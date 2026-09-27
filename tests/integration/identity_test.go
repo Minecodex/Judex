@@ -149,3 +149,69 @@ func TestConcurrentDuplicateRegistration(t *testing.T) {
 		t.Fatalf("expected one user row, got %d", count)
 	}
 }
+
+// TestRecoveryAndDisable (A03/A07): operator recovery code resets the
+// password exactly once, invalidates old sessions, and does not auto-login;
+// disabled accounts fail login with the uniform error and keep audit rows.
+func TestRecoveryAndDisable(t *testing.T) {
+	fixture := integration.StartPG(t)
+	limiter := identity.NewRateLimiter(fixture.Pool.Pool, nil)
+	svc := identity.NewService(fixture.Pool, limiter, identity.Options{RegisterPerIP: 1000, LoginPerIP: 1000, LoginPerAccount: 1000}, nil)
+	ctx := context.Background()
+
+	user, session, err := svc.Register(ctx, " recovery ", "recover@judex.test", "password-old-12345", "10.0.0.3")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	code, err := svc.IssueRecoveryCode(ctx, "recover@judex.test", "op@host", "test reset")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Old session still valid before recovery.
+	if _, err := svc.ResolveSession(ctx, session.Secret); err != nil {
+		t.Fatalf("pre-recovery session must resolve: %v", err)
+	}
+	if err := svc.RecoverPassword(ctx, code, "password-new-12345"); err != nil {
+		t.Fatal(err)
+	}
+	// Old session revoked (auth_version bump), new login works with new password.
+	if _, err := svc.ResolveSession(ctx, session.Secret); apierrors.IsCode(err, apierrors.Unauthenticated) == false && apierrors.IsCode(err, apierrors.GrantRevoked) == false {
+		t.Fatalf("old session must be invalid after recovery, got %v", err)
+	}
+	if _, _, err := svc.Login(ctx, "recover@judex.test", "password-new-12345", "10.0.0.3"); err != nil {
+		t.Fatalf("login with new password: %v", err)
+	}
+	// One-time: second consume fails.
+	if err := svc.RecoverPassword(ctx, code, "password-newer-1234"); apierrors.IsCode(err, apierrors.Unauthenticated) == false {
+		t.Fatalf("reused recovery code must fail, got %v", err)
+	}
+
+	// Operator disable: uniform login error, audit rows recorded.
+	if err := svc.DisableAccount(ctx, "recover@judex.test", "op@host", "offboarding test"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := svc.Login(ctx, "recover@judex.test", "password-new-12345", "10.0.0.3"); apierrors.IsCode(err, apierrors.Unauthenticated) == false {
+		t.Fatalf("disabled login must be uniform UNAUTHENTICATED, got %v", err)
+	}
+	var auditOps []string
+	rows, err := fixture.Pool.Query(ctx,
+		`SELECT operation FROM audit_events WHERE object_id=$1 ORDER BY occurred_at`, user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var op string
+		if err := rows.Scan(&op); err != nil {
+			t.Fatal(err)
+		}
+		auditOps = append(auditOps, op)
+	}
+	joined := strings.Join(auditOps, ",")
+	for _, want := range []string{"identity.register", "identity.recovery_code.issued", "identity.recovery.completed", "identity.account.disabled"} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("audit trail missing %s: %v", want, auditOps)
+		}
+	}
+}

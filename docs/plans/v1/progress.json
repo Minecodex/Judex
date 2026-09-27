@@ -143,8 +143,13 @@
       "dependsOn": [
         "P1-02"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "identity/recovery.go: IssueRecoveryCode（15min 一次性码，hash 存储，operator+reason 审计）、RecoverPassword（咨询锁串行消费+新凭据+auth_version 递增+撤销全部会话/授权+不自动登录）、Disable/Enable（停用即拒登+杀会话，历史保留）",
+        "cmd/judex-server account recovery-code|disable|enable: 运维子命令（部署凭据即授权，operator 记入审计，无业务超级管理员）",
+        "POST /auth/recover handler 接入契约",
+        "integration: 恢复码一次性、旧会话失效、新密码可登录、二次消费拒绝；停用后统一 UNAUTHENTICATED；审计链包含 register/issued/completed/disabled"
+      ],
       "notes": ""
     },
     {

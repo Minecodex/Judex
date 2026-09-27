@@ -37,6 +37,12 @@ func run() error {
 		return nil
 	}
 
+	// Operator subcommands (docs/plans/v1/02 §3): audited maintenance that
+	// runs against the database directly and exits; never a business role.
+	if flag.NArg() > 0 && flag.Arg(0) == "account" {
+		return runAccountCommand()
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		return err

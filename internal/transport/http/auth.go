@@ -32,6 +32,7 @@ func (h *IdentityHandlers) Register(spec *SpecRouter) {
 	spec.Register("getSession", h.getSession)
 	spec.Register("logout", h.logout)
 	spec.Register("logoutAll", h.logoutAll)
+	spec.Register("recoverPassword", h.recoverPassword)
 }
 
 func clientIP(c *gin.Context) string {
@@ -167,4 +168,21 @@ func (h *IdentityHandlers) logoutAll(c *gin.Context) {
 		return
 	}
 	respond{}.ok(c, gin.H{"revokedSessions": sessions, "revokedGrants": grants})
+}
+
+func (h *IdentityHandlers) recoverPassword(c *gin.Context) {
+	var req struct {
+		RecoveryCode string `json:"recoveryCode" binding:"required"`
+		NewPassword  string `json:"newPassword" binding:"required"`
+	}
+	if err := bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	if err := h.Service.RecoverPassword(c.Request.Context(), req.RecoveryCode, req.NewPassword); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	h.clearSessionCookie(c)
+	respond{}.ok(c, gin.H{"completed": true})
 }
