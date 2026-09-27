@@ -28,6 +28,191 @@ func (h *WorkHandlers) Register(spec *SpecRouter) {
 	spec.Register("discardTask", withAuth(h.discardTask))
 	spec.Register("startTask", withAuth(h.startTask))
 	spec.Register("getExecutionMap", withAuth(h.executionMap))
+	spec.Register("getTaskAcceptanceReview", withAuth(h.taskReview))
+	spec.Register("decideTaskAcceptance", withAuth(h.taskDecide))
+	spec.Register("reopenTask", withAuth(h.taskReopen))
+	spec.Register("getPlanAcceptanceReview", withAuth(h.planReview))
+	spec.Register("acceptPlan", withAuth(h.planDecide))
+	spec.Register("reopenPlan", withAuth(h.planReopen))
+}
+
+func (h *WorkHandlers) taskReview(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	taskID, err := uuid.Parse(c.Param("taskId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("taskId", "invalid"))
+		return
+	}
+	review, err := h.Work.TaskAcceptanceReview(c.Request.Context(), p.UserID, projectID, taskID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, review)
+}
+
+func (h *WorkHandlers) taskDecide(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	taskID, err := uuid.Parse(c.Param("taskId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("taskId", "invalid"))
+		return
+	}
+	var req struct {
+		ReviewID        string `json:"reviewId" binding:"required"`
+		ReviewHash      string `json:"reviewHash" binding:"required"`
+		ExpectedVersion int64  `json:"expectedVersion" binding:"required"`
+		Decision        string `json:"decision" binding:"required"`
+		Reason          string `json:"reason"`
+	}
+	if err := bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	if req.Decision != "accept" && req.Decision != "reject" {
+		respond{}.error(c, apierrors.Fields("decision", "enum"))
+		return
+	}
+	task, err := h.Work.DecideTaskAcceptance(c.Request.Context(), p.UserID, projectID, taskID,
+		req.ReviewHash, req.Decision == "accept", req.Reason, req.ExpectedVersion)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, task)
+}
+
+func (h *WorkHandlers) taskReopen(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	taskID, err := uuid.Parse(c.Param("taskId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("taskId", "invalid"))
+		return
+	}
+	var req struct {
+		ExpectedVersion int64  `json:"expectedVersion" binding:"required"`
+		AcceptanceID    string `json:"acceptanceId"`
+		Reason          string `json:"reason" binding:"required"`
+	}
+	if err := bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	acceptanceID, err := uuid.Parse(req.AcceptanceID)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("acceptanceId", "invalid"))
+		return
+	}
+	task, err := h.Work.ReopenTask(c.Request.Context(), p.UserID, projectID, taskID, acceptanceID, req.Reason, req.ExpectedVersion)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, task)
+}
+
+func (h *WorkHandlers) planReview(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	planID, err := uuid.Parse(c.Param("planId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("planId", "invalid"))
+		return
+	}
+	review, err := h.Work.PlanAcceptanceReview(c.Request.Context(), p.UserID, projectID, planID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, review)
+}
+
+func (h *WorkHandlers) planDecide(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	planID, err := uuid.Parse(c.Param("planId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("planId", "invalid"))
+		return
+	}
+	var req struct {
+		ReviewID   string `json:"reviewId" binding:"required"`
+		ReviewHash string `json:"reviewHash" binding:"required"`
+		Decision   string `json:"decision" binding:"required"`
+		Reason     string `json:"reason"`
+	}
+	if err := bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	if req.Decision != "accept" && req.Decision != "reject" {
+		respond{}.error(c, apierrors.Fields("decision", "enum"))
+		return
+	}
+	plan, err := h.Work.DecidePlanAcceptance(c.Request.Context(), p.UserID, projectID, planID,
+		req.ReviewHash, req.Decision == "accept", req.Reason)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, plan)
+}
+
+func (h *WorkHandlers) planReopen(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	planID, err := uuid.Parse(c.Param("planId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("planId", "invalid"))
+		return
+	}
+	var req struct {
+		ExpectedVersion int64  `json:"expectedVersion"`
+		AcceptanceID    string `json:"acceptanceId"`
+		Reason          string `json:"reason" binding:"required"`
+	}
+	if err := bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	acceptanceID, err := uuid.Parse(req.AcceptanceID)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("acceptanceId", "invalid"))
+		return
+	}
+	plan, err := h.Work.ReopenPlan(c.Request.Context(), p.UserID, projectID, planID, acceptanceID, req.Reason)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, plan)
 }
 
 func (h *WorkHandlers) startTask(c *gin.Context) {

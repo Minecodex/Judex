@@ -474,8 +474,13 @@
         "P3-06",
         "P3-02"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "work/acceptances.go: TaskAcceptanceReview（快照=版本+最新报告+前置，SHA256 reviewHash）、DecideTaskAcceptance（仅当前验收身份；REVIEW_STALE 新报告失效；退回须理由→rework；验收须 accept 前置满足→accepted+不可变 task_acceptances）、ReopenTask（引用原 acceptance+reopen_records 历史保留）",
+        "PlanAcceptanceReview（引用各任务 acceptanceId 集合；未全验收暴露 blockers）、DecidePlanAcceptance（仅计划负责人当前绑定人；REQUIREMENT_UNMET 未全验收；快照引用入 plan_acceptances）、ReopenPlan",
+        "handlers: 8 个验收 operation 接入",
+        "integration: 非验收人 403、REVIEW_STALE 新报告、退回→rework→补交→验收+不可变记录、任务全验收后 owner 验收计划、重开保留历史、B12 部分验收拒绝"
+      ],
       "notes": ""
     },
     {
