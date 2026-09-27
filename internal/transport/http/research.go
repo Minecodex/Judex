@@ -27,6 +27,26 @@ func (h *ResearchHandlers) Register(spec *SpecRouter) {
 	spec.Register("createReleaseReport", withAuth(h.createRelease))
 	spec.Register("createFixPropagation", withAuth(h.fixPropagation))
 	spec.Register("listAudit", withAuth(h.listAudit))
+	spec.Register("listMyActions", withAuth(h.myActions))
+}
+
+func (h *ResearchHandlers) myActions(c *gin.Context) {
+	p := principalFrom(c)
+	var projectFilter *uuid.UUID
+	if raw := c.Query("projectId"); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+			return
+		}
+		projectFilter = &id
+	}
+	actions, err := h.Work.MyActions(c.Request.Context(), p.UserID, projectFilter)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, respond{}.list(actions, nil))
 }
 
 func (h *ResearchHandlers) listRepos(c *gin.Context) {

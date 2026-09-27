@@ -218,3 +218,95 @@ func TestHandoffSourceLevel(t *testing.T) {
 		t.Fatalf("accepted task must NOT be unaccepted by receiver, got %s", status)
 	}
 }
+
+// TestMyActions (B12/B15 读模型): 按当前绑定计算统一待办——pending 提案、
+// 待接收交接、待验收任务、全验收计划；无关用户为空。
+func TestMyActions(t *testing.T) {
+	svc, hsvc, projects, ids, pool := newHandoffEnv(t)
+	ctx := context.Background()
+	owner, _, _ := ids.Register(ctx, "OA", "oa@oa.test", "password-oa-oa-1", "10.0.0.1")
+	worker, _, _ := ids.Register(ctx, "OB", "ob@oa.test", "password-ob-ob-1", "10.0.0.1")
+	proj, _ := projects.Create(ctx, owner.ID, project.CreateRequest{Title: "待办项目"})
+	if err := projects.JoinDirect(ctx, proj.ID, worker.ID); err != nil {
+		t.Fatal(err)
+	}
+	revPos, _ := projects.CreatePosition(ctx, owner.ID, proj.ID, project.PositionDraft{Name: "验收"})
+	revIdent, _ := projects.CreateIdentity(ctx, owner.ID, proj.ID, revPos.ID, owner.ID)
+	wPos, _ := projects.CreatePosition(ctx, owner.ID, proj.ID, project.PositionDraft{Name: "执行"})
+	wIdent, _ := projects.CreateIdentity(ctx, owner.ID, proj.ID, wPos.ID, worker.ID)
+
+	plan, _ := svc.CreatePlanDraft(ctx, owner.ID, proj.ID, "P", "", "", &revIdent.ID, nil)
+	task, _ := svc.CreateTaskDraft(ctx, owner.ID, proj.ID, work.TaskDraft{
+		Title: "T", PlanID: &plan.ID, ParticipantIDs: []uuid.UUID{wIdent.ID},
+		ReviewerIdentityID: &revIdent.ID,
+	})
+	activateTask(t, pool, task.ID)
+	if _, err := pool.Exec(ctx, `UPDATE plans SET status='active', version=2 WHERE id=$1`, plan.ID); err != nil {
+		t.Fatal(err)
+	}
+	// Deliver -> owner should see an accept action.
+	if _, _, err := svc.Report(ctx, worker.ID, proj.ID, work.ReportInput{
+		TaskID: task.ID, IdentityID: &wIdent.ID, Kind: "delivery",
+		Text: "done", ExpectedTaskVersion: 2,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	ownerActions, err := svc.MyActions(ctx, owner.ID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hasAccept := false
+	for _, a := range ownerActions {
+		if a.ObjectType == "task" && a.Kind == "accept" {
+			hasAccept = true
+		}
+	}
+	if !hasAccept {
+		t.Fatalf("owner must see a task accept action: %+v", ownerActions)
+	}
+	// Worker (not reviewer) sees none of that.
+	workerActions, _ := svc.MyActions(ctx, worker.ID, nil)
+	for _, a := range workerActions {
+		if a.ObjectType == "task" && a.Kind == "accept" {
+			t.Fatalf("worker must not see reviewer accept action: %+v", a)
+		}
+	}
+	// Accept task -> owner sees plan-level accept action.
+	review, _ := svc.TaskAcceptanceReview(ctx, owner.ID, proj.ID, task.ID)
+	if _, err := svc.DecideTaskAcceptance(ctx, owner.ID, proj.ID, task.ID, review.ReviewHash, true, "", 3); err != nil {
+		t.Fatal(err)
+	}
+	ownerActions, _ = svc.MyActions(ctx, owner.ID, nil)
+	hasPlanAccept := false
+	for _, a := range ownerActions {
+		if a.ObjectType == "plan" && a.Kind == "accept" {
+			hasPlanAccept = true
+		}
+	}
+	if !hasPlanAccept {
+		t.Fatalf("owner must see plan accept action after all tasks accepted: %+v", ownerActions)
+	}
+	// Handoff receipt waiting for receiver.
+	dst, _ := svc.CreateTaskDraft(ctx, owner.ID, proj.ID, work.TaskDraft{Title: "D", PlanID: &plan.ID})
+	h, err := hsvc.Create(ctx, owner.ID, proj.ID, "交接", dst.ID, wIdent.ID, "stage",
+		[]struct {
+			SourceTaskID     uuid.UUID
+			SenderIdentityID uuid.UUID
+		}{{task.ID, revIdent.ID}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := hsvc.SendSource(ctx, owner.ID, proj.ID, h.ID, h.Sources[0].ID, "成果"); err != nil {
+		t.Fatal(err)
+	}
+	workerActions, _ = svc.MyActions(ctx, worker.ID, nil)
+	hasReceive := false
+	for _, a := range workerActions {
+		if a.ObjectType == "handoff" && a.Kind == "receive" {
+			hasReceive = true
+		}
+	}
+	if !hasReceive {
+		t.Fatalf("worker (receiver) must see handoff receipt action: %+v", workerActions)
+	}
+}

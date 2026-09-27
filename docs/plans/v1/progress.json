@@ -508,8 +508,12 @@
         "P3-06",
         "P3-07"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "work/actions.go: MyActions 按当前绑定计算统一待办——pending 提案（当前绑定持有/user 席位，含 deadline）、待接收交接、待发送/补交来源、delivered 待验收任务、全验收计划待整体验收；projectFilter 过滤",
+        "handler: listMyActions 接入 GET /me/actions",
+        "integration: reviewer 见任务验收、全验收后见计划验收、worker 见交接接收而非他人验收位；绑定实时计算非缓存"
+      ],
       "notes": ""
     },
     {
