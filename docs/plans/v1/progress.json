@@ -407,9 +407,13 @@
         "P3-02",
         "P2-06"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "decision.Service: CreateDraft（operation 白名单）、Submit（固定 slots+manifest+SHA256 review hash+超时快照；reviewID=版本行 id）、Decide（真人按当前绑定覆盖多席、REVIEW_STALE 哈希校验、首票起计时+持久 timeout job、ALL 满足同事务 applyChanges：create_plan/create_task/cancel_*/clientRef→真实 ID 映射、任一退回取消整案并清 deadline）",
+        "关键修复: PostgreSQL FOR UPDATE 与 LEFT JOIN 组合静默返回 0 行——拆分为先锁行（无 join）再无锁投影查询（项目锁已串行化决定）",
+        "integration: 同真人双席一次覆盖+worker 席位、外人 FORBIDDEN、全部同意原子建 plan(active)+task(ready)+参与者+createdIds、迟到决定 INVALID_TRANSITION、退回取消且零部分应用、无首票不超时通过、首票后超时 settle 以 timeout actor 记录并通过"
+      ],
+      "notes": "P3-04（代批/修订/换人接续）与 P3-05（worker 挂载）随后"
     },
     {
       "id": "P3-04",
