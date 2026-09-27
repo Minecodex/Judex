@@ -525,8 +525,13 @@
         "P3-09",
         "P2-08"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "web WorkPanel：计划列表/新建、任务列表+详情（开始/交付/验收，验收先取快照再决定，禁乐观更新）、提案列表/创建（typed create_plan）/提交审批/同意/退回（理由必填）、统一待办（me/actions 8s 轮询）；全部命令带 expectedVersion+幂等键",
+        "ProjectWorkspace 增加 工作/议题/资料/团队 四 tab；i18n 中英文",
+        "npm build + test:web（31 项）全绿；后端 API 已由集成测试覆盖全部操作路径",
+        "P3 阶段出口：真实多人从草稿→提案→会签→执行→交接→验收的后端全链路有集成测试证据；浏览器双用户 E2E 在 P6-03 统一执行"
+      ],
       "notes": ""
     },
     {

@@ -7,6 +7,7 @@ import { usePreferences } from "../../stores/preferences";
 import { translate, type Key, type Locale } from "../../i18n";
 import { request, APIError } from "../../lib/api/client";
 import { errorKey } from "../auth/LoginPage";
+import { WorkPanel } from "../work/WorkPanel";
 
 export function errorText(locale: Locale, error: unknown): string {
   const key = errorKey(error);
@@ -30,11 +31,14 @@ type Member = { userId: string; displayName: string; email: string; role: string
 export function ProjectWorkspace({ projectId }: { projectId: string }) {
   const { locale } = usePreferences();
   const t = (key: Key) => translate(locale, key);
-  const [tab, setTab] = useState<"topics" | "materials" | "team">("topics");
+  const [tab, setTab] = useState<"work" | "topics" | "materials" | "team">("work");
 
   return (
     <div className="judex-project-workspace">
       <nav className="judex-workspace-tabs">
+        <Button variant={tab === "work" ? "primary" : "ghost"} onClick={() => setTab("work")}>
+          {t("wpTabWork")}
+        </Button>
         <Button variant={tab === "topics" ? "primary" : "ghost"} onClick={() => setTab("topics")}>
           {t("pwTabTopics")}
         </Button>
@@ -45,6 +49,7 @@ export function ProjectWorkspace({ projectId }: { projectId: string }) {
           {t("pwTabTeam")}
         </Button>
       </nav>
+      {tab === "work" && <WorkPanel projectId={projectId} />}
       {tab === "topics" && <TopicsPanel projectId={projectId} />}
       {tab === "materials" && <MaterialsPanel projectId={projectId} />}
       {tab === "team" && <TeamPanel projectId={projectId} />}
