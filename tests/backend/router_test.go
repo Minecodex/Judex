@@ -11,21 +11,40 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/gin-gonic/gin"
 	"github.com/kakj-go/Judex/internal/config"
 	transport "github.com/kakj-go/Judex/internal/transport/http"
 )
 
+func newTestRouter(t *testing.T, draining *atomic.Bool) *gin.Engine {
+	t.Helper()
+	router, err := transport.NewRouter(transport.Options{
+		Logger:   slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Draining: draining,
+		Assets: fstest.MapFS{
+			"index.html":    {Data: []byte("<!doctype html><title>Judex</title>")},
+			"assets/app.js": {Data: []byte("export const ready=true")},
+		},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return router
+}
+
 func TestRoutingAndScaffoldBoundaries(t *testing.T) {
 	draining := &atomic.Bool{}
-	router := transport.NewRouter(transport.Options{Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Draining: draining, Assets: fstest.MapFS{"index.html": {Data: []byte("<!doctype html><title>Judex</title>")}, "assets/app.js": {Data: []byte("export const ready=true")}}})
+	router := newTestRouter(t, draining)
 	cases := []struct {
 		method, path string
 		status       int
 		contains     string
 	}{
 		{"GET", "/healthz", 200, "ok"}, {"GET", "/readyz", 200, "http-scaffold"},
-		{"GET", "/api/v1/system", 200, "scaffold"}, {"GET", "/api/v1/workspace", 501, "NOT_IMPLEMENTED"},
+		{"GET", "/api/v1/system", 200, "Judex"},
+		{"GET", "/api/v1/workspace", 404, "NOT_FOUND"},
 		{"POST", "/api/v1/auth/register", 501, "NOT_IMPLEMENTED"}, {"POST", "/api/v1/auth/login", 501, "NOT_IMPLEMENTED"},
+		{"GET", "/api/v1/projects", 501, "NOT_IMPLEMENTED"},
 		{"GET", "/api/v1/missing", 404, "NOT_FOUND"}, {"GET", "/assets/missing.js", 404, "NOT_FOUND"},
 		{"GET", "/projects/example", 200, "<title>Judex"}, {"GET", "/assets/app.js", 200, "export const"},
 		{"POST", "/healthz", 405, "METHOD_NOT_ALLOWED"},
@@ -57,7 +76,11 @@ func TestRoutingAndScaffoldBoundaries(t *testing.T) {
 }
 func TestAPIWithoutWebBuild(t *testing.T) {
 	r := httptest.NewRecorder()
-	transport.NewRouter(transport.Options{}).ServeHTTP(r, httptest.NewRequest("GET", "/", nil))
+	router, err := transport.NewRouter(transport.Options{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	router.ServeHTTP(r, httptest.NewRequest("GET", "/", nil))
 	if r.Code != 404 || !strings.Contains(r.Body.String(), "WEB_BUILD_MISSING") {
 		t.Fatal(r.Body.String())
 	}

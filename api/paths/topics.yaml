@@ -1,0 +1,234 @@
+# 议题、消息与统一提交（docs/plans/v1/04 §1、06 §4）
+paths:
+  /projects/{projectId}/topics:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listTopics
+      summary: 议题分页
+      tags: [topics]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [project_room, discussion, handoff]
+      responses:
+        '200':
+          description: 议题分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/discussion.yaml#/components/schemas/Topic'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    post:
+      operationId: createTopic
+      summary: 新建议题（显式用户新建；AI 走建议提案）
+      tags: [topics]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/discussion.yaml#/components/schemas/CreateTopicRequest'
+      responses:
+        '201':
+          description: 已创建。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/discussion.yaml#/components/schemas/Topic'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+  /projects/{projectId}/topics/{topicId}:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: topicId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getTopic
+      summary: 议题详情与本人可操作项
+      tags: [topics]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/discussion.yaml#/components/schemas/Topic'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/topics/{topicId}/messages:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: topicId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listMessages
+      summary: 消息按 seq 分页（beforeSeq/afterSeq）
+      tags: [topics]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - name: beforeSeq
+          in: query
+          schema:
+            type: integer
+        - name: afterSeq
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 消息分页（按 seq 升序）。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/discussion.yaml#/components/schemas/Message'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+  /projects/{projectId}/topics/{topicId}/links:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: topicId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: linkTopic
+      summary: 议题关联计划/任务（用户明确链接；AI 用提案）
+      tags: [topics]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/discussion.yaml#/components/schemas/TopicLinkRequest'
+      responses:
+        '200':
+          description: 已关联。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/discussion.yaml#/components/schemas/Topic'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/submissions:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    post:
+      operationId: createSubmission
+      summary: 统一提交入口（文字+材料；目的 message/progress/delivery/material）
+      tags: [submissions]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/discussion.yaml#/components/schemas/SubmissionRequest'
+      responses:
+        '201':
+          description: 已 finalize 的提交（含 message/report 引用）。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/discussion.yaml#/components/schemas/Submission'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '400':
+          $ref: '../components/common.yaml#/components/responses/BadRequest'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          description: 版本冲突或材料未 ready（details 列明）。
+          content:
+            application/json:
+              schema:
+                $ref: '../components/common.yaml#/components/schemas/ErrorResponse'
+        '412':
+          $ref: '../components/common.yaml#/components/responses/RequirementUnmet'

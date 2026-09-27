@@ -1,0 +1,341 @@
+# 账户、会话、授权、邀请与待办（docs/plans/v1/06 §2、§4）
+paths:
+  /me:
+    patch:
+      operationId: updateMe
+      summary: 更新本人资料（不改邮箱）
+      tags: [me]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/auth.yaml#/components/schemas/UpdateMeRequest'
+      responses:
+        '200':
+          description: 更新后的用户。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/auth.yaml#/components/schemas/PublicUser'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '400':
+          $ref: '../components/common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: '../components/common.yaml#/components/responses/Unauthorized'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /me/password:
+    post:
+      operationId: changePassword
+      summary: 修改密码（轮换当前会话，撤销其他会话/授权）
+      tags: [me]
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/auth.yaml#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: 修改成功，返回轮换后的会话。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/auth.yaml#/components/schemas/AuthResult'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '401':
+          $ref: '../components/common.yaml#/components/responses/Unauthorized'
+  /me/sessions:
+    get:
+      operationId: listSessions
+      summary: 本人活跃会话列表（无 secret）
+      tags: [me]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: 会话分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/auth.yaml#/components/schemas/SessionSummary'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+  /me/sessions/{sessionId}:
+    delete:
+      operationId: revokeSession
+      summary: 撤销指定会话
+      tags: [me]
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 已撤销。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [revoked]
+                    properties:
+                      revoked:
+                        type: boolean
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /me/client-grants:
+    get:
+      operationId: listClientGrants
+      summary: 本人 CLI 设备授权列表
+      tags: [me]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: 授权分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/auth.yaml#/components/schemas/ClientGrant'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+  /me/client-grants/{grantId}:
+    delete:
+      operationId: revokeClientGrant
+      summary: 撤销 CLI 设备授权
+      tags: [me]
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: grantId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 已撤销。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [revoked]
+                    properties:
+                      revoked:
+                        type: boolean
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /me/invitations:
+    get:
+      operationId: listMyInvitations
+      summary: 与本人邮箱匹配的待接受邀请
+      tags: [me]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 邀请分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/projects.yaml#/components/schemas/Invitation'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+  /me/actions:
+    get:
+      operationId: listMyActions
+      summary: 本人待办（按当前绑定计算）
+      tags: [me]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+        - name: projectId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [submit, approve, receive, accept, revise, reopen]
+      responses:
+        '200':
+          description: 待办分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/discussion.yaml#/components/schemas/PendingAction'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+  /me/notifications:
+    get:
+      operationId: listNotifications
+      summary: 本人站内提醒
+      tags: [me]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: 提醒分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/discussion.yaml#/components/schemas/Notification'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+  /me/notifications/read:
+    post:
+      operationId: markNotificationsRead
+      summary: 标记提醒已读（无业务状态变化）
+      tags: [me]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/discussion.yaml#/components/schemas/MarkNotificationsRequest'
+      responses:
+        '200':
+          description: 已标记数量。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [marked]
+                    properties:
+                      marked:
+                        type: integer
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'

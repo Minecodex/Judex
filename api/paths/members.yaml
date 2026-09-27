@@ -1,0 +1,645 @@
+# 成员、邀请、职位、身份与偏好（docs/plans/v1/02 §5-§6、06 §3）
+paths:
+  /projects/{projectId}/members:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listMembers
+      summary: 成员与公开职责分页
+      tags: [members]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: 成员分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/projects.yaml#/components/schemas/ProjectMember'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/members/{userId}:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateMemberRole
+      summary: 授予/撤回 manager（owner；不移除最后 owner）
+      tags: [members]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/UpdateMemberRequest'
+      responses:
+        '200':
+          description: 更新后的成员。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/ProjectMember'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/members/{userId}/remove:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: removeMember
+      summary: 移除成员（manager；owner 不可移除；返回受影响职责）
+      tags: [members]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/RemoveMemberRequest'
+      responses:
+        '200':
+          description: 移除结果与受影响职责。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/RemoveMemberResult'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/invitations:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listInvitations
+      summary: 项目邀请分页（manager）
+      tags: [members]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: 邀请分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/projects.yaml#/components/schemas/Invitation'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    post:
+      operationId: createInvitation
+      summary: 创建邀请（指定邮箱与职位集合，返回邀请链接 token）
+      tags: [members]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/CreateInvitationRequest'
+      responses:
+        '201':
+          description: 已创建（含一次性可复制的邀请链接）。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '../components/projects.yaml#/components/schemas/Invitation'
+                      - type: object
+                        properties:
+                          inviteUrl:
+                            type: string
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/invitations/{invitationId}/revoke:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: revokeInvitation
+      summary: 撤销邀请（manager）
+      tags: [members]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/RevokeInvitationRequest'
+      responses:
+        '200':
+          description: 已撤销。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/Invitation'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /invitations/resolve:
+    get:
+      operationId: resolveInvitation
+      summary: 按 token 预览邀请（登录且邮箱匹配）
+      tags: [members]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 邀请预览。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/InvitationResolve'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /invitations/{invitationId}/accept:
+    parameters:
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: acceptInvitation
+      summary: 接受邀请（受邀本人；重试不重复建成员）
+      tags: [members]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/InvitationDecisionRequest'
+      responses:
+        '200':
+          description: 接受结果（项目 ID 与身份列表）。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [projectId, identities]
+                    properties:
+                      projectId:
+                        type: string
+                        format: uuid
+                      identities:
+                        type: array
+                        items:
+                          $ref: '../components/projects.yaml#/components/schemas/Identity'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /invitations/{invitationId}/decline:
+    parameters:
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: declineInvitation
+      summary: 拒绝邀请（受邀本人）
+      tags: [members]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/InvitationDecisionRequest'
+      responses:
+        '200':
+          description: 已拒绝。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [declined]
+                    properties:
+                      declined:
+                        type: boolean
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/positions:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listPositions
+      summary: 职位列表（含公开职责）
+      tags: [positions]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 职位分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/projects.yaml#/components/schemas/Position'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    post:
+      operationId: createPosition
+      summary: 创建职位草稿（manager）
+      tags: [positions]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/PositionDraftRequest'
+      responses:
+        '201':
+          description: 已创建。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/Position'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+  /projects/{projectId}/positions/{positionId}:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: positionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updatePosition
+      summary: 修改职位（产生新版本；manager）
+      tags: [positions]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/UpdatePositionRequest'
+      responses:
+        '200':
+          description: 更新后的职位。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/Position'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/identities:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listIdentities
+      summary: 稳定身份与当前公开绑定
+      tags: [positions]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 身份分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/projects.yaml#/components/schemas/Identity'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    post:
+      operationId: createIdentity
+      summary: 为成员建立新任职（manager）
+      tags: [positions]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/CreateIdentityRequest'
+      responses:
+        '201':
+          description: 已创建身份。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/Identity'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/identities/{identityId}/replace:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: identityId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: replaceIdentityBinding
+      summary: 替换任职（保留 identity 与历史，生成新 binding）
+      tags: [positions]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/ReplaceIdentityRequest'
+      responses:
+        '200':
+          description: 替换后的身份。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/Identity'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/me/preferences:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: getMyPreferences
+      summary: 本人项目偏好（仅本人可见）
+      tags: [positions]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 偏好。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/PersonalPreferences'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    put:
+      operationId: updateMyPreferences
+      summary: 更新本人偏好（产生新 revision）
+      tags: [positions]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/UpdatePersonalPreferencesRequest'
+      responses:
+        '200':
+          description: 更新后的偏好。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/PersonalPreferences'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /models:
+    get:
+      operationId: listModels
+      summary: 公开模型目录（无凭据）
+      tags: [projects]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 模型分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/projects.yaml#/components/schemas/ModelSummary'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'

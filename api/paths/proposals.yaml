@@ -1,0 +1,319 @@
+# 提案与审批（docs/plans/v1/03 §3-§5、06 §5）
+paths:
+  /projects/{projectId}/proposals:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listProposals
+      summary: 提案分页
+      tags: [proposals]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, pending, approved, cancelled, stale]
+        - name: kind
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 提案分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/work.yaml#/components/schemas/Proposal'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    post:
+      operationId: createProposal
+      summary: 创建 typed 提案草稿（返回差异与服务端建议审批名单）
+      tags: [proposals]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/ProposalDraftRequest'
+      responses:
+        '201':
+          description: 草稿已创建。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/Proposal'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '400':
+          $ref: '../components/common.yaml#/components/responses/BadRequest'
+  /projects/{projectId}/proposals/{proposalId}/draft:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: proposalId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: updateProposalDraft
+      summary: 更新提案草稿（只影响 draft）
+      tags: [proposals]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion, changes]
+              properties:
+                expectedVersion:
+                  type: integer
+                  minimum: 1
+                reason:
+                  type: string
+                  maxLength: 2000
+                changes:
+                  type: array
+                  minItems: 1
+                  items:
+                    $ref: '../components/work.yaml#/components/schemas/ProposalChange'
+      responses:
+        '200':
+          description: 更新后的草稿。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/Proposal'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/proposals/{proposalId}/submit:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: proposalId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: submitProposal
+      summary: 提交提案（冻结 payload/名单/manifest；sender 人工确认）
+      tags: [proposals]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/ProposalSubmitRequest'
+      responses:
+        '200':
+          description: 冻结后的审阅。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/ProposalReview'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/proposals/{proposalId}/review:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: proposalId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getProposalReview
+      summary: 固定审阅版本（payload/manifest/slots/votes/可执行动作）
+      tags: [proposals]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 审阅详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/ProposalReview'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/proposals/{proposalId}/decisions:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: proposalId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: decideProposal
+      summary: 审批决定（当前职责办理人；同一真人可覆盖多个 slot）
+      tags: [proposals]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/ProposalDecisionRequest'
+      responses:
+        '200':
+          description: 决定后的审阅状态（全部通过时同事务应用变更）。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/ProposalReview'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/proposals/{proposalId}/delegate-decisions:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: proposalId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: delegateProposalDecision
+      summary: 授权代批（只覆盖 pending 位，记录实际 actor）
+      tags: [proposals]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/DelegateDecisionRequest'
+      responses:
+        '200':
+          description: 代批后的审阅状态。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/ProposalReview'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/proposals/{proposalId}/revisions:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: proposalId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: createProposalRevision
+      summary: 基于旧审阅创建修订草稿（旧票不继承）
+      tags: [proposals]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/ProposalRevisionRequest'
+      responses:
+        '201':
+          description: 新草稿。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/Proposal'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'

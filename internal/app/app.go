@@ -32,7 +32,11 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 		logger.Info("web build absent; API-only development mode")
 	}
 	draining := &atomic.Bool{}
-	router := httptransport.NewRouter(httptransport.Options{Logger: logger, Assets: assets, Draining: draining})
+	router, err := httptransport.NewRouter(httptransport.Options{Logger: logger, Assets: assets, Draining: draining}, nil)
+	if err != nil {
+		root.Close()
+		return nil, err
+	}
 	return &Application{root: root, Draining: draining, Server: &http.Server{
 		Addr: cfg.HTTPAddress, Handler: router, ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second,

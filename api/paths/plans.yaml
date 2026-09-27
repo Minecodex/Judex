@@ -1,0 +1,710 @@
+# 计划与任务（docs/plans/v1/03、06 §5）
+paths:
+  /projects/{projectId}/plans:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listPlans
+      summary: 计划分页
+      tags: [plans]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, active, accepted, cancelled]
+      responses:
+        '200':
+          description: 计划分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/work.yaml#/components/schemas/Plan'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    post:
+      operationId: createPlan
+      summary: 创建计划草稿（正式生效需提案审批）
+      tags: [plans]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/PlanDraftRequest'
+      responses:
+        '201':
+          description: 草稿已创建。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/Plan'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+  /projects/{projectId}/plans/{planId}:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getPlan
+      summary: 计划详情（任务统计、历史验收/重开）
+      tags: [plans]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 计划详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/Plan'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/plans/{planId}/discard:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: discardPlan
+      summary: 丢弃草稿计划（作者；无正式引用）
+      tags: [plans]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/DiscardDraftRequest'
+      responses:
+        '200':
+          description: 已丢弃。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [discarded]
+                    properties:
+                      discarded:
+                        type: boolean
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/plans/{planId}/acceptance-review:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getPlanAcceptanceReview
+      summary: 计划验收快照（owner；引用任务验收集合）
+      tags: [plans]
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 验收快照。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/AcceptanceReview'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/plans/{planId}/acceptances:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: acceptPlan
+      summary: 计划整体验收（owner 人工确认）
+      tags: [plans]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/AcceptanceRequest'
+      responses:
+        '200':
+          description: 验收结果。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/Plan'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+        '412':
+          $ref: '../components/common.yaml#/components/responses/RequirementUnmet'
+  /projects/{projectId}/plans/{planId}/reopens:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: reopenPlan
+      summary: 重开已验收计划（owner；保留历史）
+      tags: [plans]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/ReopenRequest'
+      responses:
+        '200':
+          description: 重开后的计划。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/Plan'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/tasks:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listTasks
+      summary: 任务分页（按计划/状态过滤）
+      tags: [tasks]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+        - name: planId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, ready, working, delivered, accepted, rework, cancelled]
+        - name: identityId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 任务分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/work.yaml#/components/schemas/Task'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    post:
+      operationId: createTask
+      summary: 创建任务草稿
+      tags: [tasks]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/TaskDraftRequest'
+      responses:
+        '201':
+          description: 草稿已创建。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/Task'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+  /projects/{projectId}/tasks/{taskId}:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getTask
+      summary: 任务详情（当前报告、硬前置、可执行动作）
+      tags: [tasks]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 任务详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/Task'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/tasks/{taskId}/discard:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: discardTask
+      summary: 丢弃任务草稿（作者；无正式引用）
+      tags: [tasks]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/DiscardDraftRequest'
+      responses:
+        '200':
+          description: 已丢弃。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [discarded]
+                    properties:
+                      discarded:
+                        type: boolean
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/execution-map:
+    get:
+      operationId: getExecutionMap
+      summary: 有界任务图（列=执行顺序）与外部依赖摘要
+      tags: [tasks]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+        - name: planId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 执行图。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/ExecutionMap'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+  /projects/{projectId}/tasks/{taskId}/start:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: startTask
+      summary: 开始任务（participant；满足 start 硬条件）
+      tags: [tasks]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/StartTaskRequest'
+      responses:
+        '200':
+          description: 已开始。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/Task'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+        '412':
+          $ref: '../components/common.yaml#/components/responses/RequirementUnmet'
+  /projects/{projectId}/tasks/{taskId}/reports:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listTaskReports
+      summary: 任务报告列表
+      tags: [tasks]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: 报告分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/work.yaml#/components/schemas/WorkReport'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    post:
+      operationId: createTaskReport
+      summary: 上报进度/交付（与带任务目的的 submissions 同一用例）
+      tags: [tasks]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/TaskReportRequest'
+      responses:
+        '200':
+          description: 报告（引用既有 ready 提交时返回原报告）。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/WorkReport'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+        '412':
+          $ref: '../components/common.yaml#/components/responses/RequirementUnmet'
+  /projects/{projectId}/tasks/{taskId}/acceptance-review:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getTaskAcceptanceReview
+      summary: 任务验收快照（reviewer）
+      tags: [tasks]
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 验收快照。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/AcceptanceReview'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/tasks/{taskId}/acceptances:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: decideTaskAcceptance
+      summary: 任务验收/退回（当前 reviewer 人工确认）
+      tags: [tasks]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/AcceptanceRequest'
+      responses:
+        '200':
+          description: 验收结果。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/Task'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+        '412':
+          $ref: '../components/common.yaml#/components/responses/RequirementUnmet'
+  /projects/{projectId}/tasks/{taskId}/reopens:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: reopenTask
+      summary: 重开已验收任务（reviewer；引用原验收）
+      tags: [tasks]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/ReopenRequest'
+      responses:
+        '200':
+          description: 重开结果。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/Task'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/tasks/{taskId}/fix-propagations:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: createFixPropagation
+      summary: 为 Bug 选择修复传播目标（生成工作提案草稿）
+      tags: [tasks]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/FixPropagationRequest'
+      responses:
+        '202':
+          description: 已生成提案草稿引用。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [proposalId]
+                    properties:
+                      proposalId:
+                        type: string
+                        format: uuid
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'

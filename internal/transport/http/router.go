@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+
 package httptransport
 
 import (
@@ -16,21 +17,32 @@ import (
 	"github.com/kakj-go/Judex/internal/version"
 )
 
+const requestIDKey = "request_id"
+
 type Options struct {
 	Logger   *slog.Logger
 	Assets   fs.FS
 	Draining *atomic.Bool
+	// APIPath is the sub-path prefix the SPA is served under ("/").
+	APIPath string
 }
 
-func replyError(c *gin.Context, status int, code, message string) {
-	c.AbortWithStatusJSON(status, gin.H{"error": gin.H{"code": code, "message": message}, "requestId": c.GetString("request_id")})
-}
-func NewRouter(opts Options) *gin.Engine {
+// NewRouter builds the HTTP layer: probes, system info, the full contract
+// route table (real handlers where registered, 501 elsewhere) and the SPA
+// hosting rules (API 404 must never return HTML).
+func NewRouter(opts Options, spec *SpecRouter) (*gin.Engine, error) {
 	if opts.Logger == nil {
 		opts.Logger = slog.Default()
 	}
 	if opts.Draining == nil {
 		opts.Draining = &atomic.Bool{}
+	}
+	if spec == nil {
+		var err error
+		spec, err = NewSpecRouter(opts.Logger)
+		if err != nil {
+			return nil, err
+		}
 	}
 	router := gin.New()
 	_ = router.SetTrustedProxies(nil)
@@ -39,7 +51,7 @@ func NewRouter(opts Options) *gin.Engine {
 		b := make([]byte, 16)
 		_, _ = rand.Read(b)
 		id := hex.EncodeToString(b)
-		c.Set("request_id", id)
+		c.Set(requestIDKey, id)
 		c.Header("X-Request-ID", id)
 		c.Header("X-Content-Type-Options", "nosniff")
 		start := time.Now()
@@ -47,41 +59,39 @@ func NewRouter(opts Options) *gin.Engine {
 		opts.Logger.Info("http request", "request_id", id, "method", c.Request.Method, "route", c.FullPath(), "status", c.Writer.Status(), "duration_ms", time.Since(start).Milliseconds())
 	})
 	router.Use(gin.CustomRecovery(func(c *gin.Context, recovered any) {
-		opts.Logger.Error("request panic", "request_id", c.GetString("request_id"))
-		replyError(c, 500, "INTERNAL_ERROR", "request failed")
+		opts.Logger.Error("request panic", "request_id", c.GetString(requestIDKey))
+		respond{}.error(c, errInternalPanic)
 	}))
 	router.GET("/healthz", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
 	router.GET("/readyz", func(c *gin.Context) {
 		if opts.Draining.Load() {
-			replyError(c, 503, "DRAINING", "server is shutting down")
+			respond{}.error(c, errDraining)
 			return
 		}
 		c.JSON(200, gin.H{"status": "ready", "scope": "http-scaffold"})
 	})
-	router.GET("/api/v1/system", func(c *gin.Context) {
-		c.JSON(200, gin.H{"name": "Judex", "version": version.Version, "commit": version.Commit, "stage": "scaffold", "capabilities": gin.H{"identity": false, "workspace": false, "persistence": false, "agentExecution": false}})
+	spec.Register("getSystem", func(c *gin.Context) {
+		respond{}.ok(c, gin.H{
+			"name": "Judex", "version": version.Version, "commit": version.Commit,
+			"protocolVersion": "1", "schemaRange": "1",
+			"capabilities": gin.H{"identity": false, "projects": false, "persistence": false, "agentExecution": false},
+		})
 	})
-	pending := func(c *gin.Context) {
-		replyError(c, 501, "NOT_IMPLEMENTED", "This business module is not implemented in the scaffold.")
-	}
-	router.POST("/api/v1/auth/register", pending)
-	router.POST("/api/v1/auth/login", pending)
-	router.POST("/api/v1/auth/logout", pending)
-	router.GET("/api/v1/workspace", pending)
-	router.GET("/api/v1/projects", pending)
-	router.POST("/api/v1/projects", pending)
-	router.NoMethod(func(c *gin.Context) { replyError(c, 405, "METHOD_NOT_ALLOWED", "method not allowed") })
+	spec.Mount(&router.RouterGroup)
+	router.NoMethod(func(c *gin.Context) {
+		respond{}.error(c, errMethodNotAllowed)
+	})
 	router.NoRoute(func(c *gin.Context) {
-		if strings.HasPrefix(c.Request.URL.Path, "/api/") || c.Request.URL.Path == "/api" {
-			replyError(c, 404, "NOT_FOUND", "API endpoint not found")
+		if strings.HasPrefix(c.Request.URL.Path, apiPrefix) || c.Request.URL.Path == "/api" {
+			respond{}.error(c, errAPINotFound)
 			return
 		}
 		if c.Request.Method != http.MethodGet && c.Request.Method != http.MethodHead {
-			replyError(c, 404, "NOT_FOUND", "endpoint not found")
+			respond{}.error(c, errAPINotFound)
 			return
 		}
 		if opts.Assets == nil {
-			replyError(c, 404, "WEB_BUILD_MISSING", "Build web/ or use its Vite development server.")
+			respond{}.error(c, errWebBuildMissing)
 			return
 		}
 		name := strings.TrimPrefix(path.Clean(c.Request.URL.Path), "/")
@@ -96,15 +106,15 @@ func NewRouter(opts Options) *gin.Engine {
 		}
 		// Asset misses must remain errors rather than returning an HTML document.
 		if path.Ext(name) != "" || strings.HasPrefix(name, "assets/") {
-			replyError(c, 404, "NOT_FOUND", "asset not found")
+			respond{}.error(c, errAssetNotFound)
 			return
 		}
 		if _, err := fs.Stat(opts.Assets, "index.html"); err != nil {
-			replyError(c, 404, "WEB_BUILD_MISSING", "web build is unavailable")
+			respond{}.error(c, errWebBuildMissing)
 			return
 		}
 		c.Header("Cache-Control", "no-cache")
 		http.ServeFileFS(c.Writer, c.Request, opts.Assets, "index.html")
 	})
-	return router
+	return router, nil
 }

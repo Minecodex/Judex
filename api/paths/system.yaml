@@ -1,0 +1,42 @@
+# 系统与能力（docs/plans/v1/06 §2）
+paths:
+  /system:
+    get:
+      operationId: getSystem
+      summary: 服务版本与公开 capability 状态
+      tags: [system]
+      security: []
+      responses:
+        '200':
+          description: 服务信息。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/auth.yaml#/components/schemas/SystemInfo'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '503':
+          $ref: '../components/common.yaml#/components/responses/Unavailable'
+  /capabilities:
+    get:
+      operationId: getCapabilities
+      summary: 注册规则、上传限制、确认机制与协议版本（匿名最小集）
+      tags: [system]
+      security: []
+      responses:
+        '200':
+          description: 能力集。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/auth.yaml#/components/schemas/Capabilities'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'

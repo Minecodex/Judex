@@ -1,0 +1,205 @@
+# 通用契约对象：envelope、错误、分页、幂等（docs/plans/v1/06 §1）
+components:
+  schemas:
+    RequestMeta:
+      type: object
+      required: [requestId, serverTime]
+      properties:
+        requestId:
+          type: string
+        serverTime:
+          type: string
+          format: date-time
+        eventCursor:
+          type: integer
+          format: int64
+          description: 当前项目事件序列游标，仅项目资源响应返回。
+    AffectedResource:
+      type: object
+      required: [type, id, version]
+      properties:
+        type:
+          type: string
+        id:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+    CommandMeta:
+      allOf:
+        - $ref: '#/components/schemas/RequestMeta'
+        - type: object
+          properties:
+            affected:
+              type: array
+              items:
+                $ref: '#/components/schemas/AffectedResource'
+    ErrorBody:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+        message:
+          type: string
+          description: 兜底文案；客户端按 code+details 映射，不解析句子。
+        details:
+          description: 结构化错误详情，按 code 不同而不同。
+        retryable:
+          type: boolean
+          default: false
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_ERROR
+        - UNSUPPORTED_SCHEMA
+        - INVALID_REFERENCE
+        - EMAIL_IN_USE
+        - UNAUTHENTICATED
+        - SESSION_EXPIRED
+        - GRANT_REVOKED
+        - FORBIDDEN
+        - HUMAN_CONFIRMATION_REQUIRED
+        - NOT_FOUND
+        - VERSION_CONFLICT
+        - REVIEW_STALE
+        - DEPENDENCY_CHANGED
+        - INVALID_TRANSITION
+        - IDEMPOTENCY_CONFLICT
+        - SOURCE_VERSION_CONFLICT
+        - EVENT_CURSOR_EXPIRED
+        - REQUIREMENT_UNMET
+        - PAYLOAD_TOO_LARGE
+        - UNSUPPORTED_MEDIA
+        - RATE_LIMITED
+        - BUDGET_EXHAUSTED
+        - DEPENDENCY_UNAVAILABLE
+        - MODEL_UNAVAILABLE
+        - SANDBOX_UNAVAILABLE
+        - INTERNAL_ERROR
+    ErrorResponse:
+      type: object
+      required: [error, requestId]
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+        requestId:
+          type: string
+    FieldIssue:
+      type: object
+      required: [path, code]
+      properties:
+        path:
+          type: string
+        code:
+          type: string
+    ListMeta:
+      type: object
+      properties:
+        nextCursor:
+          type:
+            - string
+            - 'null'
+          description: 下一页游标；null 表示没有更多数据。
+  parameters:
+    LimitParam:
+      name: limit
+      in: query
+      description: 分页大小，范围 1-100，默认 50。
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    CursorParam:
+      name: cursor
+      in: query
+      description: 不透明分页游标，编码范围与过滤条件。
+      schema:
+        type: string
+    IdempotencyKeyParam:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+      schema:
+        type: string
+        format: uuid
+    ProjectIdParam:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: 请求不合法（400/422，VALIDATION_ERROR 等）。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: 未认证（401，UNAUTHENTICATED/SESSION_EXPIRED/GRANT_REVOKED）。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: 已认证但无权限（403，FORBIDDEN/HUMAN_CONFIRMATION_REQUIRED）。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: 资源不存在或对非成员隐藏存在性（404）。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: 状态/版本/幂等冲突（409，详见 error.code）。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RequirementUnmet:
+      description: 前置条件未满足（412，details.blockers 列明阻塞对象）。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooLarge:
+      description: 请求体过大或类型不支持（413/415）。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimited:
+      description: 速率或预算限制（429，带 Retry-After）。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unavailable:
+      description: 依赖暂不可用（503，retryable 明示）。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Internal:
+      description: 内部错误（500）。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-judex_session
+      description: Web 会话 Cookie（本地 HTTP 开发使用 judex_dev_session）。
+    bearerGrant:
+      type: http
+      scheme: bearer
+      description: CLI access token（受限 grant，无人工审批能力）。

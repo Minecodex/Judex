@@ -37,9 +37,16 @@
       "dependsOn": [
         "P0-01"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "api/{openapi.header.yaml,components/*.yaml,paths/*.yaml} authored; api/generate.mjs assembles single-file api/openapi.yaml: 103 paths / 119 operations per 06 §2-§6",
+        "generated: internal/gen/api (embedded spec + oapi-codegen types 4436 lines) and web/src/lib/api/schema.d.ts (openapi-typescript); `npm run gen:api` / Makefile `generate`",
+        "tools locked: oapi-codegen v2.8.0 via go.mod tool directive, openapi-typescript 7.13.0, js-yaml 4.1.1, kin-openapi v0.149.0",
+        "internal/platform/errors: canonical code->status map + envelope helpers; internal/platform/auth: Principal model (web/cli/operator), scopes, human-confirm gate",
+        "transport: SpecRouter mounts all contract operations with 501 NOT_IMPLEMENTED defaults; router rewritten on top",
+        "tests/contract: spec load+validate, spec<->router parity (both directions), embedded-copy sync check, 501 envelope check - all passing"
+      ],
+      "notes": "make unavailable on this Windows host; generation invoked via npm run gen:api + direct go tool calls"
     },
     {
       "id": "P0-03",

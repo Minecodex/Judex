@@ -1,0 +1,313 @@
+# Agent 运行与人工确认意图（docs/plans/v1/05、06 §6）
+paths:
+  /projects/{projectId}/topics/{topicId}/runs:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: topicId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: startAgentRun
+      summary: 请求针对某提交的 AI 分析（重复源不续额度）
+      tags: [agent]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/agent.yaml#/components/schemas/StartRunRequest'
+      responses:
+        '202':
+          description: 已登记批次/运行引用（异步执行）。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [batchId]
+                    properties:
+                      batchId:
+                        type: string
+                        format: uuid
+                      runId:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '409':
+          description: 重复源或上下文版本冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '../components/common.yaml#/components/schemas/ErrorResponse'
+        '429':
+          description: 预算耗尽（BUDGET_EXHAUSTED），需合法续开。
+          content:
+            application/json:
+              schema:
+                $ref: '../components/common.yaml#/components/schemas/ErrorResponse'
+  /projects/{projectId}/runs/{runId}:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: runId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getAgentRun
+      summary: 公开运行状态、预算与产物引用
+      tags: [agent]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 运行详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/agent.yaml#/components/schemas/AgentRun'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/runs/{runId}/events:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: runId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: subscribeRunEvents
+      summary: 运行增量 SSE（按 run seq 恢复；私有链路脱敏）
+      tags: [agent]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - name: after
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: text/event-stream。
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/runs/{runId}/cancel:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: runId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: cancelAgentRun
+      summary: 取消运行（不撤销已成立业务决定）
+      tags: [agent]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/agent.yaml#/components/schemas/CancelRunRequest'
+      responses:
+        '200':
+          description: 已请求取消。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [cancelling]
+                    properties:
+                      cancelling:
+                        type: boolean
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+  /projects/{projectId}/batches/{batchId}/extensions:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: batchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: extendDiscussionBatch
+      summary: 显式续开讨论轮次（manager；部署上限内）
+      tags: [agent]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/agent.yaml#/components/schemas/BatchExtensionRequest'
+      responses:
+        '200':
+          description: 已续开。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [maxRounds, extension]
+                    properties:
+                      maxRounds:
+                        type: integer
+                      extension:
+                        type: integer
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '429':
+          $ref: '../components/common.yaml#/components/responses/RateLimited'
+  /projects/{projectId}/confirmation-intents:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    post:
+      operationId: createConfirmationIntent
+      summary: CLI 创建人工确认意图（返回 confirmUrl，不是批准）
+      tags: [intents]
+      security:
+        - bearerGrant: []
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/agent.yaml#/components/schemas/ConfirmationIntentRequest'
+      responses:
+        '201':
+          description: 意图已创建。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/agent.yaml#/components/schemas/ConfirmationIntent'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+  /projects/{projectId}/confirmation-intents/{intentId}:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: intentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getConfirmationIntent
+      summary: 查询意图状态（本人/grant；CLI 轮询用）
+      tags: [intents]
+      security:
+        - bearerGrant: []
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 意图状态与 resultRef。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/agent.yaml#/components/schemas/ConfirmationIntent'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/confirmation-intents/{intentId}/confirm:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: intentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: confirmIntent
+      summary: 浏览器一次确认（仅 Web 会话；原子执行原领域命令）
+      tags: [intents]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/agent.yaml#/components/schemas/ConfirmIntentRequest'
+      responses:
+        '200':
+          description: 确认结果（committed/rejected）与 resultRef。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/agent.yaml#/components/schemas/ConfirmationIntent'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'

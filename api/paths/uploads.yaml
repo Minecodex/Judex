@@ -1,0 +1,384 @@
+# 上传会话与材料版本（docs/plans/v1/04 §2-§4、06 §4）
+paths:
+  /projects/{projectId}/uploads:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listUploadSessions
+      summary: 本人未完成上传会话
+      tags: [materials]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 会话分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/discussion.yaml#/components/schemas/UploadSession'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    post:
+      operationId: createUploadSession
+      summary: 创建上传会话（返回分片方案）
+      tags: [materials]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/discussion.yaml#/components/schemas/CreateUploadRequest'
+      responses:
+        '201':
+          description: 上传方案。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/discussion.yaml#/components/schemas/UploadSession'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '413':
+          $ref: '../components/common.yaml#/components/responses/TooLarge'
+  /projects/{projectId}/uploads/{uploadId}/parts/{partNumber}:
+    put:
+      operationId: uploadPart
+      summary: 上传单个分片（二进制流；同号不同摘要冲突）
+      tags: [materials]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+        - name: uploadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: partNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: X-Judex-Part-SHA256
+          in: header
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-f]{64}$'
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: 分片已登记。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [partNumber, receivedBytes]
+                    properties:
+                      partNumber:
+                        type: integer
+                      receivedBytes:
+                        type: integer
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+        '413':
+          $ref: '../components/common.yaml#/components/responses/TooLarge'
+  /projects/{projectId}/uploads/{uploadId}/complete:
+    post:
+      operationId: completeUpload
+      summary: 完成上传并登记不可变材料版本（幂等返回同版本）
+      tags: [materials]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+        - name: uploadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/discussion.yaml#/components/schemas/CompleteUploadRequest'
+      responses:
+        '201':
+          description: 已登记的材料版本。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/discussion.yaml#/components/schemas/MaterialVersion'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '409':
+          description: 来源版本落后（SOURCE_VERSION_CONFLICT）或幂等冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '../components/common.yaml#/components/schemas/ErrorResponse'
+        '412':
+          description: 分片不完整或校验失败。
+          content:
+            application/json:
+              schema:
+                $ref: '../components/common.yaml#/components/schemas/ErrorResponse'
+  /projects/{projectId}/uploads/{uploadId}:
+    delete:
+      operationId: cancelUpload
+      summary: 取消未完成上传会话（不删正式材料）
+      tags: [materials]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+        - name: uploadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 已取消。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [cancelled]
+                    properties:
+                      cancelled:
+                        type: boolean
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/materials:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listMaterials
+      summary: 项目共享资料分页（按 kind/关联过滤）
+      tags: [materials]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [file, html_bundle, text]
+        - name: linkedObjectType
+          in: query
+          schema:
+            type: string
+        - name: linkedObjectId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 材料分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/discussion.yaml#/components/schemas/Material'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+  /projects/{projectId}/materials/{materialId}/versions:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: materialId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listMaterialVersions
+      summary: 不可变版本列表
+      tags: [materials]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 版本分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/discussion.yaml#/components/schemas/MaterialVersion'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/materials/{materialId}/versions/{versionId}/content:
+    get:
+      operationId: downloadMaterialContent
+      summary: 版本内容下载（鉴权代理，支持 Range）
+      tags: [materials]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+        - name: materialId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Range
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: entry
+          in: query
+          required: false
+          description: HTML 包内的相对路径条目。
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 内容流。
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: 范围内容。
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/materials/{materialId}/versions/{versionId}/preview-session:
+    post:
+      operationId: createPreviewSession
+      summary: 为 HTML 包版本创建隔离 origin 短时预览
+      tags: [materials]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+        - name: materialId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '201':
+          description: 预览会话。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/discussion.yaml#/components/schemas/PreviewSession'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'

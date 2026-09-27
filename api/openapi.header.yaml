@@ -1,0 +1,42 @@
+openapi: 3.1.0
+info:
+  title: Judex API
+  version: 1.0.0
+  summary: Judex 协作平台公共 API（docs/plans/v1/06 契约源）
+  description: |
+    所有业务路径前缀 /api/v1（本规范路径不含该前缀，由网关/服务器统一挂载）。
+
+    协议规则：JSON 字段 camelCase；UUID 字符串；时间 RFC3339 UTC；版本为正整数。
+    成功 envelope `{data, meta:{requestId,serverTime,eventCursor?}}`；命令额外返回 `affected`。
+    错误 envelope `{error:{code,message,details?,retryable},requestId}`；客户端按 code+details 处理，不解析 message。
+    分页 `?limit=50&cursor=<opaque>`（1-100）；列表 data 为 `{items,nextCursor}`。
+    有副作用的业务命令要求 Idempotency-Key 头（UUID）；已有对象写操作要求 expectedVersion；正式决定要求 reviewId/reviewHash。
+    Web 会话使用 Cookie+CSRF（sessionCookie）；CLI 使用受限 Bearer grant（bearerGrant）。
+    阶段实现状态由 GET /system capabilities 返回；未实现的 operation 返回 501 而不是假成功。
+servers:
+  - url: /
+    description: Same-origin (SPA or CLI with explicit base URL)
+tags:
+  - {name: system, description: 系统与能力}
+  - {name: auth, description: 注册、登录与设备授权}
+  - {name: me, description: 账户、会话、待办与提醒}
+  - {name: projects, description: 项目生命周期}
+  - {name: members, description: 成员与邀请}
+  - {name: positions, description: 职位与身份}
+  - {name: workflows, description: 协作流程}
+  - {name: repositories, description: 仓库元数据}
+  - {name: topics, description: 议题与消息}
+  - {name: submissions, description: 统一提交}
+  - {name: materials, description: 上传与材料版本}
+  - {name: events, description: SSE 事件}
+  - {name: plans, description: 计划}
+  - {name: tasks, description: 任务}
+  - {name: proposals, description: 提案与审批}
+  - {name: handoffs, description: 交接}
+  - {name: releases, description: 版本发布上报}
+  - {name: audit, description: 审计}
+  - {name: agent, description: Agent 运行}
+  - {name: intents, description: 人工确认意图}
+security:
+  - sessionCookie: []
+  - bearerGrant: []
