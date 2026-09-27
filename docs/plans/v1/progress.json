@@ -313,9 +313,14 @@
         "P2-04",
         "P1-04"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "migration 00006（submissions 唯一约束(project,actor,client_submission_id)/messages UNIQUE(topic_id,seq)/notifications 按(user,event,type)去重）",
+        "discussion.Service: CreateTopic（显式人动作+首条消息同事务）、ListTopics/ListMessages(beforeSeq 倒序取再翻正)、LinkTopic(幂等)、CreateSubmission 统一入口（作者/来源服务端推导；重放返回原记录；材料须本项目 ready 否则 InvalidReference/REQUIREMENT_UNMET；material 用途无 topic 不生成消息→收件区）",
+        "handlers: listTopics/createTopic/getTopic/listMessages/linkTopic/createSubmission",
+        "integration: 首条消息作者服务端推导、同 clientSubmissionId 重试只 1 条消息且 seq 稠密、未知材料拒绝、material 用途不生成消息"
+      ],
+      "notes": "progress/delivery 目的与 work.Report 同用例合并在 P3-06 落地"
     },
     {
       "id": "P2-07",

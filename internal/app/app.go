@@ -20,6 +20,7 @@ import (
 
 	"github.com/kakj-go/Judex/internal/agent"
 	"github.com/kakj-go/Judex/internal/config"
+	"github.com/kakj-go/Judex/internal/discussion"
 	"github.com/kakj-go/Judex/internal/identity"
 	"github.com/kakj-go/Judex/internal/infrastructure/objectstore"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
@@ -36,15 +37,16 @@ type Application struct {
 	Draining *atomic.Bool
 	Config   config.Config
 
-	pool      *postgres.Pool
-	identity  *identity.Service
-	projects  *project.Service
-	workflows *workflow.Service
-	materials *material.Service
-	objects   material.ObjectStore
-	engine    *job.Engine
-	root      *os.Root
-	workers   []context.CancelFunc
+	pool       *postgres.Pool
+	identity   *identity.Service
+	projects   *project.Service
+	workflows  *workflow.Service
+	materials  *material.Service
+	discussion *discussion.Service
+	objects    material.ObjectStore
+	engine     *job.Engine
+	root       *os.Root
+	workers    []context.CancelFunc
 }
 
 // New builds the application per config mode. When persistence is enabled it
@@ -106,6 +108,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 		app.projects = project.NewService(pool, nil)
 		app.workflows = workflow.NewService(pool, nil)
 		app.materials = material.NewService(pool, app.objects, material.DefaultLimits(), nil)
+		app.discussion = discussion.NewService(pool, nil)
 	}
 
 	if cfg.RunsHTTP() {
@@ -132,6 +135,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			httptransport.NewWorkflowHandlers(app.workflows).Register(spec)
 			httptransport.NewPositionHandlers(app.projects).Register(spec)
 			httptransport.NewMaterialHandlers(app.materials).Register(spec)
+			httptransport.NewDiscussionHandlers(app.discussion).Register(spec)
 			idSvc := app.identity
 			authOpts = &httptransport.AuthOptions{
 				Config:   authCfg,
