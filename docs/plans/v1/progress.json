@@ -214,9 +214,15 @@
         "P1-05",
         "P1-06"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "identity: ListSessions（仅本人活跃会话+当前标记）/RevokeSession（仅本人、幂等）+ handlers（withAuth）",
+        "web AccountSecurity：会话列表/最近活跃/有效期/撤销其他会话；无假邮件按钮（文案如实说明设备授权在 P4 提供）",
+        "WorkspaceShell 增加项目/账户安全双 tab；退出登录走 AuthProvider signOut（cancelQueries+clear，切用户无前账号缓存）",
+        "HTTP 集成测试：双会话列表 2 条→撤销非当前→仅剩当前；DELETE 无 CSRF 被中间件拒绝（既有覆盖）",
+        "npm build + test:web（31 项）全绿"
+      ],
+      "notes": "P1 阶段完成。设备授权页/邀请深链接按计划在 P4/P2"
     },
     {
       "id": "P2-01",

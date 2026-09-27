@@ -155,3 +155,48 @@ func (s *Service) SessionProjection(ctx context.Context, sessionID uuid.UUID) (U
 	}
 	return user, expiresAt, nil
 }
+
+// SessionSummary is the safe projection for GET /me/sessions (06 §2).
+type SessionSummary struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"createdAt"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	LastSeen  time.Time `json:"lastSeenAt"`
+	Current   bool      `json:"current"`
+}
+
+// ListSessions returns the user's active sessions without secrets.
+func (s *Service) ListSessions(ctx context.Context, user, currentSession uuid.UUID) ([]SessionSummary, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, created_at, expires_at, last_seen_at FROM user_sessions
+		WHERE user_id=$1 AND revoked_at IS NULL AND expires_at>$2
+		ORDER BY last_seen_at DESC`, user, s.now())
+	if err != nil {
+		return nil, apierrors.New(apierrors.Internal, "session list failed").Wrap(err)
+	}
+	defer rows.Close()
+	var out []SessionSummary
+	for rows.Next() {
+		var sum SessionSummary
+		if err := rows.Scan(&sum.ID, &sum.CreatedAt, &sum.ExpiresAt, &sum.LastSeen); err != nil {
+			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
+		}
+		sum.Current = sum.ID == currentSession
+		out = append(out, sum)
+	}
+	return out, rows.Err()
+}
+
+// RevokeSession revokes one of the user's own sessions (idempotent).
+func (s *Service) RevokeSession(ctx context.Context, user, sessionID uuid.UUID) error {
+	tag, err := s.pool.Exec(ctx,
+		`UPDATE user_sessions SET revoked_at=COALESCE(revoked_at,$3) WHERE id=$1 AND user_id=$2`,
+		sessionID, user, s.now())
+	if err != nil {
+		return apierrors.New(apierrors.Internal, "revoke failed").Wrap(err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apierrors.New(apierrors.NotFound, "session not found")
+	}
+	return nil
+}

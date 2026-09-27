@@ -235,3 +235,76 @@ func TestRegisterHTTPDuplicate(t *testing.T) {
 		t.Fatalf("duplicate register: %d %s", resp.StatusCode, raw)
 	}
 }
+
+// TestSessionsListAndRevoke (A03 前端基础): the account security endpoints
+// list only the caller's sessions and revoke idempotently.
+func TestSessionsListAndRevoke(t *testing.T) {
+	server, svc := bootHTTPApp(t)
+	cookie, csrf := registerViaHTTP(t, server, "会话用户", "sessions@judex.test", "password-sessions-1")
+	// Create a second session via login.
+	loginBody, _ := json.Marshal(map[string]string{"email": "sessions@judex.test", "password": "password-sessions-1"})
+	req, _ := http.NewRequest("POST", server.URL+"/api/v1/auth/login", bytes.NewReader(loginBody))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := server.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	req, _ = http.NewRequest("GET", server.URL+"/api/v1/me/sessions", nil)
+	req.AddCookie(cookie)
+	resp, err = server.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var list struct {
+		Data struct {
+			Items []struct {
+				ID      string `json:"id"`
+				Current bool   `json:"current"`
+			} `json:"items"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 || len(list.Data.Items) != 2 {
+		t.Fatalf("expected 2 sessions, got %d (%d)", len(list.Data.Items), resp.StatusCode)
+	}
+	var other string
+	for _, item := range list.Data.Items {
+		if !item.Current {
+			other = item.ID
+		}
+	}
+	if other == "" {
+		t.Fatal("no non-current session found")
+	}
+	// Revoke the other session (CSRF required for DELETE).
+	req, _ = http.NewRequest("DELETE", server.URL+"/api/v1/me/sessions/"+other, nil)
+	req.Header.Set("X-CSRF-Token", csrf)
+	req.AddCookie(cookie)
+	resp, err = server.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("revoke must succeed, got %d", resp.StatusCode)
+	}
+	req, _ = http.NewRequest("GET", server.URL+"/api/v1/me/sessions", nil)
+	req.AddCookie(cookie)
+	resp, err = server.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if len(list.Data.Items) != 1 || !list.Data.Items[0].Current {
+		t.Fatalf("expected only current session after revoke, got %+v", list.Data.Items)
+	}
+	_ = svc
+}

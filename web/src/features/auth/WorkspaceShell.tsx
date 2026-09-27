@@ -1,5 +1,6 @@
 import { Button, Card } from "@heroui/react";
 import { Plus, X } from "lucide-react";
+import { AccountSecurity } from "../settings/AccountSecurity";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
@@ -20,6 +21,7 @@ export function WorkspaceShell() {
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
+  const [tab, setTab] = useState<"projects" | "security">("projects");
 
   const projects = useQuery({
     queryKey: ["projects"],
@@ -68,7 +70,21 @@ export function WorkspaceShell() {
         </div>
       </header>
       <main className="judex-workspace-main">
-        {projects.isPending ? (
+        <nav className="judex-workspace-tabs" aria-label={t("workspaceTitle")}>
+          <Button
+            variant={tab === "projects" ? "primary" : "ghost"}
+            onClick={() => setTab("projects")}
+          >
+            {t("workspaceTabProjects")}
+          </Button>
+          <Button
+            variant={tab === "security" ? "primary" : "ghost"}
+            onClick={() => setTab("security")}
+          >
+            {t("workspaceTabSecurity")}
+          </Button>
+        </nav>
+        {tab === "security" ? <AccountSecurity /> : projects.isPending ? (
           <p className="judex-workspace-status">{t("shellLoading")}</p>
         ) : projects.isError ? (
           <p className="judex-workspace-status" role="alert">
@@ -129,7 +145,9 @@ export function WorkspaceShell() {
                 <span>{t("workspaceEmptyHint")}</span>
               </div>
             )}
-            <p className="judex-workspace-boundary">{t("workspaceDemoBoundary")}</p>
+            {tab === "projects" && (
+              <p className="judex-workspace-boundary">{t("workspaceDemoBoundary")}</p>
+            )}
           </>
         )}
       </main>

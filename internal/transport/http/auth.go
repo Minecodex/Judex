@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/kakj-go/Judex/internal/identity"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
@@ -33,6 +34,8 @@ func (h *IdentityHandlers) Register(spec *SpecRouter) {
 	spec.Register("logout", h.logout)
 	spec.Register("logoutAll", h.logoutAll)
 	spec.Register("recoverPassword", h.recoverPassword)
+	spec.Register("listSessions", withAuth(h.listSessions))
+	spec.Register("revokeSession", withAuth(h.revokeSession))
 }
 
 func clientIP(c *gin.Context) string {
@@ -185,4 +188,28 @@ func (h *IdentityHandlers) recoverPassword(c *gin.Context) {
 	}
 	h.clearSessionCookie(c)
 	respond{}.ok(c, gin.H{"completed": true})
+}
+
+func (h *IdentityHandlers) listSessions(c *gin.Context) {
+	p := principalFrom(c)
+	sessions, err := h.Service.ListSessions(c.Request.Context(), p.UserID, p.SessionID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, respond{}.list(sessions, nil))
+}
+
+func (h *IdentityHandlers) revokeSession(c *gin.Context) {
+	p := principalFrom(c)
+	sessionID, err := uuid.Parse(c.Param("sessionId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("sessionId", "invalid"))
+		return
+	}
+	if err := h.Service.RevokeSession(c.Request.Context(), p.UserID, sessionID); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, gin.H{"revoked": true})
 }

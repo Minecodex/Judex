@@ -143,3 +143,41 @@
   font-size: var(--judex-font-sm, 13px);
   color: var(--judex-muted, #6f6b60);
 }
+
+.judex-workspace-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.judex-account-card {
+  width: 100%;
+}
+
+.judex-session-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+}
+
+.judex-session-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--judex-border, #e3e0d8);
+  border-radius: var(--judex-radius, 10px);
+  background: var(--judex-panel, #fff);
+}
+[data-theme="dark"] .judex-session-item {
+  background: var(--judex-panel, #242320);
+  border-color: var(--judex-border, #32302a);
+}
+
+.judex-session-item small {
+  display: block;
+  color: var(--judex-muted, #6f6b60);
+  font-size: var(--judex-font-sm, 13px);
+}
