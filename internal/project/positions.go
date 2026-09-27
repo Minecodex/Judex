@@ -19,14 +19,14 @@ import (
 
 // Position is the API projection (06 §3).
 type Position struct {
-	ID             uuid.UUID  `json:"id"`
-	Name           string     `json:"name"`
-	Status         string     `json:"status"`
-	CurrentVersion int64      `json:"currentVersion"`
-	PublicSummary  string     `json:"publicSummary"`
-	Prompt         string     `json:"prompt"`
-	ModelID        *uuid.UUID `json:"modelId"`
-	Revision       int64      `json:"revision"`
+	ID             uuid.UUID     `json:"id"`
+	Name           string        `json:"name"`
+	Status         string        `json:"status"`
+	CurrentVersion int64         `json:"currentVersion"`
+	PublicSummary  string        `json:"publicSummary"`
+	Prompt         string        `json:"prompt"`
+	ModelID        *uuid.UUID    `json:"modelId"`
+	Revision       int64         `json:"revision"`
 	NodeBindings   []NodeBinding `json:"nodeBindings"`
 }
 
@@ -37,11 +37,11 @@ type NodeBinding struct {
 }
 
 type PositionDraft struct {
-	Name           string
-	Prompt         string
-	PublicSummary  string
-	ModelID        *uuid.UUID
-	NodeBindings   []NodeBinding
+	Name          string
+	Prompt        string
+	PublicSummary string
+	ModelID       *uuid.UUID
+	NodeBindings  []NodeBinding
 }
 
 // CreatePosition (manager) inserts the template plus revision 1.

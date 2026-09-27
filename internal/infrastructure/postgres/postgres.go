@@ -8,9 +8,9 @@ package postgres
 import (
 	"context"
 	"embed"
-	"io/fs"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"time"
 

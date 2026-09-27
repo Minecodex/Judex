@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/gin-gonic/gin"
 	apigen "github.com/kakj-go/Judex/internal/gen/api"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 )

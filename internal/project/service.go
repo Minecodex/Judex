@@ -24,29 +24,29 @@ import (
 
 // Project is the API projection (06 §3).
 type Project struct {
-	ID                    uuid.UUID  `json:"id"`
-	Title                 string     `json:"title"`
-	Description           string     `json:"description"`
-	Kind                  string     `json:"kind"`
-	Status                string     `json:"status"`
-	CreatorUserID         uuid.UUID  `json:"-"`
-	OwnerUserID           uuid.UUID  `json:"-"`
-	MaxDiscussionRounds   int        `json:"maxDiscussionRounds"`
-	ApprovalTimeoutSeconds int       `json:"approvalTimeoutSeconds"`
-	DefaultModelID        *uuid.UUID `json:"defaultModelId"`
-	Version               int64      `json:"version"`
-	CreatedAt             time.Time  `json:"createdAt"`
-	UpdatedAt             time.Time  `json:"updatedAt"`
+	ID                     uuid.UUID  `json:"id"`
+	Title                  string     `json:"title"`
+	Description            string     `json:"description"`
+	Kind                   string     `json:"kind"`
+	Status                 string     `json:"status"`
+	CreatorUserID          uuid.UUID  `json:"-"`
+	OwnerUserID            uuid.UUID  `json:"-"`
+	MaxDiscussionRounds    int        `json:"maxDiscussionRounds"`
+	ApprovalTimeoutSeconds int        `json:"approvalTimeoutSeconds"`
+	DefaultModelID         *uuid.UUID `json:"defaultModelId"`
+	Version                int64      `json:"version"`
+	CreatedAt              time.Time  `json:"createdAt"`
+	UpdatedAt              time.Time  `json:"updatedAt"`
 	// ViewerRole is filled per requester: owner/manager/member or nil.
 	ViewerRole *string `json:"role"`
 }
 
 // CreateRequest is the create command payload.
 type CreateRequest struct {
-	Title                 string
-	Description           string
-	Kind                  string
-	MaxDiscussionRounds   int
+	Title                  string
+	Description            string
+	Kind                   string
+	MaxDiscussionRounds    int
 	ApprovalTimeoutSeconds int
 }
 
@@ -334,4 +334,82 @@ func (s *Service) MembershipForTx(ctx context.Context, tx pgx.Tx, requester, pro
 func (s *Service) BootstrapCursor(ctx context.Context, projectID uuid.UUID, out *int64) error {
 	return s.pool.QueryRow(ctx,
 		`SELECT event_seq FROM projects WHERE id=$1`, projectID).Scan(out)
+}
+
+// Update applies manager-editable configuration (06 §3 PATCH /projects/{p}):
+// title/description/rounds/approval timeout/default model. Rounds stay in
+// 1..100 and the model must exist and be enabled (02 §8).
+func (s *Service) Update(ctx context.Context, requester, projectID uuid.UUID, expectedVersion int64, req UpdateRequest, modelCheck func(context.Context, uuid.UUID) error) (Project, error) {
+	if req.Title != nil {
+		title := strings.TrimSpace(*req.Title)
+		if l := utf8.RuneCountInString(title); l < 1 || l > 200 {
+			return Project{}, apierrors.Fields("title", "length")
+		}
+		req.Title = &title
+	}
+	if req.MaxDiscussionRounds != nil && (*req.MaxDiscussionRounds < 1 || *req.MaxDiscussionRounds > 100) {
+		return Project{}, apierrors.Fields("maxDiscussionRounds", "range")
+	}
+	if req.ApprovalTimeoutSeconds != nil && *req.ApprovalTimeoutSeconds < 60 {
+		return Project{}, apierrors.Fields("approvalTimeoutSeconds", "range")
+	}
+	if req.DefaultModelID != nil && *req.DefaultModelID != uuid.Nil {
+		if modelCheck != nil {
+			if err := modelCheck(ctx, *req.DefaultModelID); err != nil {
+				return Project{}, err
+			}
+		}
+	}
+	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
+		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+			return err
+		}
+		m, err := s.MembershipForTx(ctx, tx, requester, projectID)
+		if err != nil {
+			return err
+		}
+		if m.Role != "owner" && m.Role != "manager" {
+			return apierrors.New(apierrors.Forbidden, "manager or owner required")
+		}
+		tag, err := tx.Exec(ctx, `
+			UPDATE projects SET
+				title = COALESCE($3, title),
+				description = COALESCE($4, description),
+				max_discussion_rounds = COALESCE($5, max_discussion_rounds),
+				approval_timeout_seconds = COALESCE($6, approval_timeout_seconds),
+				default_model_id = CASE WHEN $7 THEN $8 ELSE default_model_id END,
+				version = version + 1, updated_at = $9
+			WHERE id = $1 AND version = $2`,
+			projectID, expectedVersion, req.Title, req.Description, req.MaxDiscussionRounds,
+			req.ApprovalTimeoutSeconds, req.DefaultModelSet, req.DefaultModelID, s.now())
+		if err != nil {
+			return apierrors.New(apierrors.Internal, "project update failed").Wrap(err)
+		}
+		if tag.RowsAffected() == 0 {
+			return apierrors.New(apierrors.VersionConflict, "project version conflict")
+		}
+		return audit.Append(ctx, tx, audit.Entry{
+			ProjectID:   &projectID,
+			ActorType:   audit.ActorUser,
+			ActorUserID: &requester,
+			Source:      audit.SourceWeb,
+			Operation:   "project.update",
+			ObjectType:  "project", ObjectID: projectID.String(),
+			OccurredAt: s.now(),
+		})
+	})
+	if err != nil {
+		return Project{}, err
+	}
+	return s.Get(ctx, requester, projectID)
+}
+
+// UpdateRequest carries nullable PATCH fields.
+type UpdateRequest struct {
+	Title                  *string
+	Description            *string
+	MaxDiscussionRounds    *int
+	ApprovalTimeoutSeconds *int
+	DefaultModelID         *uuid.UUID
+	DefaultModelSet        bool
 }

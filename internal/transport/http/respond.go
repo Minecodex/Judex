@@ -57,7 +57,7 @@ func (respond) error(c *gin.Context, err error) {
 		"error": gin.H{
 			"code":      string(apiErr.Code),
 			"message":   apiErr.Message,
-			"details":  apiErr.Details,
+			"details":   apiErr.Details,
 			"retryable": apiErr.Retryable,
 		},
 		"requestId": c.GetString(requestIDKey),

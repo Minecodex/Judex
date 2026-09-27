@@ -74,9 +74,9 @@ func (s *Service) RecoverPassword(ctx context.Context, code, newPassword string)
 		return apierrors.New(apierrors.Internal, "hash failed").Wrap(err)
 	}
 	var (
-		userID      uuid.UUID
-		consumedAt  *time.Time
-		expiresAt   time.Time
+		userID     uuid.UUID
+		consumedAt *time.Time
+		expiresAt  time.Time
 	)
 	err = s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
 		// Advisory lock serializes concurrent use of the same code.

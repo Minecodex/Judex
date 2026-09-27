@@ -99,7 +99,7 @@ func (s *Service) UpdateMemberRole(ctx context.Context, requester, projectID, ta
 			Source:      audit.SourceWeb,
 			Operation:   "project.member.role",
 			ObjectType:  "member", ObjectID: target.String(),
-			Reason: strPtr("role=" + role),
+			Reason:     strPtr("role=" + role),
 			OccurredAt: s.now(),
 		})
 	})
@@ -249,14 +249,14 @@ func (s *Service) LeaveProject(ctx context.Context, requester, projectID uuid.UU
 
 // OwnerTransfer is the two-party transfer aggregate (06 §3).
 type OwnerTransfer struct {
-	ID            uuid.UUID  `json:"id"`
-	ProjectID     uuid.UUID  `json:"-"`
-	FromUserID    uuid.UUID  `json:"fromUserId"`
-	ToUserID      uuid.UUID  `json:"toUserId"`
-	State         string     `json:"state"`
-	ProjectVersion int64     `json:"projectVersion"`
-	ExpiresAt     time.Time  `json:"expiresAt"`
-	ConfirmedAt   *time.Time `json:"confirmedAt"`
+	ID             uuid.UUID  `json:"id"`
+	ProjectID      uuid.UUID  `json:"-"`
+	FromUserID     uuid.UUID  `json:"fromUserId"`
+	ToUserID       uuid.UUID  `json:"toUserId"`
+	State          string     `json:"state"`
+	ProjectVersion int64      `json:"projectVersion"`
+	ExpiresAt      time.Time  `json:"expiresAt"`
+	ConfirmedAt    *time.Time `json:"confirmedAt"`
 }
 
 // RequestOwnerTransfer (owner -> active member target) creates a pending

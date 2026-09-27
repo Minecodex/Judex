@@ -50,21 +50,21 @@ type HardRule struct {
 
 // Body is the draft/published definition payload.
 type Body struct {
-	Name             string              `json:"name"`
-	Instructions     string              `json:"instructions"`
-	Nodes            []Node              `json:"nodes"`
-	AdvisoryEdges    []Edge              `json:"advisoryEdges"`
-	HardRules        []HardRule          `json:"hardRules"`
-	ApprovalPolicies map[string]string   `json:"approvalPolicies"`
+	Name             string            `json:"name"`
+	Instructions     string            `json:"instructions"`
+	Nodes            []Node            `json:"nodes"`
+	AdvisoryEdges    []Edge            `json:"advisoryEdges"`
+	HardRules        []HardRule        `json:"hardRules"`
+	ApprovalPolicies map[string]string `json:"approvalPolicies"`
 }
 
 // Definition is the workflow aggregate head.
 type Definition struct {
-	ID                uuid.UUID  `json:"id"`
-	Name              string     `json:"name"`
+	ID                 uuid.UUID  `json:"id"`
+	Name               string     `json:"name"`
 	PublishedVersionID *uuid.UUID `json:"publishedVersionId"`
-	HasDraft          bool       `json:"hasDraft"`
-	Version           int64      `json:"version"`
+	HasDraft           bool       `json:"hasDraft"`
+	Version            int64      `json:"version"`
 }
 
 // Version is one immutable revision (draft or published).

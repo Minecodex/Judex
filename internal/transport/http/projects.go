@@ -3,22 +3,28 @@
 package httptransport
 
 import (
+	"context"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/kakj-go/Judex/internal/project"
+	"github.com/kakj-go/Judex/internal/agent"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
+	"github.com/kakj-go/Judex/internal/project"
 )
 
 // ProjectHandlers serves the project lifecycle operations (06 §3).
 type ProjectHandlers struct {
-	Projects *project.Service
+	Projects   *project.Service
+	ModelCheck func(ctx context.Context, id uuid.UUID) error
+	Models     func(ctx context.Context) ([]agent.PublicModel, error)
 }
 
-func NewProjectHandlers(svc *project.Service) *ProjectHandlers { return &ProjectHandlers{Projects: svc} }
+func NewProjectHandlers(svc *project.Service, modelCheck func(ctx context.Context, id uuid.UUID) error, models func(ctx context.Context) ([]agent.PublicModel, error)) *ProjectHandlers {
+	return &ProjectHandlers{Projects: svc, ModelCheck: modelCheck, Models: models}
+}
 
 func (h *ProjectHandlers) Register(spec *SpecRouter) {
 	spec.Register("listProjects", withAuth(h.list))
@@ -27,6 +33,8 @@ func (h *ProjectHandlers) Register(spec *SpecRouter) {
 	spec.Register("getProjectBootstrap", withAuth(h.bootstrap))
 	spec.Register("archiveProject", withAuth(h.archive(true)))
 	spec.Register("restoreProject", withAuth(h.archive(false)))
+	spec.Register("updateProject", withAuth(h.patch))
+	spec.Register("listModels", withAuth(h.listModels))
 }
 
 func pageParams(c *gin.Context) (int, *time.Time, *uuid.UUID, error) {
@@ -96,11 +104,11 @@ func (h *ProjectHandlers) list(c *gin.Context) {
 func (h *ProjectHandlers) create(c *gin.Context) {
 	p := principalFrom(c)
 	var req struct {
-		Title                 string `json:"title" binding:"required"`
-		Description           string `json:"description"`
-		Kind                  string `json:"kind"`
-		MaxDiscussionRounds   int    `json:"maxDiscussionRounds"`
-		ApprovalTimeoutSeconds int   `json:"approvalTimeoutSeconds"`
+		Title                  string `json:"title" binding:"required"`
+		Description            string `json:"description"`
+		Kind                   string `json:"kind"`
+		MaxDiscussionRounds    int    `json:"maxDiscussionRounds"`
+		ApprovalTimeoutSeconds int    `json:"approvalTimeoutSeconds"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
@@ -150,8 +158,8 @@ func (h *ProjectHandlers) bootstrap(c *gin.Context) {
 		return
 	}
 	respond{}.ok(c, gin.H{
-		"project": projectValue,
-		"identities": []any{},
+		"project":     projectValue,
+		"identities":  []any{},
 		"eventCursor": cursor,
 	})
 }
@@ -179,4 +187,53 @@ func (h *ProjectHandlers) archive(archive bool) Handler {
 		}
 		respond{}.ok(c, updated)
 	}
+}
+
+func (h *ProjectHandlers) patch(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	var req struct {
+		ExpectedVersion        int64   `json:"expectedVersion" binding:"required"`
+		Title                  *string `json:"title"`
+		Description            *string `json:"description"`
+		MaxDiscussionRounds    *int    `json:"maxDiscussionRounds"`
+		ApprovalTimeoutSeconds *int    `json:"approvalTimeoutSeconds"`
+		DefaultModelID         *string `json:"defaultModelId"`
+	}
+	if err := bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	update := project.UpdateRequest{
+		Title: req.Title, Description: req.Description,
+		MaxDiscussionRounds: req.MaxDiscussionRounds, ApprovalTimeoutSeconds: req.ApprovalTimeoutSeconds,
+		DefaultModelSet: req.DefaultModelID != nil,
+	}
+	if req.DefaultModelID != nil && *req.DefaultModelID != "" {
+		id, err := uuid.Parse(*req.DefaultModelID)
+		if err != nil {
+			respond{}.error(c, apierrors.Fields("defaultModelId", "invalid"))
+			return
+		}
+		update.DefaultModelID = &id
+	}
+	updated, err := h.Projects.Update(c.Request.Context(), p.UserID, projectID, req.ExpectedVersion, update, h.ModelCheck)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, updated)
+}
+
+func (h *ProjectHandlers) listModels(c *gin.Context) {
+	models, err := h.Models(c.Request.Context())
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, respond{}.list(models, nil))
 }

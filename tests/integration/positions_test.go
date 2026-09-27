@@ -4,8 +4,10 @@ package integrationtest_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/kakj-go/Judex/internal/agent"
 	"github.com/kakj-go/Judex/internal/identity"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	"github.com/kakj-go/Judex/internal/platform/errors"
@@ -191,5 +193,95 @@ func TestPositionsInvitationsIdentities(t *testing.T) {
 	}
 	if revisions != 1 {
 		t.Fatalf("expected 1 preference revision, got %d", revisions)
+	}
+}
+
+// TestModelCatalogAndProjectConfig (E03/A08 基础): catalog 幂等同步、禁用
+// 缺失项；项目默认模型必须存在且启用；配置上限校验。
+func TestModelCatalogAndProjectConfig(t *testing.T) {
+	fixture := integration.StartPG(t)
+	limiter := identity.NewRateLimiter(fixture.Pool.Pool, nil)
+	ids := identity.NewService(fixture.Pool, limiter, identity.Options{RegisterPerIP: 1000}, nil)
+	svc := project.NewService(fixture.Pool, nil)
+	ctx := context.Background()
+	owner, _, _ := ids.Register(ctx, "MC", "mc@mc.test", "password-mc-mc-11", "10.0.0.1")
+	proj, err := svc.Create(ctx, owner.ID, project.CreateRequest{Title: "模型项目"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m1 := uuid.NewString()
+	entries := []agent.CatalogEntry{{
+		ID: m1, DisplayName: "内部网关模型", Provider: "openai-compatible",
+		BaseURL: "http://gateway.internal/v1", APIKeyEnv: "JUDEX_MODEL_KEY_1",
+		ModelName: "gpt-internal", MaxInputTokens: 128000, MaxOutputTokens: 8192,
+		ToolCalling: true, Streaming: true,
+	}}
+	if err := agent.SyncCatalog(ctx, fixture.Pool, entries, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	// 幂等重跑 + 移除后停用。
+	entries2 := []agent.CatalogEntry{{
+		ID: uuid.NewString(), DisplayName: "替代模型", Provider: "openai-compatible",
+		BaseURL: "http://gateway2.internal/v1", APIKeyEnv: "JUDEX_MODEL_KEY_2",
+		ModelName: "alt", MaxInputTokens: 32000, MaxOutputTokens: 4096,
+	}}
+	if err := agent.SyncCatalog(ctx, fixture.Pool, entries2, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	models, err := agent.ListPublicModels(ctx, fixture.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(models) != 2 {
+		t.Fatalf("expected 2 catalog rows kept, got %d", len(models))
+	}
+	enabled := 0
+	for _, m := range models {
+		if m.Enabled {
+			enabled++
+		}
+		if m.Limits == nil || m.Limits["maxInputTokens"] == 0 {
+			t.Fatalf("public model missing limits: %+v", m)
+		}
+	}
+	if enabled != 1 {
+		t.Fatalf("expected exactly 1 enabled after resync, got %d", enabled)
+	}
+
+	// 项目配置：非法模型被拒。
+	badModel := uuid.New()
+	_, err = svc.Update(ctx, owner.ID, proj.ID, proj.Version, project.UpdateRequest{
+		DefaultModelID: &badModel, DefaultModelSet: true,
+	}, func(ctx context.Context, id uuid.UUID) error { _, err := agent.ModelEnabled(ctx, fixture.Pool, id); return err })
+	if errors.IsCode(err, errors.InvalidReference) == false {
+		t.Fatalf("unknown model must be InvalidReference, got %v", err)
+	}
+	// 禁用模型被拒。
+	disabledID, _ := uuid.Parse(m1)
+	if _, err = svc.Update(ctx, owner.ID, proj.ID, proj.Version, project.UpdateRequest{
+		DefaultModelID: &disabledID, DefaultModelSet: true,
+	}, func(ctx context.Context, id uuid.UUID) error { _, err := agent.ModelEnabled(ctx, fixture.Pool, id); return err }); errors.IsCode(err, errors.InvalidReference) == false {
+		t.Fatalf("disabled model must be rejected, got %v", err)
+	}
+	// 启用模型 + 轮次超范围拒绝。
+	enabledID := models[0].ID
+	if models[0].Enabled {
+		enabledID = models[0].ID
+	} else {
+		enabledID = models[1].ID
+	}
+	rounds := 101
+	_, err = svc.Update(ctx, owner.ID, proj.ID, proj.Version, project.UpdateRequest{
+		MaxDiscussionRounds: &rounds,
+	}, nil)
+	if errors.IsCode(err, errors.Validation) == false {
+		t.Fatalf("rounds > 100 must be rejected, got %v", err)
+	}
+	updated, err := svc.Update(ctx, owner.ID, proj.ID, proj.Version, project.UpdateRequest{
+		DefaultModelID: &enabledID, DefaultModelSet: true,
+	}, func(ctx context.Context, id uuid.UUID) error { _, err := agent.ModelEnabled(ctx, fixture.Pool, id); return err })
+	if err != nil || updated.DefaultModelID == nil || *updated.DefaultModelID != enabledID {
+		t.Fatalf("model set: %v %+v", err, updated)
 	}
 }

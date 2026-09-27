@@ -266,9 +266,14 @@
       "dependsOn": [
         "P1-04"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "agent/catalog: 部署方 YAML（baseUrl/apiKeyEnv Secret 引用/model/maxInputTokens/maxOutputTokens/能力）→ model_catalog 幂等同步（按稳定 ID upsert、缺失停用、保留历史）；DB 不存密钥，API 只返回 ID/能力/limits",
+        "config: JUDEX_MODEL_CATALOG_FILE（启动校验可读）；app 启动同步并记录条数",
+        "project.Update（PATCH）：title/description/rounds(1-100)/approvalTimeout(≥60)/defaultModel（须存在且启用 InvalidReference）；handlers updateProject+listModels",
+        "integration: 同步幂等+重同步停用旧项；未知/禁用模型拒绝；轮次>100 拒绝；合法模型设置生效"
+      ],
+      "notes": "预算/沙箱上限随 P5/P7 配置补全"
     },
     {
       "id": "P2-04",

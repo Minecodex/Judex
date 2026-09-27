@@ -14,8 +14,11 @@ import (
 	"net/http"
 	"os"
 	"sync/atomic"
+
+	"github.com/google/uuid"
 	"time"
 
+	"github.com/kakj-go/Judex/internal/agent"
 	"github.com/kakj-go/Judex/internal/config"
 	"github.com/kakj-go/Judex/internal/identity"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
@@ -66,6 +69,20 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			root.Close()
 			return nil, err
 		}
+		if cfg.ModelCatalogFile != "" {
+			entries, err := agent.LoadCatalogFile(cfg.ModelCatalogFile)
+			if err != nil {
+				pool.Close()
+				root.Close()
+				return nil, err
+			}
+			if err := agent.SyncCatalog(context.Background(), pool, entries, time.Now().UTC()); err != nil {
+				pool.Close()
+				root.Close()
+				return nil, err
+			}
+			logger.Info("model catalog synced", "entries", len(entries))
+		}
 		app.pool = pool
 		limiter := identity.NewRateLimiter(pool.Pool, nil)
 		app.identity = identity.NewService(pool, limiter, identity.Options{}, nil)
@@ -86,7 +103,13 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 				AllowedOrigins: cfg.AllowedOrigins,
 			}
 			httptransport.NewIdentityHandlers(app.identity, authCfg, authCfg.Development).Register(spec)
-			httptransport.NewProjectHandlers(app.projects).Register(spec)
+			httptransport.NewProjectHandlers(app.projects,
+				func(ctx context.Context, id uuid.UUID) error {
+					_, err := agent.ModelEnabled(ctx, app.pool, id)
+					return err
+				},
+				func(ctx context.Context) ([]agent.PublicModel, error) { return agent.ListPublicModels(ctx, app.pool) },
+			).Register(spec)
 			httptransport.NewMemberHandlers(app.projects).Register(spec)
 			httptransport.NewWorkflowHandlers(app.workflows).Register(spec)
 			httptransport.NewPositionHandlers(app.projects).Register(spec)

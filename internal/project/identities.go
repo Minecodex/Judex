@@ -210,16 +210,16 @@ func (s *Service) ReplaceIdentityBinding(ctx context.Context, requester, project
 
 // Invitation is the invite aggregate (06 §3).
 type Invitation struct {
-	projectID      uuid.UUID  `json:"-"`
-	ID             uuid.UUID  `json:"id"`
-	TargetEmail    string     `json:"targetEmail"`
-	TargetUserID   *uuid.UUID `json:"targetUserId"`
-	State          string     `json:"state"`
-	InviterUserID  uuid.UUID  `json:"inviterUserId"`
+	projectID      uuid.UUID      `json:"-"`
+	ID             uuid.UUID      `json:"id"`
+	TargetEmail    string         `json:"targetEmail"`
+	TargetUserID   *uuid.UUID     `json:"targetUserId"`
+	State          string         `json:"state"`
+	InviterUserID  uuid.UUID      `json:"inviterUserId"`
 	Positions      []PositionLite `json:"positions"`
-	ExpiresAt      time.Time  `json:"expiresAt"`
-	AcceptedUserID *uuid.UUID `json:"acceptedUserId"`
-	Token          string     `json:"-"`
+	ExpiresAt      time.Time      `json:"expiresAt"`
+	AcceptedUserID *uuid.UUID     `json:"acceptedUserId"`
+	Token          string         `json:"-"`
 }
 
 // PositionLite is a position reference inside invitations.

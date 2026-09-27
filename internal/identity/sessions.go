@@ -19,11 +19,11 @@ import (
 // token is a plain per-session value echoed by same-origin writes; it grants
 // nothing on its own (the cookie secret stays HttpOnly).
 type ResolvedSession struct {
-	SessionID   uuid.UUID
-	User        User
-	CSRFToken   string
-	ExpiresAt   time.Time
-	LastSeen    time.Time
+	SessionID         uuid.UUID
+	User              User
+	CSRFToken         string
+	ExpiresAt         time.Time
+	LastSeen          time.Time
 	lastSeenStaleness time.Duration
 }
 
@@ -35,9 +35,9 @@ func (s *Service) ResolveSession(ctx context.Context, secret string) (ResolvedSe
 		return ResolvedSession{}, apierrors.New(apierrors.Unauthenticated, "no session")
 	}
 	var (
-		rs              ResolvedSession
-		revoked         *time.Time
-		sessionAuthVer  int64
+		rs             ResolvedSession
+		revoked        *time.Time
+		sessionAuthVer int64
 	)
 	err := s.pool.QueryRow(ctx, `
 		SELECT ses.id, ses.csrf_token, ses.expires_at, ses.last_seen_at,

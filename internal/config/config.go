@@ -36,6 +36,8 @@ type Config struct {
 	// AllowedOrigins lists exact browser origins accepted for writes
 	// (02 §2); production must include the public origin.
 	AllowedOrigins []string
+	// ModelCatalogFile points at the operator YAML (02 §8); empty = no models.
+	ModelCatalogFile string
 }
 
 func Load() (Config, error) { return FromEnv(os.Getenv) }
@@ -48,8 +50,8 @@ func FromEnv(get func(string) string) (Config, error) {
 		return fallback
 	}
 	c := Config{
-		Environment: value("JUDEX_ENV", "development"),
-		HTTPAddress: value("JUDEX_HTTP_ADDR", "127.0.0.1:8080"),
+		Environment:  value("JUDEX_ENV", "development"),
+		HTTPAddress:  value("JUDEX_HTTP_ADDR", "127.0.0.1:8080"),
 		WebDirectory: value("JUDEX_WEB_DIR", "web/dist"),
 		Mode:         Mode(value("JUDEX_MODE", string(ModeAll))),
 		DatabaseURL:  value("JUDEX_DATABASE_URL", ""),
@@ -92,6 +94,12 @@ func FromEnv(get func(string) string) (Config, error) {
 	}
 	if c.Environment == "production" && len(c.AllowedOrigins) == 0 {
 		return c, fmt.Errorf("production requires JUDEX_ALLOWED_ORIGINS (comma-separated exact origins)")
+	}
+	c.ModelCatalogFile = value("JUDEX_MODEL_CATALOG_FILE", "")
+	if c.ModelCatalogFile != "" {
+		if _, err := os.Stat(c.ModelCatalogFile); err != nil {
+			return c, fmt.Errorf("JUDEX_MODEL_CATALOG_FILE not readable: %w", err)
+		}
 	}
 	return c, nil
 }

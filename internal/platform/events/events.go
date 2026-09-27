@@ -21,15 +21,15 @@ type Refs map[string]any
 
 // ProjectEvent is one durable, ordered business fact.
 type ProjectEvent struct {
-	ProjectID   uuid.UUID
-	EventID     uuid.UUID
-	Seq         int64
-	Type        string
-	ObjectType  string
-	ObjectID    string
-	Version     *int64
-	Payload     map[string]any
-	OccurredAt  time.Time
+	ProjectID  uuid.UUID
+	EventID    uuid.UUID
+	Seq        int64
+	Type       string
+	ObjectType string
+	ObjectID   string
+	Version    *int64
+	Payload    map[string]any
+	OccurredAt time.Time
 }
 
 // AppendProjectEvent allocates the next seq for the project (requires the

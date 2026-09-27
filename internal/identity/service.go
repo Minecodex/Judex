@@ -48,14 +48,14 @@ func (o Options) withDefaults() Options {
 
 // User is the public projection (no credentials).
 type User struct {
-	ID            uuid.UUID `json:"id"`
-	DisplayName   string    `json:"displayName"`
-	Email         string    `json:"email"`
-	Locale        string    `json:"locale"`
-	Status        string    `json:"status"`
-	AuthVersion   int64     `json:"-"`
-	Version       int64     `json:"version"`
-	CreatedAt     time.Time `json:"createdAt"`
+	ID          uuid.UUID `json:"id"`
+	DisplayName string    `json:"displayName"`
+	Email       string    `json:"email"`
+	Locale      string    `json:"locale"`
+	Status      string    `json:"status"`
+	AuthVersion int64     `json:"-"`
+	Version     int64     `json:"version"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 // SessionToken pairs the once-only secret with its DB row id.
@@ -189,9 +189,9 @@ func (s *Service) Login(ctx context.Context, email, password, clientIP string) (
 	}
 
 	var (
-		user       User
-		credHash   string
-		authVer    int64
+		user     User
+		credHash string
+		authVer  int64
 	)
 	err := s.pool.QueryRow(ctx, `
 		SELECT u.id, u.display_name, u.email_display, u.locale, u.status,
