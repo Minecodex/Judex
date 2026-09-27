@@ -176,15 +176,15 @@ func (s *Service) UpdateRepository(ctx context.Context, requester, projectID, re
 
 // AuditEntry is the visible audit projection (no private prompts).
 type AuditEntry struct {
-	ID           uuid.UUID `json:"id"`
-	ActorType    string    `json:"actorType"`
-	ActorUserID  *uuid.UUID `json:"actorUserId"`
-	Source       string    `json:"source"`
-	Operation    string    `json:"operation"`
-	ObjectType   string    `json:"objectType"`
-	ObjectID     string    `json:"objectId"`
-	Reason       *string   `json:"reason"`
-	OccurredAt   time.Time `json:"occurredAt"`
+	ID          uuid.UUID  `json:"id"`
+	ActorType   string     `json:"actorType"`
+	ActorUserID *uuid.UUID `json:"actorUserId"`
+	Source      string     `json:"source"`
+	Operation   string     `json:"operation"`
+	ObjectType  string     `json:"objectType"`
+	ObjectID    string     `json:"objectId"`
+	Reason      *string    `json:"reason"`
+	OccurredAt  time.Time  `json:"occurredAt"`
 }
 
 // ListAudit pages the project's visible audit trail (member read).

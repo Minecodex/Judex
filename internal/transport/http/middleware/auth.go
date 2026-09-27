@@ -188,3 +188,56 @@ func CheckOriginOnly(cfg AuthConfig) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// BearerMiddleware resolves CLI refresh-secrets (Authorization: Bearer ...)
+// into KindCLI principals; scope enforcement stays per operation.
+func BearerMiddleware(resolve func(ctx context.Context, secret string) (*auth.Principal, error)) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if p := Principal(c); p != nil {
+			c.Next()
+			return
+		}
+		header := c.GetHeader("Authorization")
+		if !strings.HasPrefix(header, "Bearer ") {
+			c.Next()
+			return
+		}
+		secret := strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
+		if secret == "" {
+			c.Next()
+			return
+		}
+		principal, err := resolve(c.Request.Context(), secret)
+		if err != nil {
+			c.Set("judex.auth_error", err)
+			c.Next()
+			return
+		}
+		c.Set(principalKey, principal)
+		c.Next()
+	}
+}
+
+// RequireScope enforces a CLI scope for the operation (06 §1); web sessions
+// rely on membership checks instead.
+func RequireScope(scope string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		p := Principal(c)
+		if p == nil {
+			c.Next()
+			return
+		}
+		if !p.HasScope(scope) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error": gin.H{
+					"code":      "FORBIDDEN",
+					"message":   "grant 缺少 scope: " + scope,
+					"retryable": false,
+				},
+				"requestId": c.GetString("request_id"),
+			})
+			return
+		}
+		c.Next()
+	}
+}

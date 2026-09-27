@@ -20,14 +20,14 @@ import (
 
 // AcceptanceReview is the frozen snapshot shown to the reviewer (06 §5).
 type AcceptanceReview struct {
-	ReviewID    string    `json:"reviewId"`
-	ReviewHash  string    `json:"reviewHash"`
-	TargetType  string    `json:"targetType"`
-	TargetID    uuid.UUID `json:"targetId"`
-	TargetVersion int64   `json:"targetVersion"`
-	Reports     []map[string]any `json:"reports"`
-	TaskAcceptanceIDs []string `json:"taskAcceptanceIds"`
-	Blockers    []Blocker `json:"blockers"`
+	ReviewID          string           `json:"reviewId"`
+	ReviewHash        string           `json:"reviewHash"`
+	TargetType        string           `json:"targetType"`
+	TargetID          uuid.UUID        `json:"targetId"`
+	TargetVersion     int64            `json:"targetVersion"`
+	Reports           []map[string]any `json:"reports"`
+	TaskAcceptanceIDs []string         `json:"taskAcceptanceIds"`
+	Blockers          []Blocker        `json:"blockers"`
 }
 
 // TaskAcceptanceReview builds the task snapshot: current version, latest
@@ -38,9 +38,9 @@ func (s *Service) TaskAcceptanceReview(ctx context.Context, requester, projectID
 		return AcceptanceReview{}, err
 	}
 	var (
-		version       int64
-		status        string
-		latestReport  uuid.NullUUID
+		version          int64
+		status           string
+		latestReport     uuid.NullUUID
 		reviewerIdentity uuid.NullUUID
 	)
 	err := s.pool.QueryRow(ctx, `
@@ -63,12 +63,12 @@ func (s *Service) TaskAcceptanceReview(ctx context.Context, requester, projectID
 		hasher.Write([]byte("|report:" + latestReport.UUID.String()))
 	}
 	review := AcceptanceReview{
-		ReviewID:    uuid.NewString(),
-		ReviewHash:  hex.EncodeToString(hasher.Sum(nil)),
-		TargetType:  "task",
-		TargetID:    taskID,
+		ReviewID:      uuid.NewString(),
+		ReviewHash:    hex.EncodeToString(hasher.Sum(nil)),
+		TargetType:    "task",
+		TargetID:      taskID,
 		TargetVersion: version,
-		Blockers:    blockers,
+		Blockers:      blockers,
 	}
 	if latestReport.Valid {
 		review.Reports = append(review.Reports, map[string]any{"reportId": latestReport.UUID})
@@ -202,7 +202,7 @@ func (s *Service) DecideTaskAcceptance(ctx context.Context, requester, projectID
 		if err := audit.Append(ctx, tx, audit.Entry{
 			ProjectID: &projectID, ActorType: audit.ActorUser, ActorUserID: &requester,
 			IdentityID: nullUUIDPtr(reviewerIdentity), Source: audit.SourceWeb,
-			Operation: "task." + map[bool]string{true: "accept", false: "reject"}[accept],
+			Operation:  "task." + map[bool]string{true: "accept", false: "reject"}[accept],
 			ObjectType: "task", ObjectID: taskID.String(), Reason: reasonPtr(reason), OccurredAt: now,
 		}); err != nil {
 			return err
@@ -229,7 +229,7 @@ func (s *Service) ReopenTask(ctx context.Context, requester, projectID, taskID u
 			return err
 		}
 		var (
-			status string
+			status           string
 			reviewerIdentity uuid.NullUUID
 		)
 		if err := tx.QueryRow(ctx, `
@@ -340,13 +340,13 @@ func (s *Service) PlanAcceptanceReview(ctx context.Context, requester, projectID
 			Reason: itoa(int64(accepted)) + "/" + itoa(int64(total)) + " 任务已验收"})
 	}
 	return AcceptanceReview{
-		ReviewID: uuid.NewString(),
-		ReviewHash: hex.EncodeToString(hasher.Sum(nil)),
-		TargetType: "plan",
-		TargetID: planID,
-		TargetVersion: version,
+		ReviewID:          uuid.NewString(),
+		ReviewHash:        hex.EncodeToString(hasher.Sum(nil)),
+		TargetType:        "plan",
+		TargetID:          planID,
+		TargetVersion:     version,
 		TaskAcceptanceIDs: acceptanceIDs,
-		Blockers: blockers,
+		Blockers:          blockers,
 	}, nil
 }
 
@@ -366,9 +366,9 @@ func (s *Service) DecidePlanAcceptance(ctx context.Context, requester, projectID
 			return err
 		}
 		var (
-			version int64
-			status  string
-			owner   uuid.NullUUID
+			version  int64
+			status   string
+			owner    uuid.NullUUID
 			criteria string
 		)
 		if err := tx.QueryRow(ctx, `

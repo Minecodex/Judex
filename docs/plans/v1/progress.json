@@ -542,8 +542,12 @@
         "P1-02",
         "P1-05"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "identity/device.go: StartDeviceAuthorization（scope 白名单/短码+设备码 hash 存储/15min TTL）、ConfirmDeviceAuthorization（浏览器同人决定；scope 只能收窄不能扩）、PollDeviceToken（pending/slow_down/denied/expired/token 对）、RotateRefreshToken（轮换+旧 token 重放撤销整族+grant）、ResolveGrant（每次核对 grant 撤销/过期/用户 active/auth_version → KindCLI Principal 带 scope+项目范围）、ListGrants/RevokeGrant",
+        "middleware: BearerMiddleware（Authorization: Bearer）+ RequireScope；设备确认/刷新/列表/撤销 7 个 handler 接入",
+        "integration: 批准前 pending、scope 扩张拒绝、收窄生效、双重确认拒绝、轮换后重放撤族（新 token 同死）、deny 路径、授权列表"
+      ],
       "notes": ""
     },
     {

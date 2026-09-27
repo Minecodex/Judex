@@ -48,9 +48,9 @@ func (s *Service) MyActions(ctx context.Context, user uuid.UUID, projectFilter *
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			a       PendingAction
-			review  uuid.NullUUID
-			kind    string
+			a      PendingAction
+			review uuid.NullUUID
+			kind   string
 		)
 		if err := rows.Scan(&a.ProjectID, &a.ObjectID, &review, &a.DueAt, &a.CreatedAt, &kind); err != nil {
 			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
@@ -178,4 +178,3 @@ func (s *Service) MyActions(ctx context.Context, user uuid.UUID, projectFilter *
 	}
 	return actions, nil
 }
-

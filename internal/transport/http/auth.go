@@ -36,6 +36,12 @@ func (h *IdentityHandlers) Register(spec *SpecRouter) {
 	spec.Register("recoverPassword", h.recoverPassword)
 	spec.Register("listSessions", withAuth(h.listSessions))
 	spec.Register("revokeSession", withAuth(h.revokeSession))
+	spec.Register("createDeviceAuthorization", h.deviceAuthorize)
+	spec.Register("pollDeviceToken", h.deviceToken)
+	spec.Register("confirmDeviceAuthorization", withAuth(h.deviceConfirm))
+	spec.Register("refreshToken", h.refreshGrant)
+	spec.Register("listClientGrants", withAuth(h.listGrants))
+	spec.Register("revokeClientGrant", withAuth(h.revokeGrant))
 }
 
 func clientIP(c *gin.Context) string {
@@ -208,6 +214,122 @@ func (h *IdentityHandlers) revokeSession(c *gin.Context) {
 		return
 	}
 	if err := h.Service.RevokeSession(c.Request.Context(), p.UserID, sessionID); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, gin.H{"revoked": true})
+}
+
+func (h *IdentityHandlers) deviceAuthorize(c *gin.Context) {
+	var req struct {
+		DeviceName      string   `json:"deviceName" binding:"required"`
+		RequestedScopes []string `json:"requestedScopes" binding:"required"`
+		ProjectScope    []string `json:"projectScope"`
+	}
+	if err := bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	deviceCode, userCode, expiresIn, interval, err := h.Service.StartDeviceAuthorization(
+		c.Request.Context(), req.DeviceName, req.RequestedScopes, req.ProjectScope)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.created(c, gin.H{
+		"deviceCode": deviceCode, "userCode": userCode,
+		"verificationUri": "/device", "expiresIn": expiresIn, "interval": interval,
+	})
+}
+
+func (h *IdentityHandlers) deviceToken(c *gin.Context) {
+	var req struct {
+		DeviceCode string `json:"deviceCode" binding:"required"`
+	}
+	if err := bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	state, refreshToken, err := h.Service.PollDeviceToken(c.Request.Context(), req.DeviceCode)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	switch state {
+	case 1: // slow_down
+		respond{}.ok(c, gin.H{"status": "slow_down", "interval": 5})
+		return
+	case 0: // pending
+		respond{}.ok(c, gin.H{"status": "pending", "interval": 5})
+		return
+	}
+	// Completed: return the token pair (refresh doubles as the CLI secret).
+	respond{}.created(c, gin.H{
+		"accessToken": refreshToken, "refreshToken": refreshToken,
+		"accessExpiresIn": int(15 * 60), "refreshExpiresIn": int(30 * 24 * 3600),
+		"tokenType": "bearer",
+	})
+}
+
+func (h *IdentityHandlers) deviceConfirm(c *gin.Context) {
+	p := principalFrom(c)
+	var req struct {
+		UserCode string   `json:"userCode" binding:"required"`
+		Approved bool     `json:"approved"`
+		Scopes   []string `json:"scopes"`
+	}
+	if err := bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	if err := h.Service.ConfirmDeviceAuthorization(c.Request.Context(), p.UserID, req.UserCode, req.Approved, req.Scopes); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	state := "approved"
+	if !req.Approved {
+		state = "denied"
+	}
+	respond{}.ok(c, gin.H{"state": state})
+}
+
+func (h *IdentityHandlers) refreshGrant(c *gin.Context) {
+	var req struct {
+		RefreshToken string `json:"refreshToken" binding:"required"`
+	}
+	if err := bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	rotated, err := h.Service.RotateRefreshToken(c.Request.Context(), req.RefreshToken)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, gin.H{
+		"refreshToken": rotated, "tokenType": "bearer",
+		"refreshExpiresIn": int(30 * 24 * 3600),
+	})
+}
+
+func (h *IdentityHandlers) listGrants(c *gin.Context) {
+	p := principalFrom(c)
+	grants, err := h.Service.ListGrants(c.Request.Context(), p.UserID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, respond{}.list(grants, nil))
+}
+
+func (h *IdentityHandlers) revokeGrant(c *gin.Context) {
+	p := principalFrom(c)
+	grantID, err := uuid.Parse(c.Param("grantId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("grantId", "invalid"))
+		return
+	}
+	if err := h.Service.RevokeGrant(c.Request.Context(), p.UserID, grantID); err != nil {
 		respond{}.error(c, err)
 		return
 	}

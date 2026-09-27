@@ -16,6 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kakj-go/Judex/internal/identity"
+	"github.com/kakj-go/Judex/internal/platform/auth"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/kakj-go/Judex/internal/transport/http/middleware"
 	"github.com/kakj-go/Judex/internal/version"
@@ -37,8 +38,9 @@ type Options struct {
 
 // AuthOptions carries the wiring the middleware needs.
 type AuthOptions struct {
-	Config   middleware.AuthConfig
-	Resolver func(ctx context.Context, secret string) (identity.ResolvedSession, error)
+	Config        middleware.AuthConfig
+	Resolver      func(ctx context.Context, secret string) (identity.ResolvedSession, error)
+	GrantResolver func(ctx context.Context, secret string) (*auth.Principal, error)
 }
 
 // NewRouter builds the HTTP layer: probes, system info, the full contract
@@ -78,6 +80,9 @@ func NewRouter(opts Options, spec *SpecRouter) (*gin.Engine, error) {
 	}))
 	if opts.Auth != nil && opts.Auth.Resolver != nil {
 		router.Use(middleware.SessionMiddleware(opts.Auth.Config, opts.Auth.Resolver))
+		if opts.Auth.GrantResolver != nil {
+			router.Use(middleware.BearerMiddleware(opts.Auth.GrantResolver))
+		}
 		router.Use(middleware.CheckOriginOnly(opts.Auth.Config))
 		router.Use(middleware.RequireCSRF(opts.Auth.Config))
 	}

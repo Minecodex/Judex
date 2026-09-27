@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/kakj-go/Judex/internal/work"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
+	"github.com/kakj-go/Judex/internal/work"
 )
 
 // ResearchHandlers serves repositories, releases and fix propagation (06 §3/§5).
@@ -72,9 +72,9 @@ func (h *ResearchHandlers) createRepo(c *gin.Context) {
 		return
 	}
 	var req struct {
-		DisplayName  string `json:"displayName" binding:"required"`
-		URL          string `json:"url" binding:"required"`
-		Provider     string `json:"provider"`
+		DisplayName   string `json:"displayName" binding:"required"`
+		URL           string `json:"url" binding:"required"`
+		Provider      string `json:"provider"`
 		DefaultBranch string `json:"defaultBranch"`
 	}
 	if err := bindJSON(c, &req); err != nil {

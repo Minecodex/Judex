@@ -155,8 +155,9 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			httptransport.NewResearchHandlers(app.work).Register(spec)
 			idSvc := app.identity
 			authOpts = &httptransport.AuthOptions{
-				Config:   authCfg,
-				Resolver: idSvc.ResolveSession,
+				Config:        authCfg,
+				Resolver:      idSvc.ResolveSession,
+				GrantResolver: idSvc.ResolveGrant,
 			}
 		}
 		httptransport.PreviewOrigin = cfg.PreviewOrigin

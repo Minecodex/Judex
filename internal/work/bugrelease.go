@@ -19,13 +19,13 @@ import (
 
 // BugDetails carries the bug payload (03 §8).
 type BugDetails struct {
-	SourceTaskID      *uuid.UUID
+	SourceTaskID       *uuid.UUID
 	ObservedReleaseRef string
-	Environment       string
-	Steps             string
-	Expected          string
-	Actual            string
-	Severity          string
+	Environment        string
+	Steps              string
+	Expected           string
+	Actual             string
+	Severity           string
 }
 
 // CreateBug drafts a bug task with its details; linking to an accepted task
@@ -79,14 +79,14 @@ func (s *Service) CreateBug(ctx context.Context, requester, projectID uuid.UUID,
 
 // ReleaseReport is an environment/version fact report (03 §8).
 type ReleaseReport struct {
-	ID                 uuid.UUID `json:"id"`
-	VersionLabel       string    `json:"versionLabel"`
-	Environment        string    `json:"environment"`
-	URL                string    `json:"url"`
-	Status             string    `json:"status"`
-	RepositoryCommits  []map[string]any `json:"repositoryCommits"`
-	ReportedBy         uuid.UUID `json:"reportedBy"`
-	CreatedAt          time.Time `json:"createdAt"`
+	ID                uuid.UUID        `json:"id"`
+	VersionLabel      string           `json:"versionLabel"`
+	Environment       string           `json:"environment"`
+	URL               string           `json:"url"`
+	Status            string           `json:"status"`
+	RepositoryCommits []map[string]any `json:"repositoryCommits"`
+	ReportedBy        uuid.UUID        `json:"reportedBy"`
+	CreatedAt         time.Time        `json:"createdAt"`
 }
 
 // ReportRelease records a deployment fact; it never triggers deployment
