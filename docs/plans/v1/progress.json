@@ -243,9 +243,14 @@
       "dependsOn": [
         "P1-04"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "workflow.Service: 结构化 nodes/edges/hardRules/policies 为权威（Mermaid 由 GenerateMermaid 从结构生成，绝不反向解析）；Validate 拒绝重复 nodeId/未知边/自环/环/非白名单硬规则/未知节点策略；draft→publish 版本不可变；ConstraintHash 规范化约束指纹（P3 审阅影响用）；发布校验 draftHash（REVIEW_STALE）",
+        "handlers: listWorkflows/createWorkflow/listWorkflowVersions/updateWorkflowDraft/publishWorkflow（withAuth，manager 写）",
+        "integration: 四类非法结构拒绝、发布 stale hash 拒绝、发布后旧版本不可变、新草稿 revision 递增、Mermaid 随结构变化",
+        "测试基建重构: 集成 fixture 改为单容器+每测试独立数据库（26 测试 20.9s，原 97s），解决 Docker daemon 反复卡死"
+      ],
+      "notes": "职位节点绑定在 P2-01（执行顺序按 09 共同规则调整：本任务先行）"
     },
     {
       "id": "P2-03",
