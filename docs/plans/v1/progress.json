@@ -357,9 +357,14 @@
         "P2-07",
         "P1-07"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "ProjectWorkspace：议题面板（创建+选定）、消息线程（统一提交幂等+3s 轮询刷新）、共享资料列表、团队成员（404 项目缺失态）",
+        "WorkspaceShell：项目列表可点击进入项目内页面；错误文案按 code 映射中英文",
+        "npm build + test:web（31 项）全绿",
+        "P2 阶段出口：两个账号可见同一份真实资料与讨论（服务端已具备：邀请/议题/资料版本隔离+可见性测试）"
+      ],
+      "notes": "完整 Chatbox 工作区（三栏/多标签/拖拽）与真实 API 的整合在 P3-10/P5-09/P6 分阶段迁移；设置/流程编辑深度 UI 随 P3 演进"
     },
     {
       "id": "P3-01",
