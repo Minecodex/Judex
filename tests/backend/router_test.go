@@ -40,7 +40,7 @@ func TestRoutingAndScaffoldBoundaries(t *testing.T) {
 		status       int
 		contains     string
 	}{
-		{"GET", "/healthz", 200, "ok"}, {"GET", "/readyz", 200, "http-scaffold"},
+		{"GET", "/healthz", 200, "ok"}, {"GET", "/readyz", 200, "\"scope\":\"http\""},
 		{"GET", "/api/v1/system", 200, "Judex"},
 		{"GET", "/api/v1/workspace", 404, "NOT_FOUND"},
 		{"POST", "/api/v1/auth/register", 501, "NOT_IMPLEMENTED"}, {"POST", "/api/v1/auth/login", 501, "NOT_IMPLEMENTED"},
@@ -86,12 +86,25 @@ func TestAPIWithoutWebBuild(t *testing.T) {
 	}
 }
 func TestConfiguration(t *testing.T) {
-	c, err := config.FromEnv(func(string) string { return "" })
-	if err != nil || c.HTTPAddress != "127.0.0.1:8080" {
+	apiOnly := func(k string) string {
+		if k == "JUDEX_MODE" {
+			return "api"
+		}
+		return ""
+	}
+	c, err := config.FromEnv(apiOnly)
+	if err != nil || c.HTTPAddress != "127.0.0.1:8080" || c.Mode != config.ModeAPI {
 		t.Fatal(c, err)
 	}
-	for key, value := range map[string]string{"JUDEX_ENV": "invalid", "JUDEX_HTTP_ADDR": "bad", "JUDEX_SHUTDOWN_TIMEOUT": "0s"} {
+	invalid := map[string]string{
+		"JUDEX_ENV": "invalid", "JUDEX_HTTP_ADDR": "bad", "JUDEX_SHUTDOWN_TIMEOUT": "0s",
+		"JUDEX_MODE": "bogus", "JUDEX_WORKER_COUNT": "0",
+	}
+	for key, value := range invalid {
 		_, err := config.FromEnv(func(k string) string {
+			if k == "JUDEX_MODE" && key != "JUDEX_MODE" {
+				return "api"
+			}
 			if k == key {
 				return value
 			}
@@ -100,5 +113,29 @@ func TestConfiguration(t *testing.T) {
 		if err == nil {
 			t.Fatal("invalid configuration accepted", key)
 		}
+	}
+	// Persistence modes require a database URL; production always does.
+	for _, mode := range []string{"all", "worker", "migrate"} {
+		_, err := config.FromEnv(func(k string) string {
+			if k == "JUDEX_MODE" {
+				return mode
+			}
+			return ""
+		})
+		if err == nil {
+			t.Fatal("mode without database accepted", mode)
+		}
+	}
+	_, err = config.FromEnv(func(k string) string {
+		switch k {
+		case "JUDEX_MODE":
+			return "api"
+		case "JUDEX_ENV":
+			return "production"
+		}
+		return ""
+	})
+	if err == nil {
+		t.Fatal("production without database accepted")
 	}
 }

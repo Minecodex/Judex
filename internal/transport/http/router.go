@@ -3,6 +3,7 @@
 package httptransport
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"io/fs"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/kakj-go/Judex/internal/version"
 )
 
@@ -23,8 +25,9 @@ type Options struct {
 	Logger   *slog.Logger
 	Assets   fs.FS
 	Draining *atomic.Bool
-	// APIPath is the sub-path prefix the SPA is served under ("/").
-	APIPath string
+	// ReadyCheck validates deeper readiness (DB reachable, not draining);
+	// nil means HTTP-only readiness.
+	ReadyCheck func(ctx context.Context) error
 }
 
 // NewRouter builds the HTTP layer: probes, system info, the full contract
@@ -68,7 +71,17 @@ func NewRouter(opts Options, spec *SpecRouter) (*gin.Engine, error) {
 			respond{}.error(c, errDraining)
 			return
 		}
-		c.JSON(200, gin.H{"status": "ready", "scope": "http-scaffold"})
+		if opts.ReadyCheck != nil {
+			if err := opts.ReadyCheck(c.Request.Context()); err != nil {
+				respond{}.error(c, apierrors.Newf(apierrors.DependencyDown, "readiness check failed").WithRetryable(true).Wrap(err))
+				return
+			}
+		}
+		scope := "http"
+		if opts.ReadyCheck != nil {
+			scope = "http+db"
+		}
+		c.JSON(200, gin.H{"status": "ready", "scope": scope})
 	})
 	spec.Register("getSystem", func(c *gin.Context) {
 		respond{}.ok(c, gin.H{

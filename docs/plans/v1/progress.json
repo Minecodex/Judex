@@ -90,9 +90,15 @@
         "P0-03",
         "P0-04"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "config: JUDEX_MODE (all/api/worker/migrate) + JUDEX_DATABASE_URL + worker count + log level; strict validation (persistence modes require DB; production always requires DB)",
+        "internal/app: pool+HTTP+worker 装配、分模式生命周期、draining→readyz 分级（http / http+db）、graceful Close",
+        "cmd/judex-server: --mode/--version flags, signal-driven shutdown, migrate 模式独立退出码",
+        "tests/integration/application_test.go: 真实 PG 上启动完整应用 -> /readyz(/healthz/api 501) 验证 -> 优雅关闭",
+        "Makefile: test-integration/test-contract 分层命令; .env.example 更新"
+      ],
+      "notes": "P0 阶段完成。contract/router/integration/backend 测试全绿"
     },
     {
       "id": "P1-01",
