@@ -40,7 +40,7 @@ test-go:
 test-web:
 	$(NPM) run test:web
 test-integration:
-	$(GO) test ./tests/integration/ -count=1
+	$(GO) test ./tests/integration/ -count=1 -timeout 20m
 test-contract:
 	$(GO) test ./tests/contract/ -count=1
 test-e2e: build-web

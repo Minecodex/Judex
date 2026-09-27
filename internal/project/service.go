@@ -119,9 +119,10 @@ func (s *Service) Create(ctx context.Context, creator uuid.UUID, req CreateReque
 			INSERT INTO projects (id, title, description, kind, creator_user_id, owner_user_id,
 			                      max_discussion_rounds, approval_timeout_seconds, created_at, updated_at)
 			VALUES ($1,$2,$3,$4,$5,$5,$6,$7,$8,$8)
-			RETURNING id, title, description, kind, status, version, created_at, updated_at`,
+			RETURNING id, title, description, kind, status, max_discussion_rounds, approval_timeout_seconds, version, created_at, updated_at`,
 			id, title, req.Description, req.Kind, creator, req.MaxDiscussionRounds, req.ApprovalTimeoutSeconds, now).
 			Scan(&created.ID, &created.Title, &created.Description, &created.Kind, &created.Status,
+				&created.MaxDiscussionRounds, &created.ApprovalTimeoutSeconds,
 				&created.Version, &created.CreatedAt, &created.UpdatedAt); err != nil {
 			return apierrors.New(apierrors.Internal, "project insert failed").Wrap(err)
 		}

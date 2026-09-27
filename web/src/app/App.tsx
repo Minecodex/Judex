@@ -1,199 +1,155 @@
-import { UIWarning } from "../components/ui/FormControls";
-import { useState, useEffect } from "react";
-import { Button, Card, Input, Label, TextField } from "@heroui/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router";
+import { Button, Card } from "@heroui/react";
 import WorkApp from "../features/chat/ChatWorkspace";
 import { usePreferences } from "../stores/preferences";
-import { translate } from "../i18n";
-import {
-  APIError,
-  dataMode,
-  request,
-  type SystemInfo,
-} from "../lib/api/client";
+import { translate, type Key } from "../i18n";
+import { dataMode } from "../lib/api/client";
+import { AuthProvider, useAuth } from "../features/auth/AuthProvider";
+import { LoginPage } from "../features/auth/LoginPage";
+import { RegisterPage } from "../features/auth/RegisterPage";
+import { RecoverPage } from "../features/auth/RecoverPage";
+import { WorkspaceShell } from "../features/auth/WorkspaceShell";
+
 export default function App() {
-  const client = useQueryClient();
-  const [signedOut, setSignedOut] = useState(
-    () => sessionStorage.getItem("judex.preview.signedOut") === "1",
-  );
   const { locale, theme, setLocale, setTheme } = usePreferences();
-  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [locale, theme]);
-  const [screen, setScreen] = useState<"login" | "register" | null>(() =>
-    location.pathname === "/register"
-      ? "register"
-      : location.pathname === "/login"
-        ? "login"
-        : null,
+  // 演示模式保留完整旧工作区（tests/e2e fixture）；生产 bundle 走真实认证。
+  if (dataMode === "demo") return <WorkApp onLogout={async () => {}} />;
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AuthRoutes
+          controls={
+            <div className="judex-entry-controls">
+              <Button variant="ghost" onClick={() => setLocale(locale === "en" ? "zh-CN" : "en")}>
+                {locale === "en" ? "中文" : "EN"}
+              </Button>
+              <Button variant="ghost" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+                {theme === "dark" ? "☀" : "☾"}
+              </Button>
+            </div>
+          }
+        />
+      </BrowserRouter>
+    </AuthProvider>
   );
-  const system = useQuery({
-    queryKey: ["system"],
-    queryFn: () => request<SystemInfo>("/system"),
-    retry: false,
-    enabled: dataMode === "api" || (!!screen && !signedOut),
-  });
-  const signOut = async () => {
-    if (dataMode === "api")
-      await request("/auth/logout", {
-        method: "POST",
-      });
-    else sessionStorage.setItem("judex.preview.signedOut", "1");
-    await client.cancelQueries();
-    client.clear();
-    setSignedOut(true);
-    setScreen("login");
-    history.replaceState(null, "", "/login");
-  };
-  if (dataMode === "demo" && signedOut)
+}
+
+function AuthRoutes({ controls }: { controls: React.ReactNode }) {
+  const { phase, refresh } = useAuth();
+  const location = useLocation();
+  const { locale } = usePreferences();
+  const t = (key: Key) => translate(locale, key);
+
+  if (phase === "bootstrapping") {
     return (
       <main className="judex-entry min-h-screen flex items-center justify-center">
-        <Card className="judex-entry-card">
+        <p className="judex-workspace-status">{t("shellLoading")}</p>
+      </main>
+    );
+  }
+  if (phase === "unavailable") {
+    return (
+      <main className="judex-entry min-h-screen flex flex-col items-center justify-center gap-4 p-8">
+        {controls}
+        <Card className="judex-auth-card">
           <Card.Header>
-            <Card.Title>{t("accountSignedOut")}</Card.Title>
-            <Card.Description>{t("accountSignedOutHint")}</Card.Description>
+            <Card.Title>{t("authEntryTitle")}</Card.Title>
+            <Card.Description>{t("errServer")}</Card.Description>
           </Card.Header>
           <Card.Content>
-            <Button
-              data-testid="return-preview"
-              onPress={() => {
-                sessionStorage.removeItem("judex.preview.signedOut");
-                history.replaceState(null, "", "/");
-                setSignedOut(false);
-                setScreen(null);
-              }}
-            >
-              {t("accountReturnPreview")}
-            </Button>
+            <Button onClick={() => refresh()}>{t("shellNetwork")}</Button>
           </Card.Content>
         </Card>
       </main>
     );
-  if (dataMode === "demo" && !screen) return <WorkApp onLogout={signOut} />;
+  }
+  const isAuthPage =
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname === "/recover";
   return (
-    <main className="judex-entry min-h-screen flex flex-col items-center justify-center gap-6 p-8">
-      <div className="judex-entry-controls">
-        <Button
-          variant="ghost"
-          onPress={() => setLocale(locale === "en" ? "zh-CN" : "en")}
-        >
-          {locale === "en" ? "中文" : "EN"}
-        </Button>
-        <Button
-          variant="ghost"
-          onPress={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          {theme === "dark" ? "☀" : "☾"}
-        </Button>
-      </div>
-      <Card className="judex-entry-card">
-        <Card.Header>
-          <Card.Title>{t("shellTitle")}</Card.Title>
-          <Card.Description>{t("shellWelcome")}</Card.Description>
-        </Card.Header>
-        <Card.Content>
-          <p>{t("shellDescription")}</p>
-          <div className="judex-connection" data-testid="backend-status">
-            {system.isPending
-              ? t("shellLoading")
-              : system.isError
-                ? t("shellNetwork")
-                : t("shellConnected") + " · " + system.data.version}
-          </div>
-          {screen ? (
-            <AuthForm kind={screen} />
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          phase === "authenticated" ? (
+            <Navigate to="/" replace />
           ) : (
-            <div className="judex-entry-actions">
-              <Button onPress={() => setScreen("login")}>
-                {t("shellLogin")}
-              </Button>
-              <Button variant="secondary" onPress={() => setScreen("register")}>
-                {t("shellRegister")}
-              </Button>
-            </div>
-          )}
-          {screen && (
-            <Button variant="ghost" onPress={() => setScreen(null)}>
-              {t("shellBack")}
-            </Button>
-          )}
-        </Card.Content>
-      </Card>
-      <small>{t("shellApiMode")} · Apache-2.0</small>
-    </main>
+            <EntryLayout controls={controls}>
+              <LoginPage />
+            </EntryLayout>
+          )
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          phase === "authenticated" ? (
+            <Navigate to="/" replace />
+          ) : (
+            <EntryLayout controls={controls}>
+              <RegisterPage />
+            </EntryLayout>
+          )
+        }
+      />
+      <Route
+        path="/recover"
+        element={
+          <EntryLayout controls={controls}>
+            <RecoverPage />
+          </EntryLayout>
+        }
+      />
+      <Route
+        path="/*"
+        element={
+          phase === "authenticated" ? (
+            <WorkspaceShell />
+          ) : (
+            <Navigate
+              to="/login"
+              replace
+              state={{ from: isAuthPage ? "/" : location.pathname + location.search }}
+            />
+          )
+        }
+      />
+    </Routes>
   );
 }
-function AuthForm({ kind }: { kind: "login" | "register" }) {
+
+function EntryLayout({
+  controls,
+  children,
+}: {
+  controls: React.ReactNode;
+  children: React.ReactNode;
+}) {
   const { locale } = usePreferences();
-  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
-  const [name, setName] = useState(""),
-    [email, setEmail] = useState(""),
-    [password, setPassword] = useState("");
-  const mutation = useMutation({
-    mutationFn: () =>
-      request("/auth/" + kind, {
-        method: "POST",
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-        }),
-      }),
-    onSettled: () => setPassword(""),
-  });
+  const t = (key: Key) => translate(locale, key);
   return (
-    <form
-      className="judex-auth-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        mutation.mutate();
-      }}
-    >
-      {kind === "register" && (
-        <TextField isRequired name="name" value={name} onChange={setName}>
-          <Label>{t("shellName")}</Label>
-          <Input autoComplete="name" />
-        </TextField>
-      )}
-      <TextField
-        isRequired
-        type="email"
-        name="email"
-        value={email}
-        onChange={setEmail}
-      >
-        <Label>{t("shellEmail")}</Label>
-        <Input autoComplete="email" />
-      </TextField>
-      <TextField
-        isRequired
-        name="password"
-        type="password"
-        value={password}
-        onChange={setPassword}
-      >
-        <Label>{t("shellPassword")}</Label>
-        <Input
-          autoComplete={kind === "login" ? "current-password" : "new-password"}
-        />
-      </TextField>
-      <Button type="submit" isPending={mutation.isPending}>
-        {t(mutation.isPending ? "shellPending" : "shellSubmit")}
-      </Button>
-      {mutation.isError && (
-        <UIWarning role="alert">
-          {t(
-            mutation.error instanceof APIError &&
-              mutation.error.code === "NOT_IMPLEMENTED"
-              ? "shellUnavailable"
-              : "shellNetwork",
-          )}
-        </UIWarning>
-      )}
-      <small>{t("shellAuthNote")}</small>
-    </form>
+    <main className="judex-entry min-h-screen flex flex-col items-center justify-center gap-6 p-8">
+      {controls}
+      <Card className="judex-auth-card judex-entry-card">
+        <Card.Header>
+          <Card.Title>{t("authEntryTitle")}</Card.Title>
+          <Card.Description>{t("authEntryHint")}</Card.Description>
+        </Card.Header>
+        <Card.Content>{children}</Card.Content>
+      </Card>
+    </main>
   );
 }

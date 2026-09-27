@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 @import "./tokens.css";
+@import "./auth.css";
 @import "./base.css";
 @import "./studio.css";
 @import "./workflow.css";

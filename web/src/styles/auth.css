@@ -1,0 +1,145 @@
+/* 认证页面与 P1 工作区壳（docs/plans/v1/08）。仅 judex-* 前缀 + token 变量。 */
+
+.judex-entry {
+  background: var(--judex-bg, #f6f5f2);
+  color: var(--judex-fg, #26251f);
+}
+[data-theme="dark"] .judex-entry {
+  background: var(--judex-bg, #1b1a17);
+  color: var(--judex-fg, #ece9e2);
+}
+
+.judex-auth-card {
+  width: min(440px, calc(100vw - 48px));
+}
+
+.judex-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.judex-auth-reveal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--judex-font-sm, 13px);
+  color: var(--judex-muted, #6f6b60);
+}
+
+.judex-auth-hint {
+  font-size: var(--judex-font-sm, 13px);
+  color: var(--judex-muted, #6f6b60);
+}
+
+.judex-workspace-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--judex-bg, #f6f5f2);
+  color: var(--judex-fg, #26251f);
+}
+[data-theme="dark"] .judex-workspace-shell {
+  background: var(--judex-bg, #1b1a17);
+  color: var(--judex-fg, #ece9e2);
+}
+
+.judex-workspace-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--judex-border, #e3e0d8);
+}
+[data-theme="dark"] .judex-workspace-header {
+  border-bottom-color: var(--judex-border, #32302a);
+}
+
+.judex-workspace-user {
+  font-size: var(--judex-font-sm, 13px);
+  color: var(--judex-muted, #6f6b60);
+}
+
+.judex-workspace-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.judex-workspace-main {
+  flex: 1;
+  width: min(880px, 100% - 48px);
+  margin: 0 auto;
+  padding: 28px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.judex-workspace-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.judex-workspace-create {
+  width: 100%;
+}
+
+.judex-workspace-input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--judex-border, #d8d4c9);
+  border-radius: var(--judex-radius, 8px);
+  background: var(--judex-panel, #fff);
+  color: inherit;
+  font-size: 14px;
+}
+[data-theme="dark"] .judex-workspace-input {
+  background: var(--judex-panel, #26241f);
+  border-color: var(--judex-border, #3a382f);
+}
+
+.judex-workspace-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+}
+
+.judex-workspace-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border: 1px solid var(--judex-border, #e3e0d8);
+  border-radius: var(--judex-radius, 10px);
+  background: var(--judex-panel, #fff);
+}
+[data-theme="dark"] .judex-workspace-item {
+  background: var(--judex-panel, #242320);
+  border-color: var(--judex-border, #32302a);
+}
+
+.judex-workspace-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 48px 24px;
+  border: 1px dashed var(--judex-border, #d8d4c9);
+  border-radius: var(--judex-radius, 12px);
+  color: var(--judex-muted, #6f6b60);
+}
+
+.judex-workspace-status {
+  color: var(--judex-muted, #6f6b60);
+}
+
+.judex-workspace-boundary {
+  margin-top: auto;
+  font-size: var(--judex-font-sm, 13px);
+  color: var(--judex-muted, #6f6b60);
+}

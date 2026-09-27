@@ -193,9 +193,17 @@
         "P1-02",
         "P1-04"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "web: react-router@7.5.0 锁定；/login /register /recover + / 工作区壳路由；AuthProvider 状态机（bootstrapping→anonymous/authenticated/unavailable，401 与 5xx 区分，无假登录态）",
+        "页面：注册（确认密码/aria-live/autocomplete/仅内存口令）、登录（统一错误映射/限流文案/returnTo 安全跳转拒绝双斜杠与协议）、恢复（如实展示运维获取方式，成功不自动登录）",
+        "client.ts: envelope 解包、CSRF token 内存管理、Idempotency-Key 透传；features/auth/api.ts 使用生成 schema 类型",
+        "WorkspaceShell: 真实项目列表/新建（真实 API+幂等键）/空项目引导/退出登录清缓存；工作区完整业务界面按计划在 P2-08/P6 接入",
+        "demo 模式完整保留为测试 fixture（VITE_DATA_MODE=demo）",
+        "真实垂直冒烟：Docker PG + go server 托管 web/dist → register/session/CSRF/createProject 全通，SPA HTML 正常；修复创建后默认配置未回填的投影 bug",
+        "npm run build + test:web 全绿"
+      ],
+      "notes": "浏览器级双用户 E2E 在 P6-03 business.config.ts 统一建设"
     },
     {
       "id": "P1-07",

@@ -29,7 +29,11 @@ type PGFixture struct {
 
 func run(t *testing.T, args ...string) string {
 	t.Helper()
-	cmd := exec.Command(args[0], args[1:]...)
+	// Docker calls are bounded so a wedged daemon fails the test fast
+	// instead of hanging the whole suite until the global timeout.
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("%v failed: %v\n%s", args, err, out)
@@ -38,7 +42,9 @@ func run(t *testing.T, args ...string) string {
 }
 
 func tryRun(args ...string) (string, error) {
-	cmd := exec.Command(args[0], args[1:]...)
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
