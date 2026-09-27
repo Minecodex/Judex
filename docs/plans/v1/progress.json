@@ -330,9 +330,14 @@
         "P2-06",
         "P0-04"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "SSEHandlers: 订阅时成员校验+seq 回放+15s 心跳+1s DB 轮询兜底（跨进程写入者）+60s 成员复核（撤销即断开）+过期游标 409 EVENT_CURSOR_EXPIRED；事件 payload 最小化（eventId/seq/type/object/occurredAt）",
+        "notifications: 列表+已读标记（无业务状态变化）；表按(user,event,type)去重",
+        "integration: 实时事件在流上到达（含 seq）、非成员连接 404；outbox 递送器常驻循环随 worker 进程装配在 P0-05 基础上于后续阶段按需开启",
+        "全套集成/backend/contract 测试绿"
+      ],
+      "notes": "run.* 事件流（/runs/{id}/events）在 P5-04 接入"
     },
     {
       "id": "P2-08",
