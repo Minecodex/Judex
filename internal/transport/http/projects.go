@@ -21,12 +21,12 @@ type ProjectHandlers struct {
 func NewProjectHandlers(svc *project.Service) *ProjectHandlers { return &ProjectHandlers{Projects: svc} }
 
 func (h *ProjectHandlers) Register(spec *SpecRouter) {
-	spec.Register("listProjects", h.list)
-	spec.Register("createProject", h.create)
-	spec.Register("getProject", h.get)
-	spec.Register("getProjectBootstrap", h.bootstrap)
-	spec.Register("archiveProject", h.archive(true))
-	spec.Register("restoreProject", h.archive(false))
+	spec.Register("listProjects", withAuth(h.list))
+	spec.Register("createProject", withAuth(h.create))
+	spec.Register("getProject", withAuth(h.get))
+	spec.Register("getProjectBootstrap", withAuth(h.bootstrap))
+	spec.Register("archiveProject", withAuth(h.archive(true)))
+	spec.Register("restoreProject", withAuth(h.archive(false)))
 }
 
 func pageParams(c *gin.Context) (int, *time.Time, *uuid.UUID, error) {

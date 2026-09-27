@@ -80,3 +80,19 @@ func principalFrom(c *gin.Context) *auth.Principal {
 
 // ensure io import stays referenced if body handling changes.
 var _ io.Reader = (io.Reader)(nil)
+
+// withAuth wraps a handler that requires an authenticated principal; it is
+// the transport-level guard for every security-marked operation (06 §1).
+func withAuth(h Handler) Handler {
+	return func(c *gin.Context) {
+		if principalFrom(c) == nil {
+			if err, ok := c.Value("judex.auth_error").(error); ok {
+				respond{}.error(c, err)
+				return
+			}
+			respond{}.error(c, apierrors.New(apierrors.Unauthenticated, "authentication required"))
+			return
+		}
+		h(c)
+	}
+}

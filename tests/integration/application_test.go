@@ -96,15 +96,16 @@ func TestApplicationBootsAndShutsDown(t *testing.T) {
 	if req.StatusCode != 400 {
 		t.Fatalf("login with empty body must be 400, got %d", req.StatusCode)
 	}
-	// Unimplemented business endpoints stay explicit 501.
+	// Authenticated endpoints reject anonymous access with 401 now that the
+	// module is live.
 	resp, err = http.Get(base + "/api/v1/projects")
 	if err != nil {
 		t.Fatal(err)
 	}
 	io.Copy(io.Discard, resp.Body)
 	resp.Body.Close()
-	if resp.StatusCode != 501 {
-		t.Fatalf("projects before P1-04 must be 501, got %d", resp.StatusCode)
+	if resp.StatusCode != 401 {
+		t.Fatalf("projects without a session must be 401, got %d", resp.StatusCode)
 	}
 }
 

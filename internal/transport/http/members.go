@@ -18,13 +18,13 @@ type MemberHandlers struct {
 func NewMemberHandlers(svc *project.Service) *MemberHandlers { return &MemberHandlers{Projects: svc} }
 
 func (h *MemberHandlers) Register(spec *SpecRouter) {
-	spec.Register("listMembers", h.list)
-	spec.Register("updateMemberRole", h.updateRole)
-	spec.Register("removeMember", h.remove)
-	spec.Register("leaveProject", h.leave)
-	spec.Register("requestOwnerTransfer", h.requestTransfer)
-	spec.Register("getOwnerTransfer", h.getTransfer)
-	spec.Register("decideOwnerTransfer", h.decideTransfer)
+	spec.Register("listMembers", withAuth(h.list))
+	spec.Register("updateMemberRole", withAuth(h.updateRole))
+	spec.Register("removeMember", withAuth(h.remove))
+	spec.Register("leaveProject", withAuth(h.leave))
+	spec.Register("requestOwnerTransfer", withAuth(h.requestTransfer))
+	spec.Register("getOwnerTransfer", withAuth(h.getTransfer))
+	spec.Register("decideOwnerTransfer", withAuth(h.decideTransfer))
 }
 
 func (h *MemberHandlers) list(c *gin.Context) {
