@@ -143,6 +143,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 				Resolver: idSvc.ResolveSession,
 			}
 		}
+		httptransport.PreviewOrigin = cfg.PreviewOrigin
 		router, err := httptransport.NewRouter(httptransport.Options{
 			Logger: logger, Assets: assets, Draining: draining,
 			ReadyCheck: app.readyCheck,

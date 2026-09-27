@@ -33,6 +33,36 @@ func (h *MaterialHandlers) Register(spec *SpecRouter) {
 	spec.Register("listMaterials", withAuth(h.listMaterials))
 	spec.Register("listMaterialVersions", withAuth(h.listVersions))
 	spec.Register("downloadMaterialContent", withAuth(h.download))
+	spec.Register("createPreviewSession", withAuth(h.createPreview))
+}
+
+// PreviewOrigin configures where isolated previews live (empty = source
+// download only, no interactive preview claims).
+var PreviewOrigin string
+
+func (h *MaterialHandlers) createPreview(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	materialID, err := uuid.Parse(c.Param("materialId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("materialId", "invalid"))
+		return
+	}
+	versionID, err := uuid.Parse(c.Param("versionId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("versionId", "invalid"))
+		return
+	}
+	session, err := h.Materials.CreatePreviewSession(c.Request.Context(), p.UserID, projectID, materialID, versionID, PreviewOrigin)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.created(c, session)
 }
 
 func (h *MaterialHandlers) listSessions(c *gin.Context) {

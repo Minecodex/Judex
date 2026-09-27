@@ -41,6 +41,9 @@ type Config struct {
 	// ObjectStorage mirrors the Object config contract (11 §2); required
 	// from P2-04 on for materials, optional for pure identity deployments.
 	ObjectStorage ObjectStorageOptions
+	// PreviewOrigin is the isolated origin serving HTML material previews
+	// (04 §4). Empty: no interactive preview, source download only.
+	PreviewOrigin string
 }
 
 // ObjectStorageOptions configures the S3-compatible store.
@@ -116,6 +119,7 @@ func FromEnv(get func(string) string) (Config, error) {
 		Bucket:          value("JUDEX_S3_BUCKET", ""),
 		PathStyle:       value("JUDEX_S3_PATH_STYLE", "true") == "true",
 	}
+	c.PreviewOrigin = value("JUDEX_PREVIEW_ORIGIN", "")
 	c.ModelCatalogFile = value("JUDEX_MODEL_CATALOG_FILE", "")
 	if c.ModelCatalogFile != "" {
 		if _, err := os.Stat(c.ModelCatalogFile); err != nil {

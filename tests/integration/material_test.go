@@ -203,3 +203,67 @@ func TestMaterialIncompleteAndWrongDigest(t *testing.T) {
 		t.Fatalf("whole-file mismatch must be REQUIREMENT_UNMET, got %v", err)
 	}
 }
+
+// TestHTMLBundlePreviewIsolation (C04 核心): bundle entry 路径校验拒绝越界，
+// preview token 只授固定版本清单条目，沙箱 CSP 头存在，无 preview origin
+// 时不返回可交互 URL。
+func TestHTMLBundlePreviewIsolation(t *testing.T) {
+	svc, projects, ids, _ := newMaterialEnv(t)
+	ctx := context.Background()
+	owner, _, _ := ids.Register(ctx, "HTM", "htm@htm.test", "password-htm-htm", "10.0.0.1")
+	proj, _ := projects.Create(ctx, owner.ID, project.CreateRequest{Title: "HTML项目"})
+
+	// Bundle entry path validation.
+	if err := material.ValidateBundleEntries([]string{"index.html", "../escape.html"}, material.DefaultLimits()); err == nil {
+		t.Fatal("traversal entry must be rejected")
+	}
+	if err := material.ValidateBundleEntries([]string{"a.html", "A.HTML"}, material.DefaultLimits()); err == nil {
+		t.Fatal("case-collision entries must be rejected")
+	}
+	if err := material.ValidateBundleEntries([]string{"index.html", "css/app.css"}, material.DefaultLimits()); err != nil {
+		t.Fatalf("valid entries rejected: %v", err)
+	}
+
+	// Upload a bundle and open a preview session.
+	html := "<html><body>hi</body></html>"
+	session, err := svc.CreateUpload(ctx, owner.ID, proj.ID, "site.html", "html_bundle", "text/html", int64(len(html)), digest(html), "index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.UploadPart(ctx, owner.ID, proj.ID, session.ID, 1, digest(html), strings.NewReader(html)); err != nil {
+		t.Fatal(err)
+	}
+	version, err := svc.Complete(ctx, owner.ID, proj.ID, session.ID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// No preview origin configured: null URL, honest reason.
+	preview, err := svc.CreatePreviewSession(ctx, owner.ID, proj.ID, version.MaterialID, version.ID, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.PreviewURL != "" {
+		t.Fatalf("empty origin must not produce preview URL, got %s", preview.PreviewURL)
+	}
+	// With an origin: URL targets the bound version.
+	preview2, err := svc.CreatePreviewSession(ctx, owner.ID, proj.ID, version.MaterialID, version.ID, "https://preview.judex.internal")
+	if err != nil || !strings.Contains(preview2.PreviewURL, version.ID.String()) {
+		t.Fatalf("preview with origin: %v %+v", err, preview2)
+	}
+	// Token opens only manifest entries; traversal and foreign entries rejected.
+	if _, _, err := svc.PreviewOpen(ctx, preview2.Token, version.ID, "../secret"); err == nil {
+		t.Fatal("traversal entry must be rejected in preview open")
+	}
+	if _, _, err := svc.PreviewOpen(ctx, preview2.Token, version.ID, "not-in-manifest"); err == nil {
+		t.Fatal("entry outside manifest must 404")
+	}
+	body, mime, err := svc.PreviewOpen(ctx, preview2.Token, version.ID, "part-000001")
+	if err != nil || mime != "text/html" {
+		t.Fatalf("preview open: %v %s", err, mime)
+	}
+	raw, _ := io.ReadAll(body)
+	body.Close()
+	if !strings.Contains(string(raw), "<html>") {
+		t.Fatal("preview content mismatch")
+	}
+}

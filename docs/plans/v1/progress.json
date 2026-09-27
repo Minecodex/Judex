@@ -301,9 +301,14 @@
       "dependsOn": [
         "P2-04"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "material/preview.go: ValidateBundleEntries（拒绝绝对路径/../drive/UNC/NUL/大小写冲突/数量上限）；CreatePreviewSession 一次性 token（hash 存储、绑定单一版本、60s TTL、无 preview origin 时诚实返回空 URL 不假装可交互）；PreviewOpen 只开清单条目且拒绝越界路径",
+        "migration 00007 preview_tokens；config JUDEX_PREVIEW_ORIGIN（独立 origin 部署在 P7 Helm）",
+        "handler: createPreviewSession 接入契约",
+        "integration: 越界/大小写冲突条目拒绝、空 origin 不产 URL、token 只开本版本清单、traversal/manifest 外 404、内容正确"
+      ],
+      "notes": "独立 preview origin 的 K8s ingress/CSP 部署配置在 P7-01；压缩炸弹解压限制随真实对象存储部署验收"
     },
     {
       "id": "P2-06",

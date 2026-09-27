@@ -28,14 +28,14 @@ import (
 
 // Topic is the API projection (06 §4).
 type Topic struct {
-	ID             uuid.UUID      `json:"id"`
-	Title          string         `json:"title"`
-	Kind           string         `json:"kind"`
-	ContextType    *string        `json:"contextType"`
-	ContextID      *uuid.UUID     `json:"contextId"`
-	LastMessageSeq int64          `json:"lastMessageSeq"`
-	Links          []TopicLink    `json:"links"`
-	CreatedAt      time.Time      `json:"createdAt"`
+	ID             uuid.UUID   `json:"id"`
+	Title          string      `json:"title"`
+	Kind           string      `json:"kind"`
+	ContextType    *string     `json:"contextType"`
+	ContextID      *uuid.UUID  `json:"contextId"`
+	LastMessageSeq int64       `json:"lastMessageSeq"`
+	Links          []TopicLink `json:"links"`
+	CreatedAt      time.Time   `json:"createdAt"`
 }
 
 type TopicLink struct {
@@ -45,20 +45,20 @@ type TopicLink struct {
 
 // Message is one committed chat record (kind/author derived server-side).
 type Message struct {
-	ID               uuid.UUID  `json:"id"`
-	TopicID          uuid.UUID  `json:"topicId"`
-	Seq              int64      `json:"seq"`
-	Kind             string     `json:"kind"`
-	AuthorUserID     *uuid.UUID `json:"authorUserId"`
-	AuthorName       *string    `json:"authorDisplayName"`
-	IdentityID       *uuid.UUID `json:"identityId"`
-	Source           *string    `json:"source"`
-	SubmissionID     *uuid.UUID `json:"submissionId"`
-	RunID            *uuid.UUID `json:"runId"`
-	Content          string     `json:"content"`
-	State            string     `json:"state"`
-	MaterialVersionIDs []string `json:"materialVersionIds"`
-	CreatedAt        time.Time  `json:"createdAt"`
+	ID                 uuid.UUID  `json:"id"`
+	TopicID            uuid.UUID  `json:"topicId"`
+	Seq                int64      `json:"seq"`
+	Kind               string     `json:"kind"`
+	AuthorUserID       *uuid.UUID `json:"authorUserId"`
+	AuthorName         *string    `json:"authorDisplayName"`
+	IdentityID         *uuid.UUID `json:"identityId"`
+	Source             *string    `json:"source"`
+	SubmissionID       *uuid.UUID `json:"submissionId"`
+	RunID              *uuid.UUID `json:"runId"`
+	Content            string     `json:"content"`
+	State              string     `json:"state"`
+	MaterialVersionIDs []string   `json:"materialVersionIds"`
+	CreatedAt          time.Time  `json:"createdAt"`
 }
 
 // Submission is the unified entry record.
