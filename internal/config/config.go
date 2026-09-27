@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -32,6 +33,9 @@ type Config struct {
 	DatabaseURL     string
 	WorkerCount     int
 	LogLevel        string
+	// AllowedOrigins lists exact browser origins accepted for writes
+	// (02 §2); production must include the public origin.
+	AllowedOrigins []string
 }
 
 func Load() (Config, error) { return FromEnv(os.Getenv) }
@@ -78,6 +82,16 @@ func FromEnv(get func(string) string) (Config, error) {
 	}
 	if c.Environment == "production" && c.DatabaseURL == "" {
 		return c, fmt.Errorf("production requires JUDEX_DATABASE_URL")
+	}
+	if raw := get("JUDEX_ALLOWED_ORIGINS"); raw != "" {
+		for _, o := range strings.Split(raw, ",") {
+			if o = strings.TrimSpace(o); o != "" {
+				c.AllowedOrigins = append(c.AllowedOrigins, o)
+			}
+		}
+	}
+	if c.Environment == "production" && len(c.AllowedOrigins) == 0 {
+		return c, fmt.Errorf("production requires JUDEX_ALLOWED_ORIGINS (comma-separated exact origins)")
 	}
 	return c, nil
 }

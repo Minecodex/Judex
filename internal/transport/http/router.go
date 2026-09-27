@@ -15,7 +15,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kakj-go/Judex/internal/identity"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
+	"github.com/kakj-go/Judex/internal/transport/http/middleware"
 	"github.com/kakj-go/Judex/internal/version"
 )
 
@@ -28,6 +30,15 @@ type Options struct {
 	// ReadyCheck validates deeper readiness (DB reachable, not draining);
 	// nil means HTTP-only readiness.
 	ReadyCheck func(ctx context.Context) error
+	// Auth, when non-nil, enables session resolution + CSRF/Origin
+	// enforcement for the whole API surface (docs/plans/v1/02 §2).
+	Auth *AuthOptions
+}
+
+// AuthOptions carries the wiring the middleware needs.
+type AuthOptions struct {
+	Config   middleware.AuthConfig
+	Resolver func(ctx context.Context, secret string) (identity.ResolvedSession, error)
 }
 
 // NewRouter builds the HTTP layer: probes, system info, the full contract
@@ -65,6 +76,11 @@ func NewRouter(opts Options, spec *SpecRouter) (*gin.Engine, error) {
 		opts.Logger.Error("request panic", "request_id", c.GetString(requestIDKey))
 		respond{}.error(c, errInternalPanic)
 	}))
+	if opts.Auth != nil && opts.Auth.Resolver != nil {
+		router.Use(middleware.SessionMiddleware(opts.Auth.Config, opts.Auth.Resolver))
+		router.Use(middleware.CheckOriginOnly(opts.Auth.Config))
+		router.Use(middleware.RequireCSRF(opts.Auth.Config))
+	}
 	router.GET("/healthz", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
 	router.GET("/readyz", func(c *gin.Context) {
 		if opts.Draining.Load() {

@@ -86,15 +86,25 @@ func TestApplicationBootsAndShutsDown(t *testing.T) {
 	if resp.StatusCode != 200 || !contains(string(body), "Judex") {
 		t.Fatalf("system endpoint: %d %s", resp.StatusCode, body)
 	}
-	// Unimplemented business endpoint stays explicit 501.
-	resp, err = http.Post(base+"/api/v1/auth/login", "application/json", nil)
+	// Identity is live: bad login body is a 400, not a 501.
+	req, err := http.Post(base+"/api/v1/auth/login", "application/json", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	io.Copy(io.Discard, req.Body)
+	req.Body.Close()
+	if req.StatusCode != 400 {
+		t.Fatalf("login with empty body must be 400, got %d", req.StatusCode)
+	}
+	// Unimplemented business endpoints stay explicit 501.
+	resp, err = http.Get(base + "/api/v1/projects")
 	if err != nil {
 		t.Fatal(err)
 	}
 	io.Copy(io.Discard, resp.Body)
 	resp.Body.Close()
 	if resp.StatusCode != 501 {
-		t.Fatalf("login before P1 must be 501, got %d", resp.StatusCode)
+		t.Fatalf("projects before P1-04 must be 501, got %d", resp.StatusCode)
 	}
 }
 

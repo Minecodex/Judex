@@ -262,9 +262,9 @@ func (s *Service) insertSession(ctx context.Context, tx pgx.Tx, userID uuid.UUID
 	now := s.now()
 	expiresAt := now.Add(s.opts.SessionAbsTTL)
 	_, err := tx.Exec(ctx, `
-		INSERT INTO user_sessions (id, user_id, secret_hash, auth_version, created_at, expires_at, last_seen_at, csrf_secret_hash)
+		INSERT INTO user_sessions (id, user_id, secret_hash, auth_version, created_at, expires_at, last_seen_at, csrf_token)
 		VALUES ($1, $2, $3, $4, $5, $6, $5, $7)`,
-		sessionID, userID, keys.Hash(secret), authVersion, now, expiresAt, keys.Hash(csrf))
+		sessionID, userID, keys.Hash(secret), authVersion, now, expiresAt, csrf)
 	if err != nil {
 		return SessionToken{}, apierrors.New(apierrors.Internal, "session insert failed").Wrap(err)
 	}

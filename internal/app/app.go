@@ -17,8 +17,10 @@ import (
 	"time"
 
 	"github.com/kakj-go/Judex/internal/config"
+	"github.com/kakj-go/Judex/internal/identity"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	"github.com/kakj-go/Judex/internal/job"
+	"github.com/kakj-go/Judex/internal/transport/http/middleware"
 	httptransport "github.com/kakj-go/Judex/internal/transport/http"
 )
 
@@ -28,6 +30,7 @@ type Application struct {
 	Config   config.Config
 
 	pool     *postgres.Pool
+	identity *identity.Service
 	engine   *job.Engine
 	root     *os.Root
 	workers  []context.CancelFunc
@@ -60,13 +63,34 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			return nil, err
 		}
 		app.pool = pool
+		limiter := identity.NewRateLimiter(pool.Pool, nil)
+		app.identity = identity.NewService(pool, limiter, identity.Options{}, nil)
 	}
 
 	if cfg.RunsHTTP() {
+		var authOpts *httptransport.AuthOptions
+		spec, err := httptransport.NewSpecRouter(logger)
+		if err != nil {
+			app.Close(context.Background())
+			return nil, err
+		}
+		if app.identity != nil {
+			authCfg := middleware.AuthConfig{
+				Development:    cfg.Environment == "development" || cfg.Environment == "test",
+				AllowedOrigins: cfg.AllowedOrigins,
+			}
+			httptransport.NewIdentityHandlers(app.identity, authCfg, authCfg.Development).Register(spec)
+			idSvc := app.identity
+			authOpts = &httptransport.AuthOptions{
+				Config:   authCfg,
+				Resolver: idSvc.ResolveSession,
+			}
+		}
 		router, err := httptransport.NewRouter(httptransport.Options{
 			Logger: logger, Assets: assets, Draining: draining,
 			ReadyCheck: app.readyCheck,
-		}, nil)
+			Auth:       authOpts,
+		}, spec)
 		if err != nil {
 			app.Close(context.Background())
 			return nil, err
@@ -77,8 +101,8 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			ReadTimeout:       30 * time.Second,
 			// SSE/streaming handlers override the write deadline per request;
 			// the global cap only bounds ordinary requests (docs/plans/v1/00).
-			WriteTimeout: 30 * time.Second,
-			IdleTimeout:  60 * time.Second,
+			WriteTimeout:  30 * time.Second,
+			IdleTimeout:   60 * time.Second,
 			MaxHeaderBytes: 1 << 20,
 		}
 	}

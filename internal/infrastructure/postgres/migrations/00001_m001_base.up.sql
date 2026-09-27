@@ -31,7 +31,7 @@ CREATE TABLE user_sessions (
     expires_at timestamptz NOT NULL,
     last_seen_at timestamptz NOT NULL,
     revoked_at timestamptz,
-    csrf_secret_hash bytea NOT NULL
+    csrf_token text NOT NULL
 );
 CREATE INDEX user_sessions_expiry_idx ON user_sessions (expires_at);
 CREATE INDEX user_sessions_user_idx ON user_sessions (user_id);

@@ -125,9 +125,16 @@
       "dependsOn": [
         "P1-01"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "identity/sessions.go: ResolveSession（hash 校验+revoked/expiry/status/auth_version 五重检查）、节流 TouchSession、Logout、LogoutAll（锁 user 行+auth_version 校验+撤销其他会话与 grants）",
+        "middleware/auth.go: SessionMiddleware（无感解析）/RequireAuth/RequireCSRF（写方法+Web principal：X-CSRF-Token+Origin 白名单）/CheckOriginOnly（匿名写 Origin 检查）",
+        "cookie: __Host-judex_session（prod，Secure/HttpOnly/Lax/Path=/无 Domain）与 judex_dev_session（dev）；csrf_token 明文列（非 bearer 凭据，GET session 可回显）",
+        "handlers: register/login/getSession/logout/logoutAll 接入 SpecRouter；严格 JSON（拒绝未知字段+1MiB 上限）；Retry-After 头",
+        "config: JUDEX_ALLOWED_ORIGINS（生产必填）",
+        "HTTP 集成测试: 注册得 cookie+CSRF、无 CSRF 写 403、恶意 Origin 403、合法 Origin+CSRF 通过、logout 后 401；错误密码与未知账号 error envelope 完全一致（防枚举）；重复邮箱 409 EMAIL_IN_USE"
+      ],
+      "notes": "full go test ./... 全绿（backend/contract/deploy/integration）"
     },
     {
       "id": "P1-03",
