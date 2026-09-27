@@ -26,6 +26,61 @@ func (h *WorkHandlers) Register(spec *SpecRouter) {
 	spec.Register("getPlan", withAuth(h.getPlan))
 	spec.Register("discardPlan", withAuth(h.discardPlan))
 	spec.Register("discardTask", withAuth(h.discardTask))
+	spec.Register("startTask", withAuth(h.startTask))
+	spec.Register("getExecutionMap", withAuth(h.executionMap))
+}
+
+func (h *WorkHandlers) startTask(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	taskID, err := uuid.Parse(c.Param("taskId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("taskId", "invalid"))
+		return
+	}
+	var req struct {
+		ExpectedVersion int64  `json:"expectedVersion" binding:"required"`
+		IdentityID      string `json:"identityId"`
+	}
+	if err := bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	identity, err := optionalUUID(req.IdentityID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	task, err := h.Work.Start(c.Request.Context(), p.UserID, projectID, taskID, identity, req.ExpectedVersion)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, task)
+}
+
+func (h *WorkHandlers) executionMap(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	planID, err := optionalUUID(c.Query("planId"))
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	m, err := h.Work.ExecutionMap(c.Request.Context(), p.UserID, projectID, planID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, m)
 }
 
 func (h *WorkHandlers) listPlans(c *gin.Context) {

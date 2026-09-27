@@ -390,9 +390,13 @@
       "dependsOn": [
         "P3-01"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "work/execution.go: evaluateBlockers（task_acceptance 须 accepted/handoff_receipt 须来源已接收/material_ready 须 ready）；Start 状态门（ready/rework→working，仅参与者，start 硬前置 REQUIREMENT_UNMET+blockers，版本冲突）；ExecutionMap（列=硬前置最长路径深度，父子为归属边不排序，blockers 附节点）",
+        "handlers: startTask/getExecutionMap",
+        "integration: 未验收前置阻塞开始、验收后开始成功、执行图列序与硬边正确"
+      ],
+      "notes": "并发 A→B/B→A 双连接写的竞态由 project 锁+环检测覆盖（P3-01）；真实双连接并发用例在 P3-03 提案应用处统一验证"
     },
     {
       "id": "P3-03",

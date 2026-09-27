@@ -85,3 +85,69 @@ func TestPlanTaskDrafts(t *testing.T) {
 	_ = child
 	_ = uuid.Nil
 }
+
+// TestStartBlockingAndMap (B09 核心): 未验收前置阻塞开始（REQUIREMENT_UNMET
+// + blockers）；验收后可开始；执行图列序按前置深度。
+func TestStartBlockingAndMap(t *testing.T) {
+	svc, projects, ids, pool := newWorkEnv(t)
+	ctx := context.Background()
+	owner, _, _ := ids.Register(ctx, "S", "s@s.test", "password-ss-ss-11", "10.0.0.1")
+	proj, _ := projects.Create(ctx, owner.ID, project.CreateRequest{Title: "前置项目"})
+
+	plan, err := svc.CreatePlanDraft(ctx, owner.ID, proj.ID, "计划", "", "", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := svc.CreateTaskDraft(ctx, owner.ID, proj.ID, work.TaskDraft{Title: "第一步", PlanID: &plan.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Manually activate + accept the first task (proposal path lands P3-03;
+	// the state machine gates are what matters here).
+	if _, err := pool.Exec(ctx, `UPDATE tasks SET status='ready', version=2 WHERE id=$1`, first.ID); err != nil {
+		t.Fatal(err)
+	}
+	second, err := svc.CreateTaskDraft(ctx, owner.ID, proj.ID, work.TaskDraft{
+		Title: "第二步", PlanID: &plan.ID,
+		Requirements: []work.Requirement{{Phase: "start", Kind: "task_acceptance", TargetID: first.ID, Hard: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE tasks SET status='ready', version=2 WHERE id=$1`, second.ID); err != nil {
+		t.Fatal(err)
+	}
+	// Blocked: first not accepted.
+	if _, err := svc.Start(ctx, owner.ID, proj.ID, second.ID, nil, 2); errors.IsCode(err, errors.RequirementUnmet) == false {
+		t.Fatalf("unmet precondition must block start, got %v", err)
+	}
+	// Accept first, then second starts.
+	if _, err := pool.Exec(ctx, `UPDATE tasks SET status='accepted', version=3 WHERE id=$1`, first.ID); err != nil {
+		t.Fatal(err)
+	}
+	started, err := svc.Start(ctx, owner.ID, proj.ID, second.ID, nil, 2)
+	if err != nil || started.Status != "working" {
+		t.Fatalf("start after acceptance: %v %+v", err, started)
+	}
+	// Execution map: accepted first at column 0, working second at column 1.
+	m, err := svc.ExecutionMap(ctx, owner.ID, proj.ID, &plan.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	columns := map[string]int{}
+	for _, node := range m.Nodes {
+		columns[node.Title] = node.Column
+	}
+	if columns["第一步"] != 0 || columns["第二步"] != 1 {
+		t.Fatalf("columns must follow precondition depth: %+v", columns)
+	}
+	edgeFound := false
+	for _, edge := range m.Edges {
+		if edge.Kind == "hard" && edge.ToTaskID == second.ID.String() {
+			edgeFound = true
+		}
+	}
+	if !edgeFound {
+		t.Fatalf("hard edge missing: %+v", m.Edges)
+	}
+}
