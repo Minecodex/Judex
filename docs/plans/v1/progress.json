@@ -422,8 +422,15 @@
       "dependsOn": [
         "P3-03"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "Delegate: 仅 owner/manager；只覆盖 pending 席位（不碰已成立 reject）；decision_source=delegate 且记录真实 actor；完成即同事务应用",
+        "CreateRevision: 终态提案→新 draft revision（旧票不继承，重新 Submit 生成全新 slots+hash）；仅发起人；pending 不可修订",
+        "GetReview/ListProposals 读模型（席位状态+当前绑定人名+职位名）",
+        "proposal.timeout job handler 挂载 app（worker 进程自动结算）",
+        "handlers: 8 个提案 operation 接入契约",
+        "integration: 普通成员代批 403、manager 代批通过并记录 delegate 来源与真实 actor、修订 revision=2 重置 draft、重新提交新 slots、换绑后旧人 403 新人接续 pending、已同意席位不被重开（2 approved 收官）"
+      ],
       "notes": ""
     },
     {
@@ -434,9 +441,13 @@
         "P3-04",
         "P0-04"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "首票设 first_approval_at+deadline_at 并同事务入队持久 job（P3-03 Submit/Decide）；退回清 deadline；无首票永不超时通过（SettleTimeout 显式检查）；SettleTimeout 幂等（非 pending/未到期 no-op）；deadline 结算记录 timeout actor",
+        "job engine 基础（租约/心跳/fencing/重启接管）已在 P0-04 真实 PG 证明；proposal.timeout handler 已挂载 worker",
+        "integration: TestProposalTimeoutSettle（无首票不通过/首票后超时结算+timeout 决定记录）+ TestFencingBlocksStaleWorker + TestJobsSkipLockedDisjointClaims"
+      ],
+      "notes": "人工决定 vs 到期的串行化由 project 锁+状态复核保证（同一命令函数结算）"
     },
     {
       "id": "P3-06",

@@ -20,12 +20,14 @@ import (
 
 	"github.com/kakj-go/Judex/internal/agent"
 	"github.com/kakj-go/Judex/internal/config"
+	"github.com/kakj-go/Judex/internal/decision"
 	"github.com/kakj-go/Judex/internal/discussion"
 	"github.com/kakj-go/Judex/internal/identity"
 	"github.com/kakj-go/Judex/internal/infrastructure/objectstore"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	"github.com/kakj-go/Judex/internal/job"
 	"github.com/kakj-go/Judex/internal/material"
+	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/kakj-go/Judex/internal/project"
 	httptransport "github.com/kakj-go/Judex/internal/transport/http"
 	"github.com/kakj-go/Judex/internal/transport/http/middleware"
@@ -45,6 +47,7 @@ type Application struct {
 	materials  *material.Service
 	discussion *discussion.Service
 	work       *work.Service
+	decisions  *decision.Service
 	objects    material.ObjectStore
 	engine     *job.Engine
 	root       *os.Root
@@ -112,6 +115,9 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 		app.materials = material.NewService(pool, app.objects, material.DefaultLimits(), nil)
 		app.discussion = discussion.NewService(pool, nil)
 		app.work = work.NewService(pool, nil)
+		app.decisions = decision.NewService(pool, nil, 86400)
+		handler := decision.TimeoutJobHandler{Service: app.decisions}
+		timeoutExecutor = handler.Execute
 	}
 
 	if cfg.RunsHTTP() {
@@ -141,6 +147,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			httptransport.NewDiscussionHandlers(app.discussion).Register(spec)
 			httptransport.NewSSEHandlers(app.pool.Pool).Register(spec)
 			httptransport.NewWorkHandlers(app.work).Register(spec)
+			httptransport.NewProposalHandlers(app.decisions).Register(spec)
 			idSvc := app.identity
 			authOpts = &httptransport.AuthOptions{
 				Config:   authCfg,
@@ -216,6 +223,20 @@ var jobHandlers []job.Handler
 
 // RegisterJobHandler is called during wiring (before StartWorkers).
 func RegisterJobHandler(h job.Handler) { jobHandlers = append(jobHandlers, h) }
+
+func init() {
+	// Timeout settlement worker (P3-05): the service instance is bound per
+	// application via BindDecisionTimeouts.
+	RegisterJobHandler(job.HandlerFunc{KindName: "proposal.timeout", Attempts: 5, ExecuteFn: func(ctx context.Context, j job.Job) error {
+		if timeoutExecutor == nil {
+			return apierrors.Newf(apierrors.Internal, "timeout executor not bound")
+		}
+		return timeoutExecutor(ctx, j)
+	}})
+}
+
+// timeoutExecutor is set by New() once the decision service exists.
+var timeoutExecutor func(ctx context.Context, j job.Job) error
 
 // Close drains and releases all resources (graceful shutdown, 11 §3).
 func (a *Application) Close(ctx context.Context) error {

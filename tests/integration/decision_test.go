@@ -249,3 +249,146 @@ func TestProposalTimeoutSettle(t *testing.T) {
 		t.Fatalf("timeout decision must be recorded as timeout actor, got %v %s", err, decisionSource)
 	}
 }
+
+// TestDelegateAndRevision (B07/B04 修订): manager 代批 pending 席位（记录
+// delegate 来源，不冒充原人）；修订创建新草稿 revision 且旧票不继承。
+func TestDelegateAndRevision(t *testing.T) {
+	svc, projects, ids, pool := newDecisionEnv(t)
+	ctx := context.Background()
+	owner, _, _ := ids.Register(ctx, "MA", "ma@ma.test", "password-ma-ma-1", "10.0.0.1")
+	manager, _, _ := ids.Register(ctx, "MB", "mb@mb.test", "password-mb-mb-1", "10.0.0.1")
+	member, _, _ := ids.Register(ctx, "MC", "mc@mc.test", "password-mc-mc-1", "10.0.0.1")
+	proj, _ := projects.Create(ctx, owner.ID, project.CreateRequest{Title: "代批项目"})
+	for _, u := range []uuid.UUID{manager.ID, member.ID} {
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO project_members (project_id, user_id, role, state, joined_at)
+			VALUES ($1,$2,'member','active',now())`, proj.ID, u); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := projects.UpdateMemberRole(ctx, owner.ID, proj.ID, manager.ID, proj.Version, "manager"); err != nil {
+		t.Fatal(err)
+	}
+	pos, _ := projects.CreatePosition(ctx, owner.ID, proj.ID, project.PositionDraft{Name: "岗"})
+	memberIdent, _ := projects.CreateIdentity(ctx, owner.ID, proj.ID, pos.ID, member.ID)
+
+	proposalID, err := svc.CreateDraft(ctx, owner.ID, proj.ID, "work_arrangement", nil, "",
+		[]decision.Change{{Operation: "create_task", TargetType: "task",
+			Fields: map[string]any{"title": "代批任务", "participantIdentityIds": []any{memberIdent.ID.String()}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Submit(ctx, owner.ID, proj.ID, proposalID, 1, ""); err != nil {
+		t.Fatal(err)
+	}
+	review, err := svc.GetReview(ctx, owner.ID, proj.ID, proposalID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Member (plain, no delegation authority) cannot delegate.
+	if _, err := svc.Delegate(ctx, member.ID, proj.ID, proposalID, review.ReviewHash, "越权"); errors.IsCode(err, errors.Forbidden) == false {
+		t.Fatalf("plain member delegate must be forbidden, got %v", err)
+	}
+	// Manager delegates the pending seat -> approved + applied.
+	if _, err := svc.Delegate(ctx, manager.ID, proj.ID, proposalID, review.ReviewHash, "出差代批"); err != nil {
+		t.Fatalf("manager delegate: %v", err)
+	}
+	var status, source string
+	if err := pool.QueryRow(ctx, `SELECT status FROM proposals WHERE id=$1`, proposalID).Scan(&status); err != nil || status != "approved" {
+		t.Fatalf("delegate must complete the proposal, got %s", status)
+	}
+	if err := pool.QueryRow(ctx, `SELECT decision_source FROM approval_decisions WHERE review_id=$1`, review.ReviewID).Scan(&source); err != nil || source != "delegate" {
+		t.Fatalf("decision must record delegate source, got %v %s", err, source)
+	}
+	var actor uuid.UUID
+	if err := pool.QueryRow(ctx, `SELECT actor_user_id FROM approval_decisions WHERE review_id=$1`, review.ReviewID).Scan(&actor); err != nil || actor != manager.ID {
+		t.Fatalf("delegate must record the REAL actor, got %v", actor)
+	}
+
+	// Revision: terminal proposal -> new draft revision; old tickets stay.
+	revision, err := svc.CreateRevision(ctx, owner.ID, proj.ID, proposalID,
+		[]decision.Change{{Operation: "create_task", TargetType: "task",
+			Fields: map[string]any{"title": "修订任务", "participantIdentityIds": []any{memberIdent.ID.String()}}}},
+		"按退回意见修改")
+	if err != nil || revision != 2 {
+		t.Fatalf("revision: %v %d", err, revision)
+	}
+	if err := pool.QueryRow(ctx, `SELECT status FROM proposals WHERE id=$1`, proposalID).Scan(&status); err != nil || status != "draft" {
+		t.Fatalf("revision must reset to draft, got %s", status)
+	}
+	// Old review slots remain with the OLD review id; a fresh submit makes new slots.
+	if _, err := svc.Submit(ctx, owner.ID, proj.ID, proposalID, 3, ""); err != nil {
+		t.Fatalf("resubmit: %v", err)
+	}
+	var slotCount int
+	if err := pool.QueryRow(ctx, `
+		SELECT count(*) FROM approval_slots s
+		WHERE s.review_id=(SELECT current_review_id FROM proposals WHERE id=$1)`, proposalID).Scan(&slotCount); err != nil || slotCount != 1 {
+		t.Fatalf("new review must have fresh slots, got %d", slotCount)
+	}
+}
+
+// TestBindingReplacementContinuesPending (B08): 身份换绑后 pending 职责由新
+// 绑定人接续；已同意席位保持；旧绑定人失去操作资格。
+func TestBindingReplacementContinuesPending(t *testing.T) {
+	svc, projects, ids, pool := newDecisionEnv(t)
+	ctx := context.Background()
+	owner, _, _ := ids.Register(ctx, "NA", "na@na.test", "password-na-na-1", "10.0.0.1")
+	oldHolder, _, _ := ids.Register(ctx, "NB", "nb@nb.test", "password-nb-nb-1", "10.0.0.1")
+	newHolder, _, _ := ids.Register(ctx, "NC", "nc@nc.test", "password-nc-nc-1", "10.0.0.1")
+	proj, _ := projects.Create(ctx, owner.ID, project.CreateRequest{Title: "换人项目"})
+	// Join both via direct membership (invitation path already proven).
+	for _, u := range []uuid.UUID{oldHolder.ID, newHolder.ID} {
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO project_members (project_id, user_id, role, state, joined_at)
+			VALUES ($1,$2,'member','active',now())`, proj.ID, u); err != nil {
+			t.Fatal(err)
+		}
+	}
+	seatPos, _ := projects.CreatePosition(ctx, owner.ID, proj.ID, project.PositionDraft{Name: "座席"})
+	oldIdent, _ := projects.CreateIdentity(ctx, owner.ID, proj.ID, seatPos.ID, oldHolder.ID)
+	otherPos, _ := projects.CreatePosition(ctx, owner.ID, proj.ID, project.PositionDraft{Name: "另席"})
+	otherIdent, _ := projects.CreateIdentity(ctx, owner.ID, proj.ID, otherPos.ID, owner.ID)
+
+	proposalID, err := svc.CreateDraft(ctx, owner.ID, proj.ID, "work_arrangement", nil, "",
+		[]decision.Change{
+			{Operation: "create_plan", TargetType: "plan",
+				Fields: map[string]any{"title": "P", "ownerIdentityId": otherIdent.ID.String()}},
+			{Operation: "create_task", TargetType: "task",
+				Fields: map[string]any{"title": "T", "participantIdentityIds": []any{oldIdent.ID.String()}}},
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Submit(ctx, owner.ID, proj.ID, proposalID, 1, ""); err != nil {
+		t.Fatal(err)
+	}
+	review, _ := svc.GetReview(ctx, owner.ID, proj.ID, proposalID)
+	// Owner approves their own seat (first approval, starts timer).
+	if _, err := svc.Decide(ctx, owner.ID, proj.ID, proposalID, review.ReviewHash, true, ""); err != nil {
+		t.Fatal(err)
+	}
+	// Replace the old holder's binding: same identity, new bindingVersion.
+	if _, err := projects.ReplaceIdentityBinding(ctx, owner.ID, proj.ID, oldIdent.ID, newHolder.ID, 1, "休假接替"); err != nil {
+		t.Fatal(err)
+	}
+	// Old holder can no longer decide.
+	if _, err := svc.Decide(ctx, oldHolder.ID, proj.ID, proposalID, review.ReviewHash, true, ""); errors.IsCode(err, errors.Forbidden) == false {
+		t.Fatalf("old holder must lose eligibility, got %v", err)
+	}
+	// New holder continues the pending seat; first-approval time kept.
+	if _, err := svc.Decide(ctx, newHolder.ID, proj.ID, proposalID, review.ReviewHash, true, ""); err != nil {
+		t.Fatalf("new holder must continue the pending seat: %v", err)
+	}
+	var status string
+	if err := pool.QueryRow(ctx, `SELECT status FROM proposals WHERE id=$1`, proposalID).Scan(&status); err != nil || status != "approved" {
+		t.Fatalf("proposal must complete after continuation, got %s", status)
+	}
+	// Both seats end approved: the pre-replacement approval persisted (not
+	// reopened) and the continued seat completed the quorum.
+	var approvedSlots int
+	if err := pool.QueryRow(ctx, `
+		SELECT count(*) FROM approval_slots WHERE review_id=$1 AND state='approved'`, review.ReviewID).Scan(&approvedSlots); err != nil || approvedSlots != 2 {
+		t.Fatalf("approved seats must persist (2 expected), got %d", approvedSlots)
+	}
+}
