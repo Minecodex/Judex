@@ -1,6 +1,7 @@
 import { Button, Card } from "@heroui/react";
 import { Plus, X } from "lucide-react";
 import { AccountSecurity } from "../settings/AccountSecurity";
+import { ProjectWorkspace } from "../projects/ProjectWorkspace";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
@@ -22,6 +23,7 @@ export function WorkspaceShell() {
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [tab, setTab] = useState<"projects" | "security">("projects");
+  const [activeProject, setActiveProject] = useState<string | null>(null);
 
   const projects = useQuery({
     queryKey: ["projects"],
@@ -84,7 +86,9 @@ export function WorkspaceShell() {
             {t("workspaceTabSecurity")}
           </Button>
         </nav>
-        {tab === "security" ? <AccountSecurity /> : projects.isPending ? (
+        {tab === "security" ? <AccountSecurity /> : activeProject ? (
+          <ProjectWorkspace projectId={activeProject} />
+        ) : projects.isPending ? (
           <p className="judex-workspace-status">{t("shellLoading")}</p>
         ) : projects.isError ? (
           <p className="judex-workspace-status" role="alert">
@@ -134,7 +138,9 @@ export function WorkspaceShell() {
               <ul className="judex-workspace-list">
                 {projects.data.map((project) => (
                   <li key={project.id} className="judex-workspace-item">
-                    <strong>{project.title}</strong>
+                    <Button variant="secondary" onClick={() => setActiveProject(project.id)}>
+                      {project.title}
+                    </Button>
                     <small>{project.role ?? ""}</small>
                   </li>
                 ))}

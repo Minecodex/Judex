@@ -181,3 +181,48 @@
   color: var(--judex-muted, #6f6b60);
   font-size: var(--judex-font-sm, 13px);
 }
+
+.judex-project-workspace,
+.judex-panel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.judex-inline-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.judex-thread-card {
+  width: 100%;
+}
+
+.judex-thread-scroll {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.judex-thread-message {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--judex-panel, #fff);
+  border: 1px solid var(--judex-border, #e3e0d8);
+}
+[data-theme="dark"] .judex-thread-message {
+  background: var(--judex-panel, #242320);
+  border-color: var(--judex-border, #32302a);
+}
+
+.judex-thread-message .judex-thread-content {
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

@@ -25,6 +25,7 @@ const modules = [
   { zh: authZh, en: authEn },
 ];
 export type Locale = "zh-CN" | "en";
+// re-exported for feature modules
 export type Key =
   | keyof typeof commonZh
   | keyof typeof experienceZh
