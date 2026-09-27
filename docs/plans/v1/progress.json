@@ -490,8 +490,13 @@
       "dependsOn": [
         "P3-07"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "work/bugrelease.go: CreateBug（bug_details+严重度白名单，草稿不越权重开已验收）、ReportRelease（事实记录非部署命令）、CreateFixPropagation（用户选目标→独立草稿任务，非 bug 拒绝）",
+        "work/repositories.go: 仓库元数据 CRUD（member 读/manager 写、版本冲突），ListAudit 可见审计分页（无私人 prompt）",
+        "handlers: 仓库×3/发布×2/修复传播/审计 接入",
+        "integration: 成员写仓库 403、版本冲突、bug 草稿、发布事实记录、双目标传播独立任务、非 bug 拒绝"
+      ],
       "notes": ""
     },
     {

@@ -473,3 +473,13 @@ func (s *Service) OperatorTransferOwner(ctx context.Context, projectID, toUser u
 }
 
 func strPtr(s string) *string { return &s }
+
+// JoinDirect inserts an active membership row directly; TEST USE ONLY —
+// production joins flow through invitations (02 §5).
+func (s *Service) JoinDirect(ctx context.Context, projectID, userID uuid.UUID) error {
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO project_members (project_id, user_id, role, state, joined_at)
+		VALUES ($1,$2,'member','active',$3)
+		ON CONFLICT (project_id, user_id) DO NOTHING`, projectID, userID, s.now())
+	return err
+}
