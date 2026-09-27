@@ -232,9 +232,16 @@
         "P1-05",
         "P2-02"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "positions: Create/Update 版本化（revision 递增+版本冲突）、节点绑定必须指向已发布 workflow 的真实节点（InvalidReference）",
+        "identities: 稳定身份+binding 历史；CreateIdentity 显式新席位（目标须 active 成员）；ReplaceIdentityBinding 保留 identity、闭合旧 binding、version+1、审计含理由",
+        "invitations: 一次性 token（hash 存储）、7 天过期、精确邮箱匹配（错人 403）、接受事务（user 锁→invite 锁→project 锁）复用同模板 active 身份防重试复制；撤销/拒绝/过期状态机；ListMyInvitations 按登录邮箱",
+        "personal preferences: 空态 revision 0、首写 expected 0→1、版本冲突、revision 留档（运行 manifest 固定引用用）",
+        "handlers: 15 个 operation 接入（positions/identities/replace/invitations×5/preferences×2）",
+        "integration: 职位版本化+非法绑定拒绝+同岗多人（邀请2席+显式第3席）+替换闭合旧绑定+偏好隔离与版本化+错邮箱/过期 token 拒绝"
+      ],
+      "notes": "旧绑定 run 撤销事件在 P5 有 run 后补"
     },
     {
       "id": "P2-02",
