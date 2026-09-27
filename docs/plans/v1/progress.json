@@ -73,9 +73,14 @@
       "dependsOn": [
         "P0-03"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "migration 00002: projects (M002 合同列) + project_events (project_id,seq PK) + outbox_events（projects 表提前于 P1-04 落地以承载 event_seq，其余 M002 表按计划在 P1-05）",
+        "internal/job: SKIP LOCKED 领取+租约+fencing_token、心跳、指数退避+抖动、dead/failed 分类、同事务 Enqueue",
+        "internal/platform/events: 项目锁下 event_seq 分配 + project_events/outbox 同事务写入；outbox 只作唤醒，按 delivered_at 一次领取",
+        "integration tests (real PG): 4 连接并发 40 事件序列稠密无重复；双引擎领取不重叠；租约过期后接管者 fencing 更高且旧 worker Finish 写 0 行不生效；重试退避到 dead、不可重试立即 failed；job+event+幂等同事务回滚无孤儿"
+      ],
+      "notes": "worker 进程装配与 outbox 递送循环在 P0-05 接入 app"
     },
     {
       "id": "P0-05",
