@@ -1,3 +1,11 @@
+import {
+  UIInput,
+  UITextArea,
+  UIOption,
+  UISelect,
+  UIWarning,
+  UICard,
+} from "../../components/ui/FormControls";
 import { useState } from "react";
 import { ArrowRight, Copy } from "lucide-react";
 import { useWork } from "./store";
@@ -12,7 +20,6 @@ import {
   planAction,
 } from "./actions";
 import { ownsSeat, planTasks, planReviewKey } from "./selectors";
-
 export function CreateWorkDialog({
   kind,
   onClose,
@@ -46,7 +53,10 @@ export function CreateWorkDialog({
     parentId: parentTask?.id ?? "",
   });
   const set = (patch: Partial<typeof draft>) =>
-    setDraft({ ...draft, ...patch });
+    setDraft({
+      ...draft,
+      ...patch,
+    });
   return (
     <Dialog
       title={t(kind === "plan" ? "workNewPlan" : "workNewTask")}
@@ -55,104 +65,133 @@ export function CreateWorkDialog({
     >
       <p className="judex-modal-description">{t("workCreateHint")}</p>
       <Field label={t("workTitle")}>
-        <input
+        <UIInput
           className="judex-input"
           value={draft.title}
           data-testid="new-work-title"
-          onChange={(e) => set({ title: e.target.value })}
+          onChange={(e) =>
+            set({
+              title: e.target.value,
+            })
+          }
         />
       </Field>
       <Field label={t("workDescription")}>
-        <textarea
+        <UITextArea
           className="judex-textarea judex-textarea-short"
           value={draft.description}
           data-testid="new-work-description"
-          onChange={(e) => set({ description: e.target.value })}
+          onChange={(e) =>
+            set({
+              description: e.target.value,
+            })
+          }
         />
       </Field>
       <Field label={t("workCriteria")}>
-        <textarea
+        <UITextArea
           className="judex-textarea judex-textarea-short"
           value={draft.criteria}
           data-testid="new-work-criteria"
-          onChange={(e) => set({ criteria: e.target.value })}
+          onChange={(e) =>
+            set({
+              criteria: e.target.value,
+            })
+          }
         />
       </Field>
       <div className="judex-work-form-grid">
         <Field label={t(kind === "plan" ? "workOwner" : "workChooseSeat")}>
-          <select
+          <UISelect
             className="judex-input"
             value={draft.seatId}
             data-testid="new-work-seat"
-            onChange={(e) => set({ seatId: e.target.value })}
+            onChange={(e) =>
+              set({
+                seatId: e.target.value,
+              })
+            }
           >
             {seats.map((s) => (
-              <option key={s.id} value={s.id}>
+              <UIOption key={s.id} value={s.id}>
                 {s.person} ·{" "}
                 {text(state.positions.find((p) => p.id === s.positionId)!.name)}
-              </option>
+              </UIOption>
             ))}
-          </select>
+          </UISelect>
         </Field>
         <Field label={t("workChooseFlow")}>
-          <select
+          <UISelect
             className="judex-input"
             value={draft.flowId}
-            onChange={(e) => set({ flowId: e.target.value })}
+            onChange={(e) =>
+              set({
+                flowId: e.target.value,
+              })
+            }
           >
             {flows.map((f) => (
-              <option key={f.id} value={f.id}>
+              <UIOption key={f.id} value={f.id}>
                 {text(f.name)}
-              </option>
+              </UIOption>
             ))}
-          </select>
+          </UISelect>
         </Field>
       </div>
       {kind === "task" && (
         <Field label={t("workChoosePlan")}>
-          <select
+          <UISelect
             className="judex-input"
             data-testid="new-work-plan"
             value={draft.planId ?? ""}
             onChange={(e) =>
-              set({ planId: e.target.value || null, parentId: "" })
+              set({
+                planId: e.target.value || null,
+                parentId: "",
+              })
             }
           >
-            <option value="">{t("workDirect")}</option>
+            <UIOption value="">{t("workDirect")}</UIOption>
             {state.plans
               .filter((p) => p.projectId === project.id)
               .map((p) => (
-                <option key={p.id} value={p.id}>
+                <UIOption key={p.id} value={p.id}>
                   {text(p.title)}
-                </option>
+                </UIOption>
               ))}
-          </select>
+          </UISelect>
         </Field>
       )}
       {kind === "task" && draft.planId && (
         <Field label={t("cardsParent")}>
-          <select
+          <UISelect
             className="judex-input"
             data-testid="new-work-parent"
             value={draft.parentId}
-            onChange={(e) => set({ parentId: e.target.value })}
+            onChange={(e) =>
+              set({
+                parentId: e.target.value,
+              })
+            }
           >
-            <option value="">{t("cardsRootTask")}</option>
+            <UIOption value="">{t("cardsRootTask")}</UIOption>
             {state.tasks
               .filter(
                 (task) =>
                   task.projectId === project.id && task.planId === draft.planId,
               )
               .map((task) => (
-                <option key={task.id} value={task.id}>
+                <UIOption key={task.id} value={task.id}>
                   {text(task.title)}
-                </option>
+                </UIOption>
               ))}
-          </select>
+          </UISelect>
         </Field>
       )}
       {(!seats.length || !flows.length) && (
-        <p className="judex-work-warning">{t("cardsNeedInfo")}</p>
+        <UIWarning className="judex-work-warning">
+          {t("cardsNeedInfo")}
+        </UIWarning>
       )}
       <div className="judex-modal-actions">
         <Btn secondary onClick={onClose}>
@@ -175,7 +214,10 @@ export function CreateWorkDialog({
               })
             ) {
               onClose();
-              go({ view: kind, id });
+              go({
+                view: kind,
+                id,
+              });
             }
           }}
         >
@@ -210,7 +252,7 @@ export function ReportDialog({
         {text(task.title)} · {t(source ? "workRevisionHint" : "workLocalHint")}
       </p>
       <Field label={t("workReportLabel")}>
-        <textarea
+        <UITextArea
           className="judex-textarea"
           data-testid="report-body"
           value={summary}
@@ -265,7 +307,7 @@ export function ReasonDialog({
   return (
     <Dialog title={t(task ? "workTaskReopen" : "workReject")} onClose={onClose}>
       <Field label={t("workRejectReason")}>
-        <textarea
+        <UITextArea
           className="judex-textarea"
           data-testid="work-reason"
           value={reason}
@@ -335,14 +377,14 @@ export function AcceptanceDialog({
       <p className="judex-modal-description">
         {t(plan ? "workPlanReviewHint" : "workNoReceiptIsAcceptance")}
       </p>
-      <div className="judex-work-callout">
+      <UICard className="judex-work-callout">
         <strong>{text(plan?.title ?? task!.title)}</strong>
         <ul>
           {(plan?.criteria ?? task!.criteria).map((c, i) => (
             <li key={i}>{text(c)}</li>
           ))}
         </ul>
-      </div>
+      </UICard>
       {tasks.map((item) => (
         <section className="judex-work-review-evidence" key={item.id}>
           <h3>{text(item.title)}</h3>
@@ -350,9 +392,9 @@ export function AcceptanceDialog({
         </section>
       ))}
       {changed && (
-        <p className="judex-work-warning" role="alert">
+        <UIWarning className="judex-work-warning" role="alert">
           {t("workErrorStale")}
-        </p>
+        </UIWarning>
       )}
       <div className="judex-modal-actions">
         <Btn secondary onClick={onClose}>
@@ -418,7 +460,7 @@ export function BriefDialog({
     .join("\n\n");
   return (
     <Dialog title={t("workBrief")} onClose={onClose} wide>
-      <textarea
+      <UITextArea
         className="judex-brief-text"
         data-testid="work-brief"
         readOnly

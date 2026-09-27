@@ -1,3 +1,5 @@
+import {chooseValue} from "./workspace-helpers";
+import {openTool,openSettings,selectPerson,toggleTheme,toggleLanguage} from './workspace-helpers';
 import { test, expect, type Page } from "@playwright/test";
 test("an open acceptance dialog cannot approve evidence changed by a later local report", async ({
   page,
@@ -37,7 +39,7 @@ const open = (page: Page, view = "home", id = "", design = "studio") =>
       (id ? "&item=" + id : ""),
   );
 async function person(page: Page, name: string) {
-  await page.getByTestId("work-person").selectOption(name);
+  await selectPerson(page,name);
   await expect.poll(async () => (await state(page)).currentUser).toBe(name);
 }
 async function report(page: Page, taskId: string, actor: string) {
@@ -126,6 +128,7 @@ test("hard prerequisites, task acceptance, plan owner acceptance and reopening f
   for (const id of ["build", "guide", "empty-state", "package"])
     await acceptTask(page, id);
   await open(page);
+  await openTool(page,'overview');
   await expect(page.getByTestId('today-plan-review-leaf-first')).toBeVisible();
   await open(page, "plan", "leaf-first");
   await page.getByTestId("accept-plan").click();
@@ -148,7 +151,7 @@ test("new plan and direct task start as drafts; references do not duplicate owne
   await page.getByTestId("new-work-title").fill("下一轮体验改善");
   await page.getByTestId("new-work-description").fill("清楚地改善首次使用体验");
   await page.getByTestId("new-work-criteria").fill("有验证依据");
-  await page.getByTestId("new-work-seat").selectOption("lead");
+  await chooseValue(page,"new-work-seat","lead");
   await page.getByTestId("create-work-draft").click();
   expect((await state(page)).plans.at(-1).status).toBe("draft");
   await expect(page.getByTestId("activate-plan")).toHaveCount(0);
@@ -161,7 +164,7 @@ test("new plan and direct task start as drafts; references do not duplicate owne
   await page.getByTestId("new-work-title").fill("确认一个临时问题");
   await page.getByTestId("new-work-description").fill("附上出处的结论");
   await page.getByTestId("new-work-criteria").fill("资料可追溯");
-  await page.getByTestId("new-work-plan").selectOption("");
+  await chooseValue(page,"new-work-plan","");
   await page.getByTestId("create-work-draft").click();
   await page.getByTestId("approve-task-draft").click();
   expect((await state(page)).tasks.at(-1).planId).toBeNull();
@@ -185,12 +188,11 @@ test("pure discussions link multiple plans and tasks without changing their prog
   await page.getByTestId("create-discussion").click();
   await page.getByTestId("work-discussion-input").fill("同意，可以全部完成");
   await page.getByTestId("send-work-message").click();
-  await page.getByTestId("close-pure-topic").click();
   const after = await state(page);
   expect(after.tasks).toEqual(before.tasks);
   expect(after.plans).toEqual(before.plans);
   expect(after.topics.at(-1).planIds).toEqual(["leaf-first", "leaf-next"]);
-  expect(after.topics.at(-1).closed).toBe(true);
+  await expect(page.getByTestId("work-discussion-input")).toBeEnabled();
 });
 
 test("a same-task handoff draft requires its sender and does not silently complete the task", async ({
@@ -200,7 +202,7 @@ test("a same-task handoff draft requires its sender and does not silently comple
   await person(page, "顾言");
   await open(page, "task", "build");
   await page.getByTestId("propose-handoff").click();
-  await page.getByTestId("handoff-kind").selectOption("stage");
+  await chooseValue(page,"handoff-kind","stage");
   await page.getByTestId("create-handoff-draft").click();
   const handoff = (await state(page)).handoffs.at(-1);
   expect(handoff.kind).toBe("stage");
@@ -258,7 +260,7 @@ test("position templates, invitation, personal preferences and replacement keep 
   await page.getByTestId("new-position").click();
   await page.getByTestId("position-name").fill("研究伙伴");
   await page.getByTestId("position-prompt").fill("为结论附来源与适用范围");
-  await page.getByTestId("position-node").selectOption("receive");
+  await chooseValue(page,"position-node","receive");
   await page.getByTestId("save-position").click();
   await page.getByTestId("next-invite").click();
   await page.getByTestId("next-invite-name").fill("陆青");
@@ -292,7 +294,7 @@ test("position templates, invitation, personal preferences and replacement keep 
     .getByTestId("seat-" + seat.id)
     .getByRole("button", { name: "替换关联人", exact: true })
     .click();
-  await page.getByTestId("replace-seat-person").selectOption("周宁");
+  await chooseValue(page,"replace-seat-person","周宁");
   await page.getByTestId("confirm-seat-replace").click();
   data = await state(page);
   expect(data.preferences.find((p: any) => p.person === "陆青").prompt).toBe(

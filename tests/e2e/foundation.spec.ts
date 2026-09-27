@@ -1,9 +1,10 @@
+import {openTool} from './workspace-helpers';
 import {test,expect} from '@playwright/test';
-test('preview is explicit, HeroUI is loaded, and all project modules open',async({page})=>{
+test('preview is explicit, HeroUI is loaded, and the chat context stays beside project tools',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
- await expect(page.getByText(/交互预览 · 数据仅保存在本机/)).toBeVisible();await expect(page.locator('.button').first()).toBeVisible();
+ await expect(page.locator(".judex-preview-banner")).toHaveCount(0);await expect(page.getByText("AI 演示 · 未连接模型",{exact:true})).toBeVisible();await expect(page.locator('.button').first()).toBeVisible();
  await page.screenshot({path:test.info().outputPath('workspace.png'),fullPage:true});
- for(const view of ['plans','tasks','handoffs','decisions','topics','team','flows','resources','settings','home']){await page.getByTestId('work-nav-'+view).click();await expect(page.locator('.judex-next-main')).not.toBeEmpty();}
+ for(const view of ['plans','decisions','team','flows','resources']){await openTool(page,view);if(await page.getByTestId("settings-page").isVisible())await page.getByTestId("settings-back").click();await expect(page.locator('.judex-chat-panel-body')).not.toBeEmpty();await expect(page.getByTestId('chat-thread')).toBeVisible();}
  expect(errors).toEqual([]);
 });
 test('authentication form calls actual Gin API and never fakes account creation',async({page})=>{

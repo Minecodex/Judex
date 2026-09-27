@@ -1,3 +1,9 @@
+import {
+  UIOption,
+  UISelect,
+  UICheckbox,
+  UIInput,
+} from "../../components/ui/FormControls";
 import { useState } from "react";
 import { useWork } from "./store";
 import { Btn, Dialog, Field } from "./ui";
@@ -36,7 +42,7 @@ export function HandoffDialog({
     <Dialog title={t("workProposeHandoff")} onClose={onClose} wide>
       <p className="judex-modal-description">{t("workProposeHandoffHint")}</p>
       <Field label={t("workHandoffType")}>
-        <select
+        <UISelect
           className="judex-input"
           data-testid="handoff-kind"
           value={kind}
@@ -56,15 +62,15 @@ export function HandoffDialog({
             }
           }}
         >
-          <option value="stage">{t("workHandoffKindStage")}</option>
-          <option value="dependency" disabled={!otherTasks.length}>
+          <UIOption value="stage">{t("workHandoffKindStage")}</UIOption>
+          <UIOption value="dependency" disabled={!otherTasks.length}>
             {t("workHandoffKindDependency")}
-          </option>
-        </select>
+          </UIOption>
+        </UISelect>
       </Field>
       {kind === "dependency" && (
         <Field label={t("workNextTask")}>
-          <select
+          <UISelect
             className="judex-input"
             data-testid="handoff-target"
             value={target}
@@ -76,44 +82,43 @@ export function HandoffDialog({
             }}
           >
             {otherTasks.map((v) => (
-              <option key={v.id} value={v.id}>
+              <UIOption key={v.id} value={v.id}>
                 {text(v.title)}
-              </option>
+              </UIOption>
             ))}
-          </select>
+          </UISelect>
         </Field>
       )}
       <Field label={t("workReceiver")}>
-        <select
+        <UISelect
           className="judex-input"
           data-testid="handoff-receiver"
           value={receiver}
           onChange={(e) => setReceiver(e.target.value)}
         >
           {recipients.map((id) => (
-            <option key={id} value={id}>
+            <UIOption key={id} value={id}>
               {state.seats.find((s) => s.id === id)?.person}
-            </option>
+            </UIOption>
           ))}
-        </select>
+        </UISelect>
       </Field>
       <div className="judex-position-options">
         {eligible.map((v) => (
-          <label key={v.id}>
-            <input
-              type="checkbox"
-              data-testid={"handoff-source-" + v.id}
-              checked={ids.includes(v.id)}
-              onChange={(e) =>
-                setIds(
-                  e.target.checked
-                    ? [...ids, v.id]
-                    : ids.filter((id) => id !== v.id),
-                )
-              }
-            />
+          <UICheckbox
+            key={v.id}
+            data-testid={"handoff-source-" + v.id}
+            checked={ids.includes(v.id)}
+            onChange={(e) =>
+              setIds(
+                e.target.checked
+                  ? [...ids, v.id]
+                  : ids.filter((id) => id !== v.id),
+              )
+            }
+          >
             <span>{text(v.title)}</span>
-          </label>
+          </UICheckbox>
         ))}
       </div>
       <div className="judex-modal-actions">
@@ -139,7 +144,10 @@ export function HandoffDialog({
               })
             ) {
               onClose();
-              go({ view: "handoff", id });
+              go({
+                view: "handoff",
+                id,
+              });
             }
           }}
         >
@@ -158,7 +166,7 @@ export function DiscussionDialog({ onClose }: { onClose: () => void }) {
     <Dialog title={t("workNewDiscussion")} onClose={onClose} wide>
       <p className="judex-modal-description">{t("workDiscussionLinkHint")}</p>
       <Field label={t("workTitle")}>
-        <input
+        <UIInput
           className="judex-input"
           data-testid="discussion-title"
           value={title}
@@ -170,21 +178,20 @@ export function DiscussionDialog({ onClose }: { onClose: () => void }) {
         {state.plans
           .filter((p) => p.projectId === project.id)
           .map((p) => (
-            <label key={p.id}>
-              <input
-                type="checkbox"
-                checked={planIds.includes(p.id)}
-                data-testid={"topic-plan-" + p.id}
-                onChange={(e) =>
-                  setPlans(
-                    e.target.checked
-                      ? [...planIds, p.id]
-                      : planIds.filter((id) => id !== p.id),
-                  )
-                }
-              />
+            <UICheckbox
+              key={p.id}
+              checked={planIds.includes(p.id)}
+              data-testid={"topic-plan-" + p.id}
+              onChange={(e) =>
+                setPlans(
+                  e.target.checked
+                    ? [...planIds, p.id]
+                    : planIds.filter((id) => id !== p.id),
+                )
+              }
+            >
               {text(p.title)}
-            </label>
+            </UICheckbox>
           ))}
       </div>
       <h3>{t("workTasks")}</h3>
@@ -192,21 +199,20 @@ export function DiscussionDialog({ onClose }: { onClose: () => void }) {
         {state.tasks
           .filter((p) => p.projectId === project.id)
           .map((p) => (
-            <label key={p.id}>
-              <input
-                type="checkbox"
-                checked={taskIds.includes(p.id)}
-                data-testid={"topic-task-" + p.id}
-                onChange={(e) =>
-                  setTasks(
-                    e.target.checked
-                      ? [...taskIds, p.id]
-                      : taskIds.filter((id) => id !== p.id),
-                  )
-                }
-              />
+            <UICheckbox
+              key={p.id}
+              checked={taskIds.includes(p.id)}
+              data-testid={"topic-task-" + p.id}
+              onChange={(e) =>
+                setTasks(
+                  e.target.checked
+                    ? [...taskIds, p.id]
+                    : taskIds.filter((id) => id !== p.id),
+                )
+              }
+            >
               {text(p.title)}
-            </label>
+            </UICheckbox>
           ))}
       </div>
       <div className="judex-modal-actions">
@@ -231,7 +237,10 @@ export function DiscussionDialog({ onClose }: { onClose: () => void }) {
               })
             ) {
               onClose();
-              go({ view: "topic", id });
+              go({
+                view: "topic",
+                id,
+              });
             }
           }}
         >

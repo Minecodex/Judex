@@ -10,7 +10,6 @@ import {
   planAction,
   createWork,
   decideDraft,
-  closeTopic,
   topicMessage,
   publishFlow,
   refreshHandoff,
@@ -274,10 +273,9 @@ test("new workflow context keeps unaffected cards and invalidates materially aff
   s = ok(sendSource(as(s, "夏禾"), "first-review", "source-guide", 2));
   assert.equal(source(s, "source-guide").status, "pending");
 });
-test("discussion messages, closure and linking never mutate work progress", () => {
+test("discussion messages and linking never mutate work progress", () => {
   const s = seedWork();
   let n = ok(topicMessage(s, "labels", "我同意，也全部完成了"));
-  n = ok(closeTopic(n, "labels"));
   n = ok(
     createDiscussion(
       n,

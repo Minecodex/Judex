@@ -1,5 +1,10 @@
-import {Button as HeroButton,Modal} from "@heroui/react";
-import {Button} from "../../components/ui/Button";
+import {
+  FormField,
+  UIStatus,
+  UIFilePicker,
+} from "../../components/ui/FormControls";
+import { Button as HeroButton, Modal } from "@heroui/react";
+import { Button } from "../../components/ui/Button";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { X, ArrowUpRight, Paperclip, FileText, Check } from "lucide-react";
 import { useWork } from "./store";
@@ -20,16 +25,68 @@ export function Btn({
   testId?: string;
   danger?: boolean;
 }) {
-  return <HeroButton variant={danger?'danger':secondary?'secondary':'primary'} isDisabled={disabled} onPress={onClick} data-testid={testId} className={'judex-button judex-button-'+(danger?'danger':secondary?'secondary':'primary')}>{children}</HeroButton>;
+  return (
+    <HeroButton
+      variant={danger ? "danger" : secondary ? "secondary" : "primary"}
+      isDisabled={disabled}
+      onPress={onClick}
+      data-testid={testId}
+      className={
+        "judex-button judex-button-" +
+        (danger ? "danger" : secondary ? "secondary" : "primary")
+      }
+    >
+      {children}
+    </HeroButton>
+  );
 }
-export function Dialog({title,onClose,children,wide=false}:{title:string;onClose:()=>void;children:ReactNode;wide?:boolean}){
- const {t,theme}=useWork();
- return <Modal.Backdrop isOpen isDismissable onOpenChange={open=>{if(!open)onClose();}} className="judex-overlay" data-theme={theme}>
-  <Modal.Container size={wide?'lg':'md'}><Modal.Dialog aria-label={title} className="judex-dialog-content">
-   <Modal.Header><Modal.Heading>{title}</Modal.Heading><HeroButton variant="ghost" isIconOnly aria-label={t('close')} onPress={onClose}><X/></HeroButton></Modal.Header>
-   <Modal.Body>{children}</Modal.Body>
-  </Modal.Dialog></Modal.Container>
- </Modal.Backdrop>;
+export function Dialog({
+  title,
+  onClose,
+  children,
+  wide = false,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  wide?: boolean;
+}) {
+  const { t, theme } = useWork();
+  return (
+    <Modal.Backdrop
+      isOpen
+      isDismissable
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      className="judex-overlay"
+      data-theme={theme}
+    >
+      <Modal.Container
+        size={wide ? "lg" : "md"}
+        className={
+          "judex-dialog-container" +
+          (wide ? " judex-dialog-container-wide" : "")
+        }
+      >
+        <Modal.Dialog aria-label={title} className="judex-dialog-content">
+          <Modal.Header className="judex-dialog-header">
+            <Modal.Heading>{title}</Modal.Heading>
+            <HeroButton
+              className="judex-dialog-close"
+              variant="ghost"
+              isIconOnly
+              aria-label={t("close")}
+              onPress={onClose}
+            >
+              <X />
+            </HeroButton>
+          </Modal.Header>
+          <Modal.Body className="judex-dialog-body">{children}</Modal.Body>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
+  );
 }
 export function Person({
   seatId,
@@ -69,7 +126,7 @@ export function Pill({
 }) {
   const { t } = useWork();
   return (
-    <span className={"judex-work-pill judex-work-pill-" + status}>
+    <UIStatus className={"judex-work-pill judex-work-pill-" + status}>
       {status === "accepted"
         ? t(
             kind === "task"
@@ -83,7 +140,7 @@ export function Pill({
               status[0].toUpperCase() +
               status.slice(1)) as Parameters<typeof t>[0],
           )}
-    </span>
+    </UIStatus>
   );
 }
 export function Heading({
@@ -115,12 +172,7 @@ export function Field({
   label: string;
   children: ReactNode;
 }) {
-  return (
-    <label className="judex-field-label">
-      {label}
-      {children}
-    </label>
-  );
+  return <FormField label={label}>{children}</FormField>;
 }
 export function EmptyState({
   text,
@@ -152,7 +204,12 @@ export function TaskRow({
       className={
         "judex-work-task-row" + (nested ? " judex-work-task-nested" : "")
       }
-      onClick={() => go({ view: "task", id: task.id })}
+      onClick={() =>
+        go({
+          view: "task",
+          id: task.id,
+        })
+      }
     >
       <span
         className={
@@ -229,45 +286,43 @@ export function Upload({
   const { state, t, setToast } = useWork();
   return (
     <div className="judex-work-upload">
-      <label>
+      <UIFilePicker
+        multiple
+        data-testid="work-files"
+        onChange={async (e) => {
+          const values = Array.from(e.target.files ?? []),
+            incoming: Evidence[] = [];
+          for (const file of values) {
+            if (file.size > 1024 * 1024) {
+              setToast(t("workFileLarge"));
+              continue;
+            }
+            const textual =
+              file.type.startsWith("text/") ||
+              /\.(md|txt|json|csv|log)$/i.test(file.name);
+            const data = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(String(reader.result));
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+            incoming.push({
+              id: uid(),
+              name: file.name,
+              text: textual ? await file.text() : "",
+              data,
+              type: file.type,
+              author: state.currentUser,
+              at: Date.now(),
+            });
+          }
+          onChange([...files, ...incoming]);
+          e.target.value = "";
+        }}
+      >
         <Paperclip />
         {t("workAttach")}
-        <input
-          type="file"
-          multiple
-          data-testid="work-files"
-          onChange={async (e) => {
-            const values = Array.from(e.target.files ?? []),
-              incoming: Evidence[] = [];
-            for (const file of values) {
-              if (file.size > 1024 * 1024) {
-                setToast(t("workFileLarge"));
-                continue;
-              }
-              const textual =
-                file.type.startsWith("text/") ||
-                /\.(md|txt|json|csv|log)$/i.test(file.name);
-              const data = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(String(reader.result));
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-              });
-              incoming.push({
-                id: uid(),
-                name: file.name,
-                text: textual ? await file.text() : "",
-                data,
-                type: file.type,
-                author: state.currentUser,
-                at: Date.now(),
-              });
-            }
-            onChange([...files, ...incoming]);
-            e.target.value = "";
-          }}
-        />
-      </label>
+      </UIFilePicker>
       {files.map((f) => (
         <span key={f.id}>
           {f.name}

@@ -1,4 +1,4 @@
-import {Button} from "../../components/ui/Button";
+import { Button } from "../../components/ui/Button";
 import { ArrowUpRight, FileText, GitBranch, LockKeyhole } from "lucide-react";
 import { useWork } from "./store";
 import { blockers } from "./selectors";

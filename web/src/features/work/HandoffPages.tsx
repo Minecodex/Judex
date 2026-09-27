@@ -1,4 +1,9 @@
-import {Button} from "../../components/ui/Button";
+import {
+  UICard,
+  UIWarning,
+  UIDisclosure,
+} from "../../components/ui/FormControls";
+import { Button } from "../../components/ui/Button";
 import { useState } from "react";
 import {
   ArrowLeft,
@@ -61,7 +66,12 @@ export function HandoffList({ compact = false }: { compact?: boolean }) {
               key={h.id}
               className="judex-handoff-list-item"
               data-testid={"handoff-list-" + h.id}
-              onClick={() => go({ view: "handoff", id: h.id })}
+              onClick={() =>
+                go({
+                  view: "handoff",
+                  id: h.id,
+                })
+              }
             >
               <span className="judex-envelope-icon">
                 <Mail />
@@ -107,7 +117,7 @@ function Contribution({
     sender = ownsSeat(state, source.senderSeatId),
     receiver = ownsSeat(state, handoff.receiverSeatId);
   return (
-    <article
+    <UICard
       className={"judex-contribution judex-contribution-" + source.status}
       data-testid={"contribution-" + source.id}
       data-status={source.status}
@@ -115,7 +125,11 @@ function Contribution({
       <div className="judex-contribution-top">
         <Person seatId={source.senderSeatId} />
         <div>
-          <span>{t("workSourceVersion", { version: source.revision })}</span>
+          <span>
+            {t("workSourceVersion", {
+              version: source.revision,
+            })}
+          </span>
           <Pill status={source.status} kind="source" />
         </div>
       </div>
@@ -223,7 +237,7 @@ function Contribution({
           onClose={() => setModal(null)}
         />
       )}
-    </article>
+    </UICard>
   );
 }
 export function HandoffPage({
@@ -240,7 +254,11 @@ export function HandoffPage({
       {!embedded && (
         <Button
           className="judex-work-back"
-          onClick={() => go({ view: "handoffs" })}
+          onClick={() =>
+            go({
+              view: "handoffs",
+            })
+          }
         >
           <ArrowLeft />
           {t("workHandoffs")}
@@ -269,7 +287,14 @@ export function HandoffPage({
           <span>{t("workReceiver")}</span>
           <Person seatId={handoff.receiverSeatId} />
         </div>
-        <Button onClick={() => go({ view: "flows", id: flow.id })}>
+        <Button
+          onClick={() =>
+            go({
+              view: "flows",
+              id: flow.id,
+            })
+          }
+        >
           <FileText />
           <span>
             {t("workBased")}
@@ -280,7 +305,7 @@ export function HandoffPage({
         </Button>
       </div>
       {handoff.stale && (
-        <div className="judex-work-warning" data-testid="handoff-stale">
+        <UIWarning className="judex-work-warning" data-testid="handoff-stale">
           <AlertCircle />
           <span>{t("workStale")}</span>
           <Btn
@@ -290,7 +315,7 @@ export function HandoffPage({
           >
             {t("workRefresh")}
           </Btn>
-        </div>
+        </UIWarning>
       )}
       <div className="judex-contributions">
         {handoff.sources.map((source) => (
@@ -298,20 +323,35 @@ export function HandoffPage({
         ))}
       </div>
       <p className="judex-work-small-note">{t("workNoReceiptIsAcceptance")}</p>
-      <Btn secondary onClick={() => go({ view: "task", id: handoff.taskId })}>
+      <Btn
+        secondary
+        onClick={() =>
+          go({
+            view: "task",
+            id: handoff.taskId,
+          })
+        }
+      >
         {t("workViewTask")}
         <ArrowRight />
       </Btn>
       <Activity targetId={handoff.id} />
       {!!handoff.history.length && (
-        <details className="judex-work-records">
-          <summary>
-            {t("deliveryHistory")} · {handoff.history.length}
-          </summary>
+        <UIDisclosure
+          className="judex-work-records"
+          title={
+            <>
+              {t("deliveryHistory")} · {handoff.history.length}
+            </>
+          }
+        >
           {handoff.history.map((entry, index) => (
             <article key={index}>
               <strong>
-                {t("workSourceVersion", { version: entry.source.revision })} ·{" "}
+                {t("workSourceVersion", {
+                  version: entry.source.revision,
+                })}{" "}
+                ·{" "}
                 {entry.source.sentBy ??
                   state.seats.find((v) => v.id === entry.source.senderSeatId)
                     ?.person}
@@ -321,7 +361,7 @@ export function HandoffPage({
               {entry.source.reason && <p>{entry.source.reason}</p>}
             </article>
           ))}
-        </details>
+        </UIDisclosure>
       )}
     </div>
   );

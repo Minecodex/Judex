@@ -5,8 +5,10 @@ import { agentsZh, agentsEn } from "./agents";
 import { membershipZh, membershipEn } from "./membership";
 import { workZh, workEn } from "./work";
 import { projectZh, projectEn } from "./project";
-import {cardsZh,cardsEn} from './cards';
-import {shellZh,shellEn} from './shell';
+import { cardsZh, cardsEn } from "./cards";
+import { shellZh, shellEn } from "./shell";
+import { chatZh, chatEn } from "./chat";
+import { settingsZh, settingsEn } from "./settings";
 const modules = [
   { zh: commonZh, en: commonEn },
   { zh: experienceZh, en: experienceEn },
@@ -15,8 +17,10 @@ const modules = [
   { zh: membershipZh, en: membershipEn },
   { zh: workZh, en: workEn },
   { zh: projectZh, en: projectEn },
-  {zh:cardsZh,en:cardsEn},
-  {zh:shellZh,en:shellEn},
+  { zh: cardsZh, en: cardsEn },
+  { zh: shellZh, en: shellEn },
+  { zh: chatZh, en: chatEn },
+  { zh: settingsZh, en: settingsEn },
 ];
 export type Locale = "zh-CN" | "en";
 export type Key =
@@ -28,7 +32,9 @@ export type Key =
   | keyof typeof workZh
   | keyof typeof projectZh
   | keyof typeof cardsZh
-  | keyof typeof shellZh;
+  | keyof typeof shellZh
+  | keyof typeof chatZh
+  | keyof typeof settingsZh;
 const zh = Object.assign({}, ...modules.map((m) => m.zh)) as Record<
   Key,
   string

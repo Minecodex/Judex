@@ -1,4 +1,8 @@
 import {
+  discussTopic,
+  discussWorkSubmission,
+} from "../chat/discussionPolicy.ts";
+import {
   words as W,
   type WorkState,
   type Result,
@@ -128,7 +132,7 @@ export function reviseSource(
   task.files.push(...files);
   task.revision++;
   if (task.status !== "accepted") task.status = "delivered";
-  return record(
+  const recorded = record(
     s,
     h.projectId,
     h.id,
@@ -139,6 +143,15 @@ export function reviseSource(
       src.revision +
       " is ready for the sender's confirmation. Other source decisions remain.",
   );
+  return recorded.error
+    ? recorded
+    : discussWorkSubmission(
+        recorded.state,
+        source.taskId,
+        "source:" + sourceId + ":" + src.revision,
+        summary,
+        files,
+      );
 }
 export function sendSource(
   state: WorkState,
@@ -196,13 +209,22 @@ export function reportTask(
   );
   next.status = "delivered";
   next.revision++;
-  return record(
+  const recorded = record(
     s,
     task.projectId,
     task.id,
     "本人提交工作成果；最终验收尚未完成。",
     "The assigned person reported delivery; final acceptance is still pending.",
   );
+  return recorded.error
+    ? recorded
+    : discussWorkSubmission(
+        recorded.state,
+        taskId,
+        next.files[next.files.length - files.length - 1].id,
+        summary,
+        files,
+      );
 }
 export function taskAction(
   state: WorkState,
@@ -427,6 +449,7 @@ export function topicMessage(
       id: uid(),
       actor: s.currentUser,
       kind: "person",
+      submissionType: files.length ? "material" : "message",
       text: W(body.trim()),
       files,
       at: Date.now(),
@@ -442,20 +465,7 @@ export function topicMessage(
       at: Date.now(),
     },
   );
-  return { state: s };
-}
-export function closeTopic(state: WorkState, topicId: string): Result {
-  const topic = state.topics.find((t) => t.id === topicId);
-  if (!topic || !member(state, topic.projectId)) return fail("permission");
-  const s = structuredClone(state);
-  s.topics.find((t) => t.id === topicId)!.closed = !topic.closed;
-  return record(
-    s,
-    topic.projectId,
-    topic.id,
-    "更新讨论状态，不改变计划或任务的交付进度。",
-    "Discussion status changed; plan and task progress remain unchanged.",
-  );
+  return discussTopic(s, topicId);
 }
 export function publishFlow(
   state: WorkState,

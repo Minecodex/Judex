@@ -1,0 +1,312 @@
+:root {
+  --settings-sidebar: 248px;
+  --settings-content: 960px;
+  --account-menu-width: 290px;
+  --settings-search-height: 40px;
+  --settings-control-width: 200px;
+}
+.judex-chat-app-container[hidden] {
+  display: none !important;
+}
+.judex-chat-account .judex-account-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: var(--s14);
+  padding: var(--s2);
+  background: transparent;
+  justify-content: flex-start;
+  border-radius: var(--r-md);
+  color: var(--ink);
+}
+.judex-account-trigger > span:nth-child(2) {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  text-align: left;
+  gap: var(--s1);
+}
+.judex-account-trigger strong {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.judex-account-trigger small {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.judex-account-trigger svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.judex-account-popover {
+  width: var(--account-menu-width);
+  max-width: calc(100vw - var(--s8));
+  background: var(--surface);
+  border: var(--stroke) solid var(--line);
+  border-radius: var(--r-xl);
+  color: var(--ink);
+  box-shadow: var(--shadow-floating);
+  padding: var(--s2);
+}
+.judex-account-menu {
+  outline: none;
+  display: flex;
+  flex-direction: column;
+  padding: var(--s2);
+  gap: var(--s1);
+}
+.judex-account-menu-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s2);
+  margin-bottom: var(--s2);
+}
+.judex-account-menu-identity > div {
+  display: grid;
+  gap: var(--s1);
+}
+.judex-account-menu-identity small {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.judex-account-menu-action {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3);
+  min-height: var(--s10);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+.judex-account-menu-action:hover {
+  background: var(--hover);
+}
+.judex-account-menu-action small {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.judex-account-menu-action span {
+  flex: 1;
+  text-align: left;
+}
+.judex-account-menu-divider {
+  height: var(--stroke);
+  background: var(--line);
+  margin: var(--s2) 0;
+}
+.judex-account-permission,
+.judex-account-preview p {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  padding: 0 var(--s3);
+}
+.judex-account-preview {
+  padding: var(--s2) var(--s3);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.judex-account-preview summary {
+  cursor: pointer;
+  padding: var(--s2) 0;
+}
+.judex-account-preview p {
+  padding: 0;
+  line-height: var(--leading-base);
+}
+.judex-account-preview select {
+  width: 100%;
+  margin-top: var(--s2);
+  padding: var(--s2);
+  border: var(--stroke) solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+.judex-settings-page {
+  display: grid;
+  grid-template-columns: var(--settings-sidebar) minmax(0, 1fr);
+  height: 100dvh;
+  min-width: var(--desktop-min);
+  background: var(--bg);
+  color: var(--ink);
+}
+.judex-settings-sidebar {
+  padding: var(--s5) var(--s3);
+  background: var(--chat-rail);
+  border-right: var(--stroke) solid var(--line);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+.judex-settings-sidebar .judex-control {
+  width: 100%;
+  display: flex;
+  gap: var(--s3);
+  justify-content: flex-start;
+  align-items: center;
+  padding: var(--s3);
+  min-height: var(--s10);
+  border-radius: var(--r-md);
+  color: var(--ink);
+  text-align: left;
+  font-size: var(--text-sm);
+  background: transparent;
+}
+.judex-settings-sidebar .judex-control:hover {
+  background: var(--hover);
+}
+.judex-settings-sidebar .judex-settings-active {
+  background: var(--chat-nav-active);
+}
+.judex-settings-search {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 0 var(--s3);
+  border-radius: var(--r-pill);
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+.judex-settings-search input {
+  width: 100%;
+  height: var(--settings-search-height);
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: var(--s2) 0;
+  font-size: var(--text-sm);
+}
+.judex-settings-sidebar nav h2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  padding: var(--s2) var(--s3);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+}
+.judex-settings-sidebar nav h2 small {
+  color: var(--faint);
+}
+.judex-settings-sidebar nav section {
+  margin-bottom: var(--s5);
+}
+.judex-settings-scroll {
+  overflow: auto;
+  min-height: 0;
+  padding: var(--s16) var(--s12);
+}
+.judex-settings-content {
+  width: 100%;
+  max-width: var(--settings-content);
+  margin: 0 auto;
+  padding-bottom: var(--s12);
+}
+.judex-settings-content h1 {
+  font-size: var(--text-3xl);
+  line-height: var(--leading-title);
+  font-weight: var(--weight-semibold);
+  font-family: var(--font-ui);
+}
+.judex-settings-description,
+.judex-settings-content .judex-work-heading-row p {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  line-height: var(--leading-wide);
+  margin: var(--s3) 0 var(--s8);
+}
+.judex-settings-section-title {
+  font-size: var(--text-lg);
+  margin: var(--s8) 0 var(--s4);
+}
+.judex-settings-card {
+  padding: var(--s5);
+  border: var(--stroke) solid var(--line);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+}
+.judex-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s6);
+  padding: var(--s5) var(--s2);
+}
+.judex-settings-row + .judex-settings-row {
+  border-top: var(--stroke) solid var(--line);
+}
+.judex-settings-row > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+.judex-settings-row > div:first-child > span {
+  display: grid;
+  gap: var(--s2);
+}
+.judex-settings-row strong {
+  font-weight: var(--weight-medium);
+  font-size: var(--text-base);
+}
+.judex-settings-row small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.judex-settings-row select {
+  width: var(--settings-control-width);
+}
+.judex-settings-theme-options {
+  display: flex;
+  gap: var(--s2);
+}
+.judex-settings-local {
+  display: grid;
+  gap: var(--s5);
+}
+.judex-settings-local p {
+  font-size: var(--text-sm);
+  line-height: var(--leading-wide);
+  color: var(--muted);
+}
+.judex-settings-local .judex-settings-card {
+  display: grid;
+  gap: var(--s4);
+}
+.judex-settings-content .judex-work-preferences {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s6);
+}
+.judex-settings-content .judex-work-preferences > .judex-work-panel {
+  width: 100%;
+  max-width: none;
+}
+.judex-settings-content .judex-prompt-editor {
+  width: 100%;
+  min-height: var(--chat-graph-min);
+}
+.judex-settings-content .judex-work-preferences aside {
+  background: var(--surface-soft);
+  color: var(--ink);
+  border: var(--stroke) solid var(--line);
+}
+.judex-settings-content .judex-next-demo-settings {
+  display: none;
+}
+.judex-settings-content .judex-eyebrow {
+  display: none;
+}
+.judex-settings-content .judex-flow-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+.judex-settings-content .judex-work-heading-row {
+  align-items: flex-start;
+}

@@ -1,4 +1,13 @@
-import {Button} from "../../components/ui/Button";
+import {
+  UICard,
+  UIInput,
+  UICheckbox,
+  UITextArea,
+  UIOption,
+  UISelect,
+} from "../../components/ui/FormControls";
+import { useWorkspaceDraft } from "../chat/useWorkspaceDraft";
+import { Button } from "../../components/ui/Button";
 import { ExistingAssignments } from "./ProjectPages";
 import { useState } from "react";
 import {
@@ -37,7 +46,7 @@ export function InvitePage() {
         description={t(invites.length ? "workWelcomeSub" : "workNoAccessSub")}
       />
       {invites.map((invite) => (
-        <section key={invite.id} className="judex-work-panel">
+        <UICard key={invite.id} className="judex-work-panel">
           <p>
             {invite.sender} → {state.currentUser}
           </p>
@@ -58,17 +67,19 @@ export function InvitePage() {
             testId="next-accept-invite"
             onClick={() => {
               if (act((s) => acceptInvite(s, invite.id)))
-                go({ view: "settings" });
+                go({
+                  view: "settings",
+                });
             }}
           >
             {t("workAcceptInvite")}
           </Btn>
-        </section>
+        </UICard>
       ))}
     </div>
   );
 }
-function InviteDialog({ onClose }: { onClose: () => void }) {
+export function InviteDialog({ onClose }: { onClose: () => void }) {
   const { state, project, t, text, act } = useWork(),
     [name, setName] = useState(""),
     [ids, setIds] = useState<string[]>([]);
@@ -76,7 +87,7 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
     <Dialog title={t("workInviteTitle")} onClose={onClose} wide>
       <p className="judex-modal-description">{t("workInviteHint")}</p>
       <Field label={t("workInviteName")}>
-        <input
+        <UIInput
           className="judex-input"
           data-testid="next-invite-name"
           value={name}
@@ -88,19 +99,18 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
         {state.positions
           .filter((p) => p.projectId === project.id)
           .map((p) => (
-            <label key={p.id}>
-              <input
-                type="checkbox"
-                data-testid={"invite-position-" + p.id}
-                checked={ids.includes(p.id)}
-                onChange={(e) =>
-                  setIds(
-                    e.target.checked
-                      ? [...ids, p.id]
-                      : ids.filter((id) => id !== p.id),
-                  )
-                }
-              />
+            <UICheckbox
+              key={p.id}
+              data-testid={"invite-position-" + p.id}
+              checked={ids.includes(p.id)}
+              onChange={(e) =>
+                setIds(
+                  e.target.checked
+                    ? [...ids, p.id]
+                    : ids.filter((id) => id !== p.id),
+                )
+              }
+            >
               <span>
                 <strong>{text(p.name)}</strong>
                 <small>
@@ -110,7 +120,7 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
                     .join(" · ")}
                 </small>
               </span>
-            </label>
+            </UICheckbox>
           ))}
       </div>
       <p className="judex-muted">{t("workInviteLocal")}</p>
@@ -155,52 +165,71 @@ function PositionDialog({
     >
       <p className="judex-modal-description">{t("workPositionHint")}</p>
       <Field label={t("workPositionName")}>
-        <input
+        <UIInput
           className="judex-input"
           data-testid="position-name"
           value={value.name}
-          onChange={(e) => setValue({ ...value, name: e.target.value })}
+          onChange={(e) =>
+            setValue({
+              ...value,
+              name: e.target.value,
+            })
+          }
         />
       </Field>
       <Field label={t("workPositionPrompt")}>
-        <textarea
+        <UITextArea
           className="judex-textarea"
           data-testid="position-prompt"
           value={value.prompt}
-          onChange={(e) => setValue({ ...value, prompt: e.target.value })}
+          onChange={(e) =>
+            setValue({
+              ...value,
+              prompt: e.target.value,
+            })
+          }
         />
       </Field>
       <div className="judex-work-form-grid">
         <Field label={t("workChooseFlow")}>
-          <select
+          <UISelect
             className="judex-input"
             data-testid="position-flow"
             value={value.flowId}
             onChange={(e) => {
               const f = flows.find((f) => f.id === e.target.value)!;
-              setValue({ ...value, flowId: f.id, nodeId: f.nodes[0].id });
+              setValue({
+                ...value,
+                flowId: f.id,
+                nodeId: f.nodes[0].id,
+              });
             }}
           >
             {flows.map((f) => (
-              <option key={f.id} value={f.id}>
+              <UIOption key={f.id} value={f.id}>
                 {text(f.name)}
-              </option>
+              </UIOption>
             ))}
-          </select>
+          </UISelect>
         </Field>
         <Field label={t("workChooseNode")}>
-          <select
+          <UISelect
             className="judex-input"
             data-testid="position-node"
             value={value.nodeId}
-            onChange={(e) => setValue({ ...value, nodeId: e.target.value })}
+            onChange={(e) =>
+              setValue({
+                ...value,
+                nodeId: e.target.value,
+              })
+            }
           >
             {flow.nodes.map((n) => (
-              <option value={n.id} key={n.id}>
+              <UIOption value={n.id} key={n.id}>
                 {text(n.label)}
-              </option>
+              </UIOption>
             ))}
-          </select>
+          </UISelect>
         </Field>
       </div>
       <div className="judex-modal-actions">
@@ -226,19 +255,19 @@ function ReplaceDialog({ seat, onClose }: { seat: Seat; onClose: () => void }) {
     <Dialog title={t("workReplace")} onClose={onClose}>
       <p className="judex-modal-description">{t("workReplaceHint")}</p>
       <Field label={t("workChooseSeat")}>
-        <select
+        <UISelect
           className="judex-input"
           data-testid="replace-seat-person"
           value={person}
           onChange={(e) => setPerson(e.target.value)}
         >
-          <option value="">{t("assignmentTarget")}</option>
+          <UIOption value="">{t("assignmentTarget")}</UIOption>
           {project.members
             .filter((m) => m.name !== seat.person)
             .map((m) => (
-              <option key={m.name}>{m.name}</option>
+              <UIOption key={m.name}>{m.name}</UIOption>
             ))}
-        </select>
+        </UISelect>
       </Field>
       <div className="judex-modal-actions">
         <Btn secondary onClick={onClose}>
@@ -278,7 +307,13 @@ export function TeamPage() {
           <>
             <Btn
               secondary
-              onClick={() => state.flows.some(f=>f.projectId===project.id) ? setEditing("new") : go({view:"flows"})}
+              onClick={() =>
+                state.flows.some((f) => f.projectId === project.id)
+                  ? setEditing("new")
+                  : go({
+                      view: "flows",
+                    })
+              }
               testId="new-position"
             >
               <Plus />
@@ -301,7 +336,7 @@ export function TeamPage() {
               (t.seatIds.includes(seat.id) || t.reviewerSeatId === seat.id),
           );
           return (
-            <article
+            <UICard
               className="judex-member-work-card"
               key={seat.id}
               data-testid={"seat-" + seat.id}
@@ -324,7 +359,7 @@ export function TeamPage() {
                   </Button>
                 )}
               </div>
-            </article>
+            </UICard>
           );
         })}
       </div>
@@ -347,7 +382,12 @@ export function TeamPage() {
                   return (
                     <Button
                       key={b.flowId + b.nodeId}
-                      onClick={() => go({ view: "flows", id: f.id })}
+                      onClick={() =>
+                        go({
+                          view: "flows",
+                          id: f.id,
+                        })
+                      }
                     >
                       {text(f.name)} /{" "}
                       {text(f.nodes.find((n) => n.id === b.nodeId)!.label)}
@@ -386,13 +426,13 @@ export function TeamPage() {
           wide
         >
           <Person seatId={viewing.id} />
-          <div className="judex-work-callout">
+          <UICard className="judex-work-callout">
             <h3>{t("workPositionPrompt")}</h3>
             <p>
               {text(positions.find((p) => p.id === viewing.positionId)!.prompt)}
             </p>
-          </div>
-          <div className="judex-work-callout">
+          </UICard>
+          <UICard className="judex-work-callout">
             <h3>{t("workMyPrompt")}</h3>
             <p>
               {viewing.person === state.currentUser
@@ -403,7 +443,7 @@ export function TeamPage() {
                   )?.prompt || t("workNoPreference")
                 : t("workPromptPrivate")}
             </p>
-          </div>
+          </UICard>
           <p className="judex-muted">{t("workSimulated")}</p>
         </Dialog>
       )}
@@ -416,7 +456,7 @@ export function PreferencesPage() {
       state.preferences.find(
         (p) => p.projectId === project.id && p.person === state.currentUser,
       )?.prompt ?? "";
-  const [prompt, setPrompt] = useState(value),
+  const [prompt, setPrompt] = useWorkspaceDraft("personal-prompt", value),
     [resetting, setResetting] = useState(false);
   return (
     <>
@@ -426,10 +466,10 @@ export function PreferencesPage() {
         description={t("workMyPromptHint")}
       />
       <div className="judex-work-preferences">
-        <div className="judex-work-panel">
+        <UICard className="judex-work-panel">
           <Person name={state.currentUser} />
           <Field label={t("workMyPrompt")}>
-            <textarea
+            <UITextArea
               className="judex-textarea judex-prompt-editor"
               data-testid="next-personal-prompt"
               value={prompt}
@@ -443,7 +483,7 @@ export function PreferencesPage() {
           >
             {t("personalSave")}
           </Btn>
-        </div>
+        </UICard>
         <aside>
           <LockKeyhole />
           <h3>{t("personalPrivate")}</h3>
@@ -462,10 +502,6 @@ export function PreferencesPage() {
             {t("workReminderDemo")}
           </Btn>
         )}
-        <a href="/legacy/">
-          {t("workLegacy")}
-          <ArrowUpRight />
-        </a>
         <p>{t("workResetHint")}</p>
         {resetting ? (
           <div>

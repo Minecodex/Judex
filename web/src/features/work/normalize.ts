@@ -20,6 +20,7 @@ export function normalizeWork(value: unknown): WorkState | null {
     return null;
   return {
     ...state,
+    proposals: state.proposals ?? [],
     tasks: state.tasks.map((task) => ({
       ...task,
       revision: Number.isFinite(task.revision) ? task.revision : 1,

@@ -1,3 +1,10 @@
+import {
+  UIOption,
+  UISelect,
+  UICheckbox,
+  UITextArea,
+  UIInput,
+} from "../../components/ui/FormControls";
 import { useState } from "react";
 import { FileText, FolderPlus, Upload as UploadIcon } from "lucide-react";
 import { useWork } from "./store";
@@ -6,6 +13,11 @@ import { createDiscussion } from "./composition";
 import { topicMessage, assignPositions } from "./actions";
 import { uid } from "./seed";
 import { words, type Evidence, type Project } from "./types";
+import {
+  DEFAULT_DISCUSSION_ROUNDS,
+  MAX_DISCUSSION_ROUNDS,
+  validRoundLimit,
+} from "../chat/discussionPolicy";
 export function ExistingAssignments() {
   const { state, project, management, t, text, act } = useWork();
   const [open, setOpen] = useState(false),
@@ -27,7 +39,7 @@ export function ExistingAssignments() {
       {open && (
         <Dialog title={t("projectAssign")} onClose={() => setOpen(false)}>
           <p className="judex-project-note">{t("projectAssignHint")}</p>
-          <select
+          <UISelect
             className="judex-input"
             aria-label={t("workTeam")}
             value={person}
@@ -37,25 +49,24 @@ export function ExistingAssignments() {
             }}
           >
             {project.members.map((m) => (
-              <option key={m.name}>{m.name}</option>
+              <UIOption key={m.name}>{m.name}</UIOption>
             ))}
-          </select>
+          </UISelect>
           <div className="judex-position-options">
             {available.map((p) => (
-              <label key={p.id}>
-                <input
-                  type="checkbox"
-                  checked={ids.includes(p.id)}
-                  onChange={(e) =>
-                    setIds(
-                      e.target.checked
-                        ? [...ids, p.id]
-                        : ids.filter((id) => id !== p.id),
-                    )
-                  }
-                />
+              <UICheckbox
+                key={p.id}
+                checked={ids.includes(p.id)}
+                onChange={(e) =>
+                  setIds(
+                    e.target.checked
+                      ? [...ids, p.id]
+                      : ids.filter((id) => id !== p.id),
+                  )
+                }
+              >
                 {text(p.name)}
-              </label>
+              </UICheckbox>
             ))}
           </div>
           {!available.length && <p>{t("workNoItems")}</p>}
@@ -121,7 +132,7 @@ export function ResourcesPage() {
       {adding && (
         <Dialog title={t("projectRegister")} onClose={() => setAdding(false)}>
           <Field label={t("projectPurpose")}>
-            <textarea
+            <UITextArea
               className="judex-input"
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
@@ -154,7 +165,10 @@ export function ResourcesPage() {
                 setAdding(false);
                 setFiles([]);
                 setPurpose("");
-                go({ view: "topic", id });
+                go({
+                  view: "topic",
+                  id,
+                });
               }
             }}
           >
@@ -169,12 +183,13 @@ export function ProjectDialog({ onClose }: { onClose: () => void }) {
   const { t, state, act, go } = useWork();
   const [name, setName] = useState(""),
     [goal, setGoal] = useState(""),
+    [maxRounds, setMaxRounds] = useState(String(DEFAULT_DISCUSSION_ROUNDS)),
     [kind, setKind] = useState<Project["kind"]>("software");
   return (
-    <Dialog title={t("projectSetupTitle")} onClose={onClose}>
+    <Dialog title={t("projectSetupTitle")} onClose={onClose} wide>
       <p className="judex-project-note">{t("projectSetupHint")}</p>
       <Field label={t("projectProjectName")}>
-        <input
+        <UIInput
           className="judex-input"
           data-testid="project-project-name"
           value={name}
@@ -182,30 +197,52 @@ export function ProjectDialog({ onClose }: { onClose: () => void }) {
         />
       </Field>
       <Field label={t("projectGoal")}>
-        <textarea
+        <UITextArea
           className="judex-input"
           value={goal}
           onChange={(e) => setGoal(e.target.value)}
         />
       </Field>
       <Field label={t("projectKind")}>
-        <select
+        <UISelect
           className="judex-input"
           value={kind}
           onChange={(e) => setKind(e.target.value as Project["kind"])}
         >
-          <option value="software">{t("projectSoftware")}</option>
-          <option value="design">{t("projectDesign")}</option>
-        </select>
+          <UIOption value="software">{t("projectSoftware")}</UIOption>
+          <UIOption value="design">{t("projectDesign")}</UIOption>
+        </UISelect>
       </Field>
+      <Field label={t("chatDiscussionLimit")}>
+        <UIInput
+          className="judex-input"
+          type="number"
+          min={1}
+          max={MAX_DISCUSSION_ROUNDS}
+          step={1}
+          value={maxRounds}
+          data-testid="new-project-discussion-limit"
+          onChange={(e) => setMaxRounds(e.target.value)}
+        />
+      </Field>
+      <p className="judex-project-note">{t("chatRoundMeaning")}</p>
       <Btn
-        disabled={!name.trim() || !goal.trim()}
+        disabled={
+          !name.trim() || !goal.trim() || !validRoundLimit(Number(maxRounds))
+        }
         testId="project-create-project"
         onClick={() => {
           const id = uid();
           if (
             act((s) => {
-              if (!name.trim() || !goal.trim()) return { error: "required" };
+              if (
+                !name.trim() ||
+                !goal.trim() ||
+                !validRoundLimit(Number(maxRounds))
+              )
+                return {
+                  error: "required",
+                };
               return {
                 state: {
                   ...s,
@@ -216,7 +253,13 @@ export function ProjectDialog({ onClose }: { onClose: () => void }) {
                       title: words(name.trim()),
                       description: words(goal.trim()),
                       kind,
-                      members: [{ name: s.currentUser, role: "owner" }],
+                      maxDiscussionRounds: Number(maxRounds),
+                      members: [
+                        {
+                          name: s.currentUser,
+                          role: "owner",
+                        },
+                      ],
                     },
                   ],
                 },
@@ -224,7 +267,11 @@ export function ProjectDialog({ onClose }: { onClose: () => void }) {
             })
           ) {
             onClose();
-            go({ projectId: id, view: "home", id: undefined });
+            go({
+              projectId: id,
+              view: "home",
+              id: undefined,
+            });
           }
         }}
       >

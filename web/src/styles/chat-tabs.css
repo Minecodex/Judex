@@ -1,0 +1,266 @@
+:root {
+  --chat-tab-min: 72px;
+  --chat-tab-max: 180px;
+  --chat-tab-close: 22px;
+  --chat-tab-height: 34px;
+  --chat-tab-idle: #efedf1;
+  --chat-tab-selected: #e5e1ec;
+}
+:root[data-theme="dark"] {
+  --chat-tab-idle: #343239;
+  --chat-tab-selected: #51485e;
+}
+.judex-discussion-budget {
+  display: flex;
+  gap: var(--s2) var(--s4);
+  flex-wrap: wrap;
+  align-items: center;
+  border-top: var(--stroke) solid var(--line);
+  padding: var(--s3) 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.judex-discussion-budget strong {
+  font-weight: var(--weight-medium);
+  color: var(--accent);
+}
+.judex-project-ai-settings .judex-work-panel {
+  display: grid;
+  gap: var(--s4);
+}
+.judex-project-ai-settings h2 {
+  font-size: var(--text-lg);
+}
+.judex-project-ai-settings p {
+  font-size: var(--text-sm);
+  line-height: var(--leading-base);
+  color: var(--muted);
+}
+.judex-project-ai-settings input {
+  width: 100%;
+}
+.judex-project-ai-settings .judex-work-callout {
+  margin-top: var(--s5);
+}
+.judex-conversation-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  gap: 0;
+  width: 100%;
+}
+.judex-chat-app .judex-conversation-tab {
+  gap: var(--s2);
+  padding: var(--s3) var(--s2);
+  font-size: var(--text-xs);
+  height: auto;
+  justify-content: flex-start;
+  box-shadow: none;
+}
+.judex-conversation-tab-label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.judex-chat-app .judex-active-tab-panel {
+  padding: 0;
+  outline: none;
+  background: transparent;
+}
+.judex-conversation-tabstrip {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  border-bottom: var(--stroke) solid var(--line);
+  background: var(--surface-soft);
+  padding: var(--s2) var(--s3) 0;
+  gap: var(--s1);
+  flex-shrink: 0;
+}
+.judex-conversation-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: var(--s1);
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.judex-conversation-tab {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  max-width: var(--chat-tab-max);
+  min-width: var(--chat-tab-min);
+  border: var(--stroke) solid transparent;
+  border-bottom: 0;
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  padding-right: var(--s1);
+  color: var(--muted);
+}
+.judex-conversation-tab-active {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.judex-chat-app .judex-conversation-tab [role="tab"] {
+  min-width: 0;
+  flex: 1;
+  border-radius: var(--r-md) 0 0 0;
+  gap: var(--s2);
+  justify-content: flex-start;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  padding: var(--s3) var(--s2);
+}
+.judex-conversation-tab [role="tab"] > span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.judex-conversation-tab svg,
+.judex-conversation-tab small {
+  flex-shrink: 0;
+}
+.judex-conversation-tab small {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.judex-chat-app .judex-conversation-tab-close {
+  flex-shrink: 0;
+  min-height: var(--chat-tab-close);
+  width: var(--chat-tab-close);
+  height: var(--chat-tab-close);
+  padding: 0;
+  justify-content: center;
+  border-radius: var(--r-sm);
+}
+.judex-active-tab-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.judex-chat-app .judex-conversation-tabstrip {
+  padding: var(--s2);
+  align-items: center;
+  background: var(--bg);
+  gap: var(--s2);
+}
+.judex-chat-app .judex-conversation-tabs {
+  background: transparent;
+  padding: 0;
+  gap: var(--s2);
+  border-radius: 0;
+  min-width: 0;
+  justify-content: flex-start;
+}
+.judex-chat-app .judex-conversation-tab {
+  width: max-content !important;
+  flex: 0 0 auto !important;
+  min-width: var(--chat-tab-min);
+  max-width: var(--chat-tab-max);
+  height: var(--chat-tab-height);
+  min-height: var(--chat-tab-height);
+  padding: var(--s1) var(--s2);
+  border: var(--stroke) solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--chat-tab-idle);
+  color: var(--ink);
+  gap: var(--s2);
+}
+.judex-chat-app .judex-conversation-tab:hover {
+  background: var(--hover);
+  border-color: var(--muted);
+}
+.judex-chat-app .judex-conversation-tab-active {
+  background: var(--chat-tab-selected);
+  border-color: var(--muted);
+}
+.judex-chat-app .judex-conversation-tab-label {
+  flex: 0 1 auto;
+}
+.judex-workspace-root {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  gap: 0;
+}
+.judex-chat-main[hidden] {
+  display: none !important;
+}
+.judex-workspace-window-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  flex-shrink: 0;
+}
+.judex-chat-app .judex-workspace-tabstrip {
+  flex-wrap: nowrap;
+}
+.judex-workspace-tab-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 !important;
+  background: transparent;
+  outline: none;
+  overflow: hidden;
+}
+.judex-workspace-launcher {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s6);
+  overflow: auto;
+  min-height: 0;
+}
+.judex-workspace-launcher > div {
+  width: 100%;
+  max-width: var(--entry-width);
+  margin: auto;
+}
+.judex-workspace-launcher h2 {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  margin-bottom: var(--s2);
+}
+.judex-workspace-launcher p {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  margin-bottom: var(--s5);
+}
+.judex-workspace-launcher-list {
+  display: grid;
+  gap: var(--s2);
+}
+.judex-chat-app .judex-workspace-launcher-list .judex-control {
+  width: 100%;
+  justify-content: flex-start;
+  gap: var(--s3);
+  padding: var(--s3);
+  min-height: var(--s12);
+  border-radius: var(--r-md);
+  text-align: left;
+  border: var(--stroke) solid transparent;
+}
+.judex-workspace-launcher-list .judex-control > span {
+  flex: 1;
+  min-width: 0;
+}
+.judex-chat-app .judex-workspace-launcher-list .judex-control:hover {
+  border-color: var(--line);
+  background: var(--surface);
+}

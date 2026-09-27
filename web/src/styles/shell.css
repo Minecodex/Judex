@@ -1,7 +1,6 @@
 :root { --entry-width:480px; --preview-height:38px; --control-radius:10px; }
 body { background:var(--bg);color:var(--ink); }
 .judex-control { min-width:0; height:auto; border-radius:inherit; font:inherit; white-space:normal; justify-content:inherit; }
-.judex-preview-banner { display:flex; align-items:center; justify-content:center; gap:var(--s4); padding:var(--s2) var(--s4); font-size:var(--text-xs); background:var(--warning-soft); color:var(--warning); border-bottom:var(--stroke) solid var(--line); }
 .judex-entry { font-family:var(--font-ui);background:var(--bg);color:var(--ink); }
 .judex-entry-card { width:min(100%,var(--entry-width));padding:var(--s6);background:var(--surface);border:var(--stroke) solid var(--line);border-radius:var(--r-xl); }
 .judex-entry-card p { margin:var(--s3) 0;color:var(--muted);font-size:var(--text-sm); }

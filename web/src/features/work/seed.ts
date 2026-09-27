@@ -459,7 +459,6 @@ export function seedWork(): WorkState {
         title: W("首版需要标签吗？", "Do we need labels in the first release?"),
         planIds: ["leaf-first", "leaf-next"],
         taskIds: ["build"],
-        closed: false,
         messages: [
           {
             id: "message-1",
@@ -492,7 +491,6 @@ export function seedWork(): WorkState {
         ),
         planIds: ["wild-launch"],
         taskIds: ["brand-copy"],
-        closed: false,
         messages: [],
       },
     ],

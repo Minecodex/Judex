@@ -147,8 +147,6 @@ export const workZh = {
   workRelatedTopics: "围绕这项工作的讨论",
   workOpenTopic: "进入讨论",
   workPureTopic: "讨论不计入交付进度",
-  workCloseTopic: "结束本次讨论",
-  workReopenTopic: "继续讨论",
   workDiscussPlaceholder:
     "补充一个想法、问题或依据……普通聊天不会变成正式批准。",
   workNewPlan: "开启一个计划",
@@ -401,8 +399,6 @@ export const workEn: Record<keyof typeof workZh, string> = {
   workRelatedTopics: "Discussions around this work",
   workOpenTopic: "Open discussion",
   workPureTopic: "Discussion is not delivery progress",
-  workCloseTopic: "Close discussion",
-  workReopenTopic: "Continue discussion",
   workDiscussPlaceholder:
     "Add an idea, question or evidence… Ordinary chat is never formal approval.",
   workNewPlan: "Begin a plan",

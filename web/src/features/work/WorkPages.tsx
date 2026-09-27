@@ -1,4 +1,11 @@
-import {Button} from "../../components/ui/Button";
+import {
+  UIDisclosure,
+  UIWarning,
+  UIInput,
+  UIOption,
+  UISelect,
+} from "../../components/ui/FormControls";
+import { Button } from "../../components/ui/Button";
 import { useState } from "react";
 import { HandoffDialog } from "./CompositionDialogs";
 import {
@@ -41,7 +48,7 @@ import {
   ReasonDialog,
   ReportDialog,
 } from "./Dialogs";
-import { TaskTree } from "./TaskTree";
+import { ExecutionMap } from "../chat/ExecutionMap";
 import { TaskCard } from "./TaskCards";
 import type { Plan, Task } from "./types";
 export function PlanTile({
@@ -59,7 +66,12 @@ export function PlanTile({
       className={
         "judex-plan-tile" + (featured ? " judex-plan-tile-featured" : "")
       }
-      onClick={() => go({ view: "plan", id: plan.id })}
+      onClick={() =>
+        go({
+          view: "plan",
+          id: plan.id,
+        })
+      }
       data-testid={"plan-tile-" + plan.id}
     >
       <div className="judex-plan-tile-top">
@@ -77,7 +89,12 @@ export function PlanTile({
       </div>
       <div className="judex-plan-tile-bottom">
         <Person seatId={plan.ownerSeatId} small />
-        <small>{t("workPlanCount", { done, total: tasks.length })}</small>
+        <small>
+          {t("workPlanCount", {
+            done,
+            total: tasks.length,
+          })}
+        </small>
         <ArrowRight />
       </div>
     </Button>
@@ -122,7 +139,14 @@ export function PlanPage({ plan }: { plan: Plan }) {
     selected = tasks.find((v) => v.id === selection);
   return (
     <div className="judex-plan-page">
-      <Button className="judex-work-back" onClick={() => go({ view: "plans" })}>
+      <Button
+        className="judex-work-back"
+        onClick={() =>
+          go({
+            view: "plans",
+          })
+        }
+      >
         <ArrowLeft />
         {t("workPlans")}
       </Button>
@@ -141,18 +165,20 @@ export function PlanPage({ plan }: { plan: Plan }) {
           </strong>
           <small>{t("workTaskSummary")}</small>
         </div>
-        <details>
-          <summary>{t("workCriteria")}</summary>
+        <UIDisclosure title={<>{t("workCriteria")}</>}>
           {plan.criteria.map((c, i) => (
             <p key={i}>
               <Check />
               {text(c)}
             </p>
           ))}
-        </details>
+        </UIDisclosure>
       </div>
       {needsReview(state, plan) && (
-        <div className="judex-work-warning" data-testid="plan-reopened-warning">
+        <UIWarning
+          className="judex-work-warning"
+          data-testid="plan-reopened-warning"
+        >
           <RotateCcw />
           {t("workReopenedPlan")}
           {canOwnPlan(state, plan) && (
@@ -163,7 +189,7 @@ export function PlanPage({ plan }: { plan: Plan }) {
               {t("workPlanResume")}
             </Btn>
           )}
-        </div>
+        </UIWarning>
       )}
       <div className="judex-plan-next-step">
         <div>
@@ -175,7 +201,9 @@ export function PlanPage({ plan }: { plan: Plan }) {
                 ? t("workPlanCompleted")
                 : done === tasks.length && tasks.length > 0
                   ? t("cardsPlanReady")
-                  : t("cardsPlanWait", { count: tasks.length - done })}
+                  : t("cardsPlanWait", {
+                      count: tasks.length - done,
+                    })}
           </p>
           <small>
             {t("cardsOwnerReview", {
@@ -214,15 +242,7 @@ export function PlanPage({ plan }: { plan: Plan }) {
           </Btn>
         </div>
       </div>
-      <TaskTree
-        plan={plan}
-        tasks={tasks}
-        onOpen={(task) => setSelection(task.id)}
-        onChild={(task) => {
-          setParent(task);
-          setCreating(true);
-        }}
-      />
+      <ExecutionMap tasks={tasks} onOpen={(task) => setSelection(task.id)} />
       {!!plan.referenceTaskIds.length && (
         <section className="judex-work-section">
           <h3>{t("workReferences")}</h3>
@@ -251,7 +271,15 @@ export function PlanPage({ plan }: { plan: Plan }) {
       {selected && (
         <Dialog title={t("workTasks")} onClose={() => setSelection(null)} wide>
           <TaskPage task={selected} compact embedded />
-          <Btn secondary onClick={() => go({ view: "task", id: selected.id })}>
+          <Btn
+            secondary
+            onClick={() =>
+              go({
+                view: "task",
+                id: selected.id,
+              })
+            }
+          >
             {t("cardsOpenTask")}
             <ArrowRight />
           </Btn>
@@ -311,23 +339,23 @@ export function TasksPage() {
             </Button>
           ))}
         </div>
-        <input
+        <UIInput
           className="judex-input"
           aria-label={t("cardsSearch")}
           placeholder={t("cardsSearch")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <select
+        <UISelect
           className="judex-input"
           aria-label={t("cardsStatus")}
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
-          <option value="all">{t("cardsAllStatus")}</option>
+          <UIOption value="all">{t("cardsAllStatus")}</UIOption>
           {["draft", "ready", "working", "delivered", "rework", "accepted"].map(
             (v) => (
-              <option key={v} value={v}>
+              <UIOption key={v} value={v}>
                 {t(
                   v === "accepted"
                     ? "workTaskAccepted"
@@ -335,10 +363,10 @@ export function TasksPage() {
                         v[0].toUpperCase() +
                         v.slice(1)) as Parameters<typeof t>[0]),
                 )}
-              </option>
+              </UIOption>
             ),
           )}
-        </select>
+        </UISelect>
       </div>
       <div className="judex-task-card-grid">
         {tasks.map((task) => (
@@ -538,7 +566,12 @@ export function TaskPage({
                 <Button
                   className="judex-linked-handoff"
                   key={h.id}
-                  onClick={() => go({ view: "handoff", id: h.id })}
+                  onClick={() =>
+                    go({
+                      view: "handoff",
+                      id: h.id,
+                    })
+                  }
                 >
                   <span>
                     <strong>{text(h.title)}</strong>
@@ -602,7 +635,12 @@ export function RelatedTopics({
         <Button
           className="judex-linked-handoff"
           key={topic.id}
-          onClick={() => go({ view: "topic", id: topic.id })}
+          onClick={() =>
+            go({
+              view: "topic",
+              id: topic.id,
+            })
+          }
         >
           <span>
             <strong>{text(topic.title)}</strong>

@@ -1,0 +1,164 @@
+.judex-ui-select {
+  width: 100%;
+  min-width: 0;
+}
+.judex-ui-select .select__trigger {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--ink);
+  background: var(--surface);
+  border: var(--stroke) solid var(--line);
+  border-radius: var(--r-md);
+  min-height: var(--input-height);
+  padding: var(--s3);
+  font-size: var(--text-sm);
+}
+.judex-ui-select .select__value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.judex-ui-select .select__indicator {
+  flex-shrink: 0;
+}
+.judex-ui-select-popover {
+  background: var(--surface);
+  color: var(--ink);
+  border: var(--stroke) solid var(--line);
+  border-radius: var(--r-md);
+  padding: var(--s2);
+  max-height: var(--work-drawer);
+  overflow: auto;
+  z-index: var(--z-index-overlay);
+}
+.judex-ui-select-popover [role="option"] {
+  font-size: var(--text-sm);
+  color: var(--ink);
+  min-height: var(--s10);
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-sm);
+}
+.judex-ui-select-popover [role="option"][data-focused] {
+  background: var(--hover);
+}
+.judex-ui-select-popover [role="option"][aria-selected="true"] {
+  background: var(--accent-soft);
+}
+.judex-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  min-width: 0;
+}
+.judex-checkbox-field {
+  min-width: 0;
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+.judex-checkbox-field .checkbox__content {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  text-align: left;
+  white-space: normal;
+  padding: 0;
+  min-width: 0;
+}
+.judex-checkbox-label {
+  display: block;
+  min-width: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-base);
+}
+.judex-checkbox-label small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  margin-top: var(--s1);
+}
+.judex-position-options .judex-checkbox-field {
+  padding: var(--s3);
+  border: var(--stroke) solid var(--line);
+  border-radius: var(--r-md);
+}
+.judex-ui-card {
+  display: block;
+  color: var(--ink);
+  background: var(--surface);
+}
+.judex-ui-alert {
+  color: var(--warning);
+  background: var(--warning-soft);
+  border-radius: var(--r-md);
+  font-size: var(--text-sm);
+  padding: var(--s3);
+  margin: var(--s3) 0;
+}
+.judex-ui-alert .alert__content {
+  min-width: 0;
+  flex: 1;
+}
+.judex-ui-alert .alert__description {
+  color: inherit;
+  font: inherit;
+  line-height: var(--leading-base);
+}
+.judex-ui-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+.judex-ui-disclosure {
+  color: var(--ink);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.judex-ui-disclosure .disclosure__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  width: 100%;
+  padding: var(--s2) 0;
+  font: inherit;
+  cursor: pointer;
+  color: inherit;
+}
+.judex-ui-disclosure .disclosure__body {
+  padding: var(--s2) 0;
+}
+.judex-file-picker {
+  display: inline-flex;
+}
+.judex-file-picker > .button {
+  display: flex;
+  gap: var(--s2);
+  border-radius: var(--r-md);
+  padding: var(--s2) var(--s3);
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+.judex-settings-row > .judex-ui-select {
+  width: var(--settings-control-width);
+}
+.judex-chat-proposed-tasks fieldset .judex-checkbox-field {
+  width: auto;
+  display: inline-flex;
+}
+.judex-work-pill {
+  vertical-align: middle;
+  white-space: normal;
+}
+.judex-work-pill .chip__label {
+  font: inherit;
+  color: inherit;
+}

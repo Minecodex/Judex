@@ -2,6 +2,7 @@ export type Text = { zh: string; en: string };
 export const words = (zh: string, en = zh): Text => ({ zh, en });
 export type Member = { name: string; role: "owner" | "manager" | "member" };
 export type Project = {
+  maxDiscussionRounds?: number;
   id: string;
   title: Text;
   description: Text;
@@ -108,14 +109,16 @@ export type Flow = {
   history: { version: number; instructions: Text; actor: string }[];
 };
 export type Topic = {
+  discussionRuns?: import('../chat/discussionPolicy').DiscussionRun[];
   context?: { kind: "handoff"; id: string };
   id: string;
   projectId: string;
   title: Text;
   planIds: string[];
   taskIds: string[];
-  closed: boolean;
   messages: {
+    submissionType?: 'message' | 'material' | 'work_report';
+    seatId?: string;
     id: string;
     actor: string;
     kind: "person" | "ai";
@@ -141,6 +144,7 @@ export type Audit = {
   at: number;
 };
 export type WorkState = {
+  proposals?: import('../chat/proposalModel').WorkProposal[];
   schema: 4;
   projects: Project[];
   positions: Position[];
@@ -156,6 +160,7 @@ export type WorkState = {
   currentUser: string;
 };
 export type ErrorCode =
+  | "discussionLimit"
   | "permission"
   | "required"
   | "stale"
@@ -167,6 +172,8 @@ export type Result =
   { state: WorkState; error?: never } | { error: ErrorCode; state?: never };
 export type Design = "studio";
 export type View =
+  | "workspace"
+  | "overview"
   | "home"
   | "plans"
   | "plan"
@@ -182,6 +189,9 @@ export type View =
   | "settings"
   | "resources";
 export type Route = {
+  settingsSection?: import('../settings/navigation').SettingsSection;
+  settingsItem?: string;
+  conversation?: string;
   design: Design;
   projectId: string;
   view: View;

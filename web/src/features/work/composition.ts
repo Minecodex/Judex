@@ -108,7 +108,6 @@ export function createDiscussion(
     title: W(title.trim()),
     planIds: [...new Set(planIds)],
     taskIds: [...new Set(taskIds)],
-    closed: false,
     messages: [],
   });
   return { state: next };

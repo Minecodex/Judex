@@ -11,6 +11,12 @@
 @import "./work-layouts.css";
 @import "./task-cards.css";
 @import "./shell.css";
+@import "./chat-tokens.css";
+@import "./chat-workspace.css";
+@import "./chat-layout.css";
+@import "./chat-tabs.css";
+@import "./settings.css";
+@import "./controls.css";
 
 @theme inline {
  --color-judex-background: var(--bg);
