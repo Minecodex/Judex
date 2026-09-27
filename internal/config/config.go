@@ -38,6 +38,19 @@ type Config struct {
 	AllowedOrigins []string
 	// ModelCatalogFile points at the operator YAML (02 §8); empty = no models.
 	ModelCatalogFile string
+	// ObjectStorage mirrors the Object config contract (11 §2); required
+	// from P2-04 on for materials, optional for pure identity deployments.
+	ObjectStorage ObjectStorageOptions
+}
+
+// ObjectStorageOptions configures the S3-compatible store.
+type ObjectStorageOptions struct {
+	Endpoint        string
+	Region          string
+	AccessKeyID     string
+	SecretAccessKey string
+	Bucket          string
+	PathStyle       bool
 }
 
 func Load() (Config, error) { return FromEnv(os.Getenv) }
@@ -94,6 +107,14 @@ func FromEnv(get func(string) string) (Config, error) {
 	}
 	if c.Environment == "production" && len(c.AllowedOrigins) == 0 {
 		return c, fmt.Errorf("production requires JUDEX_ALLOWED_ORIGINS (comma-separated exact origins)")
+	}
+	c.ObjectStorage = ObjectStorageOptions{
+		Endpoint:        value("JUDEX_S3_ENDPOINT", ""),
+		Region:          value("JUDEX_S3_REGION", ""),
+		AccessKeyID:     value("JUDEX_S3_ACCESS_KEY", ""),
+		SecretAccessKey: value("JUDEX_S3_SECRET_KEY", ""),
+		Bucket:          value("JUDEX_S3_BUCKET", ""),
+		PathStyle:       value("JUDEX_S3_PATH_STYLE", "true") == "true",
 	}
 	c.ModelCatalogFile = value("JUDEX_MODEL_CATALOG_FILE", "")
 	if c.ModelCatalogFile != "" {

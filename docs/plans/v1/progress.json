@@ -283,9 +283,16 @@
         "P1-04",
         "P0-04"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "migration 00005（M003 材料：upload_sessions/upload_parts/materials/material_versions/material_entries/submission_materials/material_links）",
+        "infrastructure/objectstore: aws-sdk-go-v2 S3（自定义 endpoint+path-style 兼容 SeaweedFS/外部）、流式 Put/Get/Delete/Head、服务端分配对象键（用户文件名不进路径）",
+        "material.Service: CreateUpload（分片方案+大小/摘要/entrypoint 路径校验）、UploadPart（TeeReader 流式校验摘要、同号不同内容 IDEMPOTENCY_CONFLICT、同内容幂等重传）、Complete（咨询锁+全片在场+尺寸吻合+整文件 SHA 复算→exactly-once 版本登记；重试返回同版本；派生发布落后 SOURCE_VERSION_CONFLICT）、Cancel/List/Versions/授权下载代理",
+        "handlers: 8 个 operation（上传会话/分片 PUT 二进制流/complete/取消/列表/版本/内容下载）",
+        "config: JUDEX_S3_* 环境变量（11 §2 Object 合同）",
+        "integration（真实 PG + 内存对象 fake）: 分片上传+重传幂等+篡改冲突、complete 幂等同版本、派生发布 v2 与旧版本冲突、旧版本内容不变可下载、缺片/整文件摘要不符 REQUIREMENT_UNMET"
+      ],
+      "notes": "HTML 包 entry 校验/预览隔离在 P2-05；真实 S3（MinIO/SeaweedFS）联调在部署验收"
     },
     {
       "id": "P2-05",

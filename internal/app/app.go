@@ -21,8 +21,10 @@ import (
 	"github.com/kakj-go/Judex/internal/agent"
 	"github.com/kakj-go/Judex/internal/config"
 	"github.com/kakj-go/Judex/internal/identity"
+	"github.com/kakj-go/Judex/internal/infrastructure/objectstore"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	"github.com/kakj-go/Judex/internal/job"
+	"github.com/kakj-go/Judex/internal/material"
 	"github.com/kakj-go/Judex/internal/project"
 	httptransport "github.com/kakj-go/Judex/internal/transport/http"
 	"github.com/kakj-go/Judex/internal/transport/http/middleware"
@@ -38,6 +40,8 @@ type Application struct {
 	identity  *identity.Service
 	projects  *project.Service
 	workflows *workflow.Service
+	materials *material.Service
+	objects   material.ObjectStore
 	engine    *job.Engine
 	root      *os.Root
 	workers   []context.CancelFunc
@@ -69,6 +73,19 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			root.Close()
 			return nil, err
 		}
+		if cfg.ObjectStorage.Endpoint != "" {
+			store, err := objectstore.New(context.Background(), objectstore.Options{
+				Endpoint: cfg.ObjectStorage.Endpoint, Region: cfg.ObjectStorage.Region,
+				AccessKeyID: cfg.ObjectStorage.AccessKeyID, SecretAccessKey: cfg.ObjectStorage.SecretAccessKey,
+				Bucket: cfg.ObjectStorage.Bucket, PathStyle: cfg.ObjectStorage.PathStyle,
+			})
+			if err != nil {
+				pool.Close()
+				root.Close()
+				return nil, err
+			}
+			app.objects = store
+		}
 		if cfg.ModelCatalogFile != "" {
 			entries, err := agent.LoadCatalogFile(cfg.ModelCatalogFile)
 			if err != nil {
@@ -88,6 +105,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 		app.identity = identity.NewService(pool, limiter, identity.Options{}, nil)
 		app.projects = project.NewService(pool, nil)
 		app.workflows = workflow.NewService(pool, nil)
+		app.materials = material.NewService(pool, app.objects, material.DefaultLimits(), nil)
 	}
 
 	if cfg.RunsHTTP() {
@@ -113,6 +131,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			httptransport.NewMemberHandlers(app.projects).Register(spec)
 			httptransport.NewWorkflowHandlers(app.workflows).Register(spec)
 			httptransport.NewPositionHandlers(app.projects).Register(spec)
+			httptransport.NewMaterialHandlers(app.materials).Register(spec)
 			idSvc := app.identity
 			authOpts = &httptransport.AuthOptions{
 				Config:   authCfg,
