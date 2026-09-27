@@ -107,9 +107,16 @@
       "dependsOn": [
         "P0-05"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "internal/identity: Argon2id PHC 编码（64MiB/t=3/p=1）+ 渐进 rehash 检测 + 常量时间比较；未知账号燃烧等价 CPU 防时序枚举",
+        "邮箱规范化 trim+小写折叠（保留点/加号），唯一性完全由 DB 索引裁决；登录错误统一 UNAUTHENTICATED（不区分未知/错密/停用）",
+        "Register 单事务：users+password_credentials+session+audit；Login：限流（IP/账号双窗口）+凭据验证+同事务 rehash+新会话+audit",
+        "migration 00003 rate_limit_windows：PG 共享固定窗口限流（注册/登录分维度）",
+        "integration: 注册-登录-错误路径全流程；账号维度限流第3次即拒绝（正确密码也不放行）且跨 IP 生效；8 并发同邮箱注册恰好 1 成功 7 冲突且仅 1 行",
+        "users 表补 version 列（可变对象共有字段，01 §2）"
+      ],
+      "notes": "HTTP register/login handler 在 P1-02 与 cookie/CSRF 一并接入"
     },
     {
       "id": "P1-02",

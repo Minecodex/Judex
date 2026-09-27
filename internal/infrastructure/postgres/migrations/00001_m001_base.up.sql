@@ -9,6 +9,7 @@ CREATE TABLE users (
     display_name text NOT NULL,
     status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
     auth_version bigint NOT NULL DEFAULT 1,
+    version bigint NOT NULL DEFAULT 1,
     locale text NOT NULL DEFAULT 'zh-CN',
     created_at timestamptz NOT NULL,
     updated_at timestamptz NOT NULL
