@@ -13,3 +13,6 @@ dist/
 tests/results/
 tests/reports/
 *.log
+
+# Local agent session plans
+.zcode/
