@@ -55,9 +55,16 @@
       "dependsOn": [
         "P0-02"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "deps locked: pgx/v5 v5.11.0, goose v3.28.0 (go tool), google/uuid",
+        "internal/infrastructure/postgres: pool + goose Provider migrations (advisory-locked, up-only embedded) + Tx with user-FOR-SHARE/project-FOR-UPDATE lock helpers + serialization-retry Transact",
+        "M001 migration: users/password_credentials/user_sessions/client_grants/client_tokens/device_authorizations/recovery_tokens/idempotency_records/background_jobs/audit_events per 01 §3",
+        "internal/platform/{clock,idempotency,keys}: injectable clock; advisory-lock-serialized idempotent Begin/Complete/Fail (same-key same-payload replay / different-payload 409); constant-time secret hashing",
+        "internal/audit: in-transaction immutable audit append",
+        "tests/integration (real Docker postgres:17-alpine per test): migrations repeatable; idempotency single-effect + 8-racer concurrency (exactly one Proceed); audit atomic with business rollback; FOR UPDATE guard serializes concurrent holders"
+      ],
+      "notes": "sqlc deferred until repository volume justifies it (P1); goose provider embeds up migrations only, down SQL kept for CLI use"
     },
     {
       "id": "P0-04",
