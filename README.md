@@ -35,6 +35,10 @@ go run ./cmd/judex -server http://127.0.0.1:8080 status
 - [Helm 部署](deploy/README.md) · [工程实现状态](docs/详细设计/13-工程骨架与实现状态.md)
 - [Apache-2.0](LICENSE) · [NOTICE](NOTICE) · [部署依赖](deploy/helm/UPSTREAM.md)
 
+## 完整业务实施计划
+
+后端、CLI／Skill、注册登录和正式前端联调的实施合同见 [V1 开发计划](docs/plans/v1/README.md)，包括 8 阶段、56 项任务及真实验收门槛。该计划尚待执行，不代表业务已实现。
+
 ## 设计与实现边界
 
 独立原型及其 4173 预览入口已移除。当前唯一前端工程为 `web/`，历史设计文档仅供理解决策背景。

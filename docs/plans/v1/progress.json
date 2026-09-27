@@ -1,0 +1,680 @@
+{
+  "planVersion": "1.0",
+  "baselineCommit": "8edd258",
+  "generatedAt": "2026-09-27",
+  "status": "planned",
+  "decisions": {
+    "registration": "confirmed: intranet email+password, no email verification",
+    "cliName": "confirmed: judex CLI, not ctl",
+    "humanConfirmation": "confirmed: browser reviews once; CLI retrieves the same result"
+  },
+  "tasks": [
+    {
+      "id": "P0-01",
+      "stage": "P0",
+      "title": "复核基线并清理过期架构表述",
+      "dependsOn": [],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P0-02",
+      "stage": "P0",
+      "title": "OpenAPI、错误、权限主体与生成链路",
+      "dependsOn": [
+        "P0-01"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P0-03",
+      "stage": "P0",
+      "title": "PG连接、迁移与短事务基础",
+      "dependsOn": [
+        "P0-02"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P0-04",
+      "stage": "P0",
+      "title": "持久jobs、outbox、租约和事件序列",
+      "dependsOn": [
+        "P0-03"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P0-05",
+      "stage": "P0",
+      "title": "应用装配、配置校验和集成测试基座",
+      "dependsOn": [
+        "P0-03",
+        "P0-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-01",
+      "stage": "P1",
+      "title": "账号、密码与自由注册",
+      "dependsOn": [
+        "P0-05"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-02",
+      "stage": "P1",
+      "title": "Cookie会话、CSRF与撤销",
+      "dependsOn": [
+        "P1-01"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-03",
+      "stage": "P1",
+      "title": "账户恢复、停用和受审计运维",
+      "dependsOn": [
+        "P1-02"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-04",
+      "stage": "P1",
+      "title": "项目创建、可见性和归档",
+      "dependsOn": [
+        "P1-02",
+        "P0-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-05",
+      "stage": "P1",
+      "title": "成员管理与负责人转移",
+      "dependsOn": [
+        "P1-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-06",
+      "stage": "P1",
+      "title": "注册、登录与应用认证路由",
+      "dependsOn": [
+        "P1-02",
+        "P1-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P1-07",
+      "stage": "P1",
+      "title": "账户安全与切用户隔离",
+      "dependsOn": [
+        "P1-03",
+        "P1-05",
+        "P1-06"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-01",
+      "stage": "P2",
+      "title": "职位、任职、邀请与私人偏好",
+      "dependsOn": [
+        "P1-05",
+        "P2-02"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-02",
+      "stage": "P2",
+      "title": "流程结构、规则草稿与发布版本",
+      "dependsOn": [
+        "P1-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-03",
+      "stage": "P2",
+      "title": "模型目录与项目运行配置",
+      "dependsOn": [
+        "P1-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-04",
+      "stage": "P2",
+      "title": "S3上传会话与不可变材料版本",
+      "dependsOn": [
+        "P1-04",
+        "P0-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-05",
+      "stage": "P2",
+      "title": "HTML包、预览隔离与来源发布",
+      "dependsOn": [
+        "P2-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-06",
+      "stage": "P2",
+      "title": "议题、消息与统一提交入口",
+      "dependsOn": [
+        "P2-04",
+        "P1-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-07",
+      "stage": "P2",
+      "title": "项目SSE、运行事件基础与站内通知",
+      "dependsOn": [
+        "P2-06",
+        "P0-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P2-08",
+      "stage": "P2",
+      "title": "真实项目设置、团队、流程与资料UI",
+      "dependsOn": [
+        "P2-01",
+        "P2-02",
+        "P2-03",
+        "P2-05",
+        "P2-06",
+        "P2-07",
+        "P1-07"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P3-01",
+      "stage": "P3",
+      "title": "计划任务聚合与草稿模型",
+      "dependsOn": [
+        "P2-01",
+        "P2-02"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P3-02",
+      "stage": "P3",
+      "title": "硬前置、图读模型与并发环检测",
+      "dependsOn": [
+        "P3-01"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P3-03",
+      "stage": "P3",
+      "title": "提案草稿、固定审阅与原子变更应用",
+      "dependsOn": [
+        "P3-01",
+        "P3-02",
+        "P2-06"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P3-04",
+      "stage": "P3",
+      "title": "会签、退回、修订和授权代批",
+      "dependsOn": [
+        "P3-03"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P3-05",
+      "stage": "P3",
+      "title": "首票倒计时与到期竞争",
+      "dependsOn": [
+        "P3-04",
+        "P0-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P3-06",
+      "stage": "P3",
+      "title": "职责报告与来源级交接补交",
+      "dependsOn": [
+        "P3-04",
+        "P2-06"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P3-07",
+      "stage": "P3",
+      "title": "任务验收、计划整体验收及重开",
+      "dependsOn": [
+        "P3-06",
+        "P3-02"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P3-08",
+      "stage": "P3",
+      "title": "Bug、仓库引用、环境与修复传播",
+      "dependsOn": [
+        "P3-07"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P3-09",
+      "stage": "P3",
+      "title": "统一待办、审计和治理读模型",
+      "dependsOn": [
+        "P3-05",
+        "P3-06",
+        "P3-07"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P3-10",
+      "stage": "P3",
+      "title": "正式提案/任务/交接/验收前端联调",
+      "dependsOn": [
+        "P3-08",
+        "P3-09",
+        "P2-08"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P4-01",
+      "stage": "P4",
+      "title": "设备授权、受限grant与凭据轮换",
+      "dependsOn": [
+        "P1-02",
+        "P1-05"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P4-02",
+      "stage": "P4",
+      "title": "CLI工程、profile和只读命令",
+      "dependsOn": [
+        "P4-01",
+        "P2-06",
+        "P3-09"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P4-03",
+      "stage": "P4",
+      "title": "一次性人工意图与浏览器确认页",
+      "dependsOn": [
+        "P4-01",
+        "P3-07"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P4-04",
+      "stage": "P4",
+      "title": "CLI上传、上报、Bug和环境报告",
+      "dependsOn": [
+        "P4-02",
+        "P3-08"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P4-05",
+      "stage": "P4",
+      "title": "CLI提案、交接、验收与意图结果",
+      "dependsOn": [
+        "P4-03",
+        "P4-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P4-06",
+      "stage": "P4",
+      "title": "发行Skill与宿主安装适配",
+      "dependsOn": [
+        "P4-05"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P4-07",
+      "stage": "P4",
+      "title": "CLI跨平台构建和版本兼容",
+      "dependsOn": [
+        "P4-06"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P5-01",
+      "stage": "P5",
+      "title": "ModelProvider与网关能力测试",
+      "dependsOn": [
+        "P2-03",
+        "P0-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P5-02",
+      "stage": "P5",
+      "title": "OpenSandbox客户端与项目只读挂载",
+      "dependsOn": [
+        "P2-05",
+        "P2-03",
+        "P0-05"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P5-03",
+      "stage": "P5",
+      "title": "四工具与受限业务工具注册表",
+      "dependsOn": [
+        "P5-02",
+        "P3-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P5-04",
+      "stage": "P5",
+      "title": "PG上下文、模型循环和检查点",
+      "dependsOn": [
+        "P5-01",
+        "P5-03"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P5-05",
+      "stage": "P5",
+      "title": "中心协调和子运行调度",
+      "dependsOn": [
+        "P5-04",
+        "P0-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P5-06",
+      "stage": "P5",
+      "title": "批次轮次、资源预算与自动触发",
+      "dependsOn": [
+        "P5-05",
+        "P2-07"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P5-07",
+      "stage": "P5",
+      "title": "取消、pause降级、未知执行和清理",
+      "dependsOn": [
+        "P5-06"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P5-08",
+      "stage": "P5",
+      "title": "压缩、项目知识和隐私检查",
+      "dependsOn": [
+        "P5-04"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P5-09",
+      "stage": "P5",
+      "title": "真实AI运行前端与材料分析证据",
+      "dependsOn": [
+        "P5-06",
+        "P5-07",
+        "P5-08",
+        "P3-10"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P5-10",
+      "stage": "P5",
+      "title": "真实中文模型与HTML/隔离全链路验收",
+      "dependsOn": [
+        "P5-09",
+        "P4-06"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P6-01",
+      "stage": "P6",
+      "title": "移除生产WorkState与模拟入口",
+      "dependsOn": [
+        "P3-10",
+        "P4-03",
+        "P5-09"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P6-02",
+      "stage": "P6",
+      "title": "页面状态与真实权限全面补齐",
+      "dependsOn": [
+        "P6-01"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P6-03",
+      "stage": "P6",
+      "title": "双用户Web＋CLI生产E2E",
+      "dependsOn": [
+        "P6-02",
+        "P4-07",
+        "P5-10"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P6-04",
+      "stage": "P6",
+      "title": "可访问性、规模和构建性能",
+      "dependsOn": [
+        "P6-02"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P7-01",
+      "stage": "P7",
+      "title": "Helm业务配置、迁移Job与就绪",
+      "dependsOn": [
+        "P0-05",
+        "P5-02",
+        "P6-01"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P7-02",
+      "stage": "P7",
+      "title": "四种存储组合和真实系统验收",
+      "dependsOn": [
+        "P7-01",
+        "P6-03"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P7-03",
+      "stage": "P7",
+      "title": "备份恢复、迁移与卸载保留",
+      "dependsOn": [
+        "P7-02"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P7-04",
+      "stage": "P7",
+      "title": "故障演练、资源回收与原环境恢复",
+      "dependsOn": [
+        "P7-02",
+        "P5-07"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    },
+    {
+      "id": "P7-05",
+      "stage": "P7",
+      "title": "发布制品、文档与最终验收报告",
+      "dependsOn": [
+        "P7-03",
+        "P7-04",
+        "P6-04",
+        "P4-07"
+      ],
+      "status": "planned",
+      "evidence": [],
+      "notes": ""
+    }
+  ]
+}
