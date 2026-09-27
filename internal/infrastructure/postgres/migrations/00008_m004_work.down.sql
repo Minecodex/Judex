@@ -1,0 +1,23 @@
+-- +goose Down
+DROP TABLE IF EXISTS fix_propagations;
+DROP TABLE IF EXISTS release_reports;
+DROP TABLE IF EXISTS bug_details;
+DROP TABLE IF EXISTS reopen_records;
+DROP TABLE IF EXISTS plan_acceptances;
+DROP TABLE IF EXISTS task_acceptances;
+DROP TABLE IF EXISTS source_decisions;
+DROP TABLE IF EXISTS source_versions;
+DROP TABLE IF EXISTS handoff_sources;
+DROP TABLE IF EXISTS handoffs;
+DROP TABLE IF EXISTS confirmation_intents;
+DROP TABLE IF EXISTS approval_decision_slots;
+DROP TABLE IF EXISTS approval_decisions;
+DROP TABLE IF EXISTS approval_slots;
+DROP TABLE IF EXISTS proposal_versions;
+DROP TABLE IF EXISTS proposals;
+DROP TABLE IF EXISTS work_reports;
+DROP TABLE IF EXISTS plan_task_references;
+DROP TABLE IF EXISTS task_requirements;
+DROP TABLE IF EXISTS task_participants;
+DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS plans;

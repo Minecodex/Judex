@@ -29,6 +29,7 @@ import (
 	"github.com/kakj-go/Judex/internal/project"
 	httptransport "github.com/kakj-go/Judex/internal/transport/http"
 	"github.com/kakj-go/Judex/internal/transport/http/middleware"
+	"github.com/kakj-go/Judex/internal/work"
 	"github.com/kakj-go/Judex/internal/workflow"
 )
 
@@ -43,6 +44,7 @@ type Application struct {
 	workflows  *workflow.Service
 	materials  *material.Service
 	discussion *discussion.Service
+	work       *work.Service
 	objects    material.ObjectStore
 	engine     *job.Engine
 	root       *os.Root
@@ -109,6 +111,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 		app.workflows = workflow.NewService(pool, nil)
 		app.materials = material.NewService(pool, app.objects, material.DefaultLimits(), nil)
 		app.discussion = discussion.NewService(pool, nil)
+		app.work = work.NewService(pool, nil)
 	}
 
 	if cfg.RunsHTTP() {
@@ -137,6 +140,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			httptransport.NewMaterialHandlers(app.materials).Register(spec)
 			httptransport.NewDiscussionHandlers(app.discussion).Register(spec)
 			httptransport.NewSSEHandlers(app.pool.Pool).Register(spec)
+			httptransport.NewWorkHandlers(app.work).Register(spec)
 			idSvc := app.identity
 			authOpts = &httptransport.AuthOptions{
 				Config:   authCfg,

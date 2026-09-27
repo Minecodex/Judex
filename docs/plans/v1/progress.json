@@ -374,9 +374,14 @@
         "P2-01",
         "P2-02"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "migration 00008（M004 全 24 表：plans/tasks/participants/requirements/plan_task_references/work_reports/proposals+versions+slots+decisions+decision_slots/confirmation_intents/handoffs+sources/source_versions+decisions/task+plan_acceptances/reopens/bug_details/release_reports/fix_propagations）",
+        "work.Service: 计划/任务草稿 CRUD；父子同项目同 owning plan 校验；跨项目 plan 引用拒绝；requirements kind/phase 白名单；task_acceptance 依赖环检测（项目锁下）；draft 聚合统计",
+        "handlers: listPlans/createPlan/listTasks/createTask/getTask/getPlan（discard 待 P3-03 提案上下文）",
+        "integration: 草稿不自动正式化、父子同 plan 规则、越权引用拒绝、白名单前置校验、统计正确"
+      ],
+      "notes": "提案激活/状态机在 P3-03"
     },
     {
       "id": "P3-02",
