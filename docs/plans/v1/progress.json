@@ -160,9 +160,14 @@
         "P1-02",
         "P0-04"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "migration 00004: M002 全表（project_members 单 owner 部分唯一索引/ownership_transfers/position_templates+versions/invitations+invitation_positions/agent_identities 单 coordinator/identity_bindings/preferences+revisions/workflow_definitions+versions/position_node_bindings/repository_links/model_catalog）+ topics/topic_work_links 骨架（项目创建需主会场）",
+        "project.Service: Create 单事务（项目+owner 成员+主会场+coordinator+事件+审计；owner 不自动绑定职位）；MembershipFor 非成员统一 404 隐藏存在性；ListForUser keyset 分页；Archive/Restore（owner+expectedVersion+理由，保留全部历史）",
+        "handlers: listProjects/createProject/getProject/getProjectBootstrap/archiveProject/restoreProject 接入契约",
+        "integration: 原子集合断言（成员/主会场/coordinator/事件各 1）；B 看不到 A 项目（列表空+get 404）；非成员 archive 404；版本冲突拒绝；归档保留历史并追加事件；恢复成功；并发创建独立项目"
+      ],
+      "notes": "model_catalog 表已建，配置同步在 P2-03 实现"
     },
     {
       "id": "P1-05",

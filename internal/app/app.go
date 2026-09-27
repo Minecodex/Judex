@@ -20,6 +20,7 @@ import (
 	"github.com/kakj-go/Judex/internal/identity"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	"github.com/kakj-go/Judex/internal/job"
+	"github.com/kakj-go/Judex/internal/project"
 	"github.com/kakj-go/Judex/internal/transport/http/middleware"
 	httptransport "github.com/kakj-go/Judex/internal/transport/http"
 )
@@ -31,6 +32,7 @@ type Application struct {
 
 	pool     *postgres.Pool
 	identity *identity.Service
+	projects *project.Service
 	engine   *job.Engine
 	root     *os.Root
 	workers  []context.CancelFunc
@@ -65,6 +67,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 		app.pool = pool
 		limiter := identity.NewRateLimiter(pool.Pool, nil)
 		app.identity = identity.NewService(pool, limiter, identity.Options{}, nil)
+		app.projects = project.NewService(pool, nil)
 	}
 
 	if cfg.RunsHTTP() {
@@ -80,6 +83,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 				AllowedOrigins: cfg.AllowedOrigins,
 			}
 			httptransport.NewIdentityHandlers(app.identity, authCfg, authCfg.Development).Register(spec)
+			httptransport.NewProjectHandlers(app.projects).Register(spec)
 			idSvc := app.identity
 			authOpts = &httptransport.AuthOptions{
 				Config:   authCfg,
