@@ -31,7 +31,7 @@ kubectl -n judex-dev port-forward service/judex 8080:8080
 
 自备 API Secret 设置 `global.sandboxAPIKeySecret=<名称>`、`global.sandboxAPIKeyManaged=false`，键 `api-key`。API 和沙箱使用同一配置。上游子 Chart 的 server 名称 / namespace 不应单独覆盖，否则会破坏连接约定。
 
-Agent Runner、SQLite 恢复、项目资料只读挂载、派生提交和网络隔离仍待实现。Chart 尚未为 OpenSandbox 的本地状态配置持久化，不能承诺执行恢复。
+服务端 Agent harness（模型调用在 server 进程）、OpenSandbox 客户端、项目资料只读挂载、派生提交和网络隔离按 [V1 计划](../docs/plans/v1/README.md) P5/P7 实现；平台不部署任何持密钥的沙箱 Runner。Chart 尚未为 OpenSandbox 的本地状态配置持久化，不能承诺执行恢复。
 
 ## 验证边界
 

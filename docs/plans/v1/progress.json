@@ -6,7 +6,15 @@
   "decisions": {
     "registration": "confirmed: intranet email+password, no email verification",
     "cliName": "confirmed: judex CLI, not ctl",
-    "humanConfirmation": "confirmed: browser reviews once; CLI retrieves the same result"
+    "humanConfirmation": "confirmed: browser reviews once; CLI retrieves the same result",
+    "stashedBackendWork": "user decision 2026-09-27: stash@{0} (glm) ignored entirely; fresh implementation from plans/v1; stash preserved untouched",
+    "modelConfig": "user decision 2026-09-27: operator-configured model catalog (baseUrl, apiKey via Secret/env ref, model name, maxInputTokens, maxOutputTokens); live model acceptance blocked until config provided",
+    "k8sAcceptance": "user decision 2026-09-27: local Docker Desktop cluster; K8s E2E may be deferred when resources are insufficient - implement all code first and report undone items",
+    "implementationStart": {
+      "head": "fc44a3e",
+      "worktree": "clean after baseline docs commit (plan docs committed as fc44a3e on top of 8edd258)",
+      "verifiedState": "backend is scaffold only (router 501 placeholders, no PG/S3/worker, cmd/judex status-only); frontend chat UI complete on local WorkState demo store; local tooling: go1.25.3, node24, docker+k8s v1.36.1, helm 3.16.4"
+    }
   },
   "tasks": [
     {
@@ -14,9 +22,13 @@
       "stage": "P0",
       "title": "复核基线并清理过期架构表述",
       "dependsOn": [],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "commit fc44a3e: plans/v1 + docs baseline protected before any code change",
+        "internal/README.md + deploy/README.md: removed SQLite/Runner stale wording; aligned with PG-only context + server-side harness + OpenSandbox client",
+        "progress.json decisions: recorded stash-ignore, model-config, k8s-deferral user decisions and verified scaffold state"
+      ],
+      "notes": "dependency lock list lands with P0-02/P0-03 when go.mod tools (oapi-codegen, goose, sqlc, pgx) are added and pinned"
     },
     {
       "id": "P0-02",
