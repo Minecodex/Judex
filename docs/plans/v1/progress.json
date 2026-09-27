@@ -176,9 +176,14 @@
       "dependsOn": [
         "P1-04"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "project/members.go: ListMembers（成员公开字段）、UpdateMemberRole（owner 专属，owner 角色只能走转移）、RemoveMember（manager+，owner 不可移除，活动任职阻塞 REQUIREMENT_UNMET）、LeaveProject（唯一 owner 必须先转移）",
+        "双人 owner 转移：pending 48h、仅目标方决定、接受时锁项目重验双方资格、单 owner 部分唯一索引兜底并发；OperatorTransferOwner 受审计运维命令（cmd 接入待 P1-05 收尾说明）",
+        "handlers: listMembers/updateMemberRole/removeMember/leaveProject/requestOwnerTransfer/getOwnerTransfer/decideOwnerTransfer",
+        "integration: 成员不能授权、owner 授 manager、owner 角色路由不可降级、manager 不能移除 owner、唯一 owner 不能离开、外人 404、转移后恰好 1 个 owner、原 owner 可离开、运维转移生效"
+      ],
+      "notes": "operator transfer-owner 子命令入口在 account.go 同模式实现（cmd 层一行接线）"
     },
     {
       "id": "P1-06",

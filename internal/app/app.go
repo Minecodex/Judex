@@ -84,6 +84,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			}
 			httptransport.NewIdentityHandlers(app.identity, authCfg, authCfg.Development).Register(spec)
 			httptransport.NewProjectHandlers(app.projects).Register(spec)
+			httptransport.NewMemberHandlers(app.projects).Register(spec)
 			idSvc := app.identity
 			authOpts = &httptransport.AuthOptions{
 				Config:   authCfg,

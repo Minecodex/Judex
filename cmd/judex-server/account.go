@@ -13,8 +13,10 @@ import (
 	"os"
 
 	"github.com/kakj-go/Judex/internal/config"
+	"github.com/google/uuid"
 	"github.com/kakj-go/Judex/internal/identity"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
+	"github.com/kakj-go/Judex/internal/project"
 )
 
 func runAccountCommand() error {
@@ -85,4 +87,58 @@ func defaultOperator() string {
 		return host
 	}
 	return "unknown-operator"
+}
+
+// runProjectCommand hosts audited project operator commands (02 §3).
+func runProjectCommand() error {
+	if flag.NArg() < 2 {
+		fmt.Fprintln(os.Stderr, "usage: judex-server project transfer-owner --id PROJECT --to-user USER_ID --reason ...")
+		os.Exit(2)
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	if cfg.DatabaseURL == "" {
+		return fmt.Errorf("project commands require JUDEX_DATABASE_URL")
+	}
+	pool, err := postgres.Open(context.Background(), postgres.Options{URL: cfg.DatabaseURL}, nil)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	if err := pool.Migrate(context.Background()); err != nil {
+		return fmt.Errorf("migrations must be applied first: %w", err)
+	}
+	svc := project.NewService(pool, nil)
+
+	sub := flag.NewFlagSet("project "+flag.Arg(1), flag.ExitOnError)
+	projectID := sub.String("id", "", "project id (uuid)")
+	toUser := sub.String("to-user", "", "target user id (uuid), must be an active member")
+	reason := sub.String("reason", "", "audited reason (required)")
+	operator := sub.String("operator", defaultOperator(), "operator identity recorded in the audit trail")
+	if err := sub.Parse(flag.Args()[2:]); err != nil {
+		return err
+	}
+	if *projectID == "" || *toUser == "" || *reason == "" {
+		return fmt.Errorf("--id, --to-user and --reason are required")
+	}
+	pid, err := uuid.Parse(*projectID)
+	if err != nil {
+		return fmt.Errorf("--id must be a uuid")
+	}
+	uid, err := uuid.Parse(*toUser)
+	if err != nil {
+		return fmt.Errorf("--to-user must be a uuid")
+	}
+	switch flag.Arg(1) {
+	case "transfer-owner":
+		if err := svc.OperatorTransferOwner(context.Background(), pid, uid, *operator, *reason); err != nil {
+			return err
+		}
+		fmt.Println("负责人已转移；操作已记入审计。")
+		return nil
+	default:
+		return fmt.Errorf("unknown project subcommand %q", flag.Arg(1))
+	}
 }

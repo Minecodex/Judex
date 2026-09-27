@@ -144,3 +144,124 @@ func TestProjectCreateConcurrentSingleOwner(t *testing.T) {
 		}
 	}
 }
+
+// TestMemberManagementAndOwnerTransfer (A05/A07 后端部分): manager 授权边界、
+// owner 移除保护、双人转移保持唯一 owner、离开阻塞、运维转移。
+func TestMemberManagementAndOwnerTransfer(t *testing.T) {
+	svc, ids, pool := newProjectService(t)
+	ctx := context.Background()
+	owner, _, _ := ids.Register(ctx, "Owner", "owner@mt.test", "password-owner-11", "10.0.0.1")
+	manager, _, _ := ids.Register(ctx, "Manager", "manager@mt.test", "password-manager1", "10.0.0.1")
+	member, _, _ := ids.Register(ctx, "Member", "member@mt.test", "password-member1", "10.0.0.1")
+	outsider, _, _ := ids.Register(ctx, "Outsider", "out@mt.test", "password-outsider", "10.0.0.1")
+
+	proj, err := svc.Create(ctx, owner.ID, project.CreateRequest{Title: "成员管理"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Ad hoc joins for the test (invitations arrive in P2-01; membership row
+	// shape is what matters here).
+	join := func(u uuid.UUID) {
+		t.Helper()
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO project_members (project_id, user_id, role, state, joined_at)
+			VALUES ($1,$2,'member','active',now())`, proj.ID, u); err != nil {
+			t.Fatal(err)
+		}
+	}
+	join(manager.ID)
+	join(member.ID)
+
+	// member cannot grant manager.
+	if _, err := svc.UpdateMemberRole(ctx, member.ID, proj.ID, manager.ID, proj.Version, "manager"); errors.IsCode(err, errors.Forbidden) == false {
+		t.Fatalf("member must not manage roles, got %v", err)
+	}
+	// owner grants manager.
+	m, err := svc.UpdateMemberRole(ctx, owner.ID, proj.ID, manager.ID, proj.Version, "manager")
+	if err != nil || m.Role != "manager" {
+		t.Fatalf("grant manager: %v %+v", err, m)
+	}
+	// owner cannot be demoted via role route.
+	if _, err := svc.UpdateMemberRole(ctx, owner.ID, proj.ID, owner.ID, proj.Version+1, "member"); err == nil {
+		t.Fatal("owner demote via role route must fail")
+	}
+	// manager cannot remove owner.
+	if _, err := svc.RemoveMember(ctx, manager.ID, proj.ID, owner.ID, proj.Version+2, "越权"); errors.IsCode(err, errors.Forbidden) == false {
+		t.Fatalf("manager cannot remove owner, got %v", err)
+	}
+	// owner cannot leave while sole owner.
+	if err := svc.LeaveProject(ctx, owner.ID, proj.ID, proj.Version+3); errors.IsCode(err, errors.InvalidTransition) == false {
+		t.Fatalf("sole owner leave must be blocked, got %v", err)
+	}
+	// outsider sees nothing.
+	if _, err := svc.ListMembers(ctx, outsider.ID, proj.ID); errors.IsCode(err, errors.NotFound) == false {
+		t.Fatalf("outsider member list must 404, got %v", err)
+	}
+
+	// Owner transfer: target accepts, exactly one owner remains.
+	transfer, err := svc.RequestOwnerTransfer(ctx, owner.ID, proj.ID, manager.ID, proj.Version+1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if transfer.State != "pending" {
+		t.Fatalf("transfer state: %+v", transfer)
+	}
+	// Only the target decides.
+	if _, err := svc.DecideOwnerTransfer(ctx, owner.ID, proj.ID, transfer.ID, true); errors.IsCode(err, errors.Forbidden) == false {
+		t.Fatalf("non-target decide must be forbidden, got %v", err)
+	}
+	decided, err := svc.DecideOwnerTransfer(ctx, manager.ID, proj.ID, transfer.ID, true)
+	if err != nil || decided.State != "accepted" {
+		t.Fatalf("accept transfer: %v %+v", err, decided)
+	}
+	members, err := svc.ListMembers(ctx, manager.ID, proj.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ownerCount := 0
+	for _, mm := range members {
+		if mm.Role == "owner" && mm.State == "active" {
+			ownerCount++
+		}
+	}
+	if ownerCount != 1 {
+		t.Fatalf("exactly one owner expected after transfer, got %d", ownerCount)
+	}
+	// Old owner can now leave (project version advanced twice since create).
+	current, err := svc.Get(ctx, manager.ID, proj.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.LeaveProject(ctx, owner.ID, proj.ID, current.Version); err != nil {
+		t.Fatalf("former owner should be able to leave: %v", err)
+	}
+}
+
+// TestOperatorTransferOwner: audited operator path for a stuck owner.
+func TestOperatorTransferOwner(t *testing.T) {
+	svc, ids, pool := newProjectService(t)
+	ctx := context.Background()
+	owner, _, _ := ids.Register(ctx, "O2", "o2@mt.test", "password-o2-o2-11", "10.0.0.1")
+	next, _, _ := ids.Register(ctx, "N2", "n2@mt.test", "password-n2-n2-11", "10.0.0.1")
+	proj, err := svc.Create(ctx, owner.ID, project.CreateRequest{Title: "运维转移"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO project_members (project_id, user_id, role, state, joined_at)
+		VALUES ($1,$2,'member','active',now())`, proj.ID, next.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.OperatorTransferOwner(ctx, proj.ID, next.ID, "op@host", "离职恢复"); err != nil {
+		t.Fatal(err)
+	}
+	members, err := svc.ListMembers(ctx, next.ID, proj.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, mm := range members {
+		if mm.UserID == next.ID && mm.Role != "owner" {
+			t.Fatal("operator transfer did not promote target")
+		}
+	}
+}
