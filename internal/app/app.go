@@ -22,6 +22,7 @@ import (
 	"github.com/kakj-go/Judex/internal/config"
 	"github.com/kakj-go/Judex/internal/decision"
 	"github.com/kakj-go/Judex/internal/discussion"
+	"github.com/kakj-go/Judex/internal/handoff"
 	"github.com/kakj-go/Judex/internal/identity"
 	"github.com/kakj-go/Judex/internal/infrastructure/objectstore"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
@@ -48,6 +49,7 @@ type Application struct {
 	discussion *discussion.Service
 	work       *work.Service
 	decisions  *decision.Service
+	handoffs   *handoff.Service
 	objects    material.ObjectStore
 	engine     *job.Engine
 	root       *os.Root
@@ -116,6 +118,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 		app.discussion = discussion.NewService(pool, nil)
 		app.work = work.NewService(pool, nil)
 		app.decisions = decision.NewService(pool, nil, 86400)
+		app.handoffs = handoff.NewService(pool, nil)
 		handler := decision.TimeoutJobHandler{Service: app.decisions}
 		timeoutExecutor = handler.Execute
 	}
@@ -148,6 +151,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			httptransport.NewSSEHandlers(app.pool.Pool).Register(spec)
 			httptransport.NewWorkHandlers(app.work).Register(spec)
 			httptransport.NewProposalHandlers(app.decisions).Register(spec)
+			httptransport.NewHandoffHandlers(app.handoffs, app.work).Register(spec)
 			idSvc := app.identity
 			authOpts = &httptransport.AuthOptions{
 				Config:   authCfg,

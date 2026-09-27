@@ -457,9 +457,14 @@
         "P3-04",
         "P2-06"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "work.ReportInTx/Report：progress 保持状态、delivery→delivered、accepted/cancelled/draft 拒绝、身份须当前绑定人、同 submission 幂等返回原报告（修复 uuid_nil() 非 PG 函数）、latest_report+version+事件+审计",
+        "handoff.Service：Create（多来源/跨任务/同项目校验）、SendSource（仅当前发送身份、版本冻结、revision 递增补交）、DecideSource（仅当前接收人；拒收未验收来源任务→rework、已验收来源仅记录不越权撤销；聚合 waiting/needs_revision/accepted）",
+        "handlers: 8 个交接 operation + reports 入口（与统一提交共用 Report 用例）",
+        "integration: 非绑定人 403、progress/delivery 状态机、同 submission 同报告、accepted 拒报；分来源发送/拒收/补交 v2 重确认、旧决定保留、B13 已验收来源不被撤销"
+      ],
+      "notes": "submission purpose=progress/delivery 与 /tasks/{id}/reports 两入口已共用 Report 用例；前端接线在 P3-10"
     },
     {
       "id": "P3-07",

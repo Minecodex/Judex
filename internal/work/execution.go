@@ -111,7 +111,7 @@ func (s *Service) Start(ctx context.Context, requester, projectID, taskID uuid.U
 			return err
 		}
 		var (
-			status     string
+			status      string
 			participant bool
 		)
 		if err := tx.QueryRow(ctx, `SELECT status FROM tasks WHERE id=$1 AND project_id=$2 FOR UPDATE`,

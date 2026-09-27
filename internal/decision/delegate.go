@@ -291,8 +291,8 @@ type TimeoutJobHandler struct {
 	Service *Service
 }
 
-func (h TimeoutJobHandler) Kind() string        { return "proposal.timeout" }
-func (h TimeoutJobHandler) MaxAttempts() int    { return 5 }
+func (h TimeoutJobHandler) Kind() string     { return "proposal.timeout" }
+func (h TimeoutJobHandler) MaxAttempts() int { return 5 }
 func (h TimeoutJobHandler) Execute(ctx context.Context, j job.Job) error {
 	payload := struct {
 		ProjectID  string `json:"projectId"`

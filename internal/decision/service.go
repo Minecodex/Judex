@@ -38,32 +38,32 @@ type Change struct {
 
 // Review is the frozen review aggregate (06 §5).
 type Review struct {
-	ReviewID        uuid.UUID  `json:"reviewId"`
-	ReviewHash      string     `json:"reviewHash"`
-	ProposalID      uuid.UUID  `json:"proposalId"`
-	Status          string     `json:"status"`
-	SubmittedAt     *time.Time `json:"submittedAt"`
-	FirstApprovalAt *time.Time `json:"firstApprovalAt"`
-	DeadlineAt      *time.Time `json:"deadlineAt"`
-	Changes         []Change   `json:"changes"`
-	Slots           []Slot     `json:"slots"`
+	ReviewID        uuid.UUID         `json:"reviewId"`
+	ReviewHash      string            `json:"reviewHash"`
+	ProposalID      uuid.UUID         `json:"proposalId"`
+	Status          string            `json:"status"`
+	SubmittedAt     *time.Time        `json:"submittedAt"`
+	FirstApprovalAt *time.Time        `json:"firstApprovalAt"`
+	DeadlineAt      *time.Time        `json:"deadlineAt"`
+	Changes         []Change          `json:"changes"`
+	Slots           []Slot            `json:"slots"`
 	CreatedIDs      map[string]string `json:"createdIds"`
 }
 
 // Slot is one approval seat (06 §5).
 type Slot struct {
-	ID           uuid.UUID `json:"id"`
-	AuthorityType string   `json:"authorityType"`
-	AuthorityID  uuid.UUID `json:"authorityId"`
-	DisplayName  string    `json:"displayName"`
-	PositionName *string   `json:"positionName"`
-	State        string    `json:"state"`
+	ID            uuid.UUID `json:"id"`
+	AuthorityType string    `json:"authorityType"`
+	AuthorityID   uuid.UUID `json:"authorityId"`
+	DisplayName   string    `json:"displayName"`
+	PositionName  *string   `json:"positionName"`
+	State         string    `json:"state"`
 }
 
 type Service struct {
-	pool                *postgres.Pool
-	now                 func() time.Time
-	defaultTimeoutSecs  int
+	pool               *postgres.Pool
+	now                func() time.Time
+	defaultTimeoutSecs int
 }
 
 func NewService(pool *postgres.Pool, now func() time.Time, defaultTimeoutSecs int) *Service {
@@ -283,9 +283,9 @@ func (s *Service) Submit(ctx context.Context, requester, projectID, proposalID u
 			return err
 		}
 		var (
-			status   string
-			version  int64
-			topicID  *uuid.UUID
+			status  string
+			version int64
+			topicID *uuid.UUID
 		)
 		if err := tx.QueryRow(ctx, `
 			SELECT status, version, topic_id FROM proposals WHERE id=$1 AND project_id=$2 FOR UPDATE`,

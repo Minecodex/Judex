@@ -29,12 +29,12 @@ func (s *Service) Decide(ctx context.Context, requester, projectID, proposalID u
 			return err
 		}
 		var (
-			status    string
-			reviewID  uuid.UUID
-			revHash   *string
-			firstAt   *time.Time
-			deadline  *time.Time
-			topicID   *uuid.UUID
+			status   string
+			reviewID uuid.UUID
+			revHash  *string
+			firstAt  *time.Time
+			deadline *time.Time
+			topicID  *uuid.UUID
 		)
 		if err := tx.QueryRow(ctx, `
 			SELECT status, current_review_id, version, topic_id FROM proposals
@@ -97,7 +97,7 @@ func (s *Service) Decide(ctx context.Context, requester, projectID, proposalID u
 		rows.Close()
 		var covered []uuid.UUID
 		for _, sr := range slots {
-		
+
 			if sr.state != "pending" {
 				continue
 			}

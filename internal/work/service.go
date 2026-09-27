@@ -45,39 +45,39 @@ type TaskStats struct {
 
 // Task is the API projection (06 §5).
 type Task struct {
-	ID                  uuid.UUID      `json:"id"`
-	PlanID              *uuid.UUID     `json:"planId"`
-	ParentTaskID        *uuid.UUID     `json:"parentTaskId"`
-	Title               string         `json:"title"`
-	ExpectedOutput      string         `json:"expectedOutput"`
-	AcceptanceCriteria  string         `json:"acceptanceCriteria"`
-	Kind                string         `json:"kind"`
-	Status              string         `json:"status"`
-	Participants        []Participant  `json:"participants"`
-	ReviewerIdentityID  *uuid.UUID     `json:"reviewerIdentityId"`
-	WorkflowID          *uuid.UUID     `json:"workflowId"`
-	NodeID              *string        `json:"nodeId"`
-	Requirements        []Requirement  `json:"requirements"`
-	LatestReportID      *uuid.UUID     `json:"latestReportId"`
-	LatestAcceptanceID  *uuid.UUID     `json:"latestAcceptanceId"`
-	Version             int64          `json:"version"`
-	CreatedAt           time.Time      `json:"createdAt"`
+	ID                 uuid.UUID     `json:"id"`
+	PlanID             *uuid.UUID    `json:"planId"`
+	ParentTaskID       *uuid.UUID    `json:"parentTaskId"`
+	Title              string        `json:"title"`
+	ExpectedOutput     string        `json:"expectedOutput"`
+	AcceptanceCriteria string        `json:"acceptanceCriteria"`
+	Kind               string        `json:"kind"`
+	Status             string        `json:"status"`
+	Participants       []Participant `json:"participants"`
+	ReviewerIdentityID *uuid.UUID    `json:"reviewerIdentityId"`
+	WorkflowID         *uuid.UUID    `json:"workflowId"`
+	NodeID             *string       `json:"nodeId"`
+	Requirements       []Requirement `json:"requirements"`
+	LatestReportID     *uuid.UUID    `json:"latestReportId"`
+	LatestAcceptanceID *uuid.UUID    `json:"latestAcceptanceId"`
+	Version            int64         `json:"version"`
+	CreatedAt          time.Time     `json:"createdAt"`
 }
 
 type Participant struct {
-	IdentityID    uuid.UUID `json:"identityId"`
-	DisplayName   string    `json:"displayName"`
-	Responsibility string   `json:"responsibility"`
+	IdentityID     uuid.UUID `json:"identityId"`
+	DisplayName    string    `json:"displayName"`
+	Responsibility string    `json:"responsibility"`
 }
 
 type Requirement struct {
-	ID               uuid.UUID  `json:"id"`
-	Phase            string     `json:"phase"`
-	Kind             string     `json:"kind"`
-	TargetID         uuid.UUID  `json:"targetId"`
+	ID                uuid.UUID  `json:"id"`
+	Phase             string     `json:"phase"`
+	Kind              string     `json:"kind"`
+	TargetID          uuid.UUID  `json:"targetId"`
 	MaterialVersionID *uuid.UUID `json:"materialVersionId"`
-	Hard             bool       `json:"hard"`
-	Label            string     `json:"label"`
+	Hard              bool       `json:"hard"`
+	Label             string     `json:"label"`
 }
 
 type Service struct {

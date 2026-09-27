@@ -72,3 +72,8 @@ func (respond) list(items any, nextCursor *string) gin.H {
 	}
 	return gin.H{"items": items, "nextCursor": cursor}
 }
+
+// accepted writes a 202 envelope for async-accepted commands.
+func (respond) accepted(c *gin.Context, data any, _ []gin.H) {
+	respond{}.data(c, http.StatusAccepted, data)
+}
