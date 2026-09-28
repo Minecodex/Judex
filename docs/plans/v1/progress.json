@@ -787,8 +787,12 @@
         "P5-08",
         "P3-10"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "AgentHandlers：startAgentRun（202 排队，UNIQUE(source,trigger) 重复源不续额度）、getAgentRun（真实状态）、cancelAgentRun（仅可取消态）、extendDiscussionBatch（manager human，≤100 上限）",
+        "runner 状态机在受控测试中展示排队/分析/预算/取消语义；前端聊天框架已在 P2-08/P3-10 就绪，AI 消息将在真实模型接入时通过 message.committed 事件流入（run.changed 事件类型已定义）",
+        "前端 AI 状态徽标（排队/分析/待你决定/轮次用尽/失败）在 P6 收口统一接入"
+      ],
       "notes": ""
     },
     {
@@ -799,8 +803,12 @@
         "P5-09",
         "P4-06"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "blocked",
+      "evidence": [
+        "blocked：真实模型供应商配置未提供（用户决定：部署时自行配置 baseUrl/apiKey/model/maxIn/maxOut）",
+        "已完成：ModelProvider 流式适配+受控契约测试（E03 受控部分）、runner 循环+预算+取消（受控）、M005 迁移、工具注册表、上下文压缩",
+        "恢复条件：提供 JUDEX_MODEL_CATALOG_FILE（或等价 env）后运行 tests/agent/live 用例（研发/设计中文材料、双岗位+coordinator、HTML 浏览器证据、断流/重启注入）"
+      ],
       "notes": ""
     },
     {
