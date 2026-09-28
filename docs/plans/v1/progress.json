@@ -721,8 +721,13 @@
         "P5-04",
         "P0-04"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "runner.Run：模型循环（流事件→工具分发→结果回填→续轮）；无工具即成功收束；取消/上下文超限/预算耗尽分类如实（context_blocked 不静默截断）；usage 计入即查预算（流中拦截）",
+        "M005 迁移 00010（sessions/runs/model_calls/tool_calls/run_events/checkpoints/discussion_batches+rounds/knowledge_candidates/sandbox_leases）",
+        "coordinator 唯一 session（UNIQUE(topic,identity)）；batch/round 预约表（UNIQUE(source_submission,trigger)/UNIQUE(batch,ordinal)）",
+        "受控测试：工具轮+终轮+usage、token 预算流中熔断、缺 usage 不记零、取消传播"
+      ],
       "notes": ""
     },
     {
@@ -733,8 +738,12 @@
         "P5-05",
         "P2-07"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "discussion_batches 按 source_submission_id+trigger 唯一（重复提交/AI 自回复不建新批次——重复源 409）；max_rounds 快照；round ordinal 事务预约",
+        "预算：多层初值（3轮/30次尝试/100k token/30min）+ 流中熔断 + usage_known 标记（runner 测试覆盖）",
+        "extension/续开：batches/{id}/extensions handler（manager human）已接契约（BUDGET_EXHAUSTED 需合法续开语义保留）"
+      ],
       "notes": ""
     },
     {
@@ -744,8 +753,13 @@
       "dependsOn": [
         "P5-06"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "取消传播（runner cancelled + provider cancelled 分类）",
+        "tool_calls.prepared + fencing_token 列就绪；unknown 状态显式（opensandbox Exec unknown=true）",
+        "sandbox_leases cleanup_state 支持重试；Kill 幂等；孤儿回收按 runId 标签归属",
+        "真实 server/sandbox 重启演练在 K8s 验收（视资源）"
+      ],
       "notes": ""
     },
     {
@@ -755,8 +769,12 @@
       "dependsOn": [
         "P5-04"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "agent/context：压缩摘要强制保留异议/待决/覆盖/下一步；私有层 SharedLayers 过滤；binding/preference 版本冻结",
+        "knowledge_candidates 表（unverified 状态必须保留）；PG 关键词/引用查询在 catalog 读取层",
+        "受控测试 E05 语义（异议不丢）由 context.CompressSummary 结构保证"
+      ],
       "notes": ""
     },
     {

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-package model_test
+// SPDX-License-Identifier: Apache-2.0
+package agent_test
 
 import (
 	"context"
