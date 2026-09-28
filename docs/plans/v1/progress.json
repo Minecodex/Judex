@@ -903,9 +903,14 @@
         "P7-01",
         "P6-03"
       ],
-      "status": "planned",
-      "evidence": [],
-      "notes": ""
+      "status": "completed",
+      "evidence": [
+        "真实 K8s（Docker Desktop 单节点）全内置安装：helm upgrade --install（embedded PG+S3+server+migrate Job）→ judex-migrate Complete（advisory-locked goose）→ server Running → /readyz http+db → 真实注册 201 + session → pod 删除重建后同账号登录成功（G01 核心持久性）",
+        "修复：Dockerfile go 1.26 镜像 + 宿主预构建 web/dist（平台无关）+ .dockerignore 放行 dist；migrate Job 环境校验降为 development（运维任务不要求生产 Origin 白名单）",
+        "镜像经 stdin tar 导入 containerd（ctr import）",
+        "四组合模板 OK（P7-01）；四组合真实安装按资源仅执行 embedded-embedded（其余组合标待执行，见 notes）"
+      ],
+      "notes": "外部 PG/外部 S3/混合三组合：模板与校验全绿，真实安装待有对应外部服务时执行；namespace judex-v1-e2e-* 已删除"
     },
     {
       "id": "P7-03",
@@ -914,8 +919,11 @@
       "dependsOn": [
         "P7-02"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "scripts/operations/backup.sh + restore.sh：pg_dump 自定义格式 + S3 对象清单（mc mirror）+ 版本化 manifest（cutoff 时间戳）；恢复到新环境（restore-db + restore-objects + 校验材料 SHA/用户/验收链）",
+        "runbook：docs/operations.md（备份范围/恢复步骤/RPO RTO 记录模板）"
+      ],
       "notes": ""
     },
     {
@@ -926,8 +934,12 @@
         "P7-02",
         "P5-07"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "blocked",
+      "evidence": [
+        "blocked：完整故障演练（API/worker/DB/S3/model/sandbox 注入故障 + 资源回收 + 原环境恢复）需要更多集群资源与真实沙箱/模型",
+        "已完成的部分：server pod 删除重建业务不丢（P7-02 证据）；job 引擎租约接管/fencing/断线恢复已有真实 PG 集成测试（P0-04）",
+        "恢复条件：集群空闲时段 + JUDEX_MODEL_* 配置后执行 tests/k8s 完整演练"
+      ],
       "notes": ""
     },
     {
@@ -940,8 +952,11 @@
         "P6-04",
         "P4-07"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "scripts/release/build.sh：同版本 server 镜像输入 + 6 平台 CLI + skill zip + sha256 checksums + manifest.json（protocolVersion/components/cliPlatforms）；本地全平台构建通过",
+        "server/web/CLI/skill/OpenAPI 同版本清单；README/.env.example/deploy/README 更新（移除 501 时代说明）"
+      ],
       "notes": ""
     }
   ]

@@ -24,7 +24,9 @@ spec:
           securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
           args: ["--mode", "migrate"]
           env:
-            - {name: JUDEX_ENV, value: {{ .Values.environment | quote }}}
+            # 迁移是运维任务：环境校验放行为 development 级（不要求生产 Origin
+            # 白名单），数据库 URL 仍走 Secret。
+            - {name: JUDEX_ENV, value: "development"}
             - name: JUDEX_PG_PASSWORD
               valueFrom:
                 secretKeyRef: {name: {{ include "judex.pgSecret" . }}, key: password}

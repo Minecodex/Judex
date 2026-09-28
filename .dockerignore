@@ -5,7 +5,9 @@
 bin
 node_modules
 web/node_modules
-web/dist
+web/node_modules
+# web/dist is required by the image build (prebuilt on host)
+!web/dist
 docs
 deploy/helm/vendor
 deploy/helm/judex/charts
