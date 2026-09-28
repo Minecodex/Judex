@@ -11,7 +11,7 @@
     "dev": "npm run dev --workspace @judex/web",
     "build": "npm run build --workspace @judex/web",
     "test:web": "npm test --workspace @judex/web",
-    "test:e2e": "playwright test --config tests/e2e/playwright.config.ts",
+    "test:e2e": "node tests/e2e/business.setup.mjs && playwright test --config tests/e2e/chat.config.ts && playwright test --config tests/e2e/business.config.ts",
     "gen:api": "node api/generate.mjs && openapi-typescript api/openapi.yaml -o web/src/lib/api/schema.d.ts"
   },
   "devDependencies": {

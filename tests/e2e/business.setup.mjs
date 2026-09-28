@@ -18,6 +18,16 @@ function ensureContainer(name, args) {
 }
 
 async function main() {
+  // 幂等：已就绪的服务直接复用（端口占用时旧进程仍以磁盘静态文件服务新 dist）。
+  try {
+    const existing = await fetch(`http://127.0.0.1:${SERVER_PORT}/readyz`);
+    if (existing.ok) {
+      console.log(`business e2e server already ready on :${SERVER_PORT}`);
+      return;
+    }
+  } catch { /* not running */ }
+  // 生产 bundle 必须与当前源码一致（build:demo 会把 dist 覆盖为演示包）。
+  execSync("npm run build", { cwd: new URL("../../web/", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), stdio: "inherit" });
   ensureContainer(PG, "-e POSTGRES_PASSWORD=busy -e POSTGRES_DB=judex -p 127.0.0.1::5432 postgres:17-alpine");
   const minioImage = (() => {
     try {

@@ -17,8 +17,16 @@ export async function openTool(page: Page, id: string) {
   await page.getByTestId("work-nav-" + id).click();
 }
 export async function openAccount(page: Page) {
-  if (await page.getByTestId("settings-page").isVisible())
-    await page.getByTestId("settings-back").click();
+  // team/flows 等视图会重定向到全屏设置页；设置页检测必须等渲染稳定，
+  // 否则懒加载竞态下跳过返回按钮，账户按钮始终不可见。
+  const onSettings = await page
+    .getByTestId("settings-page")
+    .waitFor({ state: "visible", timeout: 4000 })
+    .then(
+      () => true,
+      () => false,
+    );
+  if (onSettings) await page.getByTestId("settings-back").click();
   if (
     (await page
       .getByTestId("account-menu-button")

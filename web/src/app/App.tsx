@@ -1,4 +1,5 @@
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   BrowserRouter,
   Navigate,
@@ -28,12 +29,7 @@ export default function App() {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [locale, theme]);
   // 演示模式保留完整旧工作区（tests/e2e fixture）；生产 bundle 走真实认证。
-  if (dataMode === "demo")
-    return (
-      <Suspense fallback={<main className="judex-entry min-h-screen" />}>
-        <WorkApp onLogout={async () => {}} />
-      </Suspense>
-    );
+  if (dataMode === "demo") return <DemoPreviewApp />;
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -51,6 +47,56 @@ export default function App() {
         />
       </BrowserRouter>
     </AuthProvider>
+  );
+}
+
+// 演示模式的退出预览态：无会话概念，退出只进入引导页并可返回，
+// 刷新不自动重入（sessionSession judex.preview.signedOut 持久）。
+const SIGNED_OUT_KEY = "judex.preview.signedOut";
+
+function DemoPreviewApp() {
+  const [signedOut, setSignedOut] = useState(
+    () => sessionStorage.getItem(SIGNED_OUT_KEY) === "1",
+  );
+  const { locale } = usePreferences();
+  const t = (key: Key) => translate(locale, key);
+  const client = useQueryClient();
+
+  if (signedOut)
+    return (
+      <main className="judex-entry min-h-screen flex items-center justify-center">
+        <Card className="judex-entry-card">
+          <Card.Header>
+            <Card.Title>{t("accountSignedOut")}</Card.Title>
+            <Card.Description>{t("accountSignedOutHint")}</Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <Button
+              data-testid="return-preview"
+              onPress={() => {
+                sessionStorage.removeItem(SIGNED_OUT_KEY);
+                history.replaceState(null, "", "/");
+                setSignedOut(false);
+              }}
+            >
+              {t("accountReturnPreview")}
+            </Button>
+          </Card.Content>
+        </Card>
+      </main>
+    );
+  return (
+    <Suspense fallback={<main className="judex-entry min-h-screen" />}>
+      <WorkApp
+        onLogout={async () => {
+          sessionStorage.setItem(SIGNED_OUT_KEY, "1");
+          await client.cancelQueries();
+          client.clear();
+          history.replaceState(null, "", "/");
+          setSignedOut(true);
+        }}
+      />
+    </Suspense>
   );
 }
 

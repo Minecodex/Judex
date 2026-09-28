@@ -1,9 +1,20 @@
 import {openTool,openSettings,selectPerson,toggleTheme,toggleLanguage} from './workspace-helpers';
 import { test, expect, type Page } from "@playwright/test";
-const state = (page: Page) =>
-  page.evaluate(() =>
+const state = async (page: Page) => {
+  // 演示工作区为懒加载分块：seed 在挂载后写入，直接等其就绪
+  //（team/flows 视图重定向到全屏设置页，账户按钮保持隐藏）。
+  await expect
+    .poll(
+      async () =>
+        (await page.evaluate(() => localStorage.getItem("judex.web.preview.v1"))) !==
+        null,
+      { timeout: 10000 },
+    )
+    .toBe(true);
+  return page.evaluate(() =>
     JSON.parse(localStorage.getItem("judex.web.preview.v1")!),
   );
+};
 test("chat remains in place while exploring settings and execution order, with bilingual dark mode", async ({
   page,
 }) => {

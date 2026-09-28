@@ -88,6 +88,15 @@ test("leaving preview does not erase work and cannot silently re-enter on reload
   page,
 }) => {
   await page.goto("/");
+  // 演示工作区懒加载：先等 seed 写入，再取快照
+  await expect
+    .poll(
+      async () =>
+        (await page.evaluate(() => localStorage.getItem("judex.web.preview.v1"))) !==
+        null,
+      { timeout: 10000 },
+    )
+    .toBe(true);
   const before = await page.evaluate(() =>
     localStorage.getItem("judex.web.preview.v1"),
   );
