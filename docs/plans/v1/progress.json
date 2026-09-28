@@ -594,8 +594,12 @@
         "P4-02",
         "P3-08"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "CLI：material upload（真实分片+SHA，已在真实 PG+MinIO 垂直验证）、submit（--file+clientSubmissionId 幂等）、report（progress/delivery+expectedTaskVersion）、proposal draft/submit、decision review、task accept/handoff send/receive（全部经确认意图）",
+        "幂等：所有写命令自动生成并透传 Idempotency-Key（07 §4 本地 outbox 同键重试基础）",
+        "敏感边界：只上传显式指定文件路径；无 git push/kubectl 代执行快捷命令"
+      ],
       "notes": ""
     },
     {
@@ -606,8 +610,12 @@
         "P4-03",
         "P4-04"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "CLI task accept / handoff send / handoff receive：先读快照再创建 confirmation-intent（经 P4-03 的同事务确认协议）",
+        "web /confirm/:intentId：显示账号/操作/对象/有效期/结果终态；仅本人浏览器会话可确认（后端 CanConfirmHumanDecision 门控）；确认后 CLI 读取同一 resultRef",
+        "integration（P4-03 已含）：一次确认恰好一条决定、重复点击/CLI 重读不双应用、错人/坏 nonce/过期全拒"
+      ],
       "notes": ""
     },
     {

@@ -15,6 +15,7 @@ import { AuthProvider, useAuth } from "../features/auth/AuthProvider";
 import { LoginPage } from "../features/auth/LoginPage";
 import { RegisterPage } from "../features/auth/RegisterPage";
 import { RecoverPage } from "../features/auth/RecoverPage";
+import { ConfirmPage } from "../features/auth/ConfirmPage";
 import { WorkspaceShell } from "../features/auth/WorkspaceShell";
 
 export default function App() {
@@ -103,6 +104,14 @@ function AuthRoutes({ controls }: { controls: React.ReactNode }) {
               <RegisterPage />
             </EntryLayout>
           )
+        }
+      />
+      <Route
+        path="/confirm/:intentId"
+        element={
+          <EntryLayout controls={controls}>
+            <ConfirmPage />
+          </EntryLayout>
         }
       />
       <Route
