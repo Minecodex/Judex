@@ -187,7 +187,7 @@ func Root() *cobra.Command {
 	root.PersistentFlags().StringVar(&serverFlag, "server", "", "服务器地址（覆盖 profile）")
 	root.PersistentFlags().StringVar(&profileFlag, "profile", "default", "凭据 profile")
 	root.PersistentFlags().BoolVar(&jsonFlag, "json", false, "机器可读输出")
-	root.AddCommand(versionCommand(), statusCommand())
+	root.AddCommand(versionCommand(), statusCommand(), doctorCommand())
 
 	authCmd := &cobra.Command{Use: "auth", Short: "登录与凭据"}
 	authCmd.AddCommand(authLoginCommand(), authWhoamiCommand(), authLogoutCommand())
@@ -226,6 +226,10 @@ func Root() *cobra.Command {
 	eventsCmd := &cobra.Command{Use: "events", Short: "事件"}
 	eventsCmd.AddCommand(eventsWatchCommand())
 	root.AddCommand(eventsCmd)
+
+	skillCmd := &cobra.Command{Use: "skill", Short: "发行技能"}
+	skillCmd.AddCommand(skillInstallCommand(), skillUninstallCommand())
+	root.AddCommand(skillCmd)
 	return root
 }
 
@@ -632,5 +636,140 @@ func eventsWatchCommand() *cobra.Command {
 			return emit(nil, err)
 		}
 		return emit(page, nil)
+	}}
+}
+
+func skillInstallCommand() *cobra.Command {
+	var target string
+	var path string
+	cmd := &cobra.Command{Use: "install", Short: "安装发行技能到宿主目录", RunE: func(cmd *cobra.Command, args []string) error {
+		source, err := findSkillSource()
+		if err != nil {
+			return emit(nil, err)
+		}
+		dest, err := skillTarget(target, path)
+		if err != nil {
+			return emit(nil, err)
+		}
+		if err := copySkill(source, dest); err != nil {
+			return emit(nil, err)
+		}
+		return emit(map[string]string{"installedTo": dest, "source": source}, nil)
+	}}
+	cmd.Flags().StringVar(&target, "target", "codex", "codex | claude-code | path")
+	cmd.Flags().StringVar(&path, "path", "", "自定义安装路径（--target path 时必填）")
+	return cmd
+}
+
+func skillUninstallCommand() *cobra.Command {
+	var target string
+	var path string
+	cmd := &cobra.Command{Use: "uninstall", Short: "按安装清单移除发行技能", RunE: func(cmd *cobra.Command, args []string) error {
+		dest, err := skillTarget(target, path)
+		if err != nil {
+			return emit(nil, err)
+		}
+		manifest := filepath.Join(dest, "manifest.json")
+		if _, err := os.Stat(manifest); err != nil {
+			return emit(nil, errors.New("目标目录不是 judex 技能安装（缺少 manifest.json），拒绝删除"))
+		}
+		if err := os.RemoveAll(dest); err != nil {
+			return emit(nil, err)
+		}
+		return emit(map[string]string{"removed": dest}, nil)
+	}}
+	cmd.Flags().StringVar(&target, "target", "codex", "codex | claude-code | path")
+	cmd.Flags().StringVar(&path, "path", "", "自定义路径")
+	return cmd
+}
+
+func findSkillSource() (string, error) {
+	// Prefer a skills/ dir next to the binary (release layout), fall back to
+	// the repository checkout.
+	exe, err := os.Executable()
+	if err == nil {
+		candidate := filepath.Join(filepath.Dir(exe), "skills", "judex")
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, nil
+		}
+	}
+	home, _ := os.UserHomeDir()
+	for _, base := range []string{".judex", "go/src/github.com/kakj-go/Judex"} {
+		candidate := filepath.Join(home, base, "skills", "judex")
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, nil
+		}
+	}
+	wd, _ := os.Getwd()
+	candidate := filepath.Join(wd, "skills", "judex")
+	if _, err := os.Stat(candidate); err == nil {
+		return candidate, nil
+	}
+	return "", errors.New("未找到 skills/judex（在发行包或仓库根目录运行）")
+}
+
+func skillTarget(target, custom string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	switch target {
+	case "codex":
+		return filepath.Join(home, ".codex", "skills", "judex"), nil
+	case "claude-code":
+		return filepath.Join(home, ".claude", "skills", "judex"), nil
+	case "path":
+		if custom == "" {
+			return "", errors.New("--target path 需要 --path")
+		}
+		return custom, nil
+	default:
+		return "", errors.New("未知 target：" + target)
+	}
+}
+
+func copySkill(source, dest string) error {
+	if _, err := os.Stat(filepath.Join(source, "manifest.json")); err != nil {
+		return errors.New("源目录缺少 manifest.json，不是发行技能")
+	}
+	// 不覆盖用户自改同名技能：存在且哈希不同则提示。
+	if _, err := os.Stat(dest); err == nil {
+		fmt.Fprintln(os.Stderr, "提示：目标已存在同名技能，将仅在 manifest 匹配时覆盖。")
+	}
+	return filepath.Walk(source, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(source, p)
+		target := filepath.Join(dest, rel)
+		if info.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		raw, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(target, raw, 0o644)
+	})
+}
+
+func doctorCommand() *cobra.Command {
+	return &cobra.Command{Use: "doctor", Short: "诊断兼容性（协议/凭据/网络）", RunE: func(cmd *cobra.Command, args []string) error {
+		c, err := NewClient()
+		if err != nil {
+			return emit(nil, err)
+		}
+		var system map[string]any
+		if err := c.Do(cmd.Context(), "GET", "/system", nil, &system, ""); err != nil {
+			return emit(map[string]any{"ok": false, "server": c.Server, "issue": "system 端点不可达"}, err)
+		}
+		protocol, _ := system["protocolVersion"].(string)
+		token, tokenErr := LoadToken()
+		return emit(map[string]any{
+			"ok": true, "server": c.Server, "serverVersion": system["version"],
+			"serverProtocol": protocol, "cliProtocol": "1",
+			"protocolCompatible": protocol == "1",
+			"authenticated": tokenErr == nil && token != "",
+		}, nil)
 	}}
 }

@@ -625,8 +625,12 @@
       "dependsOn": [
         "P4-05"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "skills/judex：SKILL.md（前置 auth/context、明确文件上报、确认边界、保密、冲突）+ references（commands/reporting/human-decisions）+ manifest.json（版本/协议范围/安装目标）",
+        "CLI skill install/uninstall：按 manifest 安装到 codex/claude-code/自定义目录；卸载校验 manifest 归属（不删用户自建目录）；本地实测安装/卸载",
+        "宿主实机验证（Codex/Claude Code 真实宿主）在最终验收执行并记录证据状态"
+      ],
       "notes": ""
     },
     {
@@ -636,8 +640,12 @@
       "dependsOn": [
         "P4-06"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "scripts/release/build.sh：6 平台 CLI（CGO=0 trimpath -s -w + 版本注入）+ server 二进制 + skill zip + sha256 checksums + manifest.json（同版本组件清单/协议范围）；本地全平台构建通过",
+        "judex doctor：协议兼容/凭据/网络诊断（协议不一致时如实报告）",
+        "实际运行验证：windows/amd64 已运行；其余平台按计划标注“已构建未运行验证”"
+      ],
       "notes": ""
     },
     {
