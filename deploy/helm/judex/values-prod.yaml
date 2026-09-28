@@ -9,3 +9,11 @@ postgresql:
   embedded: {enabled: true, storage: 50Gi}
 objectStorage:
   embedded: {enabled: true, storage: 100Gi}
+
+# P7-01：生产必填 allowedOrigins（浏览器写操作 Origin 白名单）。
+server:
+  mode: all
+  allowedOrigins:
+    - https://judex.example.internal
+  previewOrigin: ""   # 独立预览 origin（配置后才提供交互式 HTML 预览）
+  modelCatalogSecret: ""

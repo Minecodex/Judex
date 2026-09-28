@@ -85,3 +85,11 @@ opensandbox:
       [egress]
       image = "sandbox-registry.cn-zhangjiakou.cr.aliyuncs.com/opensandbox/egress:v1.1.6"
       mode = "dns+nft"
+
+# 业务服务进程（P7-01）：mode=all|api|worker；allowedOrigins 生产必填。
+server:
+  mode: all
+  allowedOrigins: []
+  previewOrigin: ""
+  # 模型目录 Secret（含 models.yaml；密钥走 Secret 引用）。
+  modelCatalogSecret: ""

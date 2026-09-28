@@ -885,8 +885,14 @@
         "P5-02",
         "P6-01"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "migrate.yaml：--mode=migrate Job（advisory-locked goose 迁移；K8s $(VAR) 展开 JUDEX_DATABASE_URL 不泄密；backoffLimit 3；安全上下文与 server 一致）",
+        "server.yaml：JUDEX_MODE/JUDEX_ALLOWED_ORIGINS/JUDEX_PREVIEW_ORIGIN/JUDEX_DATABASE_URL（$(JUDEX_PG_PASSWORD) 组合）/JUDEX_MODEL_CATALOG_FILE（Secret 挂载 /etc/judex/models）；移除旧 PG_* 预留契约",
+        "values.yaml/prod：server 段（mode/allowedOrigins/previewOrigin/modelCatalogSecret）",
+        "helm lint dev+prod 通过；四存储组合 template 全 OK（外部 PG/S3 需 existingSecret 校验生效）",
+        ".env.example 补全 S3/模型目录/预览 origin"
+      ],
       "notes": ""
     },
     {

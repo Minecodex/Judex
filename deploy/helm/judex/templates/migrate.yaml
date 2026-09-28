@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "judex.name" . }}-migrate
+  labels: {{ include "judex.labels" . | nindent 4 }}
+  annotations:
+    #helm.sh/hook: pre-install,pre-upgrade
+    #helm.sh/hook-weight: "-5"
+    "judex.kakj.go/migration": "goose-advisory-locked"
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels: {{ include "judex.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001}
+      containers:
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          args: ["--mode", "migrate"]
+          env:
+            - {name: JUDEX_ENV, value: {{ .Values.environment | quote }}}
+            - name: JUDEX_PG_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: {{ include "judex.pgSecret" . }}, key: password}
+            # K8s $(VAR) expansion composes the URL without leaking the secret.
+            - {name: JUDEX_DATABASE_URL, value: {{ include "judex.databaseURL" . | quote }}}
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 256Mi}
