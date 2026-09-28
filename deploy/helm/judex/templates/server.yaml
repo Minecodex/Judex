@@ -57,6 +57,15 @@ spec:
             - name: JUDEX_OPENSANDBOX_API_KEY
               valueFrom:
                 secretKeyRef: {name: {{ .Values.global.sandboxAPIKeySecret }}, key: api-key}
+            {{- with .Values.server.sandboxImage }}
+            - {name: JUDEX_OPENSANDBOX_IMAGE, value: {{ . | quote }}}
+            {{- end }}
+            {{- with .Values.server.sandboxCPU }}
+            - {name: JUDEX_OPENSANDBOX_CPU, value: {{ . | quote }}}
+            {{- end }}
+            {{- with .Values.server.sandboxMemory }}
+            - {name: JUDEX_OPENSANDBOX_MEMORY, value: {{ . | quote }}}
+            {{- end }}
             {{- end }}
           resources: {{ toYaml .Values.resources | nindent 12 }}
           {{- if .Values.server.modelCatalogSecret }}

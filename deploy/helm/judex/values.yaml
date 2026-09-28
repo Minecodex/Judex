@@ -93,3 +93,7 @@ server:
   previewOrigin: ""
   # 模型目录 Secret（含 models.yaml；密钥走 Secret 引用）。
   modelCatalogSecret: ""
+  # Agent 运行沙箱（entrypoint 仅作保活；execd 由平台注入，端口 44772）。
+  sandboxImage: "docker.io/library/alpine:3.20"
+  sandboxCPU: "500m"
+  sandboxMemory: "256Mi"

@@ -21,6 +21,7 @@ import (
 	"github.com/kakj-go/Judex/internal/agent/runner"
 	"github.com/kakj-go/Judex/internal/agent/tools"
 	"github.com/kakj-go/Judex/internal/infrastructure/model"
+	"github.com/kakj-go/Judex/internal/infrastructure/opensandbox"
 	"github.com/kakj-go/Judex/internal/job"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 )
@@ -32,6 +33,16 @@ type Executor struct {
 	Provider  model.Provider
 	ModelName string
 	Clock     func() time.Time
+	// SandboxFactory provisions the per-run sandbox boundary (05 §7);
+	// nil means no sandbox configured and sandbox tools fail honestly.
+	SandboxFactory func(runID, projectID uuid.UUID) *opensandbox.RunSandbox
+}
+
+func (e *Executor) newRunSandbox(runID, projectID uuid.UUID) *opensandbox.RunSandbox {
+	if e.SandboxFactory != nil {
+		return e.SandboxFactory(runID, projectID)
+	}
+	return opensandbox.Unavailable()
 }
 
 func (e *Executor) now() time.Time {
@@ -110,6 +121,11 @@ func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUI
 	sessionID := e.ensureSession(ctx, projectID, topicID, coordinator)
 	runID := uuid.New()
 	env := e.toolEnv(projectID, topicID)
+	// One run one sandbox (05 §7): lazily provisioned on the first sandbox
+	// tool call, killed when the run finishes.
+	runSandbox := e.newRunSandbox(runID, projectID)
+	env.Sandbox = runSandbox
+	defer runSandbox.Close(context.WithoutCancel(ctx))
 	outcome := e.Runner.Run(ctx, runner.RunRequest{
 		RunID: runID, SessionID: sessionID, ProjectID: projectID,
 		ModelName: e.ModelName, Manifest: manifest,

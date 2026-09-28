@@ -29,6 +29,7 @@ import (
 	"github.com/kakj-go/Judex/internal/identity"
 	"github.com/kakj-go/Judex/internal/infrastructure/model"
 	"github.com/kakj-go/Judex/internal/infrastructure/objectstore"
+	"github.com/kakj-go/Judex/internal/infrastructure/opensandbox"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	"github.com/kakj-go/Judex/internal/job"
 	"github.com/kakj-go/Judex/internal/material"
@@ -137,6 +138,18 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 				executor := &batch.Executor{
 					Pool: pool.Pool, Provider: provider, ModelName: cfg.ModelGateway.Model,
 					Runner: runner.NewRunnerForTest(provider, registry),
+				}
+				if cfg.Sandbox.Endpoint != "" {
+					sbClient := opensandbox.New(opensandbox.Config{
+						Endpoint: cfg.Sandbox.Endpoint,
+						APIKey:   cfg.Sandbox.APIKey,
+						Image:    cfg.Sandbox.Image,
+						CPU:      cfg.Sandbox.CPU,
+						Memory:   cfg.Sandbox.Memory,
+					})
+					executor.SandboxFactory = func(runID, projectID uuid.UUID) *opensandbox.RunSandbox {
+						return &opensandbox.RunSandbox{Client: sbClient, RunID: runID, ProjectID: projectID}
+					}
 				}
 				batchExecutor = executor.ExecuteJob
 			}

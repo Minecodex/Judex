@@ -47,6 +47,18 @@ type Config struct {
 	// PreviewOrigin is the isolated origin serving HTML material previews
 	// (04 §4). Empty: no interactive preview, source download only.
 	PreviewOrigin string
+	// Sandbox wires the OpenSandbox execution boundary (05 §7). Empty
+	// endpoint: agent sandbox tools report 沙箱未配置 instead of faking.
+	Sandbox SandboxConfig
+}
+
+// SandboxConfig configures the OpenSandbox server + per-run sandboxes.
+type SandboxConfig struct {
+	Endpoint string // JUDEX_OPENSANDBOX_ENDPOINT, e.g. http://osb:80
+	APIKey   string // JUDEX_OPENSANDBOX_API_KEY (custom header)
+	Image    string // JUDEX_OPENSANDBOX_IMAGE, pinned at deploy time
+	CPU      string // JUDEX_OPENSANDBOX_CPU, K8s quantity
+	Memory   string // JUDEX_OPENSANDBOX_MEMORY, K8s quantity
 }
 
 // ModelGatewayConfig is the direct gateway wiring for background agents.
@@ -131,6 +143,14 @@ func FromEnv(get func(string) string) (Config, error) {
 		PathStyle:       value("JUDEX_S3_PATH_STYLE", "true") == "true",
 	}
 	c.PreviewOrigin = value("JUDEX_PREVIEW_ORIGIN", "")
+
+	c.Sandbox = SandboxConfig{
+		Endpoint: value("JUDEX_OPENSANDBOX_ENDPOINT", ""),
+		APIKey:   value("JUDEX_OPENSANDBOX_API_KEY", ""),
+		Image:    value("JUDEX_OPENSANDBOX_IMAGE", ""),
+		CPU:      value("JUDEX_OPENSANDBOX_CPU", ""),
+		Memory:   value("JUDEX_OPENSANDBOX_MEMORY", ""),
+	}
 	c.ModelGateway = ModelGatewayConfig{
 		Protocol: value("JUDEX_MODEL_PROTOCOL", ""),
 		BaseURL:  value("JUDEX_MODEL_BASE_URL", ""),
