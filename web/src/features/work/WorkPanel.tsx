@@ -332,10 +332,14 @@ function ProposalList({ projectId }: { projectId: string }) {
 function ProposalDetail({ projectId, proposalId, onChanged }: { projectId: string; proposalId: string; onChanged: () => void }) {
   const { locale } = usePreferences();
   const t = (key: Key) => translate(locale, key);
+  const client = useQueryClient();
   const [reason, setReason] = useState("");
   const review = useQuery({
     queryKey: ["proposalReview", projectId, proposalId],
     queryFn: () => request<Review>(`/projects/${projectId}/proposals/${proposalId}/review`),
+    enabled: !!proposalId,
+    // 冻结审阅必须与当前状态一致：pending 期间持续保鲜。
+    refetchInterval: (query) => (query.state.data?.status === "pending" ? 2000 : false),
   });
   const proposals = useQuery({
     queryKey: ["proposals", projectId],
@@ -350,7 +354,11 @@ function ProposalDetail({ projectId, proposalId, onChanged }: { projectId: strin
         body: JSON.stringify({ expectedVersion: proposal?.version ?? 1 }),
         idempotencyKey: crypto.randomUUID(),
       }),
-    onSuccess: onChanged,
+    onSuccess: () => {
+      // 冻结后的审阅（reviewId/hash/slots）必须重读，否则决定用空哈希被拒。
+      client.invalidateQueries({ queryKey: ["proposalReview", projectId, proposalId] });
+      onChanged();
+    },
   });
   const decide = useMutation({
     mutationFn: (decision: "approve" | "reject") =>
@@ -390,19 +398,25 @@ function ProposalDetail({ projectId, proposalId, onChanged }: { projectId: strin
             </Button>
           )}
           {proposal?.status === "pending" && (
-            <div className="judex-inline-form">
+            <div className="judex-inline-form" data-ready={!!review.data?.reviewHash}>
               <Input
                 aria-label={t("wpReason")}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder={t("wpReason")}
               />
-              <Button variant="primary" isPending={decide.isPending} onClick={() => decide.mutate("approve")}>
+              <Button
+                variant="primary"
+                isPending={decide.isPending}
+                isDisabled={!review.data?.reviewHash || !review.data?.slots?.length}
+                onClick={() => decide.mutate("approve")}
+              >
                 {t("wpApprove")}
               </Button>
               <Button
                 variant="danger"
                 isPending={decide.isPending}
+                isDisabled={!review.data?.reviewHash || !review.data?.slots?.length}
                 onClick={() => {
                   if (reason.trim()) decide.mutate("reject");
                 }}

@@ -820,8 +820,12 @@
         "P4-03",
         "P5-09"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "demo 工作区 lazy 分包：生产 bundle 的入口 chunk 不含 seed/模拟 AI（ChatWorkspace 独立 chunk 仅在 demo 模式动态加载）；strict JSON 防未声明字段",
+        "AuthProvider：注册/登录后立即 refresh() 会话（修复 CSRF token 未加载导致 403）",
+        "提案决定按钮在 reviewHash/slots 未就绪时禁用；proposalReview 在 pending 期间 2s 保鲜"
+      ],
       "notes": ""
     },
     {
@@ -831,8 +835,11 @@
       "dependsOn": [
         "P6-01"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "WorkPanel/ProjectWorkspace/ConfirmPage 覆盖 loading/error/empty/forbidden/pending 状态（errorText 按 code 映射双语）",
+        "修复 decide handler 缺 expectedVersion/slotIds 字段导致严格 JSON 拒绝（真实浏览器路径暴露）"
+      ],
       "notes": ""
     },
     {
@@ -844,8 +851,13 @@
         "P4-07",
         "P5-10"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "tests/e2e/business.config.ts + business.setup.mjs（幂等 Docker PG+MinIO+judex-server 生产 web dist）",
+        "business.core.spec.ts：A01/A04 双浏览器注册→建项目→隔离+刷新保活；A02 登录错误统一；F03 localStorage 空+API 404 不回 SPA+无 demo 文案",
+        "business.work.spec.ts：B03/B06 提案→提交→同意→approved（计划原子生效）；B16 退回 cancelled 后决定按钮消失",
+        "5/5 通过（4.7s，production build + 真实 API/PG/MinIO）"
+      ],
       "notes": ""
     },
     {

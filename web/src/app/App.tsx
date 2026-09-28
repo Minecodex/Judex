@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -7,7 +7,9 @@ import {
   useLocation,
 } from "react-router";
 import { Button, Card } from "@heroui/react";
-import WorkApp from "../features/chat/ChatWorkspace";
+// Demo workspace is code-split: the production bundle never ships the
+// simulated business tree (docs/plans/v1/08 §9).
+const WorkApp = lazy(() => import("../features/chat/ChatWorkspace"));
 import { usePreferences } from "../stores/preferences";
 import { translate, type Key } from "../i18n";
 import { dataMode } from "../lib/api/client";
@@ -26,7 +28,12 @@ export default function App() {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [locale, theme]);
   // 演示模式保留完整旧工作区（tests/e2e fixture）；生产 bundle 走真实认证。
-  if (dataMode === "demo") return <WorkApp onLogout={async () => {}} />;
+  if (dataMode === "demo")
+    return (
+      <Suspense fallback={<main className="judex-entry min-h-screen" />}>
+        <WorkApp onLogout={async () => {}} />
+      </Suspense>
+    );
   return (
     <AuthProvider>
       <BrowserRouter>

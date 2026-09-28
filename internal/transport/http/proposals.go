@@ -188,10 +188,12 @@ func (h *ProposalHandlers) decide(c *gin.Context) {
 		return
 	}
 	var req struct {
-		ReviewID   string `json:"reviewId" binding:"required"`
-		ReviewHash string `json:"reviewHash" binding:"required"`
-		Decision   string `json:"decision" binding:"required"`
-		Reason     string `json:"reason"`
+		ReviewID        string   `json:"reviewId" binding:"required"`
+		ReviewHash      string   `json:"reviewHash" binding:"required"`
+		ExpectedVersion int64    `json:"expectedVersion"`
+		Decision        string   `json:"decision" binding:"required"`
+		SlotIDs         []string `json:"slotIds"`
+		Reason          string   `json:"reason"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)

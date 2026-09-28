@@ -50,10 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (nextUser: PublicUser) => {
       setUser(nextUser);
       setPhase("authenticated");
-      // 成功登录后重新拉取 session（带 CSRF token），刷新项目等缓存。
+      // 注册/登录建立会话后立即拉取 session（获取 CSRF token）并刷新缓存。
+      await refresh();
       await client.invalidateQueries();
     },
-    [client],
+    [client, refresh],
   );
 
   const signOut = useCallback(async () => {
