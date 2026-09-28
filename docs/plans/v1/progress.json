@@ -2,7 +2,7 @@
   "planVersion": "1.0",
   "baselineCommit": "8edd258",
   "generatedAt": "2026-09-27",
-  "status": "completed (53) + blocked (2: P5-10 real-model acceptance, P7-04 full fault drill) — see final report",
+  "status": "completed (55) + blocked (1: P7-04 完整故障演练，集群资源) — Chatbox 三栏迁移与 E2E 修复后 npm run test:e2e 一键全绿（demo 26 + business 10）",
   "decisions": {
     "registration": "confirmed: intranet email+password, no email verification",
     "cliName": "confirmed: judex CLI, not ctl",
@@ -811,9 +811,11 @@
         "新增 Anthropic 兼容适配器（thinking 过滤/tool_use 累积/usage 合并）+ 受控测试 6 条；Provider 工厂按目录 protocol 选择适配器",
         "关键修复：OpenAI Provider 工具调用历史必须嵌套序列化 {id,type:function,function:{name,args}}（GLM 严格校验 1214）；受控测试补 wire-shape 回归",
         "thinking/reasoning_content 自动过滤不外泄；reasoning_tokens 计入 usage 预算",
-        "沙箱浏览器证据（HTML 交互检查）仍依赖 OpenSandbox 部署，属 P7-04 范围"
+        "沙箱浏览器证据（HTML 交互检查）仍依赖 OpenSandbox 部署，属 P7-04 范围",
+        "commit 84f18e3: GLM-5.3 真实模型验收 5/5",
+        "commit d240835: OpenSandbox 实测契约 + 3 live 测试 PASS"
       ],
-      "notes": "真实模型协议栈验证完成；密钥只经环境变量注入（用户应轮换已泄露在聊天中的 key）"
+      "notes": "真实模型协议栈验证完成；密钥只经环境变量注入（用户应轮换已泄露在聊天中的 key） | 2026-09-28 补验：GLM-5.3 coding 入口 5/5 通过（E11 双中文场景/E03 预算/E05 压缩/取消）+ Anthropic 适配器；OpenSandbox 适配器对齐真实 API（execd 44772 代理、RunSandbox 一次运行一沙箱），脚本化模型驱动 bash 在真实沙箱计算 PASS；GLM-5.3+真实沙箱场景 TestLiveAgentBashInRealSandbox 就绪（key 401 待换新后补跑）"
     },
     {
       "id": "P6-01",
