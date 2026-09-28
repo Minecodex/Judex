@@ -674,8 +674,11 @@
         "P2-03",
         "P0-05"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "opensandbox 适配器：Create（run/project 标签+项目只读挂载声明+镜像）/Exec（unknown 结果显式标记不盲重试）/Read/Write/Kill；未配置时显式 SANDBOX_UNAVAILABLE 不空成功；密钥仅注入 Authorization",
+        "真实 OpenSandbox lifecycle 联调与四存储挂载（EROFS/egress deny/TTL）在 K8s 验收（视资源）"
+      ],
       "notes": ""
     },
     {
@@ -686,8 +689,12 @@
         "P5-02",
         "P3-04"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "agent/tools 注册表：read/bash（沙箱执行，read 用 shellEscape 防注入）/list_agent/query_work/read_material（服务端只读）/propose_changes（仅草稿）；effectClass（sandbox/read/draft）+ allowedPrincipal 校验；结果为数据非指令",
+        "无 approve/SQL/生产部署类工具；bash unknown 显式返回",
+        "真实 OpenSandbox exec/file API 兼容性在 K8s 联调复核"
+      ],
       "notes": ""
     },
     {
@@ -698,8 +705,12 @@
         "P5-01",
         "P5-03"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "agent/context：分层 manifest（系统→职位→个人偏好[Private]→工作事实→异议→近消息→新材料）；Prompt 拆 system/user；SharedLayers 过滤私有层；压缩摘要强制保留异议/待决/覆盖范围/下一步",
+        "binding/workflow/preference 版本快照冻结于 manifest",
+        "M005 agent 表（agent_sessions/runs、model_calls、tool_calls、run_events、context_checkpoints、discussion_batches/rounds、knowledge_candidates、sandbox_leases）已随 M004 迁移布局规划；会话/检查点 PG 持久化在 P5-05 调度落地"
+      ],
       "notes": ""
     },
     {
