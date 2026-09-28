@@ -2,7 +2,7 @@
   "planVersion": "1.0",
   "baselineCommit": "8edd258",
   "generatedAt": "2026-09-27",
-  "status": "planned",
+  "status": "completed (53) + blocked (2: P5-10 real-model acceptance, P7-04 full fault drill) — see final report",
   "decisions": {
     "registration": "confirmed: intranet email+password, no email verification",
     "cliName": "confirmed: judex CLI, not ctl",
