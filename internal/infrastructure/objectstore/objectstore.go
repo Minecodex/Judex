@@ -6,6 +6,7 @@
 package objectstore
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -81,8 +82,25 @@ func ObjectKey(projectID, kind, id string, name string) string {
 	return fmt.Sprintf("projects/%s/%s/%s/%s", projectID, kind, id, safe)
 }
 
-// Put streams a reader into the object key.
+// putSizeCap bounds the buffered fallback for unseekable streams (parts are
+// ≤8MiB; the cap keeps memory bounded while enabling checksum computation).
+const putSizeCap = 64 << 20
+
+// Put stores a reader under the key. Plain-HTTP S3 endpoints (MinIO,
+// SeaweedFS) cannot compute header checksums on unseekable streams, so
+// bodies up to the cap are buffered into a seekable reader first.
 func (s *Store) Put(ctx context.Context, key string, body io.Reader, size int64, contentType string) error {
+	if _, ok := body.(io.Seeker); !ok {
+		raw, err := io.ReadAll(io.LimitReader(body, putSizeCap+1))
+		if err != nil {
+			return apierrors.New(apierrors.DependencyDown, "object read failed").WithRetryable(true).Wrap(err)
+		}
+		if len(raw) > putSizeCap {
+			return apierrors.New(apierrors.PayloadTooLarge, "单次缓冲上传超过 64MiB 上限")
+		}
+		body = bytes.NewReader(raw)
+		size = int64(len(raw))
+	}
 	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:        aws.String(s.bucket),
 		Key:           aws.String(key),
@@ -91,7 +109,7 @@ func (s *Store) Put(ctx context.Context, key string, body io.Reader, size int64,
 		ContentType:   aws.String(contentType),
 	})
 	if err != nil {
-		return apierrors.New(apierrors.DependencyDown, "object upload failed").WithRetryable(true).Wrap(err)
+		return apierrors.Newf(apierrors.DependencyDown, "object upload failed: %v", err).WithRetryable(true)
 	}
 	return nil
 }

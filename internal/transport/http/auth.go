@@ -256,10 +256,10 @@ func (h *IdentityHandlers) deviceToken(c *gin.Context) {
 		return
 	}
 	switch state {
-	case 1: // slow_down
+	case identity.PollSlowDown:
 		respond{}.ok(c, gin.H{"status": "slow_down", "interval": 5})
 		return
-	case 0: // pending
+	case identity.PollPending:
 		respond{}.ok(c, gin.H{"status": "pending", "interval": 5})
 		return
 	}

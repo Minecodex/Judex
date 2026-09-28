@@ -139,6 +139,7 @@ const (
 	PollSlowDown
 	PollDenied
 	PollExpired
+	PollCompleted
 )
 
 // PollDeviceToken trades the device code for tokens; repeated polls faster
@@ -186,7 +187,7 @@ func (s *Service) PollDeviceToken(ctx context.Context, deviceCode string) (PollS
 	if err != nil {
 		return 0, "", err
 	}
-	return 0, refreshToken, nil
+	return PollCompleted, refreshToken, nil
 }
 
 // issueTokens creates a fresh access+refresh pair in the grant's family.

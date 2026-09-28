@@ -559,8 +559,13 @@
         "P2-06",
         "P3-09"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "pkg/client：envelope 解包/Bearer/幂等键/CLIError→exit code 映射（0/3/4/5/7/8）/DeviceLogin 完整轮询（pending/slow_down 退避）",
+        "internal/cli：cobra 命令树（auth/project/inbox/material/submit/report/proposal/decision/task/handoff/events）+0600 凭据文件（JUDEX_TOKEN 环境优先）+ .judex/project.json 非机密 profile + --json envelope（schemaVersion/ok/data）",
+        "修复：cobra 子命令空格冲突（改为父子组）；设备轮询成功态与 pending 撞号（新增 PollCompleted）；aws-sdk Go v2 明文 HTTP 不可寻流校验和（≤64MiB 缓冲为可寻流）",
+        "真实垂直验证：judex-server(真实PG+MinIO) → CLI status/project list→use→material upload（真实分片+SHA+complete）→material list 全通，exit code 正确"
+      ],
       "notes": ""
     },
     {

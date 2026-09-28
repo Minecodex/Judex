@@ -34,7 +34,7 @@ func TestDeviceFlowAndRotation(t *testing.T) {
 	}
 	// Before approval: pending / slow_down semantics.
 	state, _, err := svc.PollDeviceToken(ctx, deviceCode)
-	if err != nil || state != 1 && state != 0 {
+	if err != nil || (state != 0 && state != 1) {
 		t.Fatalf("pre-approval poll: state=%d err=%v", state, err)
 	}
 	// Scope expansion rejected.
@@ -50,7 +50,7 @@ func TestDeviceFlowAndRotation(t *testing.T) {
 		t.Fatalf("double confirm must be invalid, got %v", err)
 	}
 	state, refresh, err := svc.PollDeviceToken(ctx, deviceCode)
-	if err != nil || state != 0 && state != 1 {
+	if err != nil || state != 4 { // PollCompleted
 		t.Fatalf("poll after approve: state=%d err=%v", state, err)
 	}
 	if refresh == "" {

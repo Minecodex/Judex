@@ -110,6 +110,20 @@ type Service struct {
 	now    func() time.Time
 }
 
+// unavailableStore makes missing object storage an explicit 503 instead of a
+// nil-interface panic (11 §2: S3 故障禁止上传成功，但不拖垮其它路径).
+type unavailableStore struct{}
+
+func (unavailableStore) Put(context.Context, string, io.Reader, int64, string) error {
+	return apierrors.New(apierrors.DependencyDown, "对象存储未配置").WithRetryable(true)
+}
+func (unavailableStore) Get(context.Context, string) (io.ReadCloser, error) {
+	return nil, apierrors.New(apierrors.DependencyDown, "对象存储未配置").WithRetryable(true)
+}
+func (unavailableStore) Delete(context.Context, string) error {
+	return apierrors.New(apierrors.DependencyDown, "对象存储未配置").WithRetryable(true)
+}
+
 func NewService(pool *postgres.Pool, store ObjectStore, limits Limits, now func() time.Time) *Service {
 	if now == nil {
 		now = func() time.Time { return time.Now().UTC() }
