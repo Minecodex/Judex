@@ -14,3 +14,5 @@ kubectl -n "${NS}" exec "${RELEASE}-seaweedfs-0" -- \
   > "${OUT}/${CUTOFF}/objects.txt" || echo "(inventory best-effort)"
 cat > "${OUT}/${CUTOFF}/manifest.json" <<EOF
 {"cutoff":"${CUTOFF}","namespace":"${NS}","release":"${RELEASE}","pg":"judex.pgdump","objects":"objects.txt"}
+EOF
+echo "backup complete: ${OUT}/${CUTOFF}"
