@@ -153,6 +153,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			httptransport.NewProposalHandlers(app.decisions).Register(spec)
 			httptransport.NewHandoffHandlers(app.handoffs, app.work).Register(spec)
 			httptransport.NewResearchHandlers(app.work).Register(spec)
+			httptransport.NewIntentHandlers(app.decisions, app.work).Register(spec)
 			idSvc := app.identity
 			authOpts = &httptransport.AuthOptions{
 				Config:        authCfg,

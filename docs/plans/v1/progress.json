@@ -576,8 +576,14 @@
         "P4-01",
         "P3-07"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "decision/intents.go: CreateIntent（operation 白名单/nonce/10min TTL/payload_json 快照+canonical hash/grant 归属）、GetIntent（本人可见+过期标记）、ConfirmIntent（咨询锁+项目锁+同人/nonce/过期校验+同事务执行 Executor+恰好一次消费+重复点击幂等重放 resultRef）",
+        "work.DecideTaskAcceptanceTx：验收命令的参与事务变体（意图确认复用同一领域命令与全部复核）",
+        "handlers: create/get/confirm 三个 operation；confirm 仅浏览器会话（CanConfirmHumanDecision 门控）",
+        "migration 00009 payload_json",
+        "integration: 错人 404、坏 nonce stale、一次确认→恰好 1 条 acceptance、重复点击不双应用、CLI 读取同一 resultRef、拒绝路径"
+      ],
       "notes": ""
     },
     {

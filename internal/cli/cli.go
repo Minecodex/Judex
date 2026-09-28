@@ -179,9 +179,9 @@ func TakeExitCode() int { return exitCode }
 // Root builds the full command tree.
 func Root() *cobra.Command {
 	root := &cobra.Command{
-		Use:          "judex",
-		Short:        "Judex CLI：本地工作与平台协作的客户端",
-		SilenceUsage: true,
+		Use:           "judex",
+		Short:         "Judex CLI：本地工作与平台协作的客户端",
+		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
 	root.PersistentFlags().StringVar(&serverFlag, "server", "", "服务器地址（覆盖 profile）")
@@ -260,7 +260,7 @@ func authLoginCommand() *cobra.Command {
 			scopes = []string{"projects:read", "context:read", "materials:read", "materials:write",
 				"submissions:write", "reports:write", "proposals:draft", "events:read", "intents:create"}
 		}
-		token, err := c.DeviceLogin(cmd.Context(), "judex-cli@" + runtime.GOOS, scopes)
+		token, err := c.DeviceLogin(cmd.Context(), "judex-cli@"+runtime.GOOS, scopes)
 		if err != nil {
 			return emit(nil, err)
 		}

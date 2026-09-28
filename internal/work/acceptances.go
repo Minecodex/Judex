@@ -111,10 +111,27 @@ func (s *Service) DecideTaskAcceptance(ctx context.Context, requester, projectID
 	}
 	var out Task
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		return s.decideTaskAcceptanceTx(ctx, tx, requester, projectID, taskID, reviewHash, accept, reason, expectedVersion, &out)
+	})
+	return out, err
+}
+
+// DecideTaskAcceptanceTx is the in-transaction variant used by intent
+// confirmation (07 §5): eligibility is fully re-verified here.
+func (s *Service) DecideTaskAcceptanceTx(ctx context.Context, tx pgx.Tx, requester, projectID, taskID uuid.UUID, reviewHash string, accept bool, reason string, expectedVersion int64) (Task, error) {
+	var out Task
+	if err := s.decideTaskAcceptanceTx(ctx, tx, requester, projectID, taskID, reviewHash, accept, reason, expectedVersion, &out); err != nil {
+		return Task{}, err
+	}
+	return out, nil
+}
+
+func (s *Service) decideTaskAcceptanceTx(ctx context.Context, tx pgx.Tx, requester, projectID, taskID uuid.UUID, reviewHash string, accept bool, reason string, expectedVersion int64, out *Task) error {
+	{
+		if err := txLockProject(ctx, tx, projectID); err != nil {
 			return err
 		}
-		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {
+		if _, err := memberTxRow(ctx, tx, projectID, requester); err != nil {
 			return err
 		}
 		var (
@@ -207,10 +224,21 @@ func (s *Service) DecideTaskAcceptance(ctx context.Context, requester, projectID
 		}); err != nil {
 			return err
 		}
-		out = Task{ID: taskID, Status: nextStatus, Version: version + 1}
+		*out = Task{ID: taskID, Status: nextStatus, Version: version + 1}
 		return nil
-	})
-	return out, err
+	}
+}
+
+// txLockProject/memberTxRow adapt pgx.Tx to the helpers' interfaces.
+func txLockProject(ctx context.Context, tx pgx.Tx, projectID uuid.UUID) error {
+	_, err := tx.Exec(ctx, `SELECT id FROM projects WHERE id=$1 FOR UPDATE`, projectID)
+	return err
+}
+
+func memberTxRow(ctx context.Context, q interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}, projectID, requester uuid.UUID) (string, error) {
+	return memberTx(ctx, q, projectID, requester)
 }
 
 // ReopenTask returns an accepted task to rework (03 §2 任务重开): reviewer
