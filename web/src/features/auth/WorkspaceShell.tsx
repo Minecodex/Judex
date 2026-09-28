@@ -1,7 +1,7 @@
 import { Button, Card } from "@heroui/react";
 import { Plus, X } from "lucide-react";
 import { AccountSecurity } from "../settings/AccountSecurity";
-import { ProjectWorkspace } from "../projects/ProjectWorkspace";
+import { WorkspaceApp } from "../workspace/WorkspaceApp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
@@ -23,7 +23,9 @@ export function WorkspaceShell() {
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [tab, setTab] = useState<"projects" | "security">("projects");
-  const [activeProject, setActiveProject] = useState<string | null>(null);
+  const [activeProject, setActiveProject] = useState<string | null>(
+    () => new URLSearchParams(location.search).get("project"),
+  );
 
   const projects = useQuery({
     queryKey: ["projects"],
@@ -53,6 +55,16 @@ export function WorkspaceShell() {
     await signOut();
     navigate("/login", { replace: true });
   };
+
+  if (activeProject && tab !== "security") {
+    return (
+      <WorkspaceApp
+        projectId={activeProject}
+        onLogout={signOutAndRedirect}
+        onExit={() => setActiveProject(null)}
+      />
+    );
+  }
 
   return (
     <div className="judex-workspace-shell">
@@ -86,8 +98,10 @@ export function WorkspaceShell() {
             {t("workspaceTabSecurity")}
           </Button>
         </nav>
-        {tab === "security" ? <AccountSecurity /> : activeProject ? (
-          <ProjectWorkspace projectId={activeProject} />
+        {tab === "security" ? (
+          <AccountSecurity />
+        ) : activeProject ? (
+          <AccountSecurity />
         ) : projects.isPending ? (
           <p className="judex-workspace-status">{t("shellLoading")}</p>
         ) : projects.isError ? (

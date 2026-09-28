@@ -14,8 +14,11 @@ import {
   type SplitRatio,
 } from "./splitLayout";
 import { useWork } from "../work/store";
-export function useSplitLayout(open: boolean) {
-  const { t } = useWork();
+export type SplitTranslator = (key: "chatResizeLeft" | "chatResizeRight" | "chatResizeHint") => string;
+
+// useSplitLayoutBase 与数据源无关：三栏拖拽/比例持久化/最大化逻辑共用，
+// demo 树与真实 API 工作区各自传入翻译函数。
+export function useSplitLayoutBase(open: boolean, t: SplitTranslator) {
   const ref = useRef<HTMLDivElement>(null);
   const [ratio, setRatio] = useState(() => {
     try {
@@ -213,4 +216,9 @@ export function useSplitLayout(open: boolean) {
         ? `${fitted.left}px ${box.limits.divider}px minmax(0,1fr) ${box.limits.divider}px ${fitted.right}px`
         : `${fitted.left}px ${box.limits.divider}px minmax(0,1fr)`,
   };
+}
+
+export function useSplitLayout(open: boolean) {
+  const { t } = useWork();
+  return useSplitLayoutBase(open, t);
 }

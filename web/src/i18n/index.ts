@@ -10,6 +10,7 @@ import { shellZh, shellEn } from "./shell";
 import { chatZh, chatEn } from "./chat";
 import { settingsZh, settingsEn } from "./settings";
 import { authZh, authEn } from "./auth";
+import { workspaceZh, workspaceEn } from "./workspace";
 const modules = [
   { zh: commonZh, en: commonEn },
   { zh: experienceZh, en: experienceEn },
@@ -23,6 +24,7 @@ const modules = [
   { zh: chatZh, en: chatEn },
   { zh: settingsZh, en: settingsEn },
   { zh: authZh, en: authEn },
+  { zh: workspaceZh, en: workspaceEn },
 ];
 export type Locale = "zh-CN" | "en";
 // re-exported for feature modules
@@ -38,7 +40,8 @@ export type Key =
   | keyof typeof shellZh
   | keyof typeof chatZh
   | keyof typeof settingsZh
-  | keyof typeof authZh;
+  | keyof typeof authZh
+  | keyof typeof workspaceZh;
 const zh = Object.assign({}, ...modules.map((m) => m.zh)) as Record<
   Key,
   string

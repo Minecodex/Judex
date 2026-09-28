@@ -219,7 +219,7 @@ function MessageThread({ projectId, topicId }: { projectId: string; topicId: str
   );
 }
 
-function MaterialsPanel({ projectId }: { projectId: string }) {
+export function MaterialsPanel({ projectId }: { projectId: string }) {
   const { locale } = usePreferences();
   const t = (key: Key) => translate(locale, key);
 
@@ -253,7 +253,7 @@ function MaterialsPanel({ projectId }: { projectId: string }) {
   );
 }
 
-function TeamPanel({ projectId }: { projectId: string }) {
+export function TeamPanel({ projectId }: { projectId: string }) {
   const { locale } = usePreferences();
   const t = (key: Key) => translate(locale, key);
 

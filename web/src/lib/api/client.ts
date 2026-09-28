@@ -28,6 +28,9 @@ export const clearCSRFToken = () => {
 
 const base = (import.meta.env.VITE_API_BASE_URL || "") + "/api/v1";
 
+// EventSource 等非 fetch 通道使用的完整地址。
+export const apiUrl = (path: string) => base + path;
+
 export async function request<T>(
   path: string,
   init?: RequestInit & { idempotencyKey?: string },
