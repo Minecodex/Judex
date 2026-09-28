@@ -656,8 +656,13 @@
         "P2-03",
         "P0-04"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "internal/infrastructure/model/provider.go：OpenAI 兼容流式适配（chat/completions SSE）→ 规范事件（textDelta/toolCallDelta/toolCallReady/usage/finish/error）；工具参数跨帧累积；usage 缺失保持 nil（不记零成本）；错误分类 transient/quota/auth/invalid_request/cancelled；取消经 ctx 传播",
+        "密钥仅从配置注入 Authorization 头，不进日志/prompt",
+        "tests/agent（受控 fake gateway）：文本+usage、工具参数累积成合法 JSON、无效 JSON 帧报错不静默截断、401/429/500 分类、取消传播、缺 usage 不为零",
+        "真实模型联调（E11）：模型配置未提供 → 按用户决定标 blocked（live 验收待 JUDEX_MODEL_* 提供后补跑）"
+      ],
       "notes": ""
     },
     {
