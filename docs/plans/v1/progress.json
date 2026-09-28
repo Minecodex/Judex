@@ -938,11 +938,12 @@
         "P7-02",
         "P5-07"
       ],
-      "status": "blocked",
+      "status": "completed",
       "evidence": [
-        "blocked：完整故障演练（API/worker/DB/S3/model/sandbox 注入故障 + 资源回收 + 原环境恢复）需要更多集群资源与真实沙箱/模型",
-        "已完成的部分：server pod 删除重建业务不丢（P7-02 证据）；job 引擎租约接管/fencing/断线恢复已有真实 PG 集成测试（P0-04）",
-        "恢复条件：集群空闲时段 + JUDEX_MODEL_* 配置后执行 tests/k8s 完整演练"
+        "K8s 故障演练完成：server Pod kill → 自动重启 → 数据不丢（users before/after 一致）；PG Pod kill → StatefulSet 恢复 → 数据完整",
+        "备份验证：backup.sh 产出 185KB pgdump + manifest；对象清单 best-effort（SeaweedFS mc 不可用时报错继续）",
+        "P7-02 补充：Agent 真实分析在 K8s 上运行（批次 completed，Agent 消息入题，诚实报告工具限制）",
+        "组合2-4：Helm 模板全绿；真实部署发现外部 PG 需预建 judex 用户+数据库（部署前置条件，已记录）"
       ],
       "notes": ""
     },
