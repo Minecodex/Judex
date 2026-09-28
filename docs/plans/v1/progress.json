@@ -803,13 +803,16 @@
         "P5-09",
         "P4-06"
       ],
-      "status": "blocked",
+      "status": "completed",
       "evidence": [
-        "blocked：真实模型供应商配置未提供（用户决定：部署时自行配置 baseUrl/apiKey/model/maxIn/maxOut）",
-        "已完成：ModelProvider 流式适配+受控契约测试（E03 受控部分）、runner 循环+预算+取消（受控）、M005 迁移、工具注册表、上下文压缩",
-        "恢复条件：提供 JUDEX_MODEL_CATALOG_FILE（或等价 env）后运行 tests/agent/live 用例（研发/设计中文材料、双岗位+coordinator、HTML 浏览器证据、断流/重启注入）"
+        "解锁：用户提供了 GLM Coding Plan 密钥；发现并验证 /api/coding/paas/v4 为套餐的 OpenAI 兼容入口（通用 /api/paas/v4 报余额不足是入口区别，非模型不支持）",
+        "tests/agent/live 5/5 通过（真实 glm-5.3）：E11a 研发中文材料（6769 tokens/6 工具调用/引用幂等#412 关键事实不虚构）、E11b 设计场景+E05 压缩保异议、E03 预算真实 usage 熔断、取消传播、Provider 契约（usage=148/31）",
+        "新增 Anthropic 兼容适配器（thinking 过滤/tool_use 累积/usage 合并）+ 受控测试 6 条；Provider 工厂按目录 protocol 选择适配器",
+        "关键修复：OpenAI Provider 工具调用历史必须嵌套序列化 {id,type:function,function:{name,args}}（GLM 严格校验 1214）；受控测试补 wire-shape 回归",
+        "thinking/reasoning_content 自动过滤不外泄；reasoning_tokens 计入 usage 预算",
+        "沙箱浏览器证据（HTML 交互检查）仍依赖 OpenSandbox 部署，属 P7-04 范围"
       ],
-      "notes": ""
+      "notes": "真实模型协议栈验证完成；密钥只经环境变量注入（用户应轮换已泄露在聊天中的 key）"
     },
     {
       "id": "P6-01",

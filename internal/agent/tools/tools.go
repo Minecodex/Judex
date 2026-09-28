@@ -47,6 +47,9 @@ type Env struct {
 	IdentityID string
 	// Sandbox executes read/write/edit/bash (nil → those tools refuse).
 	Sandbox SandboxExec
+	// ReadMaterialContent lets the live-test stub return injected Chinese
+	// material without a real storage round-trip.
+	ReadMaterialContent string
 	// Queriers are read-only server projections.
 	ListAgents   func(ctx context.Context, projectID string) ([]map[string]any, error)
 	QueryWork    func(ctx context.Context, projectID string, objectType string, cursor string, limit int) ([]map[string]any, error)

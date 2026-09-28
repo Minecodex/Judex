@@ -21,16 +21,16 @@ import (
 
 // Event is the normalized stream event (05 §2).
 type Event struct {
-	Type        string // textDelta | toolCallDelta | toolCallReady | usage | finish | error
-	TextDelta   string
-	ToolCallID  string
-	ToolName    string
-	ArgsDelta   string
-	ArgsJSON    string
-	InputTokens int64
+	Type         string // textDelta | toolCallDelta | toolCallReady | usage | finish | error
+	TextDelta    string
+	ToolCallID   string
+	ToolName     string
+	ArgsDelta    string
+	ArgsJSON     string
+	InputTokens  int64
 	OutputTokens int64
 	FinishReason string
-	Err         error
+	Err          error
 }
 
 // ErrorClass classifies request failures (05 §2) for retry/budget logic.
@@ -80,18 +80,18 @@ type ToolCall struct {
 
 // ToolSchema describes a tool for the request (05 §6).
 type ToolSchema struct {
-	Name         string         `json:"name"`
+	Name          string         `json:"name"`
 	SchemaVersion int            `json:"schema_version"`
-	InputSchema  map[string]any `json:"input_schema"`
+	InputSchema   map[string]any `json:"input_schema"`
 }
 
 // Request is one model call.
 type Request struct {
-	Model         string
-	Messages      []Message
-	Tools         []ToolSchema
+	Model           string
+	Messages        []Message
+	Tools           []ToolSchema
 	MaxOutputTokens int64
-	Temperature   float64
+	Temperature     float64
 }
 
 // Provider streams model events. Implementations must never log secrets.
@@ -102,9 +102,9 @@ type Provider interface {
 // OpenAIConfig carries the operator-configured entry (02 §8): baseUrl,
 // apiKey (env-resolved), model name, token limits.
 type OpenAIConfig struct {
-	BaseURL         string
-	APIKey          string
-	HTTP            *http.Client
+	BaseURL string
+	APIKey  string
+	HTTP    *http.Client
 }
 
 type OpenAIProvider struct {
@@ -119,13 +119,54 @@ func NewOpenAIProvider(cfg OpenAIConfig) *OpenAIProvider {
 }
 
 type chatRequest struct {
-	Model    string        `json:"model"`
-	Messages []Message     `json:"messages"`
-	Tools    []toolWire    `json:"tools,omitempty"`
-	Stream   bool          `json:"stream"`
+	Model         string         `json:"model"`
+	Messages      []wireMessage  `json:"messages"`
+	Tools         []toolWire     `json:"tools,omitempty"`
+	Stream        bool           `json:"stream"`
 	StreamOptions *streamOptions `json:"stream_options,omitempty"`
-	MaxTokens int64         `json:"max_tokens,omitempty"`
-	Temperature float64     `json:"temperature,omitempty"`
+	MaxTokens     int64          `json:"max_tokens,omitempty"`
+	Temperature   float64        `json:"temperature,omitempty"`
+}
+
+// wireMessage serializes assistant tool calls in the OpenAI nested shape
+// [{id, type:"function", function:{name, arguments}}] — sending the flat
+// neutral shape is rejected by strict gateways (GLM error 1214).
+type wireMessage struct {
+	Role       string         `json:"role"`
+	Content    any            `json:"content"` // string; nil when tool_calls present
+	ToolCallID string         `json:"tool_call_id,omitempty"`
+	ToolCalls  []wireToolCall `json:"tool_calls,omitempty"`
+}
+
+type wireToolCall struct {
+	ID       string           `json:"id"`
+	Type     string           `json:"type"` // always "function"
+	Function wireToolFunction `json:"function"`
+}
+
+type wireToolFunction struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
+}
+
+func toWireMessages(messages []Message) []wireMessage {
+	out := make([]wireMessage, 0, len(messages))
+	for _, msg := range messages {
+		wire := wireMessage{Role: msg.Role, ToolCallID: msg.ToolCallID}
+		if msg.Role == "assistant" && len(msg.ToolCalls) > 0 {
+			wire.Content = nil
+			for _, call := range msg.ToolCalls {
+				wire.ToolCalls = append(wire.ToolCalls, wireToolCall{
+					ID: call.ID, Type: "function",
+					Function: wireToolFunction{Name: call.Name, Arguments: call.Arguments},
+				})
+			}
+		} else {
+			wire.Content = msg.Content
+		}
+		out = append(out, wire)
+	}
+	return out
 }
 
 type streamOptions struct {
@@ -146,9 +187,9 @@ type ToolFunction struct {
 // Stream opens a streaming chat completion and normalizes SSE into Events.
 func (p *OpenAIProvider) Stream(ctx context.Context, req Request) (<-chan Event, error) {
 	body := chatRequest{
-		Model: req.Model, Messages: req.Messages, Stream: true,
+		Model: req.Model, Messages: toWireMessages(req.Messages), Stream: true,
 		StreamOptions: &streamOptions{IncludeUsage: true},
-		MaxTokens: req.MaxOutputTokens, Temperature: req.Temperature,
+		MaxTokens:     req.MaxOutputTokens, Temperature: req.Temperature,
 	}
 	for _, tool := range req.Tools {
 		body.Tools = append(body.Tools, toolWire{Type: "function", Function: ToolFunction{
@@ -163,9 +204,17 @@ func (p *OpenAIProvider) Stream(ctx context.Context, req Request) (<-chan Event,
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+p.cfg.APIKey)
+	// Transient connection failures (e.g. proxy route establishment) get one
+	// immediate retry; the request body is replayed from the original bytes.
+	httpReq.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(raw)), nil }
 	resp, err := p.cfg.HTTP.Do(httpReq)
 	if err != nil {
-		return nil, &ProviderError{Class: classifyStatus(0), Err: err}
+		_ = httpReq.Body.Close()
+		httpReq.Body, _ = httpReq.GetBody()
+		resp, err = p.cfg.HTTP.Do(httpReq)
+		if err != nil {
+			return nil, &ProviderError{Class: classifyStatus(0), Err: err}
+		}
 	}
 	if resp.StatusCode >= 400 {
 		defer resp.Body.Close()
@@ -204,7 +253,7 @@ func classifyStatus(status int) ErrorClass {
 type sseChunk struct {
 	Choices []struct {
 		Delta struct {
-			Content string `json:"content"`
+			Content   string `json:"content"`
 			ToolCalls []struct {
 				Index    int    `json:"index"`
 				ID       string `json:"id"`

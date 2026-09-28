@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-// SPDX-License-Identifier: Apache-2.0
 package agent_test
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -193,4 +193,52 @@ func TestMissingUsageNotZeroCost(t *testing.T) {
 		t.Fatalf("usage expected nil, got %+v", usage)
 	}
 	_ = strings.TrimSpace
+}
+
+func TestOpenAIWireToolCallShape(t *testing.T) {
+	var requests []map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		var doc map[string]any
+		_ = json.Unmarshal(raw, &doc)
+		requests = append(requests, doc)
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\n"))
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+	provider := model.NewOpenAIProvider(model.OpenAIConfig{BaseURL: server.URL, APIKey: "test-key"})
+	// 1) initial request with tools; 2) follow-up carrying assistant tool_calls + tool result
+	_, err := provider.Stream(context.Background(), model.Request{
+		Model: "m", Messages: []model.Message{{Role: "user", Content: "x"}},
+		Tools: []model.ToolSchema{{Name: "read", InputSchema: map[string]any{"type": "object"}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = provider.Stream(context.Background(), model.Request{
+		Model: "m",
+		Messages: []model.Message{
+			{Role: "user", Content: "x"},
+			{Role: "assistant", ToolCalls: []model.ToolCall{{ID: "c1", Name: "read", Arguments: `{"path":"a"}`}}},
+			{Role: "tool", ToolCallID: "c1", Content: `{"content":"a"}`},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(requests) != 2 {
+		t.Fatalf("requests=%d", len(requests))
+	}
+	msgs := requests[1]["messages"].([]any)
+	assistant := msgs[1].(map[string]any)
+	calls := assistant["tool_calls"].([]any)
+	call := calls[0].(map[string]any)
+	if call["type"] != "function" {
+		t.Fatalf("tool_call.type=%v (must be \"function\")", call["type"])
+	}
+	fn := call["function"].(map[string]any)
+	if fn["name"] != "read" {
+		t.Fatalf("function.name=%v", fn["name"])
+	}
 }
