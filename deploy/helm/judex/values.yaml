@@ -53,7 +53,7 @@ opensandbox:
       replicaCount: 1
       image:
         repository: sandbox-registry.cn-zhangjiakou.cr.aliyuncs.com/opensandbox/controller
-        tag: v0.2.1
+        tag: latest
   opensandbox-server:
     server:
       replicaCount: 1

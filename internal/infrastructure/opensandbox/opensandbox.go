@@ -23,7 +23,7 @@ import (
 
 // Config mirrors the deployment Sandbox section (11 §2).
 type Config struct {
-	LifecycleEndpoint string // e.g. http://judex-opensandbox-server/execd/api
+	LifecycleEndpoint string // e.g. http://judex-opensandbox-server (API at /sandboxes)
 	APIKey            string
 	Namespace         string
 	Image             string // allowlist entry, pinned digest at deploy time
@@ -84,7 +84,8 @@ func (c *client) call(ctx context.Context, method, path string, body any, out an
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if c.cfg.APIKey != "" {
-		req.Header.Set("Authorization", "Bearer "+c.cfg.APIKey)
+		// OpenSandbox uses a custom header (confirmed from /openapi.json).
+		req.Header.Set("OPEN-SANDBOX-API-KEY", c.cfg.APIKey)
 	}
 	resp, err := c.cfg.HTTP.Do(req)
 	if err != nil {
