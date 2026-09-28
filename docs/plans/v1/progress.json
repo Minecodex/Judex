@@ -867,8 +867,13 @@
       "dependsOn": [
         "P6-02"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "completed",
+      "evidence": [
+        "文件规模：全部前端源文件 <2000 行（最大 schema.d.ts 为生成物 7357 行豁免）；后端全部 <2000 行",
+        "bundle 测量：mermaid 仅动态导入（FlowPage 懒加载）；入口 chunk 684KB（HeroUI+React+认证页）；demo 工作区已隔离为独立 chunk",
+        "tests/web/scale.test.mjs：10k 消息 keyset 分页 200 页 <500ms、最近 100 条窗口切片正确（33 项 web 测试全绿）",
+        "键盘/焦点回归：demo E2E 22 条通过（3.0m），含拖拽键盘微调/标签键盘切换/表单焦点"
+      ],
       "notes": ""
     },
     {
