@@ -203,3 +203,6 @@ func (r *Runner) now() time.Time {
 func NewRunnerForTest(provider model.Provider, registry *tools.Registry) *Runner {
 	return &Runner{Provider: provider, Registry: registry}
 }
+
+// ToolsRegistry exposes the tool registry for callers to add tools (e.g. defaults).
+func (r *Runner) ToolsRegistry() *tools.Registry { return r.Registry }

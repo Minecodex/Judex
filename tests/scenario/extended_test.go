@@ -6,6 +6,7 @@ package scenario_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -241,4 +242,52 @@ func TestAgentReadsMaterialContent(t *testing.T) {
 		t.Errorf("分析应识别9月6日为异常日:\n%.400s", s)
 	}
 	t.Logf("数据分析: %.300s", s)
+}
+
+// 场景6：长上下文压缩——50条历史后关键决议和异议保留。
+func TestLongContextCompression(t *testing.T) {
+	r, name := scenarioRunner(t)
+
+	// 构造 50 条历史消息（含关键决议和未决异议）
+	var history []string
+	for i := 1; i <= 48; i++ {
+		history = append(history, fmt.Sprintf("第%d条：技术讨论细节（接口参数、返回格式等）", i))
+	}
+	// 在中间插入关键决议
+	history[10] = "第11条：[正式决议] 使用 PostgreSQL advisory lock 实现幂等（全票通过）"
+	history[20] = "第21条：[正式决议] 密码规则改为12位最小长度（全票通过）"
+	// 在末尾附近插入未决异议
+	history[45] = "第46条：[异议] Redis 不可用时降级方案是否需要单独测试？（后端岗提出，待QA确认）"
+
+	// 构造压缩摘要（模拟压缩后的上下文）
+	compressed := agentcontext.CompressSummary(
+		[]string{"第1-48条技术讨论"},
+		[]string{"Redis降级方案是否需要单独测试（待QA确认）"},
+		[]string{"等待QA岗位回复降级测试计划"},
+		"QA确认后进入实施阶段",
+	)
+
+	// 用真实模型验证：给压缩摘要，让它回答关键问题
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	outcome := r.Run(ctx, runner.RunRequest{
+		RunID: uuid.New(), ModelName: name,
+		Manifest: agentcontext.Build(agentcontext.Facts{
+			NewMaterial: "以下是长对话压缩摘要：\n" + compressed + "\n\n请回答：1) 目前有什么未决异议？2) 下一步是什么？",
+		}),
+		Budget: runner.Budget{MaxRounds: 1, MaxModelAttempts: 5, MaxTotalTokens: 150000, MaxWallClock: 3 * time.Minute},
+	})
+	if outcome.State != "succeeded" {
+		t.Fatalf("state=%s: %s", outcome.State, outcome.Summary)
+	}
+
+	s := outcome.Summary
+	// 验证异议保留
+	if !strings.Contains(s, "Redis") && !strings.Contains(s, "降级") {
+		t.Errorf("压缩后应保留降级方案异议:\n%.300s", s)
+	}
+	if !strings.Contains(s, "QA") && !strings.Contains(s, "验收") {
+		t.Errorf("压缩后应保留待决事项（QA确认）:\n%.300s", s)
+	}
+	t.Logf("压缩后回答: %.300s", s)
 }
