@@ -30,13 +30,13 @@ type Result struct {
 
 // Tool is one registered capability.
 type Tool struct {
-	Name            string
-	SchemaVersion   int
-	Description     string
-	InputSchema     map[string]any
-	Effect          EffectClass
-	AllowedFor      func(principalKind string) bool
-	Execute         func(ctx context.Context, args map[string]any, env Env) (Result, error)
+	Name          string
+	SchemaVersion int
+	Description   string
+	InputSchema   map[string]any
+	Effect        EffectClass
+	AllowedFor    func(principalKind string) bool
+	Execute       func(ctx context.Context, args map[string]any, env Env) (Result, error)
 }
 
 // Env carries the per-run execution context tools may use; it deliberately
@@ -127,7 +127,7 @@ func RegisterDefaults(r *Registry) {
 		InputSchema: objectSchema([]string{"path"}, map[string]any{
 			"path": map[string]any{"type": "string"},
 		}),
-		Effect:     EffectSandbox,
+		Effect: EffectSandbox,
 		Execute: func(ctx context.Context, args map[string]any, env Env) (Result, error) {
 			if env.Sandbox == nil {
 				return Result{}, fmt.Errorf("沙箱未挂载")
@@ -146,7 +146,7 @@ func RegisterDefaults(r *Registry) {
 		Name:        "bash",
 		Description: "在本次运行的沙箱中执行命令（分析用；不授权生产部署）",
 		InputSchema: objectSchema([]string{"command"}, map[string]any{
-			"command": map[string]any{"type": "string"},
+			"command":   map[string]any{"type": "string"},
 			"timeoutMs": map[string]any{"type": "integer"},
 		}),
 		Effect: EffectSandbox,

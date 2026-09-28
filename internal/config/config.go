@@ -38,12 +38,23 @@ type Config struct {
 	AllowedOrigins []string
 	// ModelCatalogFile points at the operator YAML (02 §8); empty = no models.
 	ModelCatalogFile string
+	// ModelGateway is a direct single-model shortcut for worker processes
+	// (P5 discussion batches) without the full catalog file.
+	ModelGateway ModelGatewayConfig
 	// ObjectStorage mirrors the Object config contract (11 §2); required
 	// from P2-04 on for materials, optional for pure identity deployments.
 	ObjectStorage ObjectStorageOptions
 	// PreviewOrigin is the isolated origin serving HTML material previews
 	// (04 §4). Empty: no interactive preview, source download only.
 	PreviewOrigin string
+}
+
+// ModelGatewayConfig is the direct gateway wiring for background agents.
+type ModelGatewayConfig struct {
+	Protocol string // openai-compatible | anthropic-compatible
+	BaseURL  string
+	APIKey   string
+	Model    string
 }
 
 // ObjectStorageOptions configures the S3-compatible store.
@@ -120,6 +131,12 @@ func FromEnv(get func(string) string) (Config, error) {
 		PathStyle:       value("JUDEX_S3_PATH_STYLE", "true") == "true",
 	}
 	c.PreviewOrigin = value("JUDEX_PREVIEW_ORIGIN", "")
+	c.ModelGateway = ModelGatewayConfig{
+		Protocol: value("JUDEX_MODEL_PROTOCOL", ""),
+		BaseURL:  value("JUDEX_MODEL_BASE_URL", ""),
+		APIKey:   value("JUDEX_MODEL_API_KEY", ""),
+		Model:    value("JUDEX_MODEL_NAME", ""),
+	}
 	c.ModelCatalogFile = value("JUDEX_MODEL_CATALOG_FILE", "")
 	if c.ModelCatalogFile != "" {
 		if _, err := os.Stat(c.ModelCatalogFile); err != nil {

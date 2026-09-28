@@ -19,11 +19,15 @@ import (
 	"time"
 
 	"github.com/kakj-go/Judex/internal/agent"
+	"github.com/kakj-go/Judex/internal/agent/batch"
+	"github.com/kakj-go/Judex/internal/agent/runner"
+	"github.com/kakj-go/Judex/internal/agent/tools"
 	"github.com/kakj-go/Judex/internal/config"
 	"github.com/kakj-go/Judex/internal/decision"
 	"github.com/kakj-go/Judex/internal/discussion"
 	"github.com/kakj-go/Judex/internal/handoff"
 	"github.com/kakj-go/Judex/internal/identity"
+	"github.com/kakj-go/Judex/internal/infrastructure/model"
 	"github.com/kakj-go/Judex/internal/infrastructure/objectstore"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	"github.com/kakj-go/Judex/internal/job"
@@ -121,6 +125,22 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 		app.handoffs = handoff.NewService(pool, nil)
 		handler := decision.TimeoutJobHandler{Service: app.decisions}
 		timeoutExecutor = handler.Execute
+		if cfg.ModelGateway.Protocol != "" {
+			provider, err := model.NewProvider(model.GatewayConfig{
+				Protocol: cfg.ModelGateway.Protocol,
+				BaseURL:  cfg.ModelGateway.BaseURL,
+				APIKey:   cfg.ModelGateway.APIKey,
+			})
+			if err == nil {
+				registry := tools.New()
+				tools.RegisterDefaults(registry)
+				executor := &batch.Executor{
+					Pool: pool.Pool, Provider: provider, ModelName: cfg.ModelGateway.Model,
+					Runner: runner.NewRunnerForTest(provider, registry),
+				}
+				batchExecutor = executor.ExecuteJob
+			}
+		}
 	}
 
 	if cfg.RunsHTTP() {
@@ -241,10 +261,19 @@ func init() {
 		}
 		return timeoutExecutor(ctx, j)
 	}})
+	RegisterJobHandler(job.HandlerFunc{KindName: "discussion.batch", Attempts: 3, ExecuteFn: func(ctx context.Context, j job.Job) error {
+		if batchExecutor == nil {
+			return apierrors.Newf(apierrors.ModelUnavailable, "模型网关未配置，批次无法自动执行").WithRetryable(false)
+		}
+		return batchExecutor(ctx, j)
+	}})
 }
 
 // timeoutExecutor is set by New() once the decision service exists.
 var timeoutExecutor func(ctx context.Context, j job.Job) error
+
+// batchExecutor is set by New() when a real model gateway is configured.
+var batchExecutor func(ctx context.Context, j job.Job) error
 
 // Close drains and releases all resources (graceful shutdown, 11 §3).
 func (a *Application) Close(ctx context.Context) error {

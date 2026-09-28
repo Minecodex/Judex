@@ -34,10 +34,10 @@ type Config struct {
 // SandboxResult reports command execution outcomes; unknown outcomes must be
 // surfaced, not guessed.
 type SandboxResult struct {
-	ExitCode   int
-	Stdout     []byte
-	Stderr     []byte
-	Unknown    bool // stream lost / server restarted mid-run
+	ExitCode int
+	Stdout   []byte
+	Stderr   []byte
+	Unknown  bool // stream lost / server restarted mid-run
 }
 
 // Sandbox is the execution boundary (05 §7): one run one sandbox; project

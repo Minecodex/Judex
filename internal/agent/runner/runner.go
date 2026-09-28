@@ -40,7 +40,8 @@ type Runner struct {
 	Clock    func() time.Time
 }
 
-// RunRequest identifies one run.
+// RunRequest identifies one run. Env carries the caller's tool projections
+// (DB readers, draft creators); when nil the runner builds a minimal env.
 type RunRequest struct {
 	RunID      uuid.UUID
 	SessionID  uuid.UUID
@@ -49,16 +50,17 @@ type RunRequest struct {
 	ModelName  string
 	Manifest   agentcontext.Manifest
 	Budget     Budget
+	Env        *tools.Env
 }
 
 // Outcome summarizes the run for the scheduler (05 §8 states).
 type Outcome struct {
-	State       string // succeeded | failed | cancelled | waiting_human | waiting_material | context_blocked
-	Summary     string
-	ToolCalls   int
-	ModelCalls  int
-	TokensUsed  int64
-	UsageKnown  bool
+	State         string // succeeded | failed | cancelled | waiting_human | waiting_material | context_blocked
+	Summary       string
+	ToolCalls     int
+	ModelCalls    int
+	TokensUsed    int64
+	UsageKnown    bool
 	Disagreements []string
 }
 
@@ -134,9 +136,17 @@ func (r *Runner) Run(ctx context.Context, req RunRequest) Outcome {
 			outcome.ToolCalls++
 			var args map[string]any
 			_ = json.Unmarshal([]byte(call.Arguments), &args)
-			result, err := r.Registry.Execute(ctx, call.Name, "agent", args, tools.Env{
+			env := tools.Env{
 				ProjectID: req.ProjectID.String(), RunID: req.RunID.String(), IdentityID: req.IdentityID.String(),
-			})
+			}
+			if req.Env != nil {
+				env = *req.Env
+				env.RunID = req.RunID.String()
+				if env.IdentityID == "" {
+					env.IdentityID = req.IdentityID.String()
+				}
+			}
+			result, err := r.Registry.Execute(ctx, call.Name, "agent", args, env)
 			content := map[string]any{"toolCallId": call.ID}
 			if err != nil {
 				content["error"] = err.Error()

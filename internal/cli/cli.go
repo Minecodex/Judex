@@ -769,7 +769,7 @@ func doctorCommand() *cobra.Command {
 			"ok": true, "server": c.Server, "serverVersion": system["version"],
 			"serverProtocol": protocol, "cliProtocol": "1",
 			"protocolCompatible": protocol == "1",
-			"authenticated": tokenErr == nil && token != "",
+			"authenticated":      tokenErr == nil && token != "",
 		}, nil)
 	}}
 }

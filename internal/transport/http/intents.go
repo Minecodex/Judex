@@ -144,7 +144,12 @@ func (h *IntentHandlers) executorFor(projectID uuid.UUID) decision.Executor {
 			return "", apierrors.Fields("objectId", "invalid")
 		}
 		reviewHash, _ := payload["reviewHash"].(string)
-		inner, _ := payload["payload"].(map[string]any)
+		// The stored payload IS the command body (flat); some clients may
+		// wrap it once more under "payload" — accept both shapes.
+		inner := payload
+		if nested, ok := payload["payload"].(map[string]any); ok {
+			inner = nested
+		}
 		switch operation {
 		case "task.acceptance":
 			expected := int64(0)

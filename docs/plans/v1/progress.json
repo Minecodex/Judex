@@ -740,9 +740,10 @@
       ],
       "status": "completed",
       "evidence": [
-        "discussion_batches 按 source_submission_id+trigger 唯一（重复提交/AI 自回复不建新批次——重复源 409）；max_rounds 快照；round ordinal 事务预约",
-        "预算：多层初值（3轮/30次尝试/100k token/30min）+ 流中熔断 + usage_known 标记（runner 测试覆盖）",
-        "extension/续开：batches/{id}/extensions handler（manager human）已接契约（BUDGET_EXHAUSTED 需合法续开语义保留）"
+        "batch.Executor：startAgentRun 现在同事务入队 discussion.batch job；worker 端执行器领取批次→coordinator session 建立→分层上下文（最近消息/工作事实/新材料）→真实模型运行（runner + DB 接线工具）→Agent 消息入题（kind=agent, identity=coordinator, run_id 可追溯）→批次状态 completed/failed/limit_reached",
+        "config: JUDEX_MODEL_PROTOCOL/BASE_URL/API_KEY/MODEL 直连网关（worker 用，不依赖目录文件）",
+        "全链路闭环验证（tests/scenario/fullflow_test.go，真实 GLM-5.3 + PG + MinIO）：完整多角色流程通过，含 Agent 两次真实分析+自主调用 propose_changes 创建草案",
+        "修复：意图确认执行器 payload 扁平/嵌套兼容；OpenAI Provider 工具调用历史嵌套序列化"
       ],
       "notes": ""
     },

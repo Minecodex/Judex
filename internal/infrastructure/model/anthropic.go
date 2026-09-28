@@ -183,7 +183,7 @@ type anthropicChunk struct {
 		} `json:"usage"`
 	} `json:"message"`
 	// content_block_start
-	Index int `json:"index"`
+	Index        int `json:"index"`
 	ContentBlock *struct {
 		Type string `json:"type"`
 		ID   string `json:"id"`
@@ -212,7 +212,7 @@ type anthropicChunk struct {
 // streamBody parses Anthropic SSE into normalized Events. Malformed frames
 // surface as errors instead of silent truncation.
 func (p *AnthropicProvider) streamBody(ctx context.Context, body io.Reader, events chan<- Event) {
-	toolMeta := map[int]Event{}   // block index → tool identity
+	toolMeta := map[int]Event{} // block index → tool identity
 	toolArgs := map[int]*strings.Builder{}
 	inputTokens := int64(-1)
 	reader := bufio.NewReader(body)

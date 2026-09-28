@@ -37,12 +37,12 @@ type Facts struct {
 
 // Manifest is the frozen per-call context snapshot.
 type Manifest struct {
-	Layers           []Layer
-	IdentityID       *uuid.UUID
-	BindingVersion   *int64
-	WorkflowVersion  *int64
-	PreferenceHash   string
-	CoveredSeq       int64
+	Layers          []Layer
+	IdentityID      *uuid.UUID
+	BindingVersion  *int64
+	WorkflowVersion *int64
+	PreferenceHash  string
+	CoveredSeq      int64
 }
 
 // Build assembles the layers (05 §5 ordering). Privacy: personal preference
@@ -119,4 +119,3 @@ func CompressSummary(covered []string, disagreements []string, pending []string,
 	}
 	return strings.Join(parts, "\n")
 }
-

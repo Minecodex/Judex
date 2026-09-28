@@ -51,12 +51,21 @@ func (h *AgentHandlers) start(c *gin.Context) {
 		respond{}.error(c, apierrors.Fields("sourceSubmissionId", "invalid"))
 		return
 	}
-	// Register the batch (UNIQUE(source, trigger) dedups); worker picks up.
+	// Register the batch (UNIQUE(source, trigger) dedups) + enqueue the
+	// execution job in one transaction so the worker actually runs it.
 	if _, err := h.Pool.Exec(c.Request.Context(), `
-		INSERT INTO discussion_batches (project_id, id, topic_id, source_submission_id,
-			policy_snapshot, max_rounds, state, trigger_kind, created_at, updated_at)
-		VALUES ($1,$2,$3,$4,'{}',3,'queued','submission',now(),now())
-		ON CONFLICT (source_submission_id, trigger_kind) DO NOTHING`,
+		WITH ins AS (
+			INSERT INTO discussion_batches (project_id, id, topic_id, source_submission_id,
+				policy_snapshot, max_rounds, state, trigger_kind, created_at, updated_at)
+			VALUES ($1,$2,$3,$4,'{}',3,'queued','submission',now(),now())
+			ON CONFLICT (source_submission_id, trigger_kind) DO NOTHING
+			RETURNING id
+		)
+		INSERT INTO background_jobs (id, kind, payload, unique_key, run_after, created_at, updated_at)
+		SELECT gen_random_uuid(), 'discussion.batch',
+		       jsonb_build_object('projectId',$1::text,'batchId',ins.id::text),
+		       'batch:'||ins.id::text, now(), now(), now()
+		FROM ins`,
 		projectID, uuid.New(), topicID, sourceID); err != nil {
 		respond{}.error(c, apierrors.New(apierrors.Internal, "batch register failed").Wrap(err))
 		return
