@@ -813,9 +813,11 @@
         "thinking/reasoning_content 自动过滤不外泄；reasoning_tokens 计入 usage 预算",
         "沙箱浏览器证据（HTML 交互检查）仍依赖 OpenSandbox 部署，属 P7-04 范围",
         "commit 84f18e3: GLM-5.3 真实模型验收 5/5",
-        "commit d240835: OpenSandbox 实测契约 + 3 live 测试 PASS"
+        "commit d240835: OpenSandbox 实测契约 + 3 live 测试 PASS",
+        "2026-09-28: tests/agent/live 9/9 PASS（含 TestLiveAgentBashInRealSandbox 首次真实模型运行）",
+        "2026-09-28: tests/scenario 9/9 PASS（794s，真实 PG+MinIO+GLM-5.3）"
       ],
-      "notes": "真实模型协议栈验证完成；密钥只经环境变量注入（用户应轮换已泄露在聊天中的 key） | 2026-09-28 补验：GLM-5.3 coding 入口 5/5 通过（E11 双中文场景/E03 预算/E05 压缩/取消）+ Anthropic 适配器；OpenSandbox 适配器对齐真实 API（execd 44772 代理、RunSandbox 一次运行一沙箱），脚本化模型驱动 bash 在真实沙箱计算 PASS；GLM-5.3+真实沙箱场景 TestLiveAgentBashInRealSandbox 就绪（key 401 待换新后补跑）"
+      "notes": "真实模型协议栈验证完成；密钥只经环境变量注入（用户应轮换已泄露在聊天中的 key） | 2026-09-28 补验：GLM-5.3 coding 入口 5/5 通过（E11 双中文场景/E03 预算/E05 压缩/取消）+ Anthropic 适配器；OpenSandbox 适配器对齐真实 API（execd 44772 代理、RunSandbox 一次运行一沙箱），脚本化模型驱动 bash 在真实沙箱计算 PASS；GLM-5.3+真实沙箱场景 TestLiveAgentBashInRealSandbox 就绪（key 401 待换新后补跑） | 2026-09-28 终验：以当前有效 Coding Plan key 全量重跑——live 9/9（E11 研发/设计、E03 预算、E05 取消、契约、沙箱生命周期/惰性/脚本化/GLM 驱动真实沙箱 bash 2 次工具调用计算 5 行/1903）；scenario 9/9（六扩展场景+全链路闭环+多 Agent 双模式）。用户消息中的旧 key 已失效（服务端 401），实际以本机 ZCode 配置的当前 key 验证。"
     },
     {
       "id": "P6-01",
