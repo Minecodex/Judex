@@ -38,3 +38,32 @@ kubectl -n judex-dev port-forward service/judex 8080:8080
 运行 `go test ./tests/deploy` 与 Helm lint 验证模板。K8s 冒烟入口为 `tests/k8s/smoke.mjs`，需要已有兼容 Operator / CRD 和可拉取镜像。
 
 本轮机器 Docker daemon 和 Kubernetes API 不可用，尚未完成真实镜像构建或安装验收；模板渲染不等于部署成功。
+
+## 本地全内置部署（Docker Desktop，2026-09-28 实测）
+
+所有依赖（embedded PostgreSQL + SeaweedFS + OpenSandbox 控制器与 Server）随同一 Helm Release 部署到 `judex` 命名空间，不依赖其他项目的共享实例：
+
+```bash
+# 1) 前端生产构建 + 服务端镜像（镜像名须与 values.image 一致）
+cd web && npm run build && cd ..
+docker build -f deploy/docker/server.Dockerfile -t judex/server:0.1.0-dev .
+
+# 2) 导入节点 containerd（desktop-control-plane 容器内的 k8s.io 命名空间；
+#    pullPolicy=IfNotPresent，本地镜像不推 registry 时必须此步）
+docker save judex/server:0.1.0-dev |
+  docker exec -i desktop-control-plane ctr --namespace k8s.io images import -
+
+# 3) 命名空间与 Secret（密钥不进 values/仓库）
+kubectl create ns judex
+kubectl -n judex create secret generic judex-opensandbox-auth --from-literal=api-key="$(openssl rand -hex 24)"
+kubectl -n judex create secret generic judex-model-catalog --from-file=models.yaml=deploy/models.yaml.example
+kubectl -n judex create secret generic judex-model-keys   --from-literal=JUDEX_MODEL_KEY_GLM53=<真实key>   # 键名与 models.yaml 的 apiKeyEnv 一致
+
+# 4) 安装（模型网关经 modelEnvSecret 引用密钥；目录同步入库供选择）
+helm install judex deploy/helm/judex -n judex   --set environment=development   --set server.allowedOrigins="{http://localhost:18097,http://127.0.0.1:18097}"   --set server.modelCatalogSecret=judex-model-catalog   --set server.modelEnvSecret=judex-model-keys   --set server.modelGateway.protocol=openai-compatible   --set server.modelGateway.baseUrl=https://open.bigmodel.cn/api/coding/paas/v4   --set server.modelGateway.model=glm-5.3   --set server.modelGateway.apiKeyKey=JUDEX_MODEL_KEY_GLM53   --set global.sandboxAPIKeySecret=judex-opensandbox-auth   --set global.sandboxAPIKeyManaged=false
+
+# 5) 本地访问
+kubectl -n judex port-forward svc/judex 18097:8080   # http://127.0.0.1:18097
+```
+
+注意：port-forward 目标 Pod 重建（rollout/崩溃）会断流，需重开；生产模式用 Ingress（`ingress.enabled`）。`/api/v1/system` 的 `capabilities` 按实际接线如实上报（identity/projects/persistence/agentExecution）。

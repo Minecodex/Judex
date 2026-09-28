@@ -34,6 +34,9 @@ type Options struct {
 	// Auth, when non-nil, enables session resolution + CSRF/Origin
 	// enforcement for the whole API surface (docs/plans/v1/02 §2).
 	Auth *AuthOptions
+	// Capabilities reports what is actually wired in this process
+	// (identity/projects/persistence/agentExecution); nil = scaffold mode.
+	Capabilities map[string]bool
 }
 
 // AuthOptions carries the wiring the middleware needs.
@@ -105,10 +108,18 @@ func NewRouter(opts Options, spec *SpecRouter) (*gin.Engine, error) {
 		c.JSON(200, gin.H{"status": "ready", "scope": scope})
 	})
 	spec.Register("getSystem", func(c *gin.Context) {
+		caps := opts.Capabilities
+		if caps == nil {
+			caps = map[string]bool{}
+		}
 		respond{}.ok(c, gin.H{
 			"name": "Judex", "version": version.Version, "commit": version.Commit,
 			"protocolVersion": "1", "schemaRange": "1",
-			"capabilities": gin.H{"identity": false, "projects": false, "persistence": false, "agentExecution": false},
+			// 未接线的键按 false 上报，不夸大能力。
+			"capabilities": gin.H{
+				"identity": caps["identity"], "projects": caps["projects"],
+				"persistence": caps["persistence"], "agentExecution": caps["agentExecution"],
+			},
 		})
 	})
 	spec.Mount(&router.RouterGroup)

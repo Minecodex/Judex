@@ -93,6 +93,14 @@ server:
   previewOrigin: ""
   # 模型目录 Secret（含 models.yaml；密钥走 Secret 引用）。
   modelCatalogSecret: ""
+  # 模型密钥 Secret：键名与 models.yaml 的 apiKeyEnv 一致，整包注入为环境变量。
+  modelEnvSecret: ""
+  # 直连模型网关（讨论批次执行器用；apiKeyKey 取 modelEnvSecret 中的键名）。
+  modelGateway:
+    protocol: ""
+    baseUrl: ""
+    model: ""
+    apiKeyKey: ""
   # Agent 运行沙箱（entrypoint 仅作保活；execd 由平台注入，端口 44772）。
   sandboxImage: "docker.io/library/alpine:3.20"
   sandboxCPU: "500m"

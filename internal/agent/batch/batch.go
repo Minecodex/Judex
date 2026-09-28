@@ -214,18 +214,24 @@ func (e *Executor) toolEnv(projectID, topicID uuid.UUID) tools.Env {
 			if table == "" {
 				return nil, fmt.Errorf("unknown objectType %q", objectType)
 			}
-			rows, err := e.Pool.Query(ctx, fmt.Sprintf(
-				`SELECT id::text, title, status FROM %s WHERE project_id=$1 ORDER BY created_at DESC LIMIT $2`, table),
-				pid, limit)
+			// proposals 无 title 列（kind+reason 表意），列选择按表区分。
+			query := fmt.Sprintf(
+				`SELECT id::text, %s, status FROM %s WHERE project_id=$1 ORDER BY created_at DESC LIMIT $2`,
+				map[string]string{"plans": "title", "tasks": "title", "proposals": "kind"}[table], table)
+			rows, err := e.Pool.Query(ctx, query, pid, limit)
 			if err != nil {
 				return nil, err
 			}
 			defer rows.Close()
 			var out []map[string]any
 			for rows.Next() {
-				var id, title, status string
-				if rows.Scan(&id, &title, &status) == nil {
-					out = append(out, map[string]any{"id": id, "title": title, "status": status,
+				var id, label, status string
+				if rows.Scan(&id, &label, &status) == nil {
+					key := "title"
+					if objectType == "proposal" {
+						key = "kind"
+					}
+					out = append(out, map[string]any{"id": id, key: label, "status": status,
 						"objectType": objectType})
 				}
 			}

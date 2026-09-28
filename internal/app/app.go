@@ -200,6 +200,11 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			Logger: logger, Assets: assets, Draining: draining,
 			ReadyCheck: app.readyCheck,
 			Auth:       authOpts,
+			// 按实际接线如实上报能力（未配置模型网关时 agentExecution=false）。
+			Capabilities: map[string]bool{
+				"identity": app.identity != nil, "projects": app.projects != nil,
+				"persistence": app.pool != nil, "agentExecution": batchExecutor != nil,
+			},
 		}, spec)
 		if err != nil {
 			app.Close(context.Background())
