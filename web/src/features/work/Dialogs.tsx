@@ -11,14 +11,6 @@ import { ArrowRight, Copy } from "lucide-react";
 import { useWork } from "./store";
 import { Btn, Dialog, EvidenceList, Field, Upload } from "./ui";
 import type { Evidence, Task, Handoff, Source, Plan } from "./types";
-import {
-  createWork,
-  reportTask,
-  reviseSource,
-  sourceDecision,
-  taskAction,
-  planAction,
-} from "./actions";
 import { ownsSeat, planTasks, planReviewKey } from "./selectors";
 export function CreateWorkDialog({
   kind,
@@ -200,23 +192,13 @@ export function CreateWorkDialog({
         <Btn
           testId="create-work-draft"
           disabled={!seats.length || !flows.length}
-          onClick={() => {
-            let id = "";
-            if (
-              act((s) => {
-                const result = createWork(s, project.id, draft);
-                if (result.state)
-                  id =
-                    kind === "plan"
-                      ? result.state.plans.at(-1)!.id
-                      : result.state.tasks.at(-1)!.id;
-                return result;
-              })
-            ) {
+          onClick={async () => {
+            const r = await act("createWork", { projectId: project.id, draft });
+            if (r.ok) {
               onClose();
               go({
                 view: kind,
-                id,
+                id: r.id,
               });
             }
           }}
@@ -267,22 +249,18 @@ export function ReportDialog({
         </Btn>
         <Btn
           testId="submit-report"
-          onClick={() => {
-            if (
-              act((s) =>
-                handoff && source
-                  ? reviseSource(
-                      s,
-                      handoff.id,
-                      source.id,
-                      source.revision,
-                      summary,
-                      files,
-                    )
-                  : reportTask(s, task.id, summary, files),
-              )
-            )
-              onClose();
+          onClick={async () => {
+            const r =
+              handoff && source
+                ? await act("reviseSource", {
+                    handoffId: handoff.id,
+                    sourceId: source.id,
+                    revision: source.revision,
+                    summary,
+                    files,
+                  })
+                : await act("reportTask", { taskId: task.id, summary, files });
+            if (r.ok) onClose();
           }}
         >
           {t(source ? "workSaveRevision" : "workSubmitReport")}
@@ -322,22 +300,17 @@ export function ReasonDialog({
         <Btn
           danger
           testId="confirm-work-reason"
-          onClick={() => {
-            if (
-              act((s) =>
-                task
-                  ? taskAction(s, task.id, "reopen", reason)
-                  : sourceDecision(
-                      s,
-                      handoff!.id,
-                      source!.id,
-                      source!.revision,
-                      "rejected",
-                      reason,
-                    ),
-              )
-            )
-              onClose();
+          onClick={async () => {
+            const r = task
+              ? await act("taskAction", { taskId: task.id, op: "reopen", reason })
+              : await act("sourceDecision", {
+                  handoffId: handoff!.id,
+                  sourceId: source!.id,
+                  revision: source!.revision,
+                  decision: "rejected",
+                  reason,
+                });
+            if (r.ok) onClose();
           }}
         >
           {t(task ? "workTaskReopen" : "workConfirmReject")}
@@ -403,15 +376,19 @@ export function AcceptanceDialog({
         <Btn
           testId="confirm-final-acceptance"
           disabled={changed}
-          onClick={() => {
-            if (
-              act((s) =>
-                plan
-                  ? planAction(s, plan.id, "accept", review.planKey)
-                  : taskAction(s, task!.id, "accept", "", review.taskRevision),
-              )
-            )
-              onClose();
+          onClick={async () => {
+            const r = plan
+              ? await act("planAction", {
+                  planId: plan.id,
+                  op: "accept",
+                  key: review.planKey,
+                })
+              : await act("taskAction", {
+                  taskId: task!.id,
+                  op: "accept",
+                  revision: review.taskRevision,
+                });
+            if (r.ok) onClose();
           }}
         >
           {t(plan ? "workPlanAccept" : "workTaskAccept")}

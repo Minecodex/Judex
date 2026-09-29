@@ -10,10 +10,8 @@ import { TextArea } from "@heroui/react";
 import { useWork } from "../work/store";
 import { Button } from "../../components/ui/Button";
 import { Person, Upload, EvidenceList } from "../work/ui";
-import { topicMessage } from "../work/actions";
-import { createDiscussion } from "../work/composition";
 import type { Topic, Evidence } from "../work/types";
-import { discussTopic, latestDiscussionRun } from "./discussionPolicy";
+import { latestDiscussionRun } from "./discussionPolicy";
 import { ProposalCard } from "./ProposalCard";
 import { ProposalDialog } from "./ProposalDialog";
 import { useReadingPosition } from "./useReadingPosition";
@@ -60,32 +58,20 @@ export function Conversation({
       tail.current?.scrollIntoView({ block: "nearest" });
     previousCount.current = count;
   }, [count]);
-  const ensure = (
-    fn: (id: string, s: typeof state) => ReturnType<typeof topicMessage>,
-  ) => {
-    let id = topic?.id;
-    const ok = act((s) => {
-      if (id) return fn(id, s);
-      const r = createDiscussion(
-        s,
-        project.id,
-        body.trim().slice(0, 48) || t("chatHome"),
-        [],
-        [],
-      );
-      if (r.error) return r;
-      id = r.state.topics.at(-1)!.id;
-      return fn(id!, r.state);
-    }, false);
-    if (ok && id && id !== topic?.id) go({ view: "topic", id });
-    return ok;
-  };
-  const send = () => {
-    if (
-      ensure((id, s) => {
-        return topicMessage(s, id, body, files);
-      })
-    ) {
+  const send = async () => {
+    const r = await act(
+      "sendTopicMessage",
+      {
+        projectId: project.id,
+        topicId: topic?.id,
+        title: body.trim().slice(0, 48) || t("chatHome"),
+        body,
+        files,
+      },
+      { toast: false },
+    );
+    if (r.ok) {
+      if (r.id && r.id !== topic?.id) go({ view: "topic", id: r.id });
       sessionStorage.removeItem("judex.chat.draft." + key);
       setBody("");
       setFiles([]);
@@ -182,7 +168,9 @@ export function Conversation({
             <Button
               disabled={atLimit}
               data-testid="chat-discuss"
-              onClick={() => act((s) => discussTopic(s, topic.id), false)}
+              onClick={() =>
+                void act("discussTopic", { topicId: topic.id }, { toast: false })
+              }
             >
               <Sparkles size={14} />
               {t(run ? "chatNextRound" : "chatAnalyze")}
@@ -210,7 +198,7 @@ export function Conversation({
                 (body.trim() || files.length)
               ) {
                 e.preventDefault();
-                send();
+                void send();
               }
             }}
           />

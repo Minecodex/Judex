@@ -4,7 +4,6 @@ import { Heading, Btn, EmptyState, Person } from "./ui";
 import { canAcceptTask, canOwnPlan, planTasks } from "./selectors";
 import { PlanTile } from "./WorkPages";
 import { TaskCard } from "./TaskCards";
-import { planAction, decideDraft } from "./actions";
 import { HandoffList } from "./HandoffPages";
 export function DecisionsPage() {
   const { state, project, t, text, act, go } = useWork();
@@ -80,7 +79,11 @@ export function DecisionsPage() {
               >
                 {t("details")}
               </Btn>
-              <Btn onClick={() => act((s) => planAction(s, p.id, "activate"))}>
+              <Btn
+                onClick={() =>
+                  void act("planAction", { planId: p.id, op: "activate" })
+                }
+              >
                 {t("workActivate")}
               </Btn>
             </div>
@@ -103,7 +106,9 @@ export function DecisionsPage() {
               >
                 {t("details")}
               </Btn>
-              <Btn onClick={() => act((s) => decideDraft(s, task.id))}>
+              <Btn
+                onClick={() => void act("decideDraft", { taskId: task.id })}
+              >
                 {t("workTaskDraftApprove")}
               </Btn>
             </div>

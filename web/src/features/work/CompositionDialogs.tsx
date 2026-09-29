@@ -7,7 +7,6 @@ import {
 import { useState } from "react";
 import { useWork } from "./store";
 import { Btn, Dialog, Field } from "./ui";
-import { createDiscussion, proposeHandoff } from "./composition";
 import type { Task, Handoff } from "./types";
 export function HandoffDialog({
   task,
@@ -127,26 +126,19 @@ export function HandoffDialog({
         </Btn>
         <Btn
           testId="create-handoff-draft"
-          onClick={() => {
-            let id = "";
-            if (
-              act((s) => {
-                const r = proposeHandoff(
-                  s,
-                  project.id,
-                  target,
-                  receiver,
-                  ids,
-                  kind,
-                );
-                if (r.state) id = r.state.handoffs.at(-1)!.id;
-                return r;
-              })
-            ) {
+          onClick={async () => {
+            const r = await act("proposeHandoff", {
+              projectId: project.id,
+              target,
+              receiver,
+              ids,
+              kind,
+            });
+            if (r.ok) {
               onClose();
               go({
                 view: "handoff",
-                id,
+                id: r.id,
               });
             }
           }}
@@ -221,25 +213,18 @@ export function DiscussionDialog({ onClose }: { onClose: () => void }) {
         </Btn>
         <Btn
           testId="create-discussion"
-          onClick={() => {
-            let id = "";
-            if (
-              act((s) => {
-                const r = createDiscussion(
-                  s,
-                  project.id,
-                  title,
-                  planIds,
-                  taskIds,
-                );
-                if (r.state) id = r.state.topics.at(-1)!.id;
-                return r;
-              })
-            ) {
+          onClick={async () => {
+            const r = await act("createDiscussion", {
+              projectId: project.id,
+              title,
+              planIds,
+              taskIds,
+            });
+            if (r.ok) {
               onClose();
               go({
                 view: "topic",
-                id,
+                id: r.id,
               });
             }
           }}

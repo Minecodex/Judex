@@ -9,11 +9,7 @@ import { Input, TextArea } from "@heroui/react";
 import { useWork } from "../work/store";
 import { Btn, Dialog, Field } from "../work/ui";
 import { Button } from "../../components/ui/Button";
-import {
-  submitProposal,
-  type ProposalInput,
-  type WorkProposal,
-} from "./proposalModel";
+import { type ProposalInput, type WorkProposal } from "./proposalModel";
 export function ProposalDialog({
   topicId,
   onClose,
@@ -332,8 +328,16 @@ export function ProposalDialog({
               !draft.criteria.trim() ||
               draft.tasks.some((v) => !v.seatId || !v.title.trim())
             }
-            onClick={() => {
-              if (act((s) => submitProposal(s, topicId, draft, previous?.id)))
+            onClick={async () => {
+              if (
+                (
+                  await act("submitProposal", {
+                    topicId,
+                    draft,
+                    previousId: previous?.id,
+                  })
+                ).ok
+              )
                 onClose();
             }}
           >

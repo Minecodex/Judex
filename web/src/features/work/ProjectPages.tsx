@@ -9,10 +9,7 @@ import { useState } from "react";
 import { FileText, FolderPlus, Upload as UploadIcon } from "lucide-react";
 import { useWork } from "./store";
 import { Btn, Dialog, Field, Upload, EvidenceList } from "./ui";
-import { createDiscussion } from "./composition";
-import { topicMessage, assignPositions } from "./actions";
-import { uid } from "./seed";
-import { words, type Evidence, type Project } from "./types";
+import { type Evidence, type Project } from "./types";
 import {
   DEFAULT_DISCUSSION_ROUNDS,
   MAX_DISCUSSION_ROUNDS,
@@ -73,8 +70,16 @@ export function ExistingAssignments() {
           <Btn
             disabled={!ids.length}
             testId="assign-existing-position"
-            onClick={() => {
-              if (act((s) => assignPositions(s, project.id, person, ids))) {
+            onClick={async () => {
+              if (
+                (
+                  await act("assignPositions", {
+                    projectId: project.id,
+                    person,
+                    ids,
+                  })
+                ).ok
+              ) {
                 setOpen(false);
                 setIds([]);
               }
@@ -141,33 +146,19 @@ export function ResourcesPage() {
           <Upload files={files} onChange={setFiles} />
           <Btn
             disabled={!files.length}
-            onClick={() => {
-              let id = "";
-              if (
-                act((s) => {
-                  const r = createDiscussion(
-                    s,
-                    project.id,
-                    purpose.trim() || t("projectEvidence"),
-                    [],
-                    [],
-                  );
-                  if (r.error) return r;
-                  id = r.state!.topics.at(-1)!.id;
-                  return topicMessage(
-                    r.state!,
-                    id,
-                    purpose || t("projectEvidence"),
-                    files,
-                  );
-                })
-              ) {
+            onClick={async () => {
+              const r = await act("registerResource", {
+                projectId: project.id,
+                purpose: purpose.trim() || t("projectEvidence"),
+                files,
+              });
+              if (r.ok) {
                 setAdding(false);
                 setFiles([]);
                 setPurpose("");
                 go({
                   view: "topic",
-                  id,
+                  id: r.id,
                 });
               }
             }}
@@ -231,44 +222,17 @@ export function ProjectDialog({ onClose }: { onClose: () => void }) {
           !name.trim() || !goal.trim() || !validRoundLimit(Number(maxRounds))
         }
         testId="project-create-project"
-        onClick={() => {
-          const id = uid();
-          if (
-            act((s) => {
-              if (
-                !name.trim() ||
-                !goal.trim() ||
-                !validRoundLimit(Number(maxRounds))
-              )
-                return {
-                  error: "required",
-                };
-              return {
-                state: {
-                  ...s,
-                  projects: [
-                    ...s.projects,
-                    {
-                      id,
-                      title: words(name.trim()),
-                      description: words(goal.trim()),
-                      kind,
-                      maxDiscussionRounds: Number(maxRounds),
-                      members: [
-                        {
-                          name: s.currentUser,
-                          role: "owner",
-                        },
-                      ],
-                    },
-                  ],
-                },
-              };
-            })
-          ) {
+        onClick={async () => {
+          const r = await act("createProject", {
+            name,
+            goal,
+            kind,
+            maxRounds: Number(maxRounds),
+          });
+          if (r.ok && r.id) {
             onClose();
             go({
-              projectId: id,
+              projectId: r.id,
               view: "home",
               id: undefined,
             });

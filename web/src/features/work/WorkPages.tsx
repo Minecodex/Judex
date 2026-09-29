@@ -40,7 +40,6 @@ import {
   requirementMet,
   seatPerson,
 } from "./selectors";
-import { decideDraft, planAction, taskAction } from "./actions";
 import {
   AcceptanceDialog,
   BriefDialog,
@@ -184,7 +183,9 @@ export function PlanPage({ plan }: { plan: Plan }) {
           {canOwnPlan(state, plan) && (
             <Btn
               secondary
-              onClick={() => act((s) => planAction(s, plan.id, "resume"))}
+              onClick={() =>
+                void act("planAction", { planId: plan.id, op: "resume" })
+              }
             >
               {t("workPlanResume")}
             </Btn>
@@ -216,7 +217,9 @@ export function PlanPage({ plan }: { plan: Plan }) {
             (plan.status === "draft" ? (
               <Btn
                 testId="activate-plan"
-                onClick={() => act((s) => planAction(s, plan.id, "activate"))}
+                onClick={() =>
+                  void act("planAction", { planId: plan.id, op: "activate" })
+                }
               >
                 {t("workActivate")}
               </Btn>
@@ -518,7 +521,7 @@ export function TaskPage({
                     )) && (
                 <Btn
                   testId="approve-task-draft"
-                  onClick={() => act((s) => decideDraft(s, task.id))}
+                  onClick={() => void act("decideDraft", { taskId: task.id })}
                 >
                   {t("workTaskDraftApprove")}
                 </Btn>
@@ -528,7 +531,9 @@ export function TaskPage({
                 <Btn
                   testId="start-task"
                   disabled={!!blockers(state, task, "start").length}
-                  onClick={() => act((s) => taskAction(s, task.id, "start"))}
+                  onClick={() =>
+                    void act("taskAction", { taskId: task.id, op: "start" })
+                  }
                 >
                   {t("workTaskStart")}
                 </Btn>

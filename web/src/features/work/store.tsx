@@ -10,7 +10,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { seedWork, WORK_KEY } from "./seed";
 import { normalizeWork } from "./normalize";
 import { allPeople, manage, member } from "./selectors";
-import type { Route, View, Text, WorkState, Result } from "./types";
+import type { Route, View, Text, WorkState } from "./types";
+import { demoActions } from "./actionRegistry";
+import type { ActFn, WorkStore } from "./storeTypes";
 import { translate, type Key } from "../../i18n";
 import { usePreferences } from "../../stores/preferences";
 import {
@@ -72,7 +74,7 @@ function initialPreview() {
     return seedWork();
   }
 }
-function useWorkbench() {
+function useWorkbench(): WorkStore {
   const client = useQueryClient();
   const query = useQuery({
     queryKey: workspaceKey,
@@ -180,12 +182,12 @@ function useWorkbench() {
     history.pushState(null, "", "/?" + q);
     setRoute(value);
   };
-  const act = (fn: (s: WorkState) => Result, success = true) => {
+  const act: ActFn = async (name, payload, opts) => {
     if (dataMode !== "demo") {
       setToast(t("shellUnavailable"));
-      return false;
+      return { ok: false };
     }
-    const result = fn(ref.current);
+    const result = demoActions[name](ref.current, payload as never);
     if (result.error) {
       setToast(
         t(
@@ -194,11 +196,11 @@ function useWorkbench() {
             result.error.slice(1)) as Key,
         ),
       );
-      return false;
+      return { ok: false };
     }
-    if (!commit(result.state!)) return false;
-    if (success) setToast(t("workSaved"));
-    return true;
+    if (!commit(result.state!)) return { ok: false };
+    if (opts?.toast !== false) setToast(t("workSaved"));
+    return { ok: true, id: result.id };
   };
   const switchPerson = (name: string) => {
     if (commit({ ...ref.current, currentUser: name }))
@@ -234,7 +236,7 @@ function useWorkbench() {
     people: allPeople(state),
   };
 }
-const Context = createContext<ReturnType<typeof useWorkbench> | null>(null);
+const Context = createContext<WorkStore | null>(null);
 export function WorkProvider({ children }: { children: ReactNode }) {
   return <Context.Provider value={useWorkbench()}>{children}</Context.Provider>;
 }

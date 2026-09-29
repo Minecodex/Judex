@@ -8,11 +8,7 @@ import { useState } from "react";
 import { Check, ArrowUpRight, GitBranch, Send } from "lucide-react";
 import { useWork } from "../work/store";
 import { Btn, Dialog, Field, Person } from "../work/ui";
-import {
-  decideProposal,
-  proposalIsCurrent,
-  type WorkProposal,
-} from "./proposalModel";
+import { proposalIsCurrent, type WorkProposal } from "./proposalModel";
 import { ProposalDialog } from "./ProposalDialog";
 export function ProposalCard({ proposal: p }: { proposal: WorkProposal }) {
   const { state, t, act, go, text } = useWork();
@@ -98,7 +94,11 @@ export function ProposalCard({ proposal: p }: { proposal: WorkProposal }) {
             testId={"approve-proposal-" + p.id}
             disabled={stale}
             onClick={() =>
-              act((s) => decideProposal(s, p.id, p.revision, true))
+              void act("decideProposal", {
+                proposalId: p.id,
+                revision: p.revision,
+                accept: true,
+              })
             }
           >
             {t("chatApprove")}
@@ -147,9 +147,16 @@ export function ProposalCard({ proposal: p }: { proposal: WorkProposal }) {
           </Field>
           <Btn
             disabled={!reason.trim()}
-            onClick={() => {
+            onClick={async () => {
               if (
-                act((s) => decideProposal(s, p.id, p.revision, false, reason))
+                (
+                  await act("decideProposal", {
+                    proposalId: p.id,
+                    revision: p.revision,
+                    accept: false,
+                    reason,
+                  })
+                ).ok
               )
                 setReject(false);
             }}

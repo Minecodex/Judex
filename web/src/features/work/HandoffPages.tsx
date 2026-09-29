@@ -18,7 +18,6 @@ import {
 import { useWork } from "./store";
 import { Btn, EmptyState, EvidenceList, Heading, Person, Pill } from "./ui";
 import { ownsSeat } from "./selectors";
-import { sourceDecision, sendSource, refreshHandoff } from "./actions";
 import { ReasonDialog, ReportDialog } from "./Dialogs";
 import { Activity } from "./WorkPages";
 import type { Handoff, Source } from "./types";
@@ -177,15 +176,12 @@ function Contribution({
               <Btn
                 testId={"receive-" + source.id}
                 onClick={() =>
-                  act((s) =>
-                    sourceDecision(
-                      s,
-                      handoff.id,
-                      source.id,
-                      source.revision,
-                      "accepted",
-                    ),
-                  )
+                  void act("sourceDecision", {
+                    handoffId: handoff.id,
+                    sourceId: source.id,
+                    revision: source.revision,
+                    decision: "accepted",
+                  })
                 }
               >
                 <Check />
@@ -210,9 +206,11 @@ function Contribution({
               <Btn
                 testId={"send-" + source.id}
                 onClick={() =>
-                  act((s) =>
-                    sendSource(s, handoff.id, source.id, source.revision),
-                  )
+                  void act("sendSource", {
+                    handoffId: handoff.id,
+                    sourceId: source.id,
+                    revision: source.revision,
+                  })
                 }
               >
                 <Send />
@@ -310,7 +308,7 @@ export function HandoffPage({
           <span>{t("workStale")}</span>
           <Btn
             secondary
-            onClick={() => act((s) => refreshHandoff(s, handoff.id))}
+            onClick={() => void act("refreshHandoff", { handoffId: handoff.id })}
             testId="refresh-handoff"
           >
             {t("workRefresh")}

@@ -11,7 +11,6 @@ import { useEffect, useRef, useState } from "react";
 import { Check, GitBranch, Plus, Sparkles } from "lucide-react";
 import { useWork } from "./store";
 import { Btn, Dialog, Field, Heading, EmptyState } from "./ui";
-import { createFlow, publishFlow } from "./actions";
 import type { Flow } from "./types";
 import { uid } from "./seed";
 function flowCode(flow: Flow, english: boolean) {
@@ -132,22 +131,17 @@ function NewFlowDialog({ onClose }: { onClose: () => void }) {
           {t("cancel")}
         </Btn>
         <Btn
-          onClick={() => {
-            if (
-              act((s) =>
-                createFlow(
-                  s,
-                  project.id,
-                  name,
-                  instructions,
-                  steps
-                    .split("\n")
-                    .map((v) => v.trim())
-                    .filter(Boolean),
-                ),
-              )
-            )
-              onClose();
+          onClick={async () => {
+            const r = await act("createFlow", {
+              projectId: project.id,
+              name,
+              instructions,
+              labels: steps
+                .split("\n")
+                .map((v) => v.trim())
+                .filter(Boolean),
+            });
+            if (r.ok) onClose();
           }}
         >
           {t("workFlowPublish")}
@@ -246,7 +240,7 @@ export function FlowPage() {
   );
 }
 function FlowEditor({ flow }: { flow: Flow }) {
-  const { t, text, management, act } = useWork(),
+  const { t, text, project, management, act } = useWork(),
     [input, setInput] = useWorkspaceDraft(
       "flow-input:" + flow.id + ":" + flow.version,
       "",
@@ -308,9 +302,13 @@ function FlowEditor({ flow }: { flow: Flow }) {
               <Btn
                 testId="publish-flow"
                 onClick={() =>
-                  act((s) =>
-                    publishFlow(s, flow.id, flow.version, draft, impact),
-                  )
+                  void act("publishFlow", {
+                    projectId: project.id,
+                    flowId: flow.id,
+                    version: flow.version,
+                    instructions: draft,
+                    material: impact,
+                  })
                 }
               >
                 <Check />

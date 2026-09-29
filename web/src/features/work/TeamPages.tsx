@@ -21,14 +21,6 @@ import {
 } from "lucide-react";
 import { useWork } from "./store";
 import { Btn, Dialog, EmptyState, Field, Heading, Person } from "./ui";
-import {
-  invitePerson,
-  acceptInvite,
-  personalPrompt,
-  replaceSeat,
-  savePosition,
-  remindPending,
-} from "./actions";
 import type { Position, Seat } from "./types";
 export function InvitePage() {
   const { state, project, t, text, act, go } = useWork();
@@ -65,8 +57,8 @@ export function InvitePage() {
           })}
           <Btn
             testId="next-accept-invite"
-            onClick={() => {
-              if (act((s) => acceptInvite(s, invite.id)))
+            onClick={async () => {
+              if ((await act("acceptInvite", { invitationId: invite.id })).ok)
                 go({
                   view: "settings",
                 });
@@ -130,8 +122,17 @@ export function InviteDialog({ onClose }: { onClose: () => void }) {
         </Btn>
         <Btn
           testId="next-create-invite"
-          onClick={() => {
-            if (act((s) => invitePerson(s, project.id, name, ids))) onClose();
+          onClick={async () => {
+            if (
+              (
+                await act("invitePerson", {
+                  projectId: project.id,
+                  name,
+                  positionIds: ids,
+                })
+              ).ok
+            )
+              onClose();
           }}
         >
           {t("workCreateInvite")}
@@ -238,8 +239,9 @@ function PositionDialog({
         </Btn>
         <Btn
           testId="save-position"
-          onClick={() => {
-            if (act((s) => savePosition(s, project.id, value))) onClose();
+          onClick={async () => {
+            if ((await act("savePosition", { projectId: project.id, value })).ok)
+              onClose();
           }}
         >
           {t("workSavePosition")}
@@ -275,8 +277,16 @@ function ReplaceDialog({ seat, onClose }: { seat: Seat; onClose: () => void }) {
         </Btn>
         <Btn
           testId="confirm-seat-replace"
-          onClick={() => {
-            if (act((s) => replaceSeat(s, seat.id, seat.person, person)))
+          onClick={async () => {
+            if (
+              (
+                await act("replaceSeat", {
+                  seatId: seat.id,
+                  from: seat.person,
+                  to: person,
+                })
+              ).ok
+            )
               onClose();
           }}
         >
@@ -479,7 +489,9 @@ export function PreferencesPage() {
           </Field>
           <Btn
             testId="next-save-preference"
-            onClick={() => act((s) => personalPrompt(s, project.id, prompt))}
+            onClick={() =>
+              void act("personalPrompt", { projectId: project.id, prompt })
+            }
           >
             {t("personalSave")}
           </Btn>
@@ -496,7 +508,7 @@ export function PreferencesPage() {
         {management && (
           <Btn
             secondary
-            onClick={() => act((s) => remindPending(s, project.id))}
+            onClick={() => void act("remindPending", { projectId: project.id })}
             testId="simulate-receipt-reminder"
           >
             {t("workReminderDemo")}
