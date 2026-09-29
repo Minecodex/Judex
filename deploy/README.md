@@ -37,7 +37,7 @@ kubectl -n judex-dev port-forward service/judex 8080:8080
 
 运行 `go test ./tests/deploy` 与 Helm lint 验证模板。K8s 冒烟入口为 `tests/k8s/smoke.mjs`，需要已有兼容 Operator / CRD 和可拉取镜像。
 
-本轮机器 Docker daemon 和 Kubernetes API 不可用，尚未完成真实镜像构建或安装验收；模板渲染不等于部署成功。
+2026-09-29 已在 Docker Desktop 集群验证四种内置/外部 PG/S3 组合、组件故障和资源回收。证据与镜像范围见 docs/plans/v1/CONTINUATION.md。
 
 ## 本地全内置部署（Docker Desktop，2026-09-28 实测）
 
@@ -67,3 +67,5 @@ kubectl -n judex port-forward svc/judex 18097:8080   # http://127.0.0.1:18097
 ```
 
 注意：port-forward 目标 Pod 重建（rollout/崩溃）会断流，需重开；生产模式用 Ingress（`ingress.enabled`）。`/api/v1/system` 的 `capabilities` 按实际接线如实上报（identity/projects/persistence/agentExecution）。
+
+改代码后更新本地部署：`npm run build` → `docker build -f deploy/docker/server.Dockerfile -t judex/server:0.1.0-dev .` → `kubectl -n judex rollout restart deploy/judex`。本机 Docker 与 Kubernetes 节点 containerd 是不同镜像存储。每次构建使用新 tag，按上面的 docker save/ctr import 导入后用 Helm 更新 image.tag；本地未推送 registry 的镜像保持 IfNotPresent，不要依赖 Always 拉取。

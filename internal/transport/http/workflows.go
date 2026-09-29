@@ -51,7 +51,7 @@ func (h *WorkflowHandlers) list(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(definitions, nil))
+	respond{}.ok(c, respond{}.list(c, definitions, nil))
 }
 
 func (h *WorkflowHandlers) create(c *gin.Context) {
@@ -91,7 +91,7 @@ func (h *WorkflowHandlers) versions(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(versions, nil))
+	respond{}.ok(c, respond{}.list(c, versions, nil))
 }
 
 func (h *WorkflowHandlers) updateDraft(c *gin.Context) {

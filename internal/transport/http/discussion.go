@@ -3,6 +3,7 @@
 package httptransport
 
 import (
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -42,7 +43,7 @@ func (h *DiscussionHandlers) listTopics(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(topics, nil))
+	respond{}.ok(c, respond{}.list(c, topics, nil))
 }
 
 func (h *DiscussionHandlers) createTopic(c *gin.Context) {
@@ -93,18 +94,12 @@ func (h *DiscussionHandlers) getTopic(c *gin.Context) {
 		respond{}.error(c, apierrors.Fields("topicId", "invalid"))
 		return
 	}
-	topics, err := h.Discussion.ListTopics(c.Request.Context(), p.UserID, projectID)
+	topic, err := h.Discussion.GetTopic(c.Request.Context(), p.UserID, projectID, topicID)
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	for _, topic := range topics {
-		if topic.ID == topicID {
-			respond{}.ok(c, topic)
-			return
-		}
-	}
-	respond{}.error(c, apierrors.New(apierrors.NotFound, "topic not found"))
+	respond{}.ok(c, topic)
 }
 
 func (h *DiscussionHandlers) listMessages(c *gin.Context) {
@@ -127,6 +122,14 @@ func (h *DiscussionHandlers) listMessages(c *gin.Context) {
 			return
 		}
 	}
+	afterSeq := int64(0)
+	if raw := c.Query("afterSeq"); raw != "" {
+		afterSeq, err = strconv.ParseInt(raw, 10, 64)
+		if err != nil || afterSeq < 0 || beforeSeq > 0 {
+			respond{}.error(c, apierrors.Fields("afterSeq", "range or conflicting beforeSeq"))
+			return
+		}
+	}
 	limit := 50
 	if raw := c.Query("limit"); raw != "" {
 		if limit, err = strconv.Atoi(raw); err != nil || limit < 1 || limit > 100 {
@@ -134,12 +137,39 @@ func (h *DiscussionHandlers) listMessages(c *gin.Context) {
 			return
 		}
 	}
-	messages, err := h.Discussion.ListMessages(c.Request.Context(), p.UserID, projectID, topicID, beforeSeq, limit)
+	scope := c.Request.URL.Path + ":" + p.UserID.String()
+	if raw := c.Query("cursor"); raw != "" {
+		if beforeSeq > 0 || afterSeq > 0 {
+			respond{}.error(c, apierrors.Fields("cursor", "cannot combine with sequence bounds"))
+			return
+		}
+		cursor, err := paging.Sequence(scope, raw)
+		if err != nil {
+			respond{}.error(c, err)
+			return
+		}
+		if cursor.After {
+			afterSeq = cursor.Seq
+		} else {
+			beforeSeq = cursor.Seq
+		}
+	}
+	messages, err := h.Discussion.ListMessages(c.Request.Context(), p.UserID, projectID, topicID, beforeSeq, limit+1, afterSeq)
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(messages, nil))
+	var next *string
+	if len(messages) > limit {
+		if afterSeq > 0 {
+			messages = messages[:limit]
+			next = paging.NextSequence(scope, messages[len(messages)-1].Seq, true)
+		} else {
+			messages = messages[1:]
+			next = paging.NextSequence(scope, messages[0].Seq, false)
+		}
+	}
+	respond{}.ok(c, respond{}.list(c, messages, next))
 }
 
 func (h *DiscussionHandlers) linkTopic(c *gin.Context) {
@@ -189,24 +219,26 @@ func (h *DiscussionHandlers) createSubmission(c *gin.Context) {
 		return
 	}
 	var req struct {
-		ClientSubmissionID string   `json:"clientSubmissionId" binding:"required"`
-		Purpose            string   `json:"purpose" binding:"required"`
-		Text               string   `json:"text" binding:"required"`
-		TopicID            string   `json:"topicId"`
-		TaskID             string   `json:"taskId"`
-		IdentityID         string   `json:"identityId"`
-		MaterialVersionIDs []string `json:"materialVersionIds"`
+		ClientSubmissionID  string   `json:"clientSubmissionId" binding:"required"`
+		ExpectedTaskVersion int64    `json:"expectedTaskVersion"`
+		Purpose             string   `json:"purpose" binding:"required"`
+		Text                string   `json:"text" binding:"required"`
+		TopicID             string   `json:"topicId"`
+		TaskID              string   `json:"taskId"`
+		IdentityID          string   `json:"identityId"`
+		MaterialVersionIDs  []string `json:"materialVersionIds"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
 		return
 	}
 	sub := discussion.Submission{
-		ClientSubmissionID: req.ClientSubmissionID,
-		Purpose:            req.Purpose,
-		Source:             "web",
-		Text:               req.Text,
-		MaterialVersionIDs: req.MaterialVersionIDs,
+		ClientSubmissionID:  req.ClientSubmissionID,
+		ExpectedTaskVersion: req.ExpectedTaskVersion,
+		Purpose:             req.Purpose,
+		Source:              "web",
+		Text:                req.Text,
+		MaterialVersionIDs:  req.MaterialVersionIDs,
 	}
 	if req.TopicID != "" {
 		id, err := uuid.Parse(req.TopicID)
@@ -231,6 +263,9 @@ func (h *DiscussionHandlers) createSubmission(c *gin.Context) {
 			return
 		}
 		sub.IdentityID = &id
+	}
+	if p.Kind == "cli" {
+		sub.Source = "cli"
 	}
 	created, err := h.Discussion.CreateSubmission(c.Request.Context(), p.UserID, projectID, sub)
 	if err != nil {

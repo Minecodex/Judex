@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -33,6 +34,14 @@ type Options struct {
 type Store struct {
 	client *s3.Client
 	bucket string
+}
+
+func (s *Store) PresignGet(ctx context.Context, key string, ttl time.Duration) (string, error) {
+	out, err := s3.NewPresignClient(s.client).PresignGetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key)}, func(o *s3.PresignOptions) { o.Expires = ttl })
+	if err != nil {
+		return "", err
+	}
+	return out.URL, nil
 }
 
 func New(ctx context.Context, opts Options) (*Store, error) {

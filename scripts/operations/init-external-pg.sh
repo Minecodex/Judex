@@ -1,17 +1,13 @@
 #!/usr/bin/env bash
-# 外部 PG 预建脚本（P7 部署前置条件）：在使用外部 PostgreSQL 时，
-# 必须先创建 judex 用户和数据库。用法: init-external-pg.sh <pg-host> <pg-port> <admin-user> <admin-password>
+# Creates the operator-selected external PostgreSQL role/database; no password in SQL text.
 set -euo pipefail
-HOST="${1:?host}"; PORT="${2:?port}"; ADMIN="${3:?admin user}"; PASS="${4:?admin password}"
-JUDEX_PASS="${JUDEX_DB_PASSWORD:?set JUDEX_DB_PASSWORD}"
-psql -h "$HOST" -p "$PORT" -U "$ADMIN" -d postgres <<SQL
-DO \$\$ BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'judex') THEN
-    CREATE ROLE judex LOGIN PASSWORD '$JUDEX_PASS';
-  END IF;
-END \$\$;
+PG_HOST="${1:?host}"; PG_PORT="${2:?port}"; ADMIN_USER="${3:?admin user}"; ADMIN_PASSWORD="${4:?admin password}"
+JUDEX_PASSWORD="${JUDEX_DB_PASSWORD:?set JUDEX_DB_PASSWORD}"
+PGPASSWORD="${ADMIN_PASSWORD}" psql -h "${PG_HOST}" -p "${PG_PORT}" -U "${ADMIN_USER}" -d postgres -v ON_ERROR_STOP=1 -v judex_password="${JUDEX_PASSWORD}" <<'SQL'
+SELECT format('CREATE ROLE judex LOGIN PASSWORD %L', :'judex_password')
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='judex')\gexec
 SELECT 'CREATE DATABASE judex OWNER judex'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'judex')\gexec
+WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname='judex')\gexec
 GRANT ALL PRIVILEGES ON DATABASE judex TO judex;
 SQL
-echo "✓ judex user + database created"
+printf 'Judex role and database ready.\n'

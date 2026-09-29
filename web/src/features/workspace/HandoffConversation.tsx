@@ -1,3 +1,5 @@
+import { HandoffSender } from "./HandoffSender";
+import { ReviewDetails } from "../work/ReviewDetails";
 import { useState } from "react";
 import { Button } from "../../components/ui/Button";
 import { TextArea } from "@heroui/react";
@@ -89,7 +91,10 @@ export function HandoffConversation({
               </strong>
               <span className="judex-pill">{t(sourceLabel[source.state])}</span>
             </header>
+            {source.summary && <p className="judex-message-content">{source.summary}</p>}
+            {source.evidence && <ReviewDetails evidence={{ reviewId: source.currentVersionId ?? source.id, reviewHash: source.currentVersionId ?? source.id, targetVersion: source.currentVersion ?? 1, reports: source.evidence.reports }} />}
             {source.reason && <p className="judex-source-reason">{source.reason}</p>}
+            <HandoffSender projectId={projectId} handoffId={handoffId} source={source} />
             {source.state === "pending" && (
               <div className="judex-source-actions">
                 <Button

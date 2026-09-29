@@ -20,8 +20,7 @@ deps:
 	$(NPM) ci
 generate:
 	node api/generate.mjs
-	$(GO) tool oapi-codegen -config api/oapi-codegen.yaml internal/gen/api/spec/openapi.yaml
-	npx openapi-typescript api/openapi.yaml -o web/src/lib/api/schema.d.ts
+	node api/generate-types.mjs
 	$(GO) build ./internal/gen/...
 dev: api
 api:

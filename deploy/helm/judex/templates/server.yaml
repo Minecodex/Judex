@@ -11,13 +11,22 @@ spec:
     metadata:
       labels: {{ include "judex.labels" . | nindent 8 }}
     spec:
+      {{- if and .Values.sandbox.enabled .Values.server.materialProjection.enabled }}
+      serviceAccountName: {{ include "judex.name" . }}-materials
+      automountServiceAccountToken: true
+      {{- else }}
       automountServiceAccountToken: false
+      {{- end }}
       securityContext: {runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, seccompProfile: {type: RuntimeDefault}}
-      {{- if .Values.server.modelCatalogSecret }}
       volumes:
+        - name: temporary
+          emptyDir: {sizeLimit: 2Gi}
+        {{- if .Values.server.modelCatalogSecret }}
         - name: model-catalog
           secret: {secretName: {{ .Values.server.modelCatalogSecret }}}
-      {{- end }}
+        {{- end }}
+      initContainers:
+        {{- include "judex.waitForPostgres" . | nindent 8 }}
       containers:
         - name: server
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -61,7 +70,7 @@ spec:
             # K8s $(VAR) expansion composes the URL without leaking the secret.
             - {name: JUDEX_DATABASE_URL, value: {{ include "judex.databaseURL" . | quote }}}
             - name: JUDEX_S3_ENDPOINT
-              value: {{ if .Values.objectStorage.embedded.enabled }}"http://{{ .Release.Name }}-seaweedfs:8333"{{ else }}{{ .Values.objectStorage.external.endpoint | quote }}{{ end }}
+              value: {{ if .Values.objectStorage.embedded.enabled }}"http://{{ .Release.Name }}-seaweedfs.{{ .Release.Namespace }}.svc.cluster.local:8333"{{ else }}{{ .Values.objectStorage.external.endpoint | quote }}{{ end }}
             - name: JUDEX_S3_ACCESS_KEY
               valueFrom:
                 secretKeyRef: {name: {{ include "judex.storageSecret" . }}, key: access-key}
@@ -70,6 +79,11 @@ spec:
                 secretKeyRef: {name: {{ include "judex.storageSecret" . }}, key: secret-key}
             - {name: JUDEX_S3_REGION, value: {{ .Values.objectStorage.external.region | quote }}}
             - {name: JUDEX_S3_BUCKET, value: {{ .Values.objectStorage.embedded.enabled | ternary "judex" .Values.objectStorage.external.bucket | quote }}}
+            {{- if and .Values.sandbox.enabled .Values.server.materialProjection.enabled }}
+            - {name: JUDEX_MATERIAL_NAMESPACE, value: {{ printf "%s-sandboxes" .Release.Namespace | quote }}}
+            - {name: JUDEX_MATERIAL_IMAGE, value: {{ default (printf "%s:%s" .Values.image.repository .Values.image.tag) .Values.server.materialProjection.image | quote }}}
+            - {name: JUDEX_MATERIAL_STORAGE_CLASS, value: {{ .Values.server.materialProjection.storageClass | quote }}}
+            {{- end }}
             {{- if .Values.sandbox.enabled }}
             - {name: JUDEX_OPENSANDBOX_ENDPOINT, value: "http://{{ printf "%s-%s-opensandbox-server" .Release.Namespace .Release.Name | trunc 63 | trimSuffix "-" }}:80"}
             - name: JUDEX_OPENSANDBOX_API_KEY
@@ -86,10 +100,11 @@ spec:
             {{- end }}
             {{- end }}
           resources: {{ toYaml .Values.resources | nindent 12 }}
-          {{- if .Values.server.modelCatalogSecret }}
           volumeMounts:
+            - {name: temporary, mountPath: /tmp}
+            {{- if .Values.server.modelCatalogSecret }}
             - {name: model-catalog, mountPath: /etc/judex/models, readOnly: true}
-          {{- end }}
+            {{- end }}
           startupProbe: {httpGet: {path: /healthz, port: http}, failureThreshold: 30, periodSeconds: 2}
           readinessProbe: {httpGet: {path: /readyz, port: http}, periodSeconds: 5}
           livenessProbe: {httpGet: {path: /healthz, port: http}, periodSeconds: 15}

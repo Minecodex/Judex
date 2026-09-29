@@ -1,19 +1,21 @@
+import { useCollection, LoadMore } from "../../lib/api/collections";
 import { Button, Card } from "@heroui/react";
-import { Plus, X } from "lucide-react";
+import { FolderPlus, ListChecks, MessageSquare, Plus, UserPlus, X } from "lucide-react";
+import { UIStatus } from "../../components/ui/FormControls";
 import { AccountSecurity } from "../settings/AccountSecurity";
 import { WorkspaceApp } from "../workspace/WorkspaceApp";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import { usePreferences } from "../../stores/preferences";
 import { translate, type Key } from "../../i18n";
 import { request } from "../../lib/api/client";
-import { listProjects, logout, type Project } from "./api";
+import { logout, type Project } from "./api";
 import { useAuth } from "./AuthProvider";
-import { errorKey } from "./LoginPage";
+import { errorKey } from "./errors";
 
-// P1 工作区壳（08 §2 首次无项目态）：真实项目列表 + 空态引导 + 账户菜单。
-// 聊天工作区整体接入在 P2-08/P6；这里不显示任何演示数据。
+// 工作区壳（08 §2 首次无项目态）：真实项目列表 + 空态引导 + 账户菜单。
+// 创建成功后直接进入项目工作区；这里不显示任何演示数据。
 export function WorkspaceShell() {
   const { locale, theme, setLocale, setTheme } = usePreferences();
   const t = (key: Key, values?: Record<string, string | number>) =>
@@ -23,15 +25,11 @@ export function WorkspaceShell() {
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [tab, setTab] = useState<"projects" | "security">("projects");
-  const [activeProject, setActiveProject] = useState<string | null>(
-    () => new URLSearchParams(location.search).get("project"),
-  );
+  const route = useLocation();
+  const activeProject = new URLSearchParams(route.search).get("project");
+  const setActiveProject = (id: string | null) => navigate(id ? `/?project=${id}` : "/");
 
-  const projects = useQuery({
-    queryKey: ["projects"],
-    queryFn: listProjects,
-  });
-
+  const projects = useCollection<Project>(["projects"], "/projects");
   const createProject = useMutation({
     mutationFn: () =>
       request<Project>("/projects", {
@@ -39,10 +37,11 @@ export function WorkspaceShell() {
         body: JSON.stringify({ title: title.trim() }),
         idempotencyKey: crypto.randomUUID(),
       }),
-    onSuccess: () => {
+    onSuccess: (created) => {
       setTitle("");
       setCreating(false);
       projects.refetch();
+      setActiveProject(created.id);
     },
   });
 
@@ -59,12 +58,15 @@ export function WorkspaceShell() {
   if (activeProject && tab !== "security") {
     return (
       <WorkspaceApp
+        key={activeProject}
         projectId={activeProject}
         onLogout={signOutAndRedirect}
         onExit={() => setActiveProject(null)}
       />
     );
   }
+
+  const hasProjects = !!projects.data && projects.data.items.length > 0;
 
   return (
     <div className="judex-workspace-shell">
@@ -112,16 +114,18 @@ export function WorkspaceShell() {
           <>
             <div className="judex-workspace-section">
               <h2>{t("workspaceTitle")}</h2>
-              <Button data-testid="workspace-new-project" onClick={() => setCreating((v) => !v)}>
-                <Plus size={16} />
-                {t("workspaceNewProject")}
-              </Button>
+              {hasProjects && (
+                <Button data-testid="workspace-new-project" onClick={() => setCreating((v) => !v)}>
+                  <Plus size={16} />
+                  {t("workspaceNewProject")}
+                </Button>
+              )}
             </div>
             {creating && (
               <Card className="judex-workspace-create">
                 <Card.Content>
                   <form
-                    className="judex-auth-form"
+                    className="judex-inline-form"
                     onSubmit={(event) => {
                       event.preventDefault();
                       if (title.trim()) createProject.mutate();
@@ -141,35 +145,58 @@ export function WorkspaceShell() {
                     <Button variant="ghost" onClick={() => setCreating(false)}>
                       <X size={15} />
                     </Button>
-                    {createProject.isError && (
-                      <p role="alert">{t(errorKey(createProject.error) ?? "errNetwork")}</p>
-                    )}
                   </form>
+                  {createProject.isError && (
+                    <p role="alert">{t(errorKey(createProject.error) ?? "errNetwork")}</p>
+                  )}
                 </Card.Content>
               </Card>
             )}
-            {projects.data && projects.data.length > 0 ? (
+            {hasProjects ? (
               <ul className="judex-workspace-list">
-                {projects.data.map((project) => (
+                {projects.data?.items.map((project) => (
                   <li key={project.id} className="judex-workspace-item">
-                    <Button variant="secondary" onClick={() => setActiveProject(project.id)}>
-                      {project.title}
+                    <Button
+                      variant="secondary"
+                      className="judex-workspace-item-main"
+                      onClick={() => setActiveProject(project.id)}
+                    >
+                      <span className="judex-workspace-item-title">{project.title}</span>
                     </Button>
-                    <small>{project.role ?? ""}</small>
+                    {project.role && <UIStatus className="judex-workspace-item-role">{project.role}</UIStatus>}
                   </li>
                 ))}
               </ul>
             ) : (
               <div className="judex-workspace-empty">
+                <span className="judex-workspace-empty-icon" aria-hidden="true">
+                  <FolderPlus size={22} />
+                </span>
                 <strong>{t("workspaceEmpty")}</strong>
                 <span>{t("workspaceEmptyHint")}</span>
+                <Button data-testid="workspace-new-project" onClick={() => setCreating(true)}>
+                  <Plus size={16} />
+                  {t("workspaceNewProject")}
+                </Button>
+                <ul className="judex-workspace-empty-steps">
+                  <li>
+                    <MessageSquare size={15} aria-hidden="true" />
+                    {t("workspaceStepDiscuss")}
+                  </li>
+                  <li>
+                    <ListChecks size={15} aria-hidden="true" />
+                    {t("workspaceStepWork")}
+                  </li>
+                  <li>
+                    <UserPlus size={15} aria-hidden="true" />
+                    {t("workspaceStepInvite")}
+                  </li>
+                </ul>
               </div>
-            )}
-            {tab === "projects" && (
-              <p className="judex-workspace-boundary">{t("workspaceDemoBoundary")}</p>
             )}
           </>
         )}
+        <LoadMore query={projects} />
       </main>
     </div>
   );

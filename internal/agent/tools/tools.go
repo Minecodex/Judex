@@ -8,7 +8,11 @@ package tools
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"github.com/getkin/kin-openapi/openapi3"
 	"strings"
 )
 
@@ -42,9 +46,14 @@ type Tool struct {
 // Env carries the per-run execution context tools may use; it deliberately
 // exposes NO credentials and NO write access to formal state.
 type Env struct {
-	ProjectID  string
-	RunID      string
-	IdentityID string
+	QueryWorkPage  func(context.Context, string, map[string]any) (map[string]any, error)
+	Publish        func(context.Context, string, map[string]any, []byte) (map[string]any, error)
+	ReadContext    func(context.Context, string, string, string, int, int) (map[string]any, error)
+	RecordAnalysis func(context.Context, string, map[string]any) (map[string]any, error)
+	QueryKnowledge func(context.Context, string, string, int) (map[string]any, error)
+	ProjectID      string
+	RunID          string
+	IdentityID     string
 	// Sandbox executes read/write/edit/bash (nil → those tools refuse).
 	Sandbox SandboxExec
 	// ReadMaterialContent lets the live-test stub return injected Chinese
@@ -99,6 +108,17 @@ func (r *Registry) Execute(ctx context.Context, name string, principalKind strin
 	if tool.AllowedFor != nil && !tool.AllowedFor(principalKind) {
 		return Result{}, fmt.Errorf("tool %q 不允许该调用方", name)
 	}
+	raw, err := json.Marshal(tool.InputSchema)
+	if err != nil {
+		return Result{}, err
+	}
+	var schema openapi3.Schema
+	if err = json.Unmarshal(raw, &schema); err != nil {
+		return Result{}, err
+	}
+	if err = schema.VisitJSON(args); err != nil {
+		return Result{}, fmt.Errorf("tool arguments: %w", err)
+	}
 	return tool.Execute(ctx, args, env)
 }
 
@@ -121,6 +141,8 @@ func intVal(args map[string]any, key string, fallback int) int {
 
 // RegisterDefaults installs the full V1 tool set (05 §6 table).
 func RegisterDefaults(r *Registry) {
+	registerContextTools(r)
+	registerFileTools(r)
 	r.Register(Tool{
 		Name:        "read",
 		Description: "读取沙箱内文件（只读）",
@@ -134,12 +156,13 @@ func RegisterDefaults(r *Registry) {
 			}
 			exit, stdout, _, unknown, err := env.Sandbox.Exec(ctx, "cat -- "+shellEscape(str(args, "path")), 30000)
 			if err != nil || unknown {
-				return Result{}, fmt.Errorf("读取结果未知，不盲重试")
+				return Result{Data: map[string]any{"unknown": unknown}}, fmt.Errorf("读取结果未知，不盲重试")
 			}
 			if exit != 0 {
 				return Result{}, fmt.Errorf("读取失败 exit=%d", exit)
 			}
-			return Result{Data: map[string]any{"content": string(stdout)}}, nil
+			hash := sha256.Sum256(stdout)
+			return Result{Data: map[string]any{"content": string(stdout), "sha256": hex.EncodeToString(hash[:]), "size": len(stdout)}}, nil
 		},
 	})
 	r.Register(Tool{
@@ -156,7 +179,7 @@ func RegisterDefaults(r *Registry) {
 			}
 			exit, stdout, stderr, unknown, err := env.Sandbox.Exec(ctx, str(args, "command"), intVal(args, "timeoutMs", 60000))
 			if err != nil {
-				return Result{}, err
+				return Result{Data: map[string]any{"unknown": unknown}}, err
 			}
 			data := map[string]any{"exitCode": exit, "stdout": string(stdout), "stderr": string(stderr)}
 			if unknown {
@@ -186,11 +209,16 @@ func RegisterDefaults(r *Registry) {
 		Description: "分页查询本项目工作事实（plan/task/proposal）",
 		InputSchema: objectSchema([]string{"objectType"}, map[string]any{
 			"objectType": map[string]any{"type": "string", "enum": []string{"plan", "task", "proposal"}},
-			"cursor":     map[string]any{"type": "string"},
-			"limit":      map[string]any{"type": "integer"},
+			"objectId":   map[string]any{"type": "string", "format": "uuid"}, "query": map[string]any{"type": "string", "maxLength": 200},
+			"cursor": map[string]any{"type": "string"},
+			"limit":  map[string]any{"type": "integer"},
 		}),
 		Effect: EffectRead,
 		Execute: func(ctx context.Context, args map[string]any, env Env) (Result, error) {
+			if env.QueryWorkPage != nil {
+				data, err := env.QueryWorkPage(ctx, env.ProjectID, args)
+				return Result{Data: data}, err
+			}
 			if env.QueryWork == nil {
 				return Result{}, fmt.Errorf("未接线")
 			}

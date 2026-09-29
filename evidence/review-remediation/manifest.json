@@ -1,0 +1,95 @@
+{
+  "date": "2026-09-28",
+  "baselineCommit": "296c07d",
+  "scope": "R01-R22 remediation; full V1 acceptance not claimed",
+  "checks": {
+    "goTestAll": "passed",
+    "goVet": "passed",
+    "api": {
+      "paths": 104,
+      "operations": 120,
+      "generatedMaxLines": 1803
+    },
+    "webUnit": 37,
+    "desktopDemoE2E": 26,
+    "productionE2E": 15,
+    "helmLint": "passed"
+  },
+  "recovery": {
+    "runId": "judex-e2e-31660-1790609114202",
+    "exitCode": 0,
+    "s3ArchiveRestoredAndVerified": true,
+    "postgresRestoredAndAllTablesMatched": true,
+    "verifiedMaterialEntries": 5
+  },
+  "kubernetes": {
+    "namespace": "judex-review-mul8nv8l",
+    "image": "judex/server:review-20260928-5",
+    "model": "glm-5.3",
+    "materialSource": "docs/plans/v1/03-工作审批与交接.md sections 1-3",
+    "seed": {
+      "projectId": "20c5a025-38f0-4392-88b1-641c24f96d4a",
+      "topicId": "0dec5818-5494-409e-8cae-3d19046d57ba",
+      "materialVersionId": "c7d6eaf0-5a9c-47ae-8c55-d216d96a0256",
+      "sha256": "3693c209fae61bd63a3a05027ba355843efe4bde741db57195b027e9e72e1556",
+      "batchId": "ea0ca645-308f-4656-be93-ca3a3943df98",
+      "runId": "a6c13a8d-d2cb-4375-9a93-a3748b08bc68"
+    },
+    "runtime": {
+      "runs": [
+        {
+          "state": "succeeded",
+          "count": 3
+        }
+      ],
+      "tools": [
+        {
+          "name": "bash",
+          "state": "succeeded",
+          "count": 2
+        },
+        {
+          "name": "call_agent",
+          "state": "succeeded",
+          "count": 2
+        },
+        {
+          "name": "read_material",
+          "state": "succeeded",
+          "count": 3
+        }
+      ],
+      "batch": {
+        "state": "completed",
+        "modelAttempts": 7,
+        "usedTokens": 18889,
+        "reservedTokens": 0,
+        "roundsReserved": 1
+      }
+    },
+    "sandbox": {
+      "egressProbeBlocked": true,
+      "filesVerified": 1,
+      "projectId": "5f2a28cd-665b-47f1-bab8-7c4444ddac97",
+      "readOnly": true,
+      "sandboxId": "10322ef0-cf77-40c6-8052-13a5f67994f1",
+      "serviceAccountTokenAbsent": true
+    },
+    "fullDesignSample": {
+      "batchId": "d4319d77-d3c3-4698-86f6-c1e809d47629",
+      "result": "failed: context deadline exceeded at previous two-minute child limit",
+      "usedTokens": 108278
+    },
+    "cleanup": "both owned namespaces deleted and NotFound verified; existing judex deployments/statefulsets remained 1/1 ready",
+    "sandboxImage": "judex/server:review-20260928-4; adapter unchanged in image 5",
+    "sourceScope": "Image 5 verifies the production runtime. Subsequent task/plan response projection changes are covered by final local PG/E2E tests."
+  },
+  "remainingGates": [
+    "full context lifecycle and compression",
+    "workflow authority and full response contract matrix",
+    "complete infrastructure fault matrix",
+    "external storage combinations",
+    "Skill host and release acceptance"
+  ],
+  "sensitiveArtifacts": "Full logs, dumps and object archives kept under ignored .cache; credentials and full model outputs excluded"
+}

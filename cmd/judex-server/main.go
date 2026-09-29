@@ -29,6 +29,15 @@ func main() {
 }
 
 func run() error {
+	if len(os.Args) == 2 && os.Args[1] == "verify-recovery" {
+		return verifyRecovery()
+	}
+	if len(os.Args) == 3 && os.Args[1] == "verify-sandbox" {
+		return verifySandbox(os.Args[2])
+	}
+	if len(os.Args) == 3 && os.Args[1] == "objects" {
+		return runObjectArchive(os.Args[2])
+	}
 	mode := flag.String("mode", "", "all | api | worker | migrate (overrides JUDEX_MODE)")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()

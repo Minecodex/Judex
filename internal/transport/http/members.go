@@ -39,7 +39,7 @@ func (h *MemberHandlers) list(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(members, nil))
+	respond{}.ok(c, respond{}.list(c, members, nil))
 }
 
 func (h *MemberHandlers) updateRole(c *gin.Context) {

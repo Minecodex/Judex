@@ -1,5 +1,4 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   BrowserRouter,
   Navigate,
@@ -10,14 +9,14 @@ import {
 import { Button, Card } from "@heroui/react";
 // Demo workspace is code-split: the production bundle never ships the
 // simulated business tree (docs/plans/v1/08 §9).
-const WorkApp = lazy(() => import("../features/chat/ChatWorkspace"));
+const DemoPreviewApp = import.meta.env.VITE_DATA_MODE === "demo" ? lazy(() => import("./DemoPreviewApp")) : null;
 import { usePreferences } from "../stores/preferences";
 import { translate, type Key } from "../i18n";
-import { dataMode } from "../lib/api/client";
 import { AuthProvider, useAuth } from "../features/auth/AuthProvider";
 import { LoginPage } from "../features/auth/LoginPage";
 import { RegisterPage } from "../features/auth/RegisterPage";
 import { RecoverPage } from "../features/auth/RecoverPage";
+import { DevicePage, InvitePage } from "../features/auth/AccessPages";
 import { ConfirmPage } from "../features/auth/ConfirmPage";
 import { WorkspaceShell } from "../features/auth/WorkspaceShell";
 
@@ -29,7 +28,7 @@ export default function App() {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [locale, theme]);
   // 演示模式保留完整旧工作区（tests/e2e fixture）；生产 bundle 走真实认证。
-  if (dataMode === "demo") return <DemoPreviewApp />;
+  if (DemoPreviewApp) return <Suspense fallback={<main className="judex-entry" />}><DemoPreviewApp /></Suspense>;
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -47,56 +46,6 @@ export default function App() {
         />
       </BrowserRouter>
     </AuthProvider>
-  );
-}
-
-// 演示模式的退出预览态：无会话概念，退出只进入引导页并可返回，
-// 刷新不自动重入（sessionSession judex.preview.signedOut 持久）。
-const SIGNED_OUT_KEY = "judex.preview.signedOut";
-
-function DemoPreviewApp() {
-  const [signedOut, setSignedOut] = useState(
-    () => sessionStorage.getItem(SIGNED_OUT_KEY) === "1",
-  );
-  const { locale } = usePreferences();
-  const t = (key: Key) => translate(locale, key);
-  const client = useQueryClient();
-
-  if (signedOut)
-    return (
-      <main className="judex-entry min-h-screen flex items-center justify-center">
-        <Card className="judex-entry-card">
-          <Card.Header>
-            <Card.Title>{t("accountSignedOut")}</Card.Title>
-            <Card.Description>{t("accountSignedOutHint")}</Card.Description>
-          </Card.Header>
-          <Card.Content>
-            <Button
-              data-testid="return-preview"
-              onPress={() => {
-                sessionStorage.removeItem(SIGNED_OUT_KEY);
-                history.replaceState(null, "", "/");
-                setSignedOut(false);
-              }}
-            >
-              {t("accountReturnPreview")}
-            </Button>
-          </Card.Content>
-        </Card>
-      </main>
-    );
-  return (
-    <Suspense fallback={<main className="judex-entry min-h-screen" />}>
-      <WorkApp
-        onLogout={async () => {
-          sessionStorage.setItem(SIGNED_OUT_KEY, "1");
-          await client.cancelQueries();
-          client.clear();
-          history.replaceState(null, "", "/");
-          setSignedOut(true);
-        }}
-      />
-    </Suspense>
   );
 }
 
@@ -159,14 +108,11 @@ function AuthRoutes({ controls }: { controls: React.ReactNode }) {
           )
         }
       />
-      <Route
-        path="/confirm/:intentId"
-        element={
-          <EntryLayout controls={controls}>
-            <ConfirmPage />
-          </EntryLayout>
-        }
-      />
+      {[{ path: "/device", element: <DevicePage /> }, { path: "/invite/:token", element: <InvitePage /> }, { path: "/confirm/:intentId", element: <ConfirmPage /> }].map((entry) => (
+        <Route key={entry.path} path={entry.path} element={phase === "authenticated"
+          ? <EntryLayout controls={controls}>{entry.element}</EntryLayout>
+          : <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />} />
+      ))}
       <Route
         path="/recover"
         element={

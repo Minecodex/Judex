@@ -32,13 +32,13 @@ type PGFixture struct {
 }
 
 const (
-	containerName = "judex-it-pg"
 	containerPass = "judex-test"
 )
 
 var (
-	once      sync.Once
-	container struct {
+	containerName = fmt.Sprintf("judex-it-%d-%d", os.Getpid(), time.Now().UnixNano())
+	once          sync.Once
+	container     struct {
 		port string
 		err  error
 	}
@@ -55,17 +55,6 @@ func tryRun(args ...string) (string, error) {
 
 // startContainer boots the shared postgres container once per process.
 func startContainer() (string, error) {
-	// Reuse an existing healthy container from a crashed run if present.
-	if out, err := tryRun("docker", "inspect", containerName, "--format",
-		"{{(index (index .NetworkSettings.Ports \"5432/tcp\") 0).HostPort}}"); err == nil {
-		if port := strings.TrimSpace(out); port != "" {
-			return port, nil
-		}
-	}
-	if _, err := tryRun("docker", "rm", "-f", containerName); err != nil {
-		// Non-fatal: the container may not exist.
-		_ = err
-	}
 	if out, err := tryRun("docker", "run", "-d", "--rm", "--name", containerName,
 		"-e", "POSTGRES_PASSWORD="+containerPass,
 		"-e", "POSTGRES_DB=judex",

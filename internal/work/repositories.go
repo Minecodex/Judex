@@ -5,6 +5,7 @@ package work
 import (
 	"context"
 	"errors"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"strings"
 	"time"
 
@@ -51,10 +52,10 @@ func (s *Service) ListRepositories(ctx context.Context, requester, projectID uui
 	if err := memberRead(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT id, display_name, url, provider, default_branch, version, archived_at
-		FROM repository_links WHERE project_id=$1 AND archived_at IS NULL
-		ORDER BY created_at`, projectID)
+		/*keys*/ FROM repository_links WHERE project_id=$1 AND archived_at IS NULL
+		/*page*/`, "created_at", "id", projectID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "repos failed").Wrap(err)
 	}
@@ -96,7 +97,7 @@ func (s *Service) CreateRepository(ctx context.Context, requester, projectID uui
 	}
 	var out Repository
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if err := managerOnly(ctx, tx, projectID, requester); err != nil {
@@ -128,7 +129,7 @@ func (s *Service) CreateRepository(ctx context.Context, requester, projectID uui
 func (s *Service) UpdateRepository(ctx context.Context, requester, projectID, repoID uuid.UUID, expectedVersion int64, displayName, rawURL, provider, defaultBranch string) (Repository, error) {
 	var out Repository
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if err := managerOnly(ctx, tx, projectID, requester); err != nil {
@@ -192,10 +193,10 @@ func (s *Service) ListAudit(ctx context.Context, requester, projectID uuid.UUID)
 	if err := memberRead(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT id, actor_type, actor_user_id, source, operation, object_type, object_id, reason, occurred_at
-		FROM audit_events WHERE project_id=$1
-		ORDER BY occurred_at DESC LIMIT 200`, projectID)
+		/*keys*/ FROM audit_events WHERE project_id=$1
+		/*page*/`, "occurred_at", "id", projectID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "audit failed").Wrap(err)
 	}

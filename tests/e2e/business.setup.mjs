@@ -1,77 +1,85 @@
-// P6-03 环境准备：单容器 PG + MinIO + judex-server（生产 web dist）。
-// 幂等：复用已存在的容器；退出时清理。
-import { execSync, spawn } from "node:child_process";
-
-const PG = "judex-busy-pg";
-const MINIO = "judex-busy-minio";
-const SERVER_PORT = 18090;
-const run = (cmd) => execSync(cmd, { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
-
-function ensureContainer(name, args) {
-  let exists = false;
-  try { run(`docker inspect ${name}`); exists = true; } catch { exists = false; }
-  if (exists) {
-    try { run(`docker start ${name}`); } catch { /* already running */ }
-    return;
-  }
-  run(`docker run -d --name ${name} ${args}`);
-}
-
-async function main() {
-  // 幂等：已就绪的服务直接复用（端口占用时旧进程仍以磁盘静态文件服务新 dist）。
-  try {
-    const existing = await fetch(`http://127.0.0.1:${SERVER_PORT}/readyz`);
-    if (existing.ok) {
-      console.log(`business e2e server already ready on :${SERVER_PORT}`);
-      return;
-    }
-  } catch { /* not running */ }
-  // 生产 bundle 必须与当前源码一致（build:demo 会把 dist 覆盖为演示包）。
-  execSync("npm run build", { cwd: new URL("../../web/", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), stdio: "inherit" });
-  ensureContainer(PG, "-e POSTGRES_PASSWORD=busy -e POSTGRES_DB=judex -p 127.0.0.1::5432 postgres:17-alpine");
-  const minioImage = (() => {
-    try {
-      const lines = run(`docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}"`).split(String.fromCharCode(10));
-      return lines.find((l) => l.includes("minio") && !l.includes("mc")) ?? "";
-    } catch { return ""; }
-  })();
-  const minioRef = minioImage ? minioImage.split(" ")[1] : "quay.io/minio/minio:latest";
-  ensureContainer(MINIO, `--user root -e MINIO_ROOT_USER=judex -e MINIO_ROOT_PASSWORD=judex-busy -p 127.0.0.1::9000 ${minioRef} server /data`);
-  // docker port is quoting-friendly on Windows cmd (inspect --format is not).
-  const pgPort = run(`docker port ${PG} 5432`).split(":").pop().trim();
-  const s3Port = run(`docker port ${MINIO} 9000`).split(":").pop().trim();
-  try {
-    run(`docker exec ${MINIO} sh -c "mc alias set local http://127.0.0.1:9000 judex judex-busy && mc mb local/judex --ignore-existing"`);
-  } catch { /* bucket may exist */ }
-  const server = spawn("go", ["run", "./cmd/judex-server"], {
-    cwd: new URL("../../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"),
-    env: {
-      ...process.env,
-      JUDEX_ENV: "development",
-      JUDEX_HTTP_ADDR: `127.0.0.1:${SERVER_PORT}`,
-      JUDEX_WEB_DIR: "web/dist",
-      JUDEX_DATABASE_URL: `postgres://postgres:busy@127.0.0.1:${pgPort}/judex?sslmode=disable`,
-      JUDEX_ALLOWED_ORIGINS: `http://127.0.0.1:${SERVER_PORT}`,
-      JUDEX_S3_ENDPOINT: `http://127.0.0.1:${s3Port}`,
-      JUDEX_S3_ACCESS_KEY: "judex",
-      JUDEX_S3_SECRET_KEY: "judex-busy",
-      JUDEX_S3_BUCKET: "judex",
-      JUDEX_S3_PATH_STYLE: "true",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  server.stdout.on("data", (d) => process.env.JUDEX_E2E_VERBOSE && process.stderr.write(d));
-  server.stderr.on("data", (d) => process.stderr.write(d));
-  // Wait for readiness.
+// Each acceptance run owns its server, PostgreSQL and S3 containers.
+// Existing developer services and previous test containers are never reused.
+import { execFileSync, spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import net from "node:net";
+import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const root = fileURLToPath(new URL("../../", import.meta.url));
+const runId = `judex-e2e-${process.pid}-${Date.now()}`;
+const pg = `${runId}-pg`, s3 = `${runId}-s3`;
+const artifact = path.join(root, ".cache/e2e", runId);
+fs.mkdirSync(artifact, { recursive: true });
+const password = randomBytes(18).toString("hex");
+const run = (command, args, options = {}) => String(execFileSync(command, args, { cwd: root, encoding: "utf8", windowsHide: true, ...options }) ?? "").trim();
+const docker = (...args) => run("docker", args);
+const npm = process.env.npm_execpath || path.join(path.dirname(process.execPath), "node_modules/npm/bin/npm-cli.js");
+let server;
+async function waitFor(url) {
   const deadline = Date.now() + 60000;
   while (Date.now() < deadline) {
-    try {
-      const resp = await fetch(`http://127.0.0.1:${SERVER_PORT}/readyz`);
-      if (resp.ok) break;
-    } catch { /* retry */ }
-    await new Promise((r) => setTimeout(r, 500));
+    if (server?.exitCode != null) throw new Error("Acceptance server exited; inspect server.log");
+    try { if ((await fetch(url)).ok) return; } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  console.log(`business e2e server ready on :${SERVER_PORT}`);
+  throw new Error(`Readiness timed out: ${url}`);
 }
-
-main().catch((e) => { console.error(e); process.exit(1); });
+try {
+  run(process.execPath, [npm, "run", "build"], { stdio: "inherit" });
+  const executable = path.join(artifact, process.platform === "win32" ? "judex-server.exe" : "judex-server");
+  run("go", ["build", "-o", executable, "./cmd/judex-server"]);
+  const cli = path.join(artifact, process.platform === "win32" ? "judex.exe" : "judex");
+  run("go", ["build", "-o", cli, "./cmd/judex"]);
+  docker("run", "-d", "--rm", "--name", pg, "--label", `judex.test-run=${runId}`, "-e", `POSTGRES_PASSWORD=${password}`, "-e", "POSTGRES_DB=judex", "-p", "127.0.0.1::5432", "postgres:17-alpine");
+  docker("run", "-d", "--rm", "--name", s3, "--label", `judex.test-run=${runId}`, "-e", "MINIO_ROOT_USER=judex", "-e", `MINIO_ROOT_PASSWORD=${password}`, "-p", "127.0.0.1::9000", "quay.io/minio/minio:RELEASE.2025-06-13T11-33-47Z", "server", "/data");
+  const pgDeadline=Date.now()+60000;
+  for (;;) {
+    try { docker("exec",pg,"pg_isready","-h","127.0.0.1","-U","postgres","-d","judex"); break; }
+    catch { if(Date.now()>pgDeadline) throw new Error("PostgreSQL readiness timed out"); await new Promise((resolve)=>setTimeout(resolve,250)); }
+  }
+  const pgPort = docker("port", pg, "5432").split(":").at(-1);
+  const s3Port = docker("port", s3, "9000").split(":").at(-1);
+  await waitFor(`http://127.0.0.1:${s3Port}/minio/health/ready`);
+  const listener = net.createServer(); await new Promise((resolve) => listener.listen(0, "127.0.0.1", resolve));
+  const port = listener.address().port; await new Promise((resolve) => listener.close(resolve));
+  const base = `http://127.0.0.1:${port}`;
+  const env = { ...process.env, GIN_MODE: "release", JUDEX_ENV: "development", JUDEX_MODE: "all", JUDEX_HTTP_ADDR: `127.0.0.1:${port}`, JUDEX_WEB_DIR: "web/dist",
+    JUDEX_DATABASE_URL: `postgres://postgres:${password}@127.0.0.1:${pgPort}/judex?sslmode=disable`, JUDEX_ALLOWED_ORIGINS: base, JUDEX_PREVIEW_ORIGIN: `http://localhost:${port}`,
+    JUDEX_S3_ENDPOINT: `http://127.0.0.1:${s3Port}`, JUDEX_S3_ACCESS_KEY: "judex", JUDEX_S3_SECRET_KEY: password, JUDEX_S3_BUCKET: "judex", JUDEX_S3_PATH_STYLE: "true",
+    JUDEX_REGISTER_PER_IP: "1000", JUDEX_MODEL_CATALOG_FILE: "", JUDEX_MODEL_PROTOCOL: "", JUDEX_OPENSANDBOX_ENDPOINT: "",
+  };
+  execFileSync(executable, ["objects", "init"], { env, windowsHide: true });
+  const log = fs.openSync(path.join(artifact, "server.log"), "w");
+  server = spawn(executable, [], { cwd: root, env, windowsHide: true, stdio: ["ignore", log, log] });
+  await waitFor(base + "/readyz");
+  run(process.execPath, [require.resolve("@playwright/test/cli"), "test", "--config", "tests/e2e/business.config.ts", ...process.argv.slice(2)], { env: { ...env, JUDEX_E2E_BASE_URL: base, JUDEX_E2E_CLI: cli, JUDEX_E2E_ARTIFACT: artifact, JUDEX_E2E_PG_CONTAINER:pg, JUDEX_E2E_RUN_ID:runId }, stdio: "inherit" });
+  // Stop API and workers before capturing a consistent business baseline.
+  await new Promise((resolve) => { server.once("exit", resolve); server.kill(); });
+  const baseline = JSON.parse(run(executable, ["verify-recovery"], { env }));
+  const dump = execFileSync("docker", ["exec", pg, "pg_dump", "-U", "postgres", "-Fc", "judex"], { windowsHide: true, maxBuffer: 128 * 1024 * 1024 });
+  fs.writeFileSync(path.join(artifact, "judex.pgdump"), dump);
+  docker("exec", pg, "createdb", "-U", "postgres", "restored");
+  execFileSync("docker", ["exec", "-i", pg, "pg_restore", "-U", "postgres", "-d", "restored", "--exit-on-error"], { input: dump, windowsHide: true });
+  // Exercise the installed backup command against real S3 and an empty restore bucket.
+  const archive = path.join(artifact, "objects.tar");
+  execFileSync(executable, ["objects", "export"], { env, cwd: root, windowsHide: true, stdio: ["ignore", fs.openSync(archive, "w"), "inherit"] });
+  execFileSync(executable, ["objects", "init"], { env: { ...env, JUDEX_S3_BUCKET: "restored" }, windowsHide: true });
+  execFileSync(executable, ["objects", "import"], { env: { ...env, JUDEX_S3_BUCKET: "restored" }, windowsHide: true, stdio: [fs.openSync(archive, "r"), "inherit", "inherit"] });
+  const restored = JSON.parse(run(executable, ["verify-recovery"], { env: { ...env, JUDEX_S3_BUCKET: "restored", JUDEX_DATABASE_URL: env.JUDEX_DATABASE_URL.replace("/judex?", "/restored?") } }));
+  if (JSON.stringify(restored) !== JSON.stringify(baseline)) throw new Error("Recovered database/material evidence differs from source");
+  fs.writeFileSync(path.join(artifact, "recovery-evidence.json"), JSON.stringify(restored, null, 2));
+  fs.writeFileSync(path.join(artifact, "manifest.json"), JSON.stringify({ runId, exitCode: 0, s3ArchiveRestoredAndVerified: true, postgresRestoredAndAllTablesMatched: true, verifiedMaterialEntries: restored.verifiedMaterialEntries }, null, 2));
+  console.log(`Business acceptance passed; evidence: ${artifact}`);
+} catch (error) {
+  process.exitCode = 1;
+  console.error(error.message.replaceAll(password, "[test credential]"));
+  console.error(`Evidence: ${artifact}`);
+} finally {
+  if (server && server.exitCode == null) server.kill();
+  for (const name of [pg, s3]) {
+    try { const info = JSON.parse(docker("inspect", name))[0]; if (info.Config.Labels?.["judex.test-run"] === runId) docker("rm", "-f", name); } catch {}
+  }
+}

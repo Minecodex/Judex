@@ -5,6 +5,7 @@ package project
 import (
 	"context"
 	"errors"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,9 +23,9 @@ func (s *Service) ListInvitations(ctx context.Context, requester, projectID uuid
 	if _, err := s.MembershipFor(ctx, requester, projectID); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT i.id, i.target_email_normalized, i.target_user_id, i.state, i.inviter_user_id, i.expires_at, i.accepted_user_id
-		FROM project_invitations i WHERE i.project_id=$1 ORDER BY i.created_at DESC LIMIT 100`, projectID)
+		/*keys*/ FROM project_invitations i WHERE i.project_id=$1 /*page*/`, "i.created_at", "i.id", projectID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "invitations failed").Wrap(err)
 	}
@@ -43,7 +44,7 @@ func (s *Service) ListInvitations(ctx context.Context, requester, projectID uuid
 // RevokeInvitation (manager) invalidates a pending invite.
 func (s *Service) RevokeInvitation(ctx context.Context, requester, projectID, invitationID uuid.UUID) error {
 	return s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		role, err := s.MembershipForTx(ctx, tx, requester, projectID)
@@ -78,13 +79,30 @@ func (s *Service) ResolveInvitationByToken(ctx context.Context, requester uuid.U
 	err := s.pool.QueryRow(ctx, `
 		SELECT i.id, i.project_id, i.target_email_normalized, i.state, i.expires_at
 		FROM project_invitations i WHERE i.token_hash=$1`, keys.Hash(token)).
-		Scan(&inv.ID, &inv.projectID, &inv.TargetEmail, &inv.State, &expiresAt)
+		Scan(&inv.ID, &inv.ProjectID, &inv.TargetEmail, &inv.State, &expiresAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Invitation{}, "", apierrors.New(apierrors.NotFound, "invitation not found")
 	}
 	if err != nil {
 		return Invitation{}, "", apierrors.New(apierrors.Internal, "resolve failed").Wrap(err)
 	}
+	inv.ExpiresAt = expiresAt
+	if err := s.pool.QueryRow(ctx, `SELECT title FROM projects WHERE id=$1`, inv.ProjectID).Scan(&inv.ProjectTitle); err != nil {
+		return Invitation{}, "", err
+	}
+	rows, err := s.pool.Query(ctx, `SELECT p.name FROM invitation_positions ip JOIN position_templates p ON p.id=ip.position_template_id WHERE ip.invitation_id=$1 ORDER BY p.name`, inv.ID)
+	if err != nil {
+		return Invitation{}, "", err
+	}
+	for rows.Next() {
+		var name string
+		if err = rows.Scan(&name); err != nil {
+			rows.Close()
+			return Invitation{}, "", err
+		}
+		inv.PositionNames = append(inv.PositionNames, name)
+	}
+	rows.Close()
 	var email string
 	if err := s.pool.QueryRow(ctx, `SELECT email_normalized FROM users WHERE id=$1`, requester).Scan(&email); err != nil {
 		return Invitation{}, "", apierrors.New(apierrors.Internal, "user lookup failed").Wrap(err)
@@ -153,7 +171,7 @@ func (s *Service) AcceptInvitation(ctx context.Context, requester uuid.UUID, inv
 		if email != targetEmail {
 			return apierrors.New(apierrors.Forbidden, "登录邮箱与受邀邮箱不一致")
 		}
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		// Positions must still exist and be active.
@@ -284,11 +302,11 @@ func (s *Service) ListMyInvitations(ctx context.Context, requester uuid.UUID) ([
 	if err := s.pool.QueryRow(ctx, `SELECT email_normalized FROM users WHERE id=$1`, requester).Scan(&email); err != nil {
 		return nil, apierrors.New(apierrors.Internal, "user lookup failed").Wrap(err)
 	}
-	rows, err := s.pool.Query(ctx, `
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT i.id, i.project_id, i.target_email_normalized, i.state, i.inviter_user_id, i.expires_at
-		FROM project_invitations i
+		/*keys*/ FROM project_invitations i
 		WHERE i.target_email_normalized=$1 AND i.state='pending' AND i.expires_at>$2
-		ORDER BY i.created_at DESC LIMIT 50`, email, s.now())
+		/*page*/`, "i.created_at", "i.id", email, s.now())
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "invitations failed").Wrap(err)
 	}
@@ -296,7 +314,7 @@ func (s *Service) ListMyInvitations(ctx context.Context, requester uuid.UUID) ([
 	var out []Invitation
 	for rows.Next() {
 		var inv Invitation
-		if err := rows.Scan(&inv.ID, &inv.projectID, &inv.TargetEmail, &inv.State, &inv.InviterUserID, &inv.ExpiresAt); err != nil {
+		if err := rows.Scan(&inv.ID, &inv.ProjectID, &inv.TargetEmail, &inv.State, &inv.InviterUserID, &inv.ExpiresAt); err != nil {
 			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
 		}
 		out = append(out, inv)
@@ -334,7 +352,7 @@ func (s *Service) UpdateMyPreferences(ctx context.Context, requester, projectID 
 	}
 	var out PersonalPreferences
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := s.MembershipForTx(ctx, tx, requester, projectID); err != nil {

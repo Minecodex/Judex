@@ -134,7 +134,7 @@ func (p *AnthropicProvider) Stream(ctx context.Context, req Request) (<-chan Eve
 	}
 	for _, tool := range req.Tools {
 		body.Tools = append(body.Tools, anthropicTool{
-			Name: tool.Name, InputSchema: tool.InputSchema,
+			Name: tool.Name, Description: tool.Description, InputSchema: tool.InputSchema,
 		})
 	}
 	raw, _ := json.Marshal(body)

@@ -88,7 +88,7 @@ func (c *Coordinator) AnalyzeWithPositions(ctx context.Context, projectID, mater
 		ProjectID: uuid.MustParse(projectID),
 		ModelName: c.ModelName,
 		Manifest:  agentcontext.Build(facts),
-		Budget:    runner.Budget{MaxRounds: 1, MaxModelAttempts: 12, MaxTotalTokens: 300000, MaxWallClock: 5 * time.Minute},
+		Budget:    runner.Budget{MaxRounds: 1, MaxModelAttempts: 12, MaxTotalTokens: runner.BatchMaxTotalTokens, MaxWallClock: 5 * time.Minute},
 	})
 
 	result := CoordinatorResult{

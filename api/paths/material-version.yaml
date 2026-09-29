@@ -1,0 +1,80 @@
+paths:
+  /projects/{projectId}/material-versions/{versionId}:
+    get:
+      operationId: getMaterialVersionById
+      summary: 按固定版本读取材料清单
+      tags:
+        - materials
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 不可变材料版本与清单
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/discussion.yaml#/components/schemas/MaterialVersion
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/RequestMeta
+        '404':
+          $ref: ../components/common.yaml#/components/responses/NotFound
+  /projects/{projectId}/material-versions/{versionId}/content:
+    get:
+      operationId: downloadMaterialVersionById
+      summary: 版本内容下载（鉴权代理，支持 Range）
+      tags:
+        - materials
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Range
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: entry
+          in: query
+          required: false
+          description: HTML 包内的相对路径条目。
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 内容流。
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: 范围内容。
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: ../components/common.yaml#/components/responses/NotFound

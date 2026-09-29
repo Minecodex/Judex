@@ -55,6 +55,16 @@ for (const f of fs.readdirSync(path.join(apiDir, 'paths')).filter((f) => f.endsW
   }
 }
 
+// Authentication errors are part of every protected operation's contract.
+for (const item of Object.values(paths)) for (const method of ['get','post','put','patch','delete','head','options']) {
+ const op=item[method]; if(!op)continue;
+ if(op.security?.length) {
+  op.responses ??= {};
+  op.responses['401'] ??= {$ref:'#/components/responses/Unauthorized'};
+  op.responses['403'] ??= {$ref:'#/components/responses/Forbidden'};
+ }
+}
+
 const body = yamlDump(
   { paths, components: { ...components, securitySchemes } },
   { lineWidth: 120, noRefs: true },

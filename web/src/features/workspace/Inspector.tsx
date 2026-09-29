@@ -1,8 +1,11 @@
+import { ProjectConfiguration } from "../projects/ProjectConfiguration";
+import { MaterialsBrowser } from "../projects/MaterialsBrowser";
 import { Maximize2, Minimize2, X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { usePreferences } from "../../stores/preferences";
 import { translate, type Key } from "../../i18n";
 import { WorkPanel } from "../work/WorkPanel";
+import { TeamSettings } from "../projects/TeamSettings";
 import { MaterialsPanel, TeamPanel } from "../projects/ProjectWorkspace";
 import type { PanelView } from "./tabs";
 
@@ -15,6 +18,7 @@ export function Inspector({
   expanded,
   onExpand,
   onClose,
+  onOpenHandoff,
 }: {
   projectId: string;
   view: PanelView;
@@ -22,6 +26,7 @@ export function Inspector({
   expanded: boolean;
   onExpand: () => void;
   onClose: () => void;
+  onOpenHandoff?: (id: string) => void;
 }) {
   const { locale } = usePreferences();
   const t = (key: Key) => translate(locale, key);
@@ -67,9 +72,9 @@ export function Inspector({
         </div>
       </header>
       <div className="judex-inspector-body" hidden={false}>
-        {view === "work" && <WorkPanel projectId={projectId} />}
-        {view === "materials" && <MaterialsPanel projectId={projectId} />}
-        {view === "team" && <TeamPanel projectId={projectId} />}
+        {view === "work" && <WorkPanel projectId={projectId} onOpenHandoff={onOpenHandoff} />}
+        {view === "materials" && <MaterialsBrowser projectId={projectId} />}
+        {view === "team" && <><TeamPanel projectId={projectId} /><TeamSettings projectId={projectId} /></>}
       </div>
     </aside>
   );

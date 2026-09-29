@@ -3,7 +3,9 @@
 package httptransport
 
 import (
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +18,7 @@ type respond struct{}
 
 func (respond) data(c *gin.Context, status int, data any) {
 	c.JSON(status, gin.H{
-		"data": data,
+		"data": normalizeCollections(data),
 		"meta": gin.H{
 			"requestId":  c.GetString(requestIDKey),
 			"serverTime": time.Now().UTC().Format(time.RFC3339Nano),
@@ -30,7 +32,7 @@ func (respond) ok(c *gin.Context, data any)      { respond{}.data(c, http.Status
 // affected attaches the command result list [{type,id,version}] to the response.
 func (r respond) affected(c *gin.Context, status int, data any, affected []gin.H) {
 	c.JSON(status, gin.H{
-		"data": data,
+		"data": normalizeCollections(data),
 		"meta": gin.H{
 			"requestId":  c.GetString(requestIDKey),
 			"serverTime": time.Now().UTC().Format(time.RFC3339Nano),
@@ -42,6 +44,13 @@ func (r respond) affected(c *gin.Context, status int, data any, affected []gin.H
 // error writes the error envelope {error:{code,message,details,retryable},requestId}.
 func (respond) error(c *gin.Context, err error) {
 	apiErr := apierrors.From(err)
+	details := apiErr.Details
+	if details == nil {
+		details = gin.H{}
+	}
+	if apiErr.CommitResult {
+		c.Set("judex.commit_conflict", true)
+	}
 	if apiErr.Code == apierrors.Internal {
 		c.AbortWithStatusJSON(apiErr.HTTPStatus(), gin.H{
 			"error": gin.H{
@@ -57,7 +66,7 @@ func (respond) error(c *gin.Context, err error) {
 		"error": gin.H{
 			"code":      string(apiErr.Code),
 			"message":   apiErr.Message,
-			"details":   apiErr.Details,
+			"details":   details,
 			"retryable": apiErr.Retryable,
 		},
 		"requestId": c.GetString(requestIDKey),
@@ -65,7 +74,13 @@ func (respond) error(c *gin.Context, err error) {
 }
 
 // list is the paginated data shape {items,nextCursor}.
-func (respond) list(items any, nextCursor *string) gin.H {
+func (respond) list(c *gin.Context, items any, nextCursor *string) gin.H {
+	if items == nil || (reflect.ValueOf(items).Kind() == reflect.Slice && reflect.ValueOf(items).IsNil()) {
+		items = []any{}
+	}
+	if nextCursor == nil {
+		nextCursor = paging.Next(c.Request.Context())
+	}
 	cursor := ""
 	if nextCursor != nil {
 		cursor = *nextCursor

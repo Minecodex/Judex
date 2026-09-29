@@ -3,6 +3,7 @@ package integrationtest_test
 
 import (
 	"context"
+	"github.com/google/uuid"
 	"testing"
 
 	"github.com/kakj-go/Judex/internal/identity"
@@ -53,42 +54,59 @@ func TestDeviceFlowAndRotation(t *testing.T) {
 	if err != nil || state != 4 { // PollCompleted
 		t.Fatalf("poll after approve: state=%d err=%v", state, err)
 	}
-	if refresh == "" {
+	if refresh.AccessToken == "" || refresh.RefreshToken == refresh.AccessToken {
 		t.Fatal("completed poll must return a token")
 	}
 	// Grant resolves with narrowed scope only.
-	principal, err := svc.ResolveGrant(ctx, refresh)
+	principal, err := svc.ResolveGrant(ctx, refresh.AccessToken)
 	if err != nil || principal.Kind != auth.KindCLI || !principal.HasScope(auth.ScopeProjectsRead) {
 		t.Fatalf("grant resolve: %v %+v", err, principal)
+	}
+	if principal.InProjectScope(uuid.New()) {
+		t.Fatal("empty grant scope was interpreted as all projects")
 	}
 	if principal.HasScope(auth.ScopeMaterialsWrite) {
 		t.Fatal("narrowed scope must not include materials:write")
 	}
 	// Rotation: old token works once, replay revokes family.
-	rotated, err := svc.RotateRefreshToken(ctx, refresh)
-	if err != nil || rotated == "" || rotated == refresh {
+	rotated, err := svc.RotateRefreshToken(ctx, refresh.RefreshToken)
+	if err != nil || rotated.AccessToken == "" || rotated.RefreshToken == refresh.RefreshToken {
 		t.Fatalf("rotate: %v", err)
 	}
-	if _, err := svc.RotateRefreshToken(ctx, refresh); errors.IsCode(err, errors.GrantRevoked) == false {
+	if _, err := svc.RotateRefreshToken(ctx, refresh.RefreshToken); errors.IsCode(err, errors.GrantRevoked) == false {
 		t.Fatalf("replay must revoke family, got %v", err)
 	}
 	// The rotated token is dead too (family revoked).
-	if _, err := svc.ResolveGrant(ctx, rotated); errors.IsCode(err, errors.GrantRevoked) == false {
+	if _, err := svc.ResolveGrant(ctx, rotated.AccessToken); errors.IsCode(err, errors.GrantRevoked) == false {
 		t.Fatalf("family revoke must kill rotated token, got %v", err)
 	}
-	// Fresh grant: explicit revoke kills it immediately.
-	_, userCode2, _, _, err := svc.StartDeviceAuthorization(ctx, "终端2", scopes, nil)
+	if _, err := svc.ResolveGrant(ctx, refresh.RefreshToken); !errors.IsCode(err, errors.Unauthenticated) {
+		t.Fatalf("refresh accepted as bearer: %v", err)
+	}
+	if _, _, err := svc.PollDeviceToken(ctx, deviceCode); err == nil {
+		t.Fatal("device code minted duplicate credentials")
+	}
+	dc2, userCode2, _, _, err := svc.StartDeviceAuthorization(ctx, "终端2", scopes, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.ConfirmDeviceAuthorization(ctx, user.ID, userCode2, true, nil); err != nil {
+	if err = svc.ConfirmDeviceAuthorization(ctx, user.ID, userCode2, true, nil); err != nil {
 		t.Fatal(err)
 	}
-	_, refresh2, err := svc.PollDeviceToken(ctx, deviceCode[:0])
-	_ = refresh2
-	// (poll uses its own device code; use the second code via full flow)
-	dc2 := deviceCode // placeholder to keep variables used
-	_ = dc2
+	_, pair2, err := svc.PollDeviceToken(ctx, dc2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	principal2, err := svc.ResolveGrant(ctx, pair2.AccessToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = svc.RevokeGrant(ctx, user.ID, principal2.GrantID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = svc.ResolveGrant(ctx, pair2.AccessToken); !errors.IsCode(err, errors.GrantRevoked) {
+		t.Fatalf("revocation did not kill access: %v", err)
+	}
 	// Deny path.
 	_, userCode3, _, _, err := svc.StartDeviceAuthorization(ctx, "终端3", scopes, nil)
 	if err != nil {

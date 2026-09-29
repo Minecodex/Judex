@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { request } from "../../lib/api/client";
 
 // 三栏工作区的真实 API 资源（openapi.yaml 议题/消息/提交/Agent 运行/交接）。
@@ -69,6 +70,9 @@ export type ApiRun = {
 };
 
 export type ApiHandoffSource = {
+ summary?: string;
+ reportId?: string | null;
+ evidence?: { reports: import("../work/ReviewDetails").EvidenceReview["reports"] };
   id: string;
   sourceTaskId: string;
   senderIdentityId: string;
@@ -125,16 +129,15 @@ export function useTopics(projectId: string) {
 }
 
 export function useMessages(projectId: string, topicId: string | null) {
-  return useQuery({
-    queryKey: ["messages", projectId, topicId],
-    enabled: !!topicId,
-    // SSE 为主；轮询兜底（SSE 断连期间仍保持可用）。
+  const query = useInfiniteQuery({
+    queryKey: ["messages", projectId, topicId], enabled: !!topicId, initialPageParam: 0,
     refetchInterval: 5000,
-    queryFn: () =>
-      request<List<ApiMessage>>(
-        `/projects/${projectId}/topics/${topicId}/messages?limit=100`,
-      ),
+    queryFn: ({ pageParam }) => request<List<ApiMessage>>(`/projects/${projectId}/topics/${topicId}/messages?limit=100${pageParam ? `&beforeSeq=${pageParam}` : ""}`),
+    getNextPageParam: (last) => { const first = last.items?.[0]?.seq; return last.items?.length === 100 && first && first > 1 ? first : undefined; },
   });
+  const unique = new Map<string, ApiMessage>();
+  for (const page of query.data?.pages ?? []) for (const message of page.items ?? []) unique.set(message.id, message);
+  return { ...query, data: query.data ? { items: [...unique.values()] } : undefined };
 }
 
 export function useHandoffs(projectId: string) {
@@ -177,13 +180,16 @@ export function useCreateTopic(projectId: string) {
 // 发消息走统一提交入口：clientSubmissionId 幂等 + Idempotency-Key。
 export function useSendMessage(projectId: string, topicId: string) {
   const client = useQueryClient();
+  const pending = useRef<{ signature: string; id: string } | null>(null);
   return useMutation({
-    mutationFn: (text: string) => {
+    mutationFn: (input: { text: string; materialVersionIds: string[] }) => {
+      const signature = JSON.stringify(input);
+      if (pending.current?.signature !== signature) pending.current = { signature, id: crypto.randomUUID() };
       const body = JSON.stringify({
-        clientSubmissionId: crypto.randomUUID(),
+        clientSubmissionId: pending.current!.id,
         purpose: "message",
         topicId,
-        text,
+        ...input,
       });
       return request<ApiSubmission>(`/projects/${projectId}/submissions`, {
         method: "POST",
@@ -192,6 +198,7 @@ export function useSendMessage(projectId: string, topicId: string) {
       });
     },
     onSuccess: () => {
+      pending.current = null;
       void client.invalidateQueries({ queryKey: ["messages", projectId, topicId] });
       void client.invalidateQueries({ queryKey: ["topics", projectId] });
     },

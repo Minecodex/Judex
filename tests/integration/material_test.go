@@ -22,8 +22,8 @@ import (
 // memStore is an in-memory ObjectStore fake for integration tests (real PG,
 // fake objects — object-level behavior is covered by deploy-time checks).
 type memStore struct {
-	mu    sync.Mutex
-	data  map[string][]byte
+	mu   sync.Mutex
+	data map[string][]byte
 }
 
 func newMemStore() *memStore { return &memStore{data: map[string][]byte{}} }
@@ -250,6 +250,14 @@ func TestHTMLBundlePreviewIsolation(t *testing.T) {
 	if err != nil || !strings.Contains(preview2.PreviewURL, version.ID.String()) {
 		t.Fatalf("preview with origin: %v %+v", err, preview2)
 	}
+	sessionToken, err := svc.ExchangePreview(ctx, preview2.Token, version.ID)
+	if err != nil || sessionToken == "" {
+		t.Fatalf("exchange: %v", err)
+	}
+	if _, err = svc.ExchangePreview(ctx, preview2.Token, version.ID); err == nil {
+		t.Fatal("one-time token replay succeeded")
+	}
+	preview2.Token = sessionToken
 	// Token opens only manifest entries; traversal and foreign entries rejected.
 	if _, _, err := svc.PreviewOpen(ctx, preview2.Token, version.ID, "../secret"); err == nil {
 		t.Fatal("traversal entry must be rejected in preview open")
@@ -257,8 +265,8 @@ func TestHTMLBundlePreviewIsolation(t *testing.T) {
 	if _, _, err := svc.PreviewOpen(ctx, preview2.Token, version.ID, "not-in-manifest"); err == nil {
 		t.Fatal("entry outside manifest must 404")
 	}
-	body, mime, err := svc.PreviewOpen(ctx, preview2.Token, version.ID, "part-000001")
-	if err != nil || mime != "text/html" {
+	body, mime, err := svc.PreviewOpen(ctx, preview2.Token, version.ID, "index.html")
+	if err != nil || !strings.HasPrefix(mime, "text/html") {
 		t.Fatalf("preview open: %v %s", err, mime)
 	}
 	raw, _ := io.ReadAll(body)

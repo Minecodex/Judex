@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { apiUrl } from "./client";
+import { apiUrl, request } from "./client";
 import {
   PROJECT_EVENT_TYPES,
   invalidationRoots,
@@ -26,9 +26,9 @@ export type ProjectEventRow = {
 export function useProjectEvents(projectId: string | null, cursor: number | undefined) {
   const client = useQueryClient();
   const cursorRef = useRef<number | undefined>(cursor);
-  if (cursor !== undefined && cursor > (cursorRef.current ?? 0)) {
-    cursorRef.current = cursor;
-  }
+  const projectRef = useRef(projectId);
+  if (projectRef.current !== projectId) { projectRef.current = projectId; cursorRef.current = cursor; }
+  if (cursorRef.current === undefined && cursor !== undefined) cursorRef.current = cursor;
   const [connected, setConnected] = useState(false);
   const [generation, setGeneration] = useState(0);
   const failures = useRef(0);
@@ -41,6 +41,8 @@ export function useProjectEvents(projectId: string | null, cursor: number | unde
       (after && after > 0 ? `?after=${after}` : "");
     const source = new EventSource(url, { withCredentials: true });
     let lastSeq = after ?? 0;
+    let disposed = false;
+    const recovery = new AbortController();
 
     const handle = (event: MessageEvent<string>) => {
       failures.current = 0;
@@ -51,7 +53,8 @@ export function useProjectEvents(projectId: string | null, cursor: number | unde
       } catch {
         return; // 无效帧按未知事件处理，不失效
       }
-      if (row.seq > lastSeq) lastSeq = row.seq;
+      if (row.projectId !== projectId || row.seq <= lastSeq) return;
+      lastSeq = row.seq;
       cursorRef.current = lastSeq;
       for (const root of invalidationRoots(row.type)) {
         void client.invalidateQueries({ queryKey: [root, projectId] });
@@ -75,18 +78,23 @@ export function useProjectEvents(projectId: string | null, cursor: number | unde
       if (failures.current >= 5) {
         failures.current = 0;
         source.close();
-        cursorRef.current = 0;
-        void client.invalidateQueries({ queryKey: [projectId] });
-        setGeneration((value) => value + 1);
+        void request<{ eventCursor: number }>(`/projects/${projectId}/bootstrap`, { signal: recovery.signal })
+          .then((snapshot) => {
+            if (disposed) return;
+            cursorRef.current = snapshot.eventCursor;
+            void client.invalidateQueries({ predicate: (query) => query.queryKey[1] === projectId });
+          }).catch(() => undefined).finally(() => { if (!disposed) setGeneration((value) => value + 1); });
       }
     };
     return () => {
+      disposed = true;
+      recovery.abort();
       source.close();
       setConnected(false);
       for (const [type, listener] of listeners)
         source.removeEventListener(type, listener);
     };
-  }, [projectId, client, generation]);
+  }, [projectId, client, generation, cursor]);
 
   return connected;
 }

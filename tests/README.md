@@ -1,15 +1,18 @@
 # 测试入口
 
-测试代码统一放在本目录，构建产物和报告忽略提交。
-
-| 目录 | 命令 | 当前覆盖 |
+| 范围 | 命令 | 覆盖 |
 | --- | --- | --- |
-| backend | `go test ./tests/backend` | 配置、探针、退出就绪状态、静态文件、API 错误边界 |
-| deploy | `go test ./tests/deploy` | 内置 / 外部 PG 与 S3 四种组合、OpenSandbox 命名空间与单活、无效配置 |
-| web | `npm run test:web` | 原型业务状态规则与卡片树布局 |
-| e2e | `npm run build` 后 `npm run test:e2e` | 真实 Gin 壳层、无假注册、生产模式、交接 / 验收 / 流程等交互 |
-| k8s | `node tests/k8s/smoke.mjs` | 临时 namespace 部署与 HTTP 探针，需集群和可拉取镜像 |
+| Go | `go test ./...`、`go vet ./...` | 领域、HTTP 契约、真实 PG、模型/沙箱受控测试；live 测试另需真实配置 |
+| Web | `npm run test:web` | 40 条状态、认证及布局单测 |
+| 浏览器全套 | `npm run test:e2e` | 桌面 demo 与真实生产业务两套入口 |
+| 生产浏览器 | `node tests/e2e/business.setup.mjs` | 真实 PG/S3、18 条生产 E2E、CLI、全表/对象恢复校验 |
+| 部署模板 | `go test ./tests/deploy` | 四种 PG/S3 配置、资源边界和无效配置 |
+| K8s 探针 | `node tests/k8s/smoke.mjs` | 指定 JUDEX_TEST_IMAGE，临时 namespace 部署与生产 capability 检查 |
+| K8s 矩阵 | `node tests/k8s/matrix.mjs` | 包含 mock-gateway 的 JUDEX_TEST_IMAGE，四存储组合及组件故障；真实模型使用 live.mjs |
+| Skill 发现 | `node tests/skill-hosts.mjs` | 原生安装卸载、实际 Codex app-server 发现；无模型调用 |
+| AI 宿主 | `node tests/skill-agent-hosts.mjs` | 需明确授权及 JUDEX_RUN_AGENT_HOST_TESTS=1；限定隔离目录会话，尚未运行 |
+| 发行 | `node tests/release.mjs dist/release/VERSION` | 全包校验和、本机包解压/版本、附带 Skill 安装卸载 |
 
-浏览器测试默认使用 Microsoft Edge。也可以 `npx playwright install chromium`，把 `PLAYWRIGHT_CHANNEL` 设为 `chromium` 后运行。测试管理 18080 / 5174 两个独立端口，不复用开发进程。报告在 `tests/reports/e2e`，失败截图 / trace 在 `tests/results/e2e`。
+浏览器默认 Microsoft Edge，可用 PLAYWRIGHT_CHANNEL=chromium。测试使用独立端口、容器和带所有权标签的 namespace，日志/trace/备份放在忽略的 .cache 或 tests/results。不得将依赖缺失导致的 skip 算作实测通过。
 
-Helm 缺失时 Go 测试会显式跳过，不能把此时的 Go 成功视为 Helm 验证。K8s 测试需要已有兼容 OpenSandbox Operator / CRD，使用独立 namespace，不部署第二个集群 Controller，不停止正常业务服务。容器启动与沙箱执行须在可用集群继续验收，浏览器预览测试不能替代服务端业务事务测试。
+K8s 测试需要已存在的兼容 Operator/CRD，不部署第二个 Controller，不停止业务服务；finally 按所有权清理。当前证据及剩余边界见 [验收报告](../docs/plans/v1/FINAL-REPORT.md)。

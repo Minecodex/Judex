@@ -1,3 +1,5 @@
+import { UIFilePicker } from "../../components/ui/FormControls";
+import { uploadFile } from "../projects/upload";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TextArea } from "@heroui/react";
 import { Bot, Send, User } from "lucide-react";
@@ -34,7 +36,10 @@ export function TopicConversation({
   const [runId, setRunId] = useState<string | null>(null);
   const run = useAgentRun(projectId, runId);
   const [draft, setDraft] = useState("");
-  const draftKey = "judex.ws.draft." + projectId + ":" + topicId;
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const draftKey = "judex.ws.draft." + user?.id + ":" + projectId + ":" + topicId;
   const bottom = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -62,19 +67,17 @@ export function TopicConversation({
     bottom.current?.scrollIntoView({ block: "end" });
   }, [items.length, run.data?.state]);
 
-  const submit = () => {
+  const submit = async () => {
     const text = draft.trim();
-    if (!text || send.isPending) return;
-    send.mutate(text, {
-      onSuccess: () => {
-        setDraft("");
-        try {
-          sessionStorage.removeItem(draftKey);
-        } catch {
-          /* 忽略 */
-        }
-      },
-    });
+    if ((!text && !files.length) || send.isPending || uploading) return;
+    setUploading(true); setUploadError("");
+    try {
+      const materialVersionIds: string[] = [];
+      for (const file of files) materialVersionIds.push((await uploadFile(projectId, file)).id);
+      await send.mutateAsync({ text, materialVersionIds });
+      setDraft(""); setFiles([]); sessionStorage.removeItem(draftKey);
+    } catch (error) { setUploadError(error instanceof Error ? error.message : String(error)); }
+    finally { setUploading(false); }
   };
 
   const saveDraft = (value: string) => {
@@ -106,6 +109,7 @@ export function TopicConversation({
         {messages.isSuccess && !items.length && (
           <div className="judex-chat-empty-hint">{t("wsMessagesEmpty")}</div>
         )}
+        {messages.hasNextPage && <Button isPending={messages.isFetchingNextPage} onPress={() => { void messages.fetchNextPage(); }}>{t("paEarlier")}</Button>}
         {items.map((message) => (
           <MessageRow key={message.id} message={message} ownName={user?.displayName} />
         ))}
@@ -121,7 +125,7 @@ export function TopicConversation({
         )}
         {run.data?.state === "failed" && (
           <p className="judex-run-status judex-run-failed" role="alert">
-            {t("wsRunFailed", { reason: run.data.waitingFor.join(", ") || "unknown" })}
+            {t("wsRunFailed", { reason: (run.data.waitingFor ?? []).join(", ") || "unknown" })}
           </p>
         )}
         <div ref={bottom} />
@@ -147,6 +151,9 @@ export function TopicConversation({
         {!lastOwnSubmission && (
           <span className="judex-chat-empty-hint">{t("wsNoAnalysisSource")}</span>
         )}
+        <UIFilePicker multiple aria-label={t("paAttachments")} onChange={(e) => setFiles(Array.from(e.target.files ?? []).slice(0, 20))}>{t("paAttachments")}</UIFilePicker>
+        {files.map((file) => <small key={file.name}>{file.name}</small>)}
+        {uploadError && <p role="alert">{uploadError}</p>}
         <TextArea
           aria-label={t("wsComposer")}
           placeholder={t("wsComposer")}
@@ -164,8 +171,8 @@ export function TopicConversation({
         />
         <Button
           data-testid="ws-send"
-          isPending={send.isPending}
-          disabled={!draft.trim()}
+          isPending={send.isPending || uploading}
+          disabled={(!draft.trim() && !files.length) || uploading}
           onClick={submit}
         >
           <Send size={15} />

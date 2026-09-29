@@ -8,5 +8,20 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- define "judex.pgHost" -}}{{ if .Values.postgresql.embedded.enabled }}{{ .Release.Name }}-postgresql{{ else }}{{ required "External PostgreSQL host is required" .Values.postgresql.external.host }}{{ end }}{{- end -}}
 {{- define "judex.storageSecret" -}}{{ if .Values.objectStorage.embedded.enabled }}judex-storage-auth{{ else }}{{ required "External S3 existingSecret is required" .Values.objectStorage.external.existingSecret }}{{ end }}{{- end -}}
 {{- define "judex.databaseURL" -}}postgres://{{ .Values.postgresql.username }}:$(JUDEX_PG_PASSWORD)@{{ include "judex.pgHost" . }}:{{ .Values.postgresql.embedded.enabled | ternary "5432" (.Values.postgresql.external.port | toString) }}/{{ .Values.postgresql.database }}{{ if not .Values.postgresql.embedded.enabled }}?sslmode={{ .Values.postgresql.external.sslMode }}{{ else }}?sslmode=disable{{ end }}{{- end -}}
-{{- define "judex.s3Endpoint" -}}{{ if .Values.objectStorage.embedded.enabled }}http://{{ .Release.Name }}-seaweedfs:8333{{ else }}{{ required "External S3 endpoint is required" .Values.objectStorage.external.endpoint }}{{ end }}{{- end -}}
+{{- define "judex.s3Endpoint" -}}{{ if .Values.objectStorage.embedded.enabled }}http://{{ .Release.Name }}-seaweedfs.{{ .Release.Namespace }}.svc.cluster.local:8333{{ else }}{{ required "External S3 endpoint is required" .Values.objectStorage.external.endpoint }}{{ end }}{{- end -}}
 {{- define "judex.s3Bucket" -}}{{ if .Values.objectStorage.embedded.enabled }}judex{{ else }}{{ required "External S3 bucket is required" .Values.objectStorage.external.bucket }}{{ end }}{{- end -}}
+
+{{- define "judex.waitForPostgres" -}}
+- name: wait-postgres
+  image: {{ .Values.postgresql.embedded.image | quote }}
+  command: [sh, -c, 'until pg_isready -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DATABASE"; do sleep 2; done']
+  securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+  env:
+    - {name: PG_HOST, value: {{ include "judex.pgHost" . | quote }}}
+    - {name: PG_PORT, value: {{ .Values.postgresql.embedded.enabled | ternary "5432" (.Values.postgresql.external.port | toString) | quote }}}
+    - {name: PG_USER, value: {{ .Values.postgresql.username | quote }}}
+    - {name: PG_DATABASE, value: {{ .Values.postgresql.database | quote }}}
+  resources:
+    requests: {cpu: 10m, memory: 16Mi}
+    limits: {cpu: 100m, memory: 64Mi}
+{{- end -}}

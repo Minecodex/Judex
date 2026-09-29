@@ -49,7 +49,7 @@ func RegisterCallAgent(r *Registry, caller AgentCaller) {
 				return Result{}, fmt.Errorf("position 和 question 为必填")
 			}
 			// Timeout the sub-agent call.
-			callCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+			callCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 			defer cancel()
 			answer, err := caller.CallPositionAgent(callCtx, env.ProjectID, position, question, material)
 			if err != nil {

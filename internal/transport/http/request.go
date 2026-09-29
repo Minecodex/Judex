@@ -3,8 +3,10 @@
 package httptransport
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/getkin/kin-openapi/openapi3"
 	"io"
 	"net/http"
 
@@ -30,8 +32,22 @@ func bindJSON(c *gin.Context, target any) error {
 			return apierrors.New(apierrors.UnsupportedMedia, "Content-Type must be application/json")
 		}
 	}
-	body := http.MaxBytesReader(c.Writer, c.Request.Body, maxJSONBody)
-	decoder := json.NewDecoder(body)
+	raw, err := io.ReadAll(http.MaxBytesReader(c.Writer, c.Request.Body, maxJSONBody))
+	if err != nil {
+		return apierrors.New(apierrors.PayloadTooLarge, "request body too large")
+	}
+	if value, exists := c.Get("judex.requestSchema"); exists {
+		if schema, ok := value.(*openapi3.Schema); ok && schema != nil {
+			var object any
+			if err = json.Unmarshal(raw, &object); err != nil {
+				return apierrors.Fields("body", "invalid JSON")
+			}
+			if err = schema.VisitJSON(object); err != nil {
+				return apierrors.Fields("body", "schema").Wrap(err)
+			}
+		}
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(target); err != nil {
 		var maxErr *http.MaxBytesError
@@ -40,7 +56,8 @@ func bindJSON(c *gin.Context, target any) error {
 		}
 		return apierrors.New(apierrors.Validation, "invalid request body").Wrap(err)
 	}
-	if decoder.More() {
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
 		return apierrors.New(apierrors.Validation, "unexpected trailing content")
 	}
 	return nil

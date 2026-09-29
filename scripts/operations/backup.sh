@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
-# Judex 备份（docs/plans/v1/11 §6）：PG 自定义格式 + S3 对象清单 + 版本 manifest。
-# 用法: backup.sh <namespace> <release> <backup-dir>
+# Immutable object bytes are captured after the database snapshot.
+# Usage: backup.sh <namespace> <release> <backup-directory>
 set -euo pipefail
-NS="${1:?namespace}"; RELEASE="${2:?release}"; OUT="${3:?backup-dir}"
+umask 077
+NS="${1:?namespace}"; RELEASE="${2:?release}"; OUT="${3:?backup-directory}"
 CUTOFF="$(date -u +%Y%m%dT%H%M%SZ)"
-mkdir -p "${OUT}/${CUTOFF}"
-echo "==> PG dump"
-kubectl -n "${NS}" exec "${RELEASE}-postgresql-0" -- \
-  pg_dump -U judex -Fc -d judex > "${OUT}/${CUTOFF}/judex.pgdump"
-echo "==> S3 object inventory"
-kubectl -n "${NS}" exec "${RELEASE}-seaweedfs-0" -- \
-  sh -c "mc alias set local http://127.0.0.1:8333 \$(cat /run/secrets/storage/access-key) \$(cat /run/secrets/storage/secret-key) 2>/dev/null; mc ls --recursive local/judex" \
-  > "${OUT}/${CUTOFF}/objects.txt" || echo "(inventory best-effort)"
-cat > "${OUT}/${CUTOFF}/manifest.json" <<EOF
-{"cutoff":"${CUTOFF}","namespace":"${NS}","release":"${RELEASE}","pg":"judex.pgdump","objects":"objects.txt"}
-EOF
-echo "backup complete: ${OUT}/${CUTOFF}"
+DEST="${OUT}/${CUTOFF}"
+mkdir -p "${DEST}"
+PG_POD="${JUDEX_BACKUP_PG_POD:-${RELEASE}-postgresql-0}"
+kubectl -n "${NS}" exec "${PG_POD}" -- pg_dump -U judex -Fc -d judex > "${DEST}/judex.pgdump.partial"
+mv "${DEST}/judex.pgdump.partial" "${DEST}/judex.pgdump"
+kubectl -n "${NS}" exec "deployment/${RELEASE}" -- /app/judex-server objects export > "${DEST}/objects.tar.partial"
+mv "${DEST}/objects.tar.partial" "${DEST}/objects.tar"
+(cd "${DEST}" && sha256sum judex.pgdump objects.tar > SHA256SUMS)
+printf '{"format":1,"cutoff":"%s","pg":"judex.pgdump","objects":"objects.tar","checksums":"SHA256SUMS"}\n' "${CUTOFF}" > "${DEST}/manifest.json"
+echo "Backup complete: ${DEST}"

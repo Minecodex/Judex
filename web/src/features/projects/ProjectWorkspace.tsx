@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { usePreferences } from "../../stores/preferences";
 import { translate, type Key, type Locale } from "../../i18n";
 import { request, APIError } from "../../lib/api/client";
-import { errorKey } from "../auth/LoginPage";
+import { errorKey } from "../auth/errors";
 import { WorkPanel } from "../work/WorkPanel";
 
 export function errorText(locale: Locale, error: unknown): string {

@@ -312,3 +312,21 @@ paths:
                     $ref: '../components/common.yaml#/components/schemas/RequestMeta'
         '401':
           $ref: '../components/common.yaml#/components/responses/Unauthorized'
+
+  /auth/device/review:
+    get:
+      operationId: getDeviceAuthorization
+      tags: [auth]
+      summary: Review a pending device authorization
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: userCode, in: query, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Device name, requested scopes and expiry for human review.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {type: object, additionalProperties: true}

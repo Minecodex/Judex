@@ -1,0 +1,33 @@
+{{- if .Values.objectStorage.embedded.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "judex.name" . }}-storage-init-{{ .Release.Revision }}
+  labels: {{ include "judex.labels" . | nindent 4 }}
+spec:
+  backoffLimit: 10
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001}
+      containers:
+        - name: initialize
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [objects, init]
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          env:
+            - {name: JUDEX_S3_ENDPOINT, value: "http://{{ .Release.Name }}-seaweedfs.{{ .Release.Namespace }}.svc.cluster.local:8333"}
+            - {name: JUDEX_S3_BUCKET, value: judex}
+            - {name: JUDEX_S3_REGION, value: us-east-1}
+            - name: JUDEX_S3_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: judex-storage-auth, key: access-key}}
+            - name: JUDEX_S3_SECRET_KEY
+              valueFrom: {secretKeyRef: {name: judex-storage-auth, key: secret-key}}
+          resources:
+            requests: {cpu: 50m, memory: 32Mi}
+            limits: {cpu: 250m, memory: 128Mi}
+{{- end }}

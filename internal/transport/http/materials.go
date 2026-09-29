@@ -25,6 +25,8 @@ func NewMaterialHandlers(svc *material.Service) *MaterialHandlers {
 }
 
 func (h *MaterialHandlers) Register(spec *SpecRouter) {
+	spec.Register("getMaterialVersionById", withAuth(h.versionByID(false)))
+	spec.Register("downloadMaterialVersionById", withAuth(h.versionByID(true)))
 	spec.Register("listUploadSessions", withAuth(h.listSessions))
 	spec.Register("createUploadSession", withAuth(h.createSession))
 	spec.Register("uploadPart", withAuth(h.uploadPart))
@@ -77,7 +79,7 @@ func (h *MaterialHandlers) listSessions(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(sessions, nil))
+	respond{}.ok(c, respond{}.list(c, sessions, nil))
 }
 
 func (h *MaterialHandlers) createSession(c *gin.Context) {
@@ -229,7 +231,7 @@ func (h *MaterialHandlers) listMaterials(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(materials, nil))
+	respond{}.ok(c, respond{}.list(c, materials, nil))
 }
 
 func (h *MaterialHandlers) listVersions(c *gin.Context) {
@@ -249,7 +251,7 @@ func (h *MaterialHandlers) listVersions(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(versions, nil))
+	respond{}.ok(c, respond{}.list(c, versions, nil))
 }
 
 func (h *MaterialHandlers) download(c *gin.Context) {
@@ -270,17 +272,57 @@ func (h *MaterialHandlers) download(c *gin.Context) {
 		return
 	}
 	entry := c.Query("entry")
+	var body io.ReadCloser
+	var version material.MaterialVersion
 	if entry == "" {
-		entry = "part-000001"
+		body, version, err = h.Materials.FileContent(c.Request.Context(), p.UserID, projectID, materialID, versionID)
+	} else {
+		body, version, err = h.Materials.VersionObject(c.Request.Context(), p.UserID, projectID, materialID, versionID, entry)
 	}
-	body, _, err := h.Materials.VersionObject(c.Request.Context(), p.UserID, projectID, materialID, versionID, entry)
+	_ = version
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
 	defer body.Close()
+	if entry == "" {
+		c.Header("Content-Length", strconv.FormatInt(version.Size, 10))
+	}
+	c.Header("Content-Type", version.Mime)
 	c.Header("Content-Disposition", "attachment")
 	c.Header("X-Content-Type-Options", "nosniff")
 	c.Status(200)
 	_, _ = io.Copy(c.Writer, body)
+}
+
+func (h *MaterialHandlers) versionByID(download bool) Handler {
+	return func(c *gin.Context) {
+		project, err := projectParam(c)
+		if err != nil {
+			respond{}.error(c, err)
+			return
+		}
+		version, err := uuid.Parse(c.Param("versionId"))
+		if err != nil {
+			respond{}.error(c, apierrors.Fields("versionId", "uuid"))
+			return
+		}
+		user := principalFrom(c).UserID
+		material, err := h.Materials.MaterialForVersion(c.Request.Context(), user, project, version)
+		if err != nil {
+			respond{}.error(c, err)
+			return
+		}
+		if download {
+			c.Params = append(c.Params, gin.Param{Key: "materialId", Value: material.String()})
+			h.download(c)
+			return
+		}
+		value, _, err := h.Materials.OpenVersion(c.Request.Context(), user, project, material, version)
+		if err != nil {
+			respond{}.error(c, err)
+			return
+		}
+		respond{}.ok(c, value)
+	}
 }

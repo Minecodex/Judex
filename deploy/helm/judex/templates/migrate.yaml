@@ -1,14 +1,15 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "judex.name" . }}-migrate
+  name: {{ include "judex.name" . }}-migrate-{{ .Release.Revision }}
   labels: {{ include "judex.labels" . | nindent 4 }}
   annotations:
     #helm.sh/hook: pre-install,pre-upgrade
     #helm.sh/hook-weight: "-5"
     "judex.kakj.go/migration": "goose-advisory-locked"
 spec:
-  backoffLimit: 3
+  backoffLimit: 10
+  activeDeadlineSeconds: 600
   ttlSecondsAfterFinished: 3600
   template:
     metadata:
@@ -17,6 +18,8 @@ spec:
       restartPolicy: OnFailure
       automountServiceAccountToken: false
       securityContext: {runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001}
+      initContainers:
+        {{- include "judex.waitForPostgres" . | nindent 8 }}
       containers:
         - name: migrate
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

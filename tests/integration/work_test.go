@@ -117,6 +117,17 @@ func TestStartBlockingAndMap(t *testing.T) {
 	if _, err := pool.Exec(ctx, `UPDATE tasks SET status='ready', version=2 WHERE id=$1`, second.ID); err != nil {
 		t.Fatal(err)
 	}
+	pos, err := projects.CreatePosition(ctx, owner.ID, proj.ID, project.PositionDraft{Name: "Executor"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity, err := projects.CreateIdentity(ctx, owner.ID, proj.ID, pos.ID, owner.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = pool.Exec(ctx, `INSERT INTO task_participants(project_id,task_id,identity_id) VALUES($1,$2,$3)`, proj.ID, second.ID, identity.ID); err != nil {
+		t.Fatal(err)
+	}
 	// Blocked: first not accepted.
 	if _, err := svc.Start(ctx, owner.ID, proj.ID, second.ID, nil, 2); errors.IsCode(err, errors.RequirementUnmet) == false {
 		t.Fatalf("unmet precondition must block start, got %v", err)

@@ -18,12 +18,14 @@ type Envelope<T> = { data: T; meta?: { requestId?: string; serverTime?: string; 
 // Session-scoped CSRF token captured from GET /auth/session and kept in
 // memory only (docs/plans/v1/02 §2: cookie 不进 JS 可写存储)。
 let csrfToken = "";
+const pendingWrites = new Map<string, string>();
 
 export const setCSRFToken = (token: string) => {
   csrfToken = token;
 };
 export const clearCSRFToken = () => {
   csrfToken = "";
+  pendingWrites.clear();
 };
 
 const base = (import.meta.env.VITE_API_BASE_URL || "") + "/api/v1";
@@ -42,7 +44,12 @@ export async function request<T>(
   const method = (init?.method || "GET").toUpperCase();
   if (method !== "GET" && method !== "HEAD") {
     if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
-    if (init?.idempotencyKey) headers["Idempotency-Key"] = init.idempotencyKey;
+    headers["Idempotency-Key"] = init?.idempotencyKey ?? headers["Idempotency-Key"] ?? crypto.randomUUID();
+  }
+  const signature = method + " " + path + " " + String(init?.body ?? "");
+  if (headers["Idempotency-Key"]) {
+    headers["Idempotency-Key"] = pendingWrites.get(signature) ?? headers["Idempotency-Key"];
+    pendingWrites.set(signature, headers["Idempotency-Key"]);
   }
   let response: Response;
   try {
@@ -50,6 +57,8 @@ export async function request<T>(
   } catch (cause) {
     throw new APIError(0, "NETWORK", "network error", undefined, true);
   }
+  if (response.status < 500) pendingWrites.delete(signature);
+  if (response.status === 401 && !path.startsWith("/auth/")) window.dispatchEvent(new Event("judex:unauthorized"));
   if (response.status === 204) return undefined as T;
   const payload = await response.json().catch(() => null);
   if (!response.ok) {

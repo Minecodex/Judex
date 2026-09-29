@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"io"
 	"strings"
 	"time"
@@ -242,7 +243,7 @@ func (s *Service) CreateUpload(ctx context.Context, requester, projectID uuid.UU
 	}
 	var out UploadSession
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if err := isMemberTx(ctx, tx, projectID, requester); err != nil {
@@ -365,10 +366,10 @@ func (s *Service) ListMySessions(ctx context.Context, requester, projectID uuid.
 	if err := isMemberTx(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT id, state, kind, name, expected_size, checksum, mime, part_size, part_count, expires_at
-		FROM upload_sessions WHERE project_id=$1 AND owner_user_id=$2 AND state='open'
-		ORDER BY created_at DESC LIMIT 50`, projectID, requester)
+		/*keys*/ FROM upload_sessions WHERE project_id=$1 AND owner_user_id=$2 AND state='open'
+		/*page*/`, "created_at", "id", projectID, requester)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "sessions failed").Wrap(err)
 	}
@@ -394,7 +395,7 @@ func (s *Service) Complete(ctx context.Context, requester, projectID, uploadID u
 		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, uploadID.String()); err != nil {
 			return err
 		}
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if err := isMemberTx(ctx, tx, projectID, requester); err != nil {
@@ -461,7 +462,7 @@ func (s *Service) Complete(ctx context.Context, requester, projectID, uploadID u
 		}
 		// Whole-file digest for plain files: stream parts back through the
 		// store (server-side verification, no client involvement).
-		if kind == "file" {
+		if kind == "file" || kind == "html_bundle" {
 			hasher := sha256.New()
 			for n := 1; n <= partCount; n++ {
 				body, err := s.store.Get(ctx, partKey(stagingKey, n))
@@ -526,13 +527,22 @@ func (s *Service) Complete(ctx context.Context, requester, projectID, uploadID u
 			fmt.Sprintf(`{"uploadId":%q}`, uploadID.String()), now); err != nil {
 			return apierrors.New(apierrors.Internal, "version insert failed").Wrap(err)
 		}
-		for n := 1; n <= partCount; n++ {
-			if _, err := tx.Exec(ctx, `
+		if kind == "html_bundle" {
+			if entrypoint == nil {
+				return apierrors.Fields("entrypoint", "required")
+			}
+			if err := s.registerBundle(ctx, tx, projectID, versionID, stagingKey, partCount, *entrypoint); err != nil {
+				return err
+			}
+		} else {
+			for n := 1; n <= partCount; n++ {
+				if _, err := tx.Exec(ctx, `
 				INSERT INTO material_entries (project_id, version_id, relative_path, object_key, size, sha256, mime)
 				VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-				projectID, versionID, fmt.Sprintf("part-%06d", n), partKey(stagingKey, n),
-				partSizes[n], partDigests[n], mime); err != nil {
-				return apierrors.New(apierrors.Internal, "entry insert failed").Wrap(err)
+					projectID, versionID, fmt.Sprintf("part-%06d", n), partKey(stagingKey, n),
+					partSizes[n], partDigests[n], mime); err != nil {
+					return apierrors.New(apierrors.Internal, "entry insert failed").Wrap(err)
+				}
 			}
 		}
 		if _, err := tx.Exec(ctx, `
@@ -572,10 +582,10 @@ func (s *Service) ListMaterials(ctx context.Context, requester, projectID uuid.U
 	if err := isMemberTx(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT id, title, kind, visibility, current_version_id, created_at
-		FROM materials WHERE project_id=$1 AND ($2='' OR kind=$2)
-		ORDER BY updated_at DESC LIMIT 100`, projectID, kind)
+		/*keys*/ FROM materials WHERE project_id=$1 AND ($2='' OR kind=$2)
+		/*page*/`, "created_at", "id", projectID, kind)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "materials failed").Wrap(err)
 	}
@@ -596,10 +606,10 @@ func (s *Service) ListVersions(ctx context.Context, requester, projectID, materi
 	if err := isMemberTx(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT v.id, v.material_id, v.revision, v.state, v.sha256, v.size, v.mime, v.entrypoint, v.author_id, v.created_at
-		FROM material_versions v WHERE v.project_id=$1 AND v.material_id=$2
-		ORDER BY v.revision DESC LIMIT 50`, projectID, materialID)
+		/*keys*/ FROM material_versions v WHERE v.project_id=$1 AND v.material_id=$2
+		/*page*/`, "v.created_at", "v.id", projectID, materialID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "versions failed").Wrap(err)
 	}

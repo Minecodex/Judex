@@ -30,7 +30,7 @@ type dbQuery interface {
 func (s *Service) RequirementsFor(ctx context.Context, q dbQuery, projectID, taskID uuid.UUID) ([]Requirement, []Blocker, error) {
 	rows, err := q.Query(ctx, `
 		SELECT id, phase, kind, target_id, material_version_id, hard, label
-		FROM task_requirements WHERE project_id=$1 AND task_id=$2`, projectID, taskID)
+		FROM task_requirements WHERE project_id=$1 AND task_id=$2 ORDER BY id`, projectID, taskID)
 	if err != nil {
 		return nil, nil, apierrors.New(apierrors.Internal, "requirements failed").Wrap(err)
 	}
@@ -43,14 +43,23 @@ func (s *Service) RequirementsFor(ctx context.Context, q dbQuery, projectID, tas
 		}
 		reqs = append(reqs, r)
 	}
-	blockers, err := s.evaluateBlockers(ctx, q, reqs)
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, nil, err
+	}
+	workflowReqs, err := TaskWorkflowRequirements(ctx, q, projectID, taskID)
+	if err != nil {
+		return nil, nil, err
+	}
+	reqs = append(reqs, workflowReqs...)
+	blockers, err := s.evaluateBlockers(ctx, q, projectID, reqs)
 	return reqs, blockers, err
 }
 
 // evaluateBlockers computes hard precondition satisfaction (03 §2):
 // task_acceptance targets must be accepted; handoff_receipt needs an
 // accepted source version; material_ready needs a ready version.
-func (s *Service) evaluateBlockers(ctx context.Context, q dbQuery, reqs []Requirement) ([]Blocker, error) {
+func (s *Service) evaluateBlockers(ctx context.Context, q dbQuery, projectID uuid.UUID, reqs []Requirement) ([]Blocker, error) {
 	var blockers []Blocker
 	for _, req := range reqs {
 		if !req.Hard {
@@ -59,7 +68,7 @@ func (s *Service) evaluateBlockers(ctx context.Context, q dbQuery, reqs []Requir
 		switch req.Kind {
 		case "task_acceptance":
 			var status string
-			err := q.QueryRow(ctx, `SELECT status FROM tasks WHERE id=$1`, req.TargetID).Scan(&status)
+			err := q.QueryRow(ctx, `SELECT status FROM tasks WHERE id=$1 AND project_id=$2`, req.TargetID, projectID).Scan(&status)
 			if errors.Is(err, pgx.ErrNoRows) {
 				blockers = append(blockers, Blocker{Phase: req.Phase, ObjectType: "task", ObjectID: req.TargetID.String(), Reason: "前置任务不存在"})
 				continue
@@ -75,7 +84,7 @@ func (s *Service) evaluateBlockers(ctx context.Context, q dbQuery, reqs []Requir
 			if err := q.QueryRow(ctx, `
 				SELECT count(*) FROM source_versions v
 				JOIN handoff_sources hs ON hs.id=v.source_id
-				WHERE v.state='accepted' AND hs.source_task_id=$1`, req.TargetID).Scan(&count); err != nil {
+				WHERE v.state='accepted' AND hs.id=$1 AND hs.current_source_version_id=v.id AND hs.project_id=$2 AND v.project_id=$2`, req.TargetID, projectID).Scan(&count); err != nil {
 				return nil, apierrors.New(apierrors.Internal, "handoff lookup failed").Wrap(err)
 			}
 			if count == 0 {
@@ -83,7 +92,7 @@ func (s *Service) evaluateBlockers(ctx context.Context, q dbQuery, reqs []Requir
 			}
 		case "material_ready":
 			var state string
-			err := q.QueryRow(ctx, `SELECT state FROM material_versions WHERE id=$1`, req.TargetID).Scan(&state)
+			err := q.QueryRow(ctx, `SELECT state FROM material_versions WHERE id=$1 AND project_id=$2`, req.TargetID, projectID).Scan(&state)
 			if errors.Is(err, pgx.ErrNoRows) {
 				blockers = append(blockers, Blocker{Phase: req.Phase, ObjectType: "material", ObjectID: req.TargetID.String(), Reason: "材料版本不存在"})
 				continue
@@ -104,15 +113,14 @@ func (s *Service) evaluateBlockers(ctx context.Context, q dbQuery, reqs []Requir
 func (s *Service) Start(ctx context.Context, requester, projectID, taskID uuid.UUID, identityID *uuid.UUID, expectedVersion int64) (Task, error) {
 	var out Task
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {
 			return err
 		}
 		var (
-			status      string
-			participant bool
+			status string
 		)
 		if err := tx.QueryRow(ctx, `SELECT status FROM tasks WHERE id=$1 AND project_id=$2 FOR UPDATE`,
 			taskID, projectID).Scan(&status); err != nil {
@@ -124,15 +132,19 @@ func (s *Service) Start(ctx context.Context, requester, projectID, taskID uuid.U
 		if status != "ready" && status != "rework" {
 			return apierrors.New(apierrors.InvalidTransition, "task is "+status)
 		}
-		if identityID != nil {
-			if err := tx.QueryRow(ctx, `
-				SELECT EXISTS(SELECT 1 FROM task_participants WHERE task_id=$1 AND identity_id=$2)`,
-				taskID, *identityID).Scan(&participant); err != nil {
-				return apierrors.New(apierrors.Internal, "participant lookup failed").Wrap(err)
-			}
-			if !participant {
-				return apierrors.New(apierrors.Forbidden, "只有当前任务参与者可以开始")
-			}
+		if _, _, err := ResolveParticipant(ctx, tx, requester, projectID, taskID, identityID); err != nil {
+			return err
+		}
+		refs, err := ChangeWorkflowConstraints(ctx, tx, projectID, []Change{{TargetType: "task", TargetID: taskID.String()}})
+		if err != nil {
+			return err
+		}
+		participant, _, err := ResolveParticipant(ctx, tx, requester, projectID, taskID, identityID)
+		if err != nil {
+			return err
+		}
+		if err = validateWorkflowParticipants(ctx, tx, projectID, refs, []uuid.UUID{participant}); err != nil {
+			return err
 		}
 		reqs, blockers, err := s.RequirementsFor(ctx, tx, projectID, taskID)
 		if err != nil {
@@ -211,7 +223,7 @@ func (s *Service) ExecutionMap(ctx context.Context, requester, projectID uuid.UU
 	var order []string
 	for rows.Next() {
 		var n node
-		if err := rows.Scan(&n.id, new(uuid.UUID), &n.parent, &n.title, &n.status); err != nil {
+		if err := rows.Scan(&n.id, new(*uuid.UUID), &n.parent, &n.title, &n.status); err != nil {
 			return ExecutionMap{}, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
 		}
 		nodes[n.id] = n

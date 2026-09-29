@@ -1,0 +1,38 @@
+{{- if .Values.sandbox.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: judex-sandbox-template
+  labels: {{ include "judex.labels" . | nindent 4 }}
+data:
+  template.yaml: |
+    metadata:
+      labels:
+        app: judex-sandbox
+    spec:
+      replicas: 1
+      template:
+        metadata:
+          labels:
+            app: judex-sandbox
+        spec:
+          automountServiceAccountToken: false
+          hostNetwork: false
+          hostPID: false
+          hostIPC: false
+          restartPolicy: Never
+          securityContext:
+            seccompProfile: {type: RuntimeDefault}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: judex-sandbox-deny-egress
+  namespace: {{ .Release.Namespace }}-sandboxes
+  labels: {{ include "judex.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {app: judex-sandbox}
+  policyTypes: [Egress]
+  egress: []
+{{- end }}

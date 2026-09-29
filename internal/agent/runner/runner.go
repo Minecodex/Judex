@@ -9,7 +9,6 @@ package runner
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 	"time"
 
@@ -29,8 +28,14 @@ type Budget struct {
 	ReservedTokens   int64 // unknown-usage hold until reconciled
 }
 
+const (
+	BatchMaxModelAttempts       = 30
+	BatchMaxTotalTokens   int64 = 300000
+	MaxParallelChildren         = 2
+)
+
 func DefaultBudget() Budget {
-	return Budget{MaxRounds: 3, MaxModelAttempts: 30, MaxTotalTokens: 100000, MaxWallClock: 30 * time.Minute}
+	return Budget{MaxRounds: 3, MaxModelAttempts: BatchMaxModelAttempts, MaxTotalTokens: BatchMaxTotalTokens, MaxWallClock: 30 * time.Minute}
 }
 
 // Runner executes one agent run against the provider + tool registry.
@@ -43,14 +48,29 @@ type Runner struct {
 // RunRequest identifies one run. Env carries the caller's tool projections
 // (DB readers, draft creators); when nil the runner builds a minimal env.
 type RunRequest struct {
-	RunID      uuid.UUID
-	SessionID  uuid.UUID
-	ProjectID  uuid.UUID
-	IdentityID uuid.UUID
-	ModelName  string
-	Manifest   agentcontext.Manifest
-	Budget     Budget
-	Env        *tools.Env
+	Lease           string
+	History         []model.Message
+	StartAttempt    int
+	Prepare         func(context.Context) (CallContext, error)
+	RunID           uuid.UUID
+	SessionID       uuid.UUID
+	ProjectID       uuid.UUID
+	IdentityID      uuid.UUID
+	ModelName       string
+	Manifest        agentcontext.Manifest
+	Budget          Budget
+	Env             *tools.Env
+	Journal         Journal
+	MaxInputTokens  int64
+	MaxOutputTokens int64
+}
+
+// CallContext is refreshed before every model request, including after tools.
+type CallContext struct {
+	Manifest                        agentcontext.Manifest
+	Provider                        model.Provider
+	ModelName                       string
+	MaxInputTokens, MaxOutputTokens int64
 }
 
 // Outcome summarizes the run for the scheduler (05 §8 states).
@@ -68,12 +88,25 @@ type Outcome struct {
 // The loop stops on budget exhaustion or provider finish; a business task is
 // never marked accepted here.
 func (r *Runner) Run(ctx context.Context, req RunRequest) Outcome {
-	outcome := Outcome{State: "running"}
+	outcome := Outcome{State: "running", UsageKnown: true}
+	if req.Budget.MaxWallClock <= 0 {
+		req.Budget.MaxWallClock = 5 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(ctx, req.Budget.MaxWallClock)
+	defer cancel()
+	if req.MaxOutputTokens <= 0 {
+		req.MaxOutputTokens = 8192
+	}
+	fail := func(err error) Outcome { outcome.State = "failed"; outcome.Summary = err.Error(); return outcome }
 	system, user := req.Manifest.Prompt()
 	messages := []model.Message{{Role: "system", Content: system}, {Role: "user", Content: user}}
+	messages = append(messages, req.History...)
+	if req.StartAttempt < 1 {
+		req.StartAttempt = 1
+	}
 	deadline := r.now().Add(req.Budget.MaxWallClock)
 
-	for attempt := 1; attempt <= req.Budget.MaxModelAttempts; attempt++ {
+	for attempt := req.StartAttempt; attempt <= req.Budget.MaxModelAttempts; attempt++ {
 		if ctx.Err() != nil {
 			outcome.State = "cancelled"
 			return outcome
@@ -88,14 +121,56 @@ func (r *Runner) Run(ctx context.Context, req RunRequest) Outcome {
 			outcome.Summary = "token 预算耗尽（合法续开需 manager）"
 			return outcome
 		}
+		if req.Prepare != nil {
+			fresh, err := req.Prepare(ctx)
+			if err != nil {
+				return fail(err)
+			}
+			req.Manifest = fresh.Manifest
+			req.ModelName = fresh.ModelName
+			req.MaxInputTokens = fresh.MaxInputTokens
+			req.MaxOutputTokens = fresh.MaxOutputTokens
+			if fresh.Provider != nil {
+				r.Provider = fresh.Provider
+			}
+			system, user = req.Manifest.Prompt()
+			messages[0] = model.Message{Role: "system", Content: system}
+			messages[1] = model.Message{Role: "user", Content: user}
+		}
+		schemas := r.providerTools()
+		if req.MaxInputTokens > 0 && req.Journal != nil {
+			compacted, changed := Compact(messages, req.RunID.String(), req.MaxInputTokens, schemas)
+			if changed {
+				messages = compacted
+				if err := req.Journal.Checkpoint(ctx, messages); err != nil {
+					return fail(err)
+				}
+			}
+		}
 		outcome.ModelCalls++
-		stream, err := r.Provider.Stream(ctx, model.Request{
-			Model: req.ModelName, Messages: messages,
-			Tools: r.providerTools(), MaxOutputTokens: 8192,
-		})
+		request := model.Request{Model: req.ModelName, Messages: messages, Tools: r.providerTools(), MaxOutputTokens: req.MaxOutputTokens}
+		inputBytes := RequestBytes(messages, schemas)
+		if req.MaxInputTokens > 0 && inputBytes > req.MaxInputTokens {
+			outcome.State = "context_blocked"
+			outcome.Summary = "context requires compaction before another model call"
+			return outcome
+		}
+		if req.Journal != nil {
+			if err := req.Journal.ModelStart(ctx, attempt, request); err != nil {
+				return fail(err)
+			}
+		}
+		stream, err := r.Provider.Stream(ctx, request)
 		if err != nil {
+			outcome.UsageKnown = false
+			outcome.TokensUsed += req.MaxOutputTokens + inputBytes
+			if req.Journal != nil {
+				_ = req.Journal.ModelEnd(context.WithoutCancel(ctx), attempt, req.MaxOutputTokens+inputBytes, false, err)
+			}
 			return r.classifyProviderError(ctx, err, outcome)
 		}
+		callUsage := int64(0)
+		usageKnown := false
 		var text strings.Builder
 		var pendingTools []model.ToolCall
 		finish := false
@@ -108,53 +183,70 @@ func (r *Runner) Run(ctx context.Context, req RunRequest) Outcome {
 					ID: event.ToolCallID, Name: event.ToolName, Arguments: event.ArgsJSON,
 				})
 			case "usage":
-				outcome.TokensUsed += event.InputTokens + event.OutputTokens
-				outcome.UsageKnown = true
-				// 未知用量保守预留：不计入时按保守值预留（05 §4）。
-				if !outcome.UsageKnown {
-					outcome.TokensUsed += 4096
-				}
-				if outcome.TokensUsed >= req.Budget.MaxTotalTokens {
-					outcome.State = "failed"
-					outcome.Summary = "token 预算耗尽（合法续开需 manager）"
-					return outcome
-				}
+				callUsage = event.InputTokens + event.OutputTokens
+				usageKnown = true
 			case "error":
+				outcome.UsageKnown = false
+				outcome.TokensUsed += req.MaxOutputTokens + inputBytes
+				if req.Journal != nil {
+					_ = req.Journal.ModelEnd(context.WithoutCancel(ctx), attempt, req.MaxOutputTokens+inputBytes, false, event.Err)
+				}
 				return r.classifyProviderError(ctx, event.Err, outcome)
 			case "finish":
 				finish = true
 			}
 		}
+		if !usageKnown {
+			callUsage = req.MaxOutputTokens + inputBytes
+			outcome.UsageKnown = false
+		}
+		outcome.TokensUsed += callUsage
+		if req.Journal != nil {
+			if err := req.Journal.ModelEnd(context.WithoutCancel(ctx), attempt, callUsage, usageKnown, nil); err != nil {
+				return fail(err)
+			}
+		}
+		if outcome.TokensUsed >= req.Budget.MaxTotalTokens {
+			outcome.State = "failed"
+			outcome.Summary = "token budget exhausted"
+			return outcome
+		}
+		if !finish && len(pendingTools) == 0 {
+			outcome.State = "failed"
+			outcome.Summary = "model stream ended without finish"
+			return outcome
+		}
 		messages = append(messages, model.Message{Role: "assistant", Content: text.String(), ToolCalls: pendingTools})
+		if req.Journal != nil {
+			if err := req.Journal.Checkpoint(ctx, messages); err != nil {
+				return fail(err)
+			}
+		}
 		if len(pendingTools) == 0 {
 			outcome.State = "succeeded"
 			outcome.Summary = text.String()
 			return outcome
 		}
-		// Dispatch every tool; results are data messages (05 §6).
-		for _, call := range pendingTools {
-			outcome.ToolCalls++
-			var args map[string]any
-			_ = json.Unmarshal([]byte(call.Arguments), &args)
-			env := tools.Env{
-				ProjectID: req.ProjectID.String(), RunID: req.RunID.String(), IdentityID: req.IdentityID.String(),
+		if outcome.ToolCalls+len(pendingTools) > 100 {
+			outcome.State = "failed"
+			outcome.Summary = "tool budget exhausted"
+			return outcome
+		}
+		outcome.ToolCalls += len(pendingTools)
+		results, unknown, err := r.executeTools(ctx, req, pendingTools)
+		if err != nil {
+			return fail(err)
+		}
+		if unknown {
+			outcome.State = "waiting_human"
+			outcome.Summary = "tool result unknown; verify before continuing"
+			return outcome
+		}
+		messages = append(messages, results...)
+		if req.Journal != nil {
+			if err := req.Journal.Checkpoint(ctx, messages); err != nil {
+				return fail(err)
 			}
-			if req.Env != nil {
-				env = *req.Env
-				env.RunID = req.RunID.String()
-				if env.IdentityID == "" {
-					env.IdentityID = req.IdentityID.String()
-				}
-			}
-			result, err := r.Registry.Execute(ctx, call.Name, "agent", args, env)
-			content := map[string]any{"toolCallId": call.ID}
-			if err != nil {
-				content["error"] = err.Error()
-			} else {
-				content["data"] = result.Data
-			}
-			raw, _ := json.Marshal(content)
-			messages = append(messages, model.Message{Role: "tool", ToolCallID: call.ID, Content: string(raw)})
 		}
 		if finish && len(pendingTools) > 0 {
 			continue // tool round continues the loop
@@ -170,7 +262,8 @@ func (r *Runner) providerTools() []model.ToolSchema {
 	for _, schema := range r.Registry.Schemas() {
 		name, _ := schema["name"].(string)
 		input, _ := schema["input_schema"].(map[string]any)
-		out = append(out, model.ToolSchema{Name: name, InputSchema: input})
+		description, _ := schema["description"].(string)
+		out = append(out, model.ToolSchema{Name: name, Description: description, InputSchema: input})
 	}
 	return out
 }

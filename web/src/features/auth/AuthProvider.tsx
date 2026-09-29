@@ -1,5 +1,6 @@
 import {
   createContext,
+  useEffect,
   useCallback,
   useContext,
   useMemo,
@@ -8,7 +9,7 @@ import {
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchSession, type PublicUser } from "./api";
-import { APIError } from "../../lib/api/client";
+import { clearCSRFToken, APIError } from "../../lib/api/client";
 
 // 认证状态机（docs/plans/v1/08 §2）：bootstrapping → anonymous /
 // authenticated → signingOut。GET session 区分 401（未登录）与服务不可用。
@@ -48,11 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const onAuthenticated = useCallback(
     async (nextUser: PublicUser) => {
-      setUser(nextUser);
-      setPhase("authenticated");
-      // 注册/登录建立会话后立即拉取 session（获取 CSRF token）并刷新缓存。
+      setPhase("bootstrapping");
+      await client.cancelQueries();
+      client.clear();
+      // fetchSession installs the new CSRF token before authenticated UI mounts.
       await refresh();
-      await client.invalidateQueries();
     },
     [client, refresh],
   );
@@ -61,10 +62,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPhase("bootstrapping");
     await client.cancelQueries();
     client.clear();
-    await fetchSession().catch(() => null); // best-effort; 401 clears nothing
+    clearCSRFToken();
+    for (const key of Object.keys(sessionStorage)) {
+      if (key.startsWith("judex.ws.draft.")) sessionStorage.removeItem(key);
+    }
     setUser(null);
     setPhase("anonymous");
   }, [client]);
+
+  useEffect(() => {
+    const expired = () => { void signOut(); };
+    window.addEventListener("judex:unauthorized", expired);
+    return () => window.removeEventListener("judex:unauthorized", expired);
+  }, [signOut]);
 
   const sessionQuery = useQuery({
     queryKey: ["auth", "session"],

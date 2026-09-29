@@ -57,6 +57,9 @@ func TestWorkReports(t *testing.T) {
 		t.Fatal(err)
 	}
 	activateTask(t, pool, task.ID)
+	if _, err := pool.Exec(ctx, `UPDATE tasks SET status='working' WHERE id=$1`, task.ID); err != nil {
+		t.Fatal(err)
+	}
 
 	// Non-holder identity report rejected.
 	_, _, err = svc.Report(ctx, owner.ID, proj.ID, work.ReportInput{
@@ -75,7 +78,7 @@ func TestWorkReports(t *testing.T) {
 		t.Fatalf("progress report: %v version=%d", err, version)
 	}
 	var status string
-	if err := pool.QueryRow(ctx, `SELECT status FROM tasks WHERE id=$1`, task.ID).Scan(&status); err != nil || status != "ready" {
+	if err := pool.QueryRow(ctx, `SELECT status FROM tasks WHERE id=$1`, task.ID).Scan(&status); err != nil || status != "working" {
 		t.Fatalf("progress must keep status, got %s", status)
 	}
 	// Delivery flips delivered.
@@ -88,7 +91,10 @@ func TestWorkReports(t *testing.T) {
 	if err := pool.QueryRow(ctx, `SELECT status FROM tasks WHERE id=$1`, task.ID).Scan(&status); err != nil || status != "delivered" {
 		t.Fatalf("delivery must set delivered, got %s", status)
 	}
-	// Same submission idempotent.
+	// Same submission idempotent after a reviewer requests rework.
+	if _, err := pool.Exec(ctx, `UPDATE tasks SET status='rework' WHERE id=$1`, task.ID); err != nil {
+		t.Fatal(err)
+	}
 	subID := uuid.New()
 	first, _, err := svc.Report(ctx, worker.ID, proj.ID, work.ReportInput{
 		TaskID: task.ID, IdentityID: &workerIdent.ID, Kind: "progress",
@@ -141,11 +147,12 @@ func TestHandoffSourceLevel(t *testing.T) {
 		Title: "来源任务", PlanID: &plan.ID, ParticipantIDs: []uuid.UUID{senderIdent.ID},
 	})
 	dstTask, _ := svc.CreateTaskDraft(ctx, owner.ID, proj.ID, work.TaskDraft{
-		Title: "目标任务", PlanID: &plan.ID, Requirements: []work.Requirement{{
-			Phase: "start", Kind: "handoff_receipt", TargetID: srcTask.ID, Hard: true,
-		}},
+		Title: "目标任务", PlanID: &plan.ID,
 	})
 	activateTask(t, pool, srcTask.ID)
+	if _, _, err := svc.Report(ctx, sender.ID, proj.ID, work.ReportInput{TaskID: srcTask.ID, IdentityID: &senderIdent.ID, Kind: "delivery", Text: "交接成果", ExpectedTaskVersion: 2}); err != nil {
+		t.Fatal(err)
+	}
 
 	hand, err := hsvc.Create(ctx, owner.ID, proj.ID, "首次交接", dstTask.ID, receiverIdent.ID, "dependency",
 		[]struct {
@@ -197,6 +204,10 @@ func TestHandoffSourceLevel(t *testing.T) {
 	srcTask2, _ := svc.CreateTaskDraft(ctx, sender.ID, proj.ID, work.TaskDraft{
 		Title: "已验收来源", PlanID: &plan.ID, ParticipantIDs: []uuid.UUID{senderIdent.ID},
 	})
+	activateTask(t, pool, srcTask2.ID)
+	if _, _, err := svc.Report(ctx, sender.ID, proj.ID, work.ReportInput{TaskID: srcTask2.ID, IdentityID: &senderIdent.ID, Kind: "delivery", Text: "已验收成果", ExpectedTaskVersion: 2}); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := pool.Exec(ctx, `UPDATE tasks SET status='accepted', version=5 WHERE id=$1`, srcTask2.ID); err != nil {
 		t.Fatal(err)
 	}

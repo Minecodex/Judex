@@ -4,9 +4,11 @@ package work
 
 import (
 	"context"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kakj-go/Judex/internal/platform/auth"
 
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 )
@@ -28,153 +30,40 @@ type PendingAction struct {
 // MyActions computes the unified todo list across proposals, handoffs,
 // tasks and plans (P3-09). Read-only: no state changes.
 func (s *Service) MyActions(ctx context.Context, user uuid.UUID, projectFilter *uuid.UUID) ([]PendingAction, error) {
-	actions := []PendingAction{}
-	rows, err := s.pool.Query(ctx, `
-		SELECT p.project_id, p.id, p.current_review_id, v.deadline_at, p.created_at, p.kind
-		FROM proposals p
-		JOIN proposal_versions v ON v.id=p.current_review_id
-		JOIN approval_slots s ON s.review_id=p.current_review_id AND s.state='pending'
-		LEFT JOIN agent_identities i ON i.id=s.authority_id AND s.authority_type='identity'
-		LEFT JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version
-		WHERE p.status='pending'
-		  AND (b.user_id=$1 OR (s.authority_type='user' AND s.authority_id=$1))
-		  AND ($2::uuid IS NULL OR p.project_id=$2)
-		GROUP BY p.project_id, p.id, p.current_review_id, v.deadline_at, p.created_at, p.kind
-		ORDER BY v.deadline_at NULLS LAST, p.created_at
-		LIMIT 100`, user, projectFilter)
+	scope := []uuid.UUID{}
+	if actor := auth.FromContext(ctx); actor != nil && actor.Kind == auth.KindCLI {
+		scope = actor.ProjectScope
+		if len(scope) == 0 {
+			return []PendingAction{}, nil
+		}
+	}
+	rows, err := paging.Query(ctx, s.pool, `
+ WITH held AS (
+ SELECT i.id,i.project_id FROM agent_identities i JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version AND b.valid_until IS NULL WHERE b.user_id=$1 AND i.status='active'
+ ), actions AS (
+ SELECT DISTINCT p.project_id,p.id object_id,'proposal'::text object_type,'approve'::text kind,p.current_review_id review_id,v.deadline_at due_at,'待审批提案（'||p.kind||'）' summary,p.created_at FROM proposals p JOIN proposal_versions v ON v.id=p.current_review_id JOIN approval_slots s ON s.review_id=p.current_review_id WHERE p.status='pending' AND s.state='pending' AND ((s.authority_type='user' AND s.authority_id=$1) OR (s.authority_type='identity' AND s.authority_id IN(SELECT id FROM held)))
+ UNION ALL
+ SELECT DISTINCT h.project_id,h.id,'handoff','receive',NULL::uuid,NULL::timestamptz,'待接收交接来源',h.created_at FROM handoffs h JOIN handoff_sources hs ON hs.handoff_id=h.id JOIN source_versions v ON v.id=hs.current_source_version_id WHERE v.state='pending' AND h.receiver_identity_id IN(SELECT id FROM held)
+ UNION ALL
+ SELECT DISTINCT h.project_id,h.id,'handoff','submit',NULL::uuid,NULL::timestamptz,'待发送/补交交接来源',h.created_at FROM handoffs h JOIN handoff_sources hs ON hs.handoff_id=h.id LEFT JOIN source_versions v ON v.id=hs.current_source_version_id WHERE (v.id IS NULL OR v.state IN ('draft','rejected')) AND hs.sender_identity_id IN(SELECT id FROM held)
+ UNION ALL
+ SELECT t.project_id,t.id,'task','accept',NULL::uuid,NULL::timestamptz,'待验收：'||t.title,t.created_at FROM tasks t WHERE t.status='delivered' AND t.reviewer_identity_id IN(SELECT id FROM held)
+ UNION ALL
+ SELECT p.project_id,p.id,'plan','accept',NULL::uuid,NULL::timestamptz,'任务已全部验收，待计划整体验收：'||p.title,p.created_at FROM plans p WHERE p.status='active' AND p.owner_identity_id IN(SELECT id FROM held) AND EXISTS(SELECT 1 FROM tasks t WHERE t.plan_id=p.id OR EXISTS(SELECT 1 FROM plan_task_references r WHERE r.plan_id=p.id AND r.task_id=t.id)) AND NOT EXISTS(SELECT 1 FROM tasks t WHERE (t.plan_id=p.id OR EXISTS(SELECT 1 FROM plan_task_references r WHERE r.plan_id=p.id AND r.task_id=t.id)) AND t.status NOT IN ('accepted','cancelled'))
+ ), scoped AS (
+ SELECT (md5(a.object_type||':'||a.object_id::text||':'||a.kind))::uuid id,a.* FROM actions a JOIN project_members m ON m.project_id=a.project_id AND m.user_id=$1 AND m.state='active' JOIN projects p ON p.id=a.project_id AND p.status='active' WHERE ($2::uuid IS NULL OR a.project_id=$2) AND (cardinality($3::uuid[])=0 OR a.project_id=ANY($3))
+ ) SELECT a.id,a.project_id,a.object_id,a.object_type,a.kind,a.review_id,a.due_at,a.summary,a.created_at /*keys*/ FROM scoped a WHERE true /*page*/`, "a.created_at", "a.id", user, projectFilter, scope)
 	if err != nil {
-		return nil, apierrors.New(apierrors.Internal, "actions(proposals) failed").Wrap(err)
+		return nil, apierrors.New(apierrors.Internal, "actions query failed").Wrap(err)
 	}
 	defer rows.Close()
+	out := []PendingAction{}
 	for rows.Next() {
-		var (
-			a      PendingAction
-			review uuid.NullUUID
-			kind   string
-		)
-		if err := rows.Scan(&a.ProjectID, &a.ObjectID, &review, &a.DueAt, &a.CreatedAt, &kind); err != nil {
-			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
-		}
-		if review.Valid {
-			a.ReviewID = &review.UUID
-		}
-		a.Kind = "approve"
-		a.ObjectType = "proposal"
-		a.Summary = "待审批提案（" + kind + "）"
-		a.ID = uuid.New()
-		actions = append(actions, a)
-	}
-
-	// Handoff receipts waiting for me (receiver with pending version).
-	rows2, err := s.pool.Query(ctx, `
-		SELECT h.project_id, h.id, h.created_at
-		FROM handoffs h
-		JOIN agent_identities i ON i.id=h.receiver_identity_id
-		JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version
-		JOIN handoff_sources hs ON hs.handoff_id=h.id
-		JOIN source_versions v ON v.id=hs.current_source_version_id AND v.state='pending'
-		WHERE b.user_id=$1 AND ($2::uuid IS NULL OR h.project_id=$2)
-		GROUP BY h.project_id, h.id, h.created_at
-		ORDER BY h.created_at LIMIT 100`, user, projectFilter)
-	if err != nil {
-		return nil, apierrors.New(apierrors.Internal, "actions(handoffs) failed").Wrap(err)
-	}
-	defer rows2.Close()
-	for rows2.Next() {
 		var a PendingAction
-		if err := rows2.Scan(&a.ProjectID, &a.ObjectID, &a.CreatedAt); err != nil {
-			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
+		if err = rows.Scan(&a.ID, &a.ProjectID, &a.ObjectID, &a.ObjectType, &a.Kind, &a.ReviewID, &a.DueAt, &a.Summary, &a.CreatedAt); err != nil {
+			return nil, err
 		}
-		a.Kind = "receive"
-		a.ObjectType = "handoff"
-		a.Summary = "待接收交接来源"
-		a.ID = uuid.New()
-		actions = append(actions, a)
+		out = append(out, a)
 	}
-
-	// Handoff sources I should (re)send as current sender.
-	rows3, err := s.pool.Query(ctx, `
-		SELECT DISTINCT h.project_id, h.id, h.created_at
-		FROM handoffs h
-		JOIN handoff_sources hs ON hs.handoff_id=h.id
-		JOIN agent_identities i ON i.id=hs.sender_identity_id
-		JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version
-		LEFT JOIN source_versions v ON v.id=hs.current_source_version_id
-		WHERE b.user_id=$1
-		  AND (v.id IS NULL OR v.state IN ('draft','rejected'))
-		  AND ($2::uuid IS NULL OR h.project_id=$2)
-		ORDER BY h.created_at LIMIT 100`, user, projectFilter)
-	if err != nil {
-		return nil, apierrors.New(apierrors.Internal, "actions(send) failed").Wrap(err)
-	}
-	defer rows3.Close()
-	for rows3.Next() {
-		var a PendingAction
-		if err := rows3.Scan(&a.ProjectID, &a.ObjectID, &a.CreatedAt); err != nil {
-			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
-		}
-		a.Kind = "submit"
-		a.ObjectType = "handoff"
-		a.Summary = "待发送/补交交接来源"
-		a.ID = uuid.New()
-		actions = append(actions, a)
-	}
-
-	// Tasks delivered awaiting my acceptance (current reviewer).
-	rows4, err := s.pool.Query(ctx, `
-		SELECT t.project_id, t.id, t.created_at, t.title
-		FROM tasks t
-		JOIN agent_identities i ON i.id=t.reviewer_identity_id
-		JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version
-		WHERE t.status='delivered' AND b.user_id=$1
-		  AND ($2::uuid IS NULL OR t.project_id=$2)
-		ORDER BY t.updated_at LIMIT 100`, user, projectFilter)
-	if err != nil {
-		return nil, apierrors.New(apierrors.Internal, "actions(accept) failed").Wrap(err)
-	}
-	defer rows4.Close()
-	for rows4.Next() {
-		var a PendingAction
-		var title string
-		if err := rows4.Scan(&a.ProjectID, &a.ObjectID, &a.CreatedAt, &title); err != nil {
-			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
-		}
-		a.Kind = "accept"
-		a.ObjectType = "task"
-		a.Summary = "待验收：" + title
-		a.ID = uuid.New()
-		actions = append(actions, a)
-	}
-
-	// Plans ready for my overall acceptance (owner, active, all tasks accepted).
-	rows5, err := s.pool.Query(ctx, `
-		SELECT p.project_id, p.id, p.created_at, p.title
-		FROM plans p
-		JOIN agent_identities i ON i.id=p.owner_identity_id
-		JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version
-		WHERE p.status='active' AND b.user_id=$1
-		  AND NOT EXISTS (
-		    SELECT 1 FROM tasks t WHERE t.plan_id=p.id AND t.project_id=p.project_id
-		      AND t.status<>'accepted' AND t.status<>'cancelled')
-		  AND EXISTS (
-		    SELECT 1 FROM tasks t WHERE t.plan_id=p.id AND t.project_id=p.project_id)
-		  AND ($2::uuid IS NULL OR p.project_id=$2)
-		ORDER BY p.created_at LIMIT 100`, user, projectFilter)
-	if err != nil {
-		return nil, apierrors.New(apierrors.Internal, "actions(plans) failed").Wrap(err)
-	}
-	defer rows5.Close()
-	for rows5.Next() {
-		var a PendingAction
-		var title string
-		if err := rows5.Scan(&a.ProjectID, &a.ObjectID, &a.CreatedAt, &title); err != nil {
-			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
-		}
-		a.Kind = "accept"
-		a.ObjectType = "plan"
-		a.Summary = "任务已全部验收，待计划整体验收：" + title
-		a.ID = uuid.New()
-		actions = append(actions, a)
-	}
-	return actions, nil
+	return out, rows.Err()
 }

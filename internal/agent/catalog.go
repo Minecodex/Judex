@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"os"
 	"time"
 
@@ -131,9 +132,9 @@ type PublicModel struct {
 
 // ListPublicModels reads the catalog for GET /models.
 func ListPublicModels(ctx context.Context, pool *postgres.Pool) ([]PublicModel, error) {
-	rows, err := pool.Query(ctx, `
-		SELECT id, display_name, provider, enabled, capabilities, limits
-		FROM model_catalog ORDER BY display_name`)
+	rows, err := paging.Query(ctx, pool, `
+		SELECT id, display_name, provider, enabled, capabilities, limits /*keys*/
+		FROM model_catalog WHERE true /*page*/`, "created_at", "id")
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "catalog read failed").Wrap(err)
 	}

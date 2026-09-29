@@ -98,6 +98,10 @@ func RequireAuth() gin.HandlerFunc {
 
 func respondAuthError(c *gin.Context, err error) {
 	apiErr := apierrors.From(err)
+	details := apiErr.Details
+	if details == nil {
+		details = gin.H{}
+	}
 	if apiErr.Code == apierrors.Internal {
 		apiErr = apierrors.New(apierrors.Unauthenticated, "invalid session")
 	}
@@ -105,7 +109,7 @@ func respondAuthError(c *gin.Context, err error) {
 		"error": gin.H{
 			"code":      string(apiErr.Code),
 			"message":   apiErr.Message,
-			"details":   apiErr.Details,
+			"details":   details,
 			"retryable": apiErr.Retryable,
 		},
 		"requestId": c.GetString("request_id"),

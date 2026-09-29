@@ -78,7 +78,7 @@ func (s *Service) PreviewOpen(ctx context.Context, token string, versionID uuid.
 	)
 	err := s.pool.QueryRow(ctx, `
 		SELECT project_id, version_id, expires_at, consumed_at FROM preview_tokens
-		WHERE token_hash=$1`, keys.Hash(token)).
+		WHERE token_hash=$1 AND consumed_at IS NOT NULL AND EXISTS(SELECT 1 FROM project_members m JOIN users u ON u.id=m.user_id WHERE m.project_id=preview_tokens.project_id AND m.user_id=preview_tokens.issued_to AND m.state='active' AND u.status='active')`, keys.Hash(token)).
 		Scan(&projectID, &boundTo, &expiresAt, &consumedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, "", apierrors.New(apierrors.NotFound, "preview not found")
@@ -133,3 +133,35 @@ func ValidateBundleEntries(entries []string, limits Limits) error {
 }
 
 var _ = fmt.Sprintf
+
+func (s *Service) PreviewEntrypoint(ctx context.Context, token string, version uuid.UUID) (string, error) {
+	var entry string
+	err := s.pool.QueryRow(ctx, `SELECT v.entrypoint FROM material_versions v JOIN preview_tokens p ON p.version_id=v.id JOIN project_members m ON m.project_id=p.project_id AND m.user_id=p.issued_to AND m.state='active' WHERE p.token_hash=$1 AND p.version_id=$2 AND p.expires_at>$3`, keys.Hash(token), version, s.now()).Scan(&entry)
+	if err != nil {
+		return "", apierrors.New(apierrors.NotFound, "preview unavailable")
+	}
+	return entry, nil
+}
+
+// ExchangePreview invalidates the one-time URL and replaces it with a short-lived
+// version-only preview session. The redirect drops the consumed capability.
+func (s *Service) ExchangePreview(ctx context.Context, token string, version uuid.UUID) (string, error) {
+	var next string
+	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
+		var consumed *time.Time
+		var expiry time.Time
+		if err := tx.QueryRow(ctx, `SELECT consumed_at,expires_at FROM preview_tokens WHERE token_hash=$1 AND version_id=$2 FOR UPDATE`, keys.Hash(token), version).Scan(&consumed, &expiry); err != nil {
+			return apierrors.New(apierrors.NotFound, "preview unavailable")
+		}
+		if !s.now().Before(expiry) {
+			return apierrors.New(apierrors.Unauthenticated, "preview expired")
+		}
+		if consumed != nil {
+			return nil
+		}
+		next = keys.NewRandom()
+		_, err := tx.Exec(ctx, `UPDATE preview_tokens SET token_hash=$2,consumed_at=$3 WHERE token_hash=$1`, keys.Hash(token), keys.Hash(next), s.now())
+		return err
+	})
+	return next, err
+}

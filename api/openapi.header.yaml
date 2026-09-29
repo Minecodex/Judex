@@ -14,7 +14,7 @@ info:
     Web 会话使用 Cookie+CSRF（sessionCookie）；CLI 使用受限 Bearer grant（bearerGrant）。
     阶段实现状态由 GET /system capabilities 返回；未实现的 operation 返回 501 而不是假成功。
 servers:
-  - url: /
+  - url: /api/v1
     description: Same-origin (SPA or CLI with explicit base URL)
 tags:
   - {name: system, description: 系统与能力}

@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,19 +21,23 @@ import (
 	agentcontext "github.com/kakj-go/Judex/internal/agent/context"
 	"github.com/kakj-go/Judex/internal/agent/runner"
 	"github.com/kakj-go/Judex/internal/agent/tools"
+	"github.com/kakj-go/Judex/internal/decision"
 	"github.com/kakj-go/Judex/internal/infrastructure/model"
 	"github.com/kakj-go/Judex/internal/infrastructure/opensandbox"
 	"github.com/kakj-go/Judex/internal/job"
+	"github.com/kakj-go/Judex/internal/material"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 )
 
 // Executor runs one discussion batch end-to-end.
 type Executor struct {
-	Pool      *pgxpool.Pool
-	Runner    *runner.Runner
-	Provider  model.Provider
-	ModelName string
-	Clock     func() time.Time
+	Pool         *pgxpool.Pool
+	Runner       *runner.Runner
+	Provider     model.Provider
+	ModelName    string
+	Clock        func() time.Time
+	Objects      material.ObjectStore
+	ResolveModel func(context.Context, uuid.UUID, uuid.UUID) (model.Provider, string, int64, int64, error)
 	// SandboxFactory provisions the per-run sandbox boundary (05 §7);
 	// nil means no sandbox configured and sandbox tools fail honestly.
 	SandboxFactory func(runID, projectID uuid.UUID) *opensandbox.RunSandbox
@@ -57,42 +62,95 @@ func (e *Executor) now() time.Time {
 // Failures mark the batch failed with the reason; they never touch formal
 // business state.
 func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUID) error {
-	// 1) Claim + gather under the project guard.
-	var (
-		topicID          uuid.UUID
-		sourceSubmission *uuid.UUID
-		sourceText       string
-		maxRounds        int
-		state            string
-	)
-	err := e.withProjectTx(ctx, projectID, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `
-			SELECT state FROM discussion_batches WHERE id=$1 AND project_id=$2 FOR UPDATE`,
-			batchID, projectID).Scan(&state); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return apierrors.New(apierrors.NotFound, "batch not found")
-			}
+	var topicID uuid.UUID
+	var sourceText string
+	var maxRounds int
+	if err := e.Pool.QueryRow(ctx, `SELECT b.topic_id,COALESCE(s.text,''),b.max_rounds FROM discussion_batches b LEFT JOIN submissions s ON s.id=b.source_submission_id AND s.project_id=b.project_id WHERE b.id=$1 AND b.project_id=$2`, batchID, projectID).Scan(&topicID, &sourceText, &maxRounds); err != nil {
+		return err
+	}
+	coordinator := e.coordinatorID(ctx, projectID)
+	sessionID, err := e.ensureSession(ctx, projectID, topicID, coordinator)
+	if err != nil {
+		return err
+	}
+	runID := uuid.New()
+	lease := uuid.NewString()
+	var restored []model.Message
+	startAttempt := 1
+	err = e.withProjectTx(ctx, projectID, func(tx pgx.Tx) error {
+		var batchState string
+		var reserved int
+		if err := tx.QueryRow(ctx, `SELECT state,rounds_reserved FROM discussion_batches WHERE id=$1 FOR UPDATE`, batchID).Scan(&batchState, &reserved); err != nil {
 			return err
 		}
-		if state == "completed" {
+		if batchState == "completed" || batchState == "cancelled" || batchState == "waiting_human" || batchState == "failed" {
 			return errAlreadyDone
 		}
-		if state != "queued" && state != "running" {
-			return apierrors.Newf(apierrors.InvalidTransition, "batch is %s", state)
-		}
-		if _, err := tx.Exec(ctx, `UPDATE discussion_batches SET state='running', updated_at=$2 WHERE id=$1`,
-			batchID, e.now()); err != nil {
+		var oldState string
+		err := tx.QueryRow(ctx, `SELECT id,state FROM agent_runs WHERE batch_id=$1 AND parent_run_id IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, batchID).Scan(&runID, &oldState)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
-		if err := tx.QueryRow(ctx, `
-			SELECT topic_id, source_submission_id, max_rounds FROM discussion_batches WHERE id=$1`,
-			batchID).Scan(&topicID, &sourceSubmission, &maxRounds); err != nil {
+		var projectState string
+		if err = tx.QueryRow(ctx, `SELECT status FROM projects WHERE id=$1`, projectID).Scan(&projectState); err != nil {
 			return err
 		}
-		if sourceSubmission != nil {
-			_ = tx.QueryRow(ctx, `SELECT text FROM submissions WHERE id=$1`, *sourceSubmission).Scan(&sourceText)
+		if projectState != "active" {
+			if _, err = tx.Exec(ctx, `UPDATE agent_runs SET state='cancelled',version=version+1,updated_at=now() WHERE batch_id=$1 AND state NOT IN ('succeeded','failed','cancelled')`, batchID); err != nil {
+				return err
+			}
+			_, err = tx.Exec(ctx, `UPDATE discussion_batches SET state='cancelled',version=version+1,updated_at=now() WHERE id=$1`, batchID)
+			return err
 		}
-		return nil
+		if oldState == "running" || oldState == "provisioning" || batchState == "running" {
+			transcript, safe, recoverErr := recoverTranscript(ctx, tx, batchID, runID)
+			if recoverErr != nil {
+				return recoverErr
+			}
+			if safe {
+				restored = transcript
+				if err = tx.QueryRow(ctx, `SELECT COALESCE(max(attempt),0)+1 FROM model_calls WHERE run_id=$1`, runID).Scan(&startAttempt); err != nil {
+					return err
+				}
+				if err = claimSession(ctx, tx, sessionID, runID); err != nil {
+					return err
+				}
+				_, err = tx.Exec(ctx, `UPDATE agent_runs SET state='running',lease_token=$2,version=version+1,updated_at=now() WHERE id=$1`, runID, lease)
+				return err
+			}
+			// We cannot prove a prepared tool did not execute. Preserve evidence and
+			// require reconciliation; never re-run bash after worker loss.
+			if _, err = tx.Exec(ctx, `UPDATE tool_calls SET state='unknown' WHERE run_id IN(SELECT id FROM agent_runs WHERE batch_id=$1) AND state IN ('prepared','running')`, batchID); err != nil {
+				return err
+			}
+			if _, err = tx.Exec(ctx, `UPDATE agent_runs SET state='waiting_human',lease_token=$2,version=version+1,budget_snapshot=jsonb_build_object('reason','interrupted run: reconcile unknown tool results'),updated_at=now() WHERE batch_id=$1 AND state NOT IN ('succeeded','failed','cancelled')`, batchID, lease); err != nil {
+				return err
+			}
+			_, err = tx.Exec(ctx, `UPDATE discussion_batches SET state='waiting_human',version=version+1,updated_at=now() WHERE id=$1`, batchID)
+			return err
+		}
+		if reserved >= maxRounds {
+			return apierrors.New(apierrors.BudgetExhausted, "discussion round limit reached")
+		}
+		if oldState == "" {
+			runID = uuid.New()
+			if _, err = tx.Exec(ctx, `INSERT INTO agent_runs(project_id,id,session_id,batch_id,identity_id,state,created_at,updated_at) VALUES($1,$2,$3,$4,$5,'queued',now(),now())`, projectID, runID, sessionID, batchID, coordinator); err != nil {
+				return err
+			}
+		} else if oldState != "queued" {
+			return errAlreadyDone
+		}
+		if err = claimSession(ctx, tx, sessionID, runID); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, `UPDATE agent_runs SET state='running',lease_token=$2,version=version+1,updated_at=now() WHERE id=$1`, runID, lease); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, `UPDATE discussion_batches SET state='running',rounds_reserved=rounds_reserved+1,version=version+1,updated_at=now() WHERE id=$1`, batchID); err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, `INSERT INTO discussion_rounds(project_id,id,batch_id,ordinal,state,coordinator_run_id,created_at) VALUES($1,$2,$3,$4,'running',$5,now())`, projectID, uuid.New(), batchID, reserved+1, runID)
+		return err
 	})
 	if errors.Is(err, errAlreadyDone) {
 		return nil
@@ -100,42 +158,55 @@ func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUI
 	if err != nil {
 		return err
 	}
-
-	// 2) Build the coordinator manifest from real project facts.
+	defer e.releaseSession(sessionID, runID)
+	var runState string
+	if err = e.Pool.QueryRow(ctx, `SELECT state FROM agent_runs WHERE id=$1`, runID).Scan(&runState); err != nil {
+		return err
+	}
+	if runState != "running" {
+		return nil
+	}
+	if len(restored) > 0 {
+		last := restored[len(restored)-1]
+		if last.Role == "assistant" && len(last.ToolCalls) == 0 {
+			return e.commit(ctx, projectID, topicID, batchID, runID, sessionID, coordinator, runner.Outcome{State: "succeeded", Summary: last.Content}, lease)
+		}
+	}
 	facts := e.gatherFacts(ctx, projectID, topicID)
 	facts.NewMaterial = sourceText
+	facts.PositionPrompt = "你是项目协调者。按公开职责调用 call_agent 收集岗位意见，保留异议与未完成事项；缺少必要岗位结果时明确报告缺口。"
+	facts.WorkFacts = append(facts.WorkFacts, e.materialFacts(ctx, projectID, batchID)...)
 	manifest := agentcontext.Build(facts)
-
-	// 3) Reserve one round (05 §3：第一次启动以事务预留 round ordinal).
-	roundID := uuid.New()
-	_ = e.withProjectTx(ctx, projectID, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			INSERT INTO discussion_rounds (project_id, id, batch_id, ordinal, state, created_at)
-			VALUES ($1,$2,$3,1,'running',$4)`, projectID, roundID, batchID, e.now())
+	rawManifest, _ := json.Marshal(manifest.SharedLayers())
+	if _, err = e.Pool.Exec(ctx, `UPDATE agent_runs SET manifest=$2 WHERE id=$1 AND lease_token=$3`, runID, rawManifest, lease); err != nil {
 		return err
-	})
-
-	// 4) Ensure the coordinator session exists ((topic,identity) unique),
-	//    then run the model outside DB transactions (01 §1).
-	coordinator := e.coordinatorID(ctx, projectID)
-	sessionID := e.ensureSession(ctx, projectID, topicID, coordinator)
-	runID := uuid.New()
+	}
+	provider, modelName, maxIn, maxOut, err := e.resolve(ctx, projectID, coordinator)
+	if err != nil {
+		return e.commit(ctx, projectID, topicID, batchID, runID, sessionID, coordinator, runner.Outcome{State: "failed", Summary: err.Error()}, lease)
+	}
+	registry := tools.New()
+	tools.RegisterDefaults(registry)
+	caller := &positionCaller{executor: e, project: projectID, topic: topicID, batch: batchID, parent: runID}
+	tools.RegisterCallAgent(registry, caller)
+	harness := &runner.Runner{Provider: provider, Registry: registry, Clock: e.Clock}
 	env := e.toolEnv(projectID, topicID)
-	// One run one sandbox (05 §7): lazily provisioned on the first sandbox
-	// tool call, killed when the run finishes.
 	runSandbox := e.newRunSandbox(runID, projectID)
 	env.Sandbox = runSandbox
 	defer runSandbox.Close(context.WithoutCancel(ctx))
-	outcome := e.Runner.Run(ctx, runner.RunRequest{
-		RunID: runID, SessionID: sessionID, ProjectID: projectID,
-		ModelName: e.ModelName, Manifest: manifest,
-		Budget: runner.Budget{MaxRounds: maxRounds, MaxModelAttempts: 12,
-			MaxTotalTokens: 120000, MaxWallClock: 5 * time.Minute},
-		Env: &env,
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go e.watchCancellation(runCtx, cancel, projectID, runID, lease)
+	journal := &journal{pool: e.Pool, project: projectID, run: runID, session: sessionID, batch: batchID, lease: lease}
+	outcome := harness.Run(runCtx, runner.RunRequest{Lease: lease, History: restored, StartAttempt: startAttempt, RunID: runID, SessionID: sessionID, ProjectID: projectID, IdentityID: coordinator, ModelName: modelName, Manifest: manifest,
+		Budget: runner.Budget{MaxRounds: maxRounds, MaxModelAttempts: runner.BatchMaxModelAttempts, MaxTotalTokens: runner.BatchMaxTotalTokens, MaxWallClock: 30 * time.Minute}, MaxInputTokens: maxIn, MaxOutputTokens: maxOut, Env: &env,
+		Journal: journal, Prepare: e.prepareCall(journal, topicID, sourceText),
 	})
-
-	// 5) Commit outcome: agent message on success/retryable note on failure.
-	return e.commit(ctx, projectID, topicID, batchID, runID, sessionID, coordinator, outcome)
+	if outcome.State == "succeeded" && len(caller.failures) > 0 {
+		outcome.State = "waiting_human"
+		outcome.Summary = "岗位结果不完整：" + strings.Join(caller.failures, "；") + "\n" + outcome.Summary
+	}
+	return e.commit(context.WithoutCancel(ctx), projectID, topicID, batchID, runID, sessionID, coordinator, outcome, lease)
 }
 
 var errAlreadyDone = errors.New("batch already completed")
@@ -182,8 +253,9 @@ func (e *Executor) gatherFacts(ctx context.Context, projectID, topicID uuid.UUID
 
 // toolEnv wires read-only DB projections for the coordinator run (05 §6).
 func (e *Executor) toolEnv(projectID, topicID uuid.UUID) tools.Env {
-	return tools.Env{
-		ProjectID: projectID.String(),
+	env := tools.Env{
+		QueryWorkPage: e.queryWorkPage,
+		ProjectID:     projectID.String(),
 		ListAgents: func(ctx context.Context, pid string) ([]map[string]any, error) {
 			rows, err := e.Pool.Query(ctx, `
 				SELECT i.id::text, i.kind, COALESCE(u.display_name,'') AS holder,
@@ -237,26 +309,19 @@ func (e *Executor) toolEnv(projectID, topicID uuid.UUID) tools.Env {
 			}
 			return out, nil
 		},
-		ReadMaterial: func(ctx context.Context, pid, versionID string) (map[string]any, error) {
-			var sha string
-			var size int64
-			var mime string
-			err := e.Pool.QueryRow(ctx, `
-				SELECT sha256, size, mime FROM material_versions
-				WHERE id=$1 AND project_id=$2`, versionID, pid).Scan(&sha, &size, &mime)
-			if err != nil {
-				return nil, fmt.Errorf("材料版本不可读（沙箱内容读取依赖部署配置）")
-			}
-			// Sandbox content reading requires the deployment mount; metadata
-			// is the honest projection without it.
-			return map[string]any{"versionId": versionID, "sha256": sha, "size": size,
-				"mime": mime, "note": "内容原文读取需沙箱挂载；此处仅核对元数据"}, nil
-		},
+		ReadMaterial: e.readMaterial,
 		ProposeDraft: func(ctx context.Context, pid string, draft map[string]any) (string, error) {
 			// Draft-only effect (05 §6)：仅创建草稿，不提交人工投票。
 			id := uuid.New()
 			changes, _ := json.Marshal(draft["changes"])
-			tx, err := e.Pool.Begin(ctx)
+			var typed []decision.Change
+			if err := json.Unmarshal(changes, &typed); err != nil {
+				return "", apierrors.Fields("changes", "invalid")
+			}
+			if err := decision.ValidateDraftChanges(typed); err != nil {
+				return "", err
+			}
+			tx, err := e.beginEffect(ctx, projectID)
 			if err != nil {
 				return "", err
 			}
@@ -278,10 +343,12 @@ func (e *Executor) toolEnv(projectID, topicID uuid.UUID) tools.Env {
 			return id.String(), nil
 		},
 	}
+	e.contextTools(&env, projectID)
+	return env
 }
 
 // commit writes the agent message + batch terminal state in one transaction.
-func (e *Executor) commit(ctx context.Context, projectID, topicID, batchID, runID, sessionID, coordinator uuid.UUID, outcome runner.Outcome) error {
+func (e *Executor) commit(ctx context.Context, projectID, topicID, batchID, runID, sessionID, coordinator uuid.UUID, outcome runner.Outcome, lease string) error {
 	return e.withProjectTx(ctx, projectID, func(tx pgx.Tx) error {
 		now := e.now()
 		batchState := "completed"
@@ -294,14 +361,44 @@ func (e *Executor) commit(ctx context.Context, projectID, topicID, batchID, runI
 				batchState = "limit_reached"
 			}
 		}
-		// Persist the run record for traceability (05 §10).
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO agent_runs (project_id, id, session_id, batch_id, identity_id, state,
-				manifest, budget_snapshot, created_at, updated_at)
-			VALUES ($1,$2,$3,$4,$5,$6,'{}'::jsonb,$7::jsonb,$8,$8)`,
-			projectID, runID, sessionID, batchID, coordinator,
-			outcome.State, runBudgetJSON(outcome), now); err != nil {
+		if outcome.State == "waiting_human" {
+			batchState = "waiting_human"
+		}
+		if outcome.State == "context_blocked" {
+			outcome.State = "waiting_human"
+			batchState = "waiting_human"
+		}
+		var current string
+		var currentLease *string
+		if err := tx.QueryRow(ctx, `SELECT state,lease_token FROM agent_runs WHERE id=$1 FOR UPDATE`, runID).Scan(&current, &currentLease); err != nil {
 			return err
+		}
+		if currentLease == nil || *currentLease != lease {
+			return nil
+		}
+		if current == "cancelled" {
+			batchState = "cancelled"
+			outcome.State = "cancelled"
+		}
+		var projectState string
+		if err := tx.QueryRow(ctx, `SELECT status FROM projects WHERE id=$1`, projectID).Scan(&projectState); err != nil {
+			return err
+		}
+		if projectState != "active" {
+			outcome.State = "cancelled"
+			batchState = "cancelled"
+		}
+		if _, err := tx.Exec(ctx, `UPDATE agent_runs SET state=$2,budget_snapshot=$3,version=version+1,updated_at=now() WHERE id=$1`, runID, outcome.State, runBudgetJSON(outcome)); err != nil {
+			return err
+		}
+		if projectState != "active" {
+			_, err := tx.Exec(ctx, `UPDATE discussion_batches SET state='cancelled',version=version+1,updated_at=now() WHERE id=$1`, batchID)
+			return err
+		}
+		if outcome.State == "succeeded" {
+			if _, err := tx.Exec(ctx, `UPDATE agent_sessions SET last_consumed_seq=GREATEST(last_consumed_seq,COALESCE((SELECT max(covered_seq) FROM context_checkpoints WHERE run_id=$2),0)) WHERE id=$1`, sessionID, runID); err != nil {
+				return err
+			}
 		}
 		var seq int64
 		if err := tx.QueryRow(ctx, `
@@ -317,7 +414,7 @@ func (e *Executor) commit(ctx context.Context, projectID, topicID, batchID, runI
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			UPDATE discussion_batches SET state=$2, rounds_reserved=rounds_reserved+1, updated_at=$3 WHERE id=$1`,
+			UPDATE discussion_batches SET state=$2, version=version+1, updated_at=$3 WHERE id=$1`,
 			batchID, batchState, now); err != nil {
 			return err
 		}
@@ -329,25 +426,11 @@ func (e *Executor) commit(ctx context.Context, projectID, topicID, batchID, runI
 }
 
 // ensureSession creates or reuses the (topic, coordinator identity) session.
-func (e *Executor) ensureSession(ctx context.Context, projectID, topicID, identityID uuid.UUID) uuid.UUID {
+func (e *Executor) ensureSession(ctx context.Context, projectID, topicID, identityID uuid.UUID) (uuid.UUID, error) {
 	var id uuid.UUID
-	err := e.Pool.QueryRow(ctx, `
-		SELECT id FROM agent_sessions WHERE topic_id=$1 AND identity_id=$2`, topicID, identityID).Scan(&id)
-	if err == nil {
-		return id
-	}
-	id = uuid.New()
-	_, err = e.Pool.Exec(ctx, `
-		INSERT INTO agent_sessions (project_id, id, topic_id, identity_id, created_at)
-		VALUES ($1,$2,$3,$4,$5)
-		ON CONFLICT (topic_id, identity_id) DO NOTHING`,
-		projectID, id, topicID, identityID, e.now())
-	if err == nil {
-		return id
-	}
-	_ = e.Pool.QueryRow(ctx, `
-		SELECT id FROM agent_sessions WHERE topic_id=$1 AND identity_id=$2`, topicID, identityID).Scan(&id)
-	return id
+	err := e.Pool.QueryRow(ctx, `INSERT INTO agent_sessions(project_id,id,topic_id,identity_id,created_at) VALUES($1,$2,$3,$4,$5)
+ ON CONFLICT(topic_id,identity_id) DO UPDATE SET identity_id=EXCLUDED.identity_id RETURNING id`, projectID, uuid.New(), topicID, identityID, e.now()).Scan(&id)
+	return id, err
 }
 
 func (e *Executor) coordinatorID(ctx context.Context, projectID uuid.UUID) uuid.UUID {
@@ -382,7 +465,7 @@ func (e *Executor) withProjectTx(ctx context.Context, projectID uuid.UUID, fn fu
 
 func runBudgetJSON(o runner.Outcome) []byte {
 	raw, _ := json.Marshal(map[string]any{
-		"tokensUsed": o.TokensUsed, "usageKnown": o.UsageKnown,
+		"tokensUsed": o.TokensUsed, "usageKnown": o.UsageKnown, "reason": o.Summary,
 		"modelCalls": o.ModelCalls, "toolCalls": o.ToolCalls,
 	})
 	return raw

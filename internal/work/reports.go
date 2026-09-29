@@ -4,6 +4,7 @@ package work
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/google/uuid"
@@ -19,6 +20,8 @@ import (
 // submission entry and POST /tasks/{id}/reports (04 §1 防双写：两个入口共用
 // 本用例)。
 type ReportInput struct {
+	CodeRefs            []map[string]any
+	EnvironmentRefs     []map[string]any
 	SubmissionID        *uuid.UUID
 	TaskID              uuid.UUID
 	IdentityID          *uuid.UUID
@@ -53,6 +56,35 @@ func (s *Service) ReportInTx(ctx context.Context, tx pgx.Tx, requester, projectI
 		}
 		return uuid.Nil, 0, apierrors.New(apierrors.Internal, "task lookup failed").Wrap(err)
 	}
+	identityID, bindingVersion, err := ResolveParticipant(ctx, tx, requester, projectID, in.TaskID, in.IdentityID)
+	if err != nil {
+		return uuid.Nil, 0, err
+	}
+	in.IdentityID = &identityID
+	if in.CodeRefs == nil {
+		in.CodeRefs = []map[string]any{}
+	}
+	if in.EnvironmentRefs == nil {
+		in.EnvironmentRefs = []map[string]any{}
+	}
+	if err := validateCodeRefs(ctx, tx, projectID, in.CodeRefs); err != nil {
+		return uuid.Nil, 0, err
+	}
+	hash := reportHash(in)
+	// Dedup: same submission never double-reports (unique constraint guards).
+	if in.SubmissionID != nil {
+		var existing uuid.NullUUID
+		var existingHash string
+		var originalVersion int64
+		if err := tx.QueryRow(ctx, `
+			SELECT id,payload_hash,task_version FROM work_reports WHERE task_id=$1 AND submission_id=$2 AND identity_id=COALESCE($3::uuid, '00000000-0000-0000-0000-000000000000'::uuid)`,
+			in.TaskID, *in.SubmissionID, nullableUUID(in.IdentityID)).Scan(&existing, &existingHash, &originalVersion); err == nil && existing.Valid {
+			if existingHash != hash {
+				return uuid.Nil, 0, apierrors.New(apierrors.IdempotencyConflict, "submission already reported with different payload")
+			}
+			return existing.UUID, originalVersion, nil
+		}
+	}
 	if status == "accepted" {
 		return uuid.Nil, 0, apierrors.New(apierrors.InvalidTransition, "已验收任务不能追加报告；需 reviewer 重开")
 	}
@@ -62,51 +94,63 @@ func (s *Service) ReportInTx(ctx context.Context, tx pgx.Tx, requester, projectI
 	if in.Kind == "delivery" && status != "ready" && status != "working" && status != "rework" {
 		return uuid.Nil, 0, apierrors.New(apierrors.InvalidTransition, "delivery from "+status)
 	}
-	// Identity check: the reporter must currently hold the identity (or the
-	// task has no identity requirement and the member reports as themselves).
-	bindingVersion := int64(0)
-	if in.IdentityID != nil {
-		var holder *uuid.UUID
-		if err := tx.QueryRow(ctx, `
-			SELECT b.user_id FROM agent_identities i
-			LEFT JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version
-			WHERE i.id=$1 AND i.project_id=$2`, *in.IdentityID, projectID).Scan(&holder); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return uuid.Nil, 0, apierrors.New(apierrors.InvalidReference, "identity not found")
-			}
-			return uuid.Nil, 0, apierrors.New(apierrors.Internal, "identity lookup failed").Wrap(err)
-		}
-		if holder == nil || *holder != requester {
-			return uuid.Nil, 0, apierrors.New(apierrors.Forbidden, "只有当前身份绑定人可以上报")
-		}
-		var version int64
-		if err := tx.QueryRow(ctx, `SELECT current_binding_version FROM agent_identities WHERE id=$1`, *in.IdentityID).Scan(&version); err != nil {
-			return uuid.Nil, 0, apierrors.New(apierrors.Internal, "binding lookup failed").Wrap(err)
-		}
-		bindingVersion = version
+	if in.Kind == "progress" && status != "working" && status != "rework" {
+		return uuid.Nil, 0, apierrors.New(apierrors.InvalidTransition, "progress requires working or rework")
 	}
-	// Dedup: same submission never double-reports (unique constraint guards).
-	if in.SubmissionID != nil {
-		var existing uuid.NullUUID
-		if err := tx.QueryRow(ctx, `
-			SELECT id FROM work_reports WHERE task_id=$1 AND submission_id=$2 AND identity_id=COALESCE($3::uuid, '00000000-0000-0000-0000-000000000000'::uuid)`,
-			in.TaskID, *in.SubmissionID, nullableUUID(in.IdentityID)).Scan(&existing); err == nil && existing.Valid {
-			return existing.UUID, currentVer, nil
+	if in.Kind == "delivery" {
+		_, blockers, err := s.RequirementsFor(ctx, tx, projectID, in.TaskID)
+		if err != nil {
+			return uuid.Nil, 0, err
+		}
+		for _, b := range blockers {
+			if b.Phase == "start" || b.Phase == "both" {
+				return uuid.Nil, 0, apierrors.New(apierrors.RequirementUnmet, "delivery prerequisites unmet").WithDetails(map[string]any{"blockers": blockers})
+			}
+		}
+		var missing int
+		err = tx.QueryRow(ctx, `SELECT count(*) FROM task_participants p JOIN tasks t ON t.id=p.task_id
+   WHERE p.task_id=$1 AND p.identity_id<>$2 AND NOT EXISTS(SELECT 1 FROM work_reports r
+    WHERE r.task_id=t.id AND r.identity_id=p.identity_id AND r.agreement_version=t.agreement_version)`, in.TaskID, identityID).Scan(&missing)
+		if err != nil {
+			return uuid.Nil, 0, err
+		}
+		if missing > 0 {
+			return uuid.Nil, 0, apierrors.New(apierrors.RequirementUnmet, "required participant contributions missing")
+		}
+	}
+	for _, raw := range in.MaterialVersionIDs {
+		vid, err := uuid.Parse(raw)
+		if err != nil {
+			return uuid.Nil, 0, apierrors.Fields("materialVersionIds", "uuid")
+		}
+		var ready bool
+		if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM material_versions WHERE project_id=$1 AND id=$2 AND state='ready')`, projectID, vid).Scan(&ready); err != nil {
+			return uuid.Nil, 0, err
+		}
+		if !ready {
+			return uuid.Nil, 0, apierrors.New(apierrors.RequirementUnmet, "material is not ready in this project")
 		}
 	}
 	now := s.now()
 	reportID := uuid.New()
+	codeRefs, _ := json.Marshal(in.CodeRefs)
+	envRefs, _ := json.Marshal(in.EnvironmentRefs)
 	identityColumn := uuid.Nil
 	if in.IdentityID != nil {
 		identityColumn = *in.IdentityID
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO work_reports (project_id, id, task_id, identity_id, binding_version, submission_id,
-			report_kind, progress_hint, created_by, created_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+			report_kind, progress_hint, created_by, created_at, agreement_version,payload_hash,task_version,code_refs_json,environment_refs_json)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,(SELECT agreement_version FROM tasks WHERE id=$3),$11,$12,$13,$14)`,
 		projectID, reportID, in.TaskID, identityColumn, bindingVersion, in.SubmissionID,
-		in.Kind, nullableText(in.Text), requester, now); err != nil {
+		in.Kind, nullableText(in.Text), requester, now, hash, currentVer+1, codeRefs, envRefs); err != nil {
 		return uuid.Nil, 0, apierrors.New(apierrors.Internal, "report insert failed").Wrap(err)
+	}
+	for _, raw := range in.MaterialVersionIDs {
+		if _, err := tx.Exec(ctx, `INSERT INTO work_report_materials(project_id,report_id,material_version_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`, projectID, reportID, raw); err != nil {
+			return uuid.Nil, 0, err
+		}
 	}
 	nextStatus := status
 	if in.Kind == "delivery" {
@@ -128,7 +172,7 @@ func (s *Service) ReportInTx(ctx context.Context, tx pgx.Tx, requester, projectI
 	}
 	if err := audit.Append(ctx, tx, audit.Entry{
 		ProjectID: &projectID, ActorType: audit.ActorUser, ActorUserID: &requester,
-		IdentityID: in.IdentityID, Source: audit.SourceWeb,
+		IdentityID: in.IdentityID, BindingVersion: &bindingVersion, Source: audit.SourceWeb,
 		Operation:  "work.report." + in.Kind,
 		ObjectType: "task", ObjectID: in.TaskID.String(), OccurredAt: now,
 	}); err != nil {
@@ -143,7 +187,7 @@ func (s *Service) Report(ctx context.Context, requester, projectID uuid.UUID, in
 	var reportID uuid.UUID
 	var version int64
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {

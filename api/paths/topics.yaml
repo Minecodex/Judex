@@ -118,6 +118,7 @@ paths:
         - bearerGrant: []
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
         - name: beforeSeq
           in: query
           schema:

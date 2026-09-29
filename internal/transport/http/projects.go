@@ -4,8 +4,7 @@ package httptransport
 
 import (
 	"context"
-	"strconv"
-	"time"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -13,11 +12,13 @@ import (
 	"github.com/kakj-go/Judex/internal/agent"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/kakj-go/Judex/internal/project"
+	"github.com/kakj-go/Judex/internal/work"
 )
 
 // ProjectHandlers serves the project lifecycle operations (06 §3).
 type ProjectHandlers struct {
 	Projects   *project.Service
+	Work       *work.Service
 	ModelCheck func(ctx context.Context, id uuid.UUID) error
 	Models     func(ctx context.Context) ([]agent.PublicModel, error)
 }
@@ -37,68 +38,19 @@ func (h *ProjectHandlers) Register(spec *SpecRouter) {
 	spec.Register("listModels", withAuth(h.listModels))
 }
 
-func pageParams(c *gin.Context) (int, *time.Time, *uuid.UUID, error) {
-	limit := 50
-	if raw := c.Query("limit"); raw != "" {
-		n, err := strconv.Atoi(raw)
-		if err != nil || n < 1 || n > 100 {
-			return 0, nil, nil, apierrors.Fields("limit", "range")
-		}
-		limit = n
-	}
-	var afterTime *time.Time
-	var afterID *uuid.UUID
-	if raw := c.Query("cursor"); raw != "" {
-		t, id, err := decodeCursor(raw)
-		if err != nil {
-			return 0, nil, nil, apierrors.Fields("cursor", "invalid")
-		}
-		afterTime, afterID = t, id
-	}
-	return limit, afterTime, afterID, nil
-}
-
-// encodeCursor produces "createdAt,id" opaque-enough keyset cursors.
-func encodeCursor(t time.Time, id uuid.UUID) string {
-	return t.UTC().Format(time.RFC3339Nano) + "|" + id.String()
-}
-
-func decodeCursor(raw string) (*time.Time, *uuid.UUID, error) {
-	for i := 0; i < len(raw); i++ {
-		if raw[i] == '|' {
-			t, err := time.Parse(time.RFC3339Nano, raw[:i])
-			if err != nil {
-				return nil, nil, err
-			}
-			id, err := uuid.Parse(raw[i+1:])
-			if err != nil {
-				return nil, nil, err
-			}
-			return &t, &id, nil
-		}
-	}
-	return nil, nil, apierrors.Fields("cursor", "format")
-}
-
 func (h *ProjectHandlers) list(c *gin.Context) {
 	p := principalFrom(c)
-	limit, afterTime, afterID, err := pageParams(c)
-	if err != nil {
-		respond{}.error(c, err)
-		return
-	}
+	limit, afterTime, afterID := paging.Params(c.Request.Context())
 	projects, more, err := h.Projects.ListForUser(c.Request.Context(), p.UserID, limit, afterTime, afterID)
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	var next *string
 	if more && len(projects) > 0 {
 		last := projects[len(projects)-1]
-		cur := encodeCursor(last.CreatedAt, last.ID)
-		next = &cur
+		paging.SetNext(c.Request.Context(), last.CreatedAt, last.ID)
 	}
-	respond{}.ok(c, respond{}.list(projects, next))
+	respond{}.ok(c, respond{}.list(c, projects, nil))
 }
 
 func (h *ProjectHandlers) create(c *gin.Context) {
@@ -157,10 +109,25 @@ func (h *ProjectHandlers) bootstrap(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
+	identities, err := h.Projects.ListIdentities(c.Request.Context(), p.UserID, projectID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	pending := 0
+	if h.Work != nil {
+		actions, err := h.Work.MyActions(c.Request.Context(), p.UserID, &projectID)
+		if err != nil {
+			respond{}.error(c, err)
+			return
+		}
+		pending = len(actions)
+	}
 	respond{}.ok(c, gin.H{
-		"project":     projectValue,
-		"identities":  []any{},
-		"eventCursor": cursor,
+		"pendingActionsCount": pending,
+		"project":             projectValue,
+		"identities":          identities,
+		"eventCursor":         cursor,
 	})
 }
 
@@ -235,5 +202,5 @@ func (h *ProjectHandlers) listModels(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(models, nil))
+	respond{}.ok(c, respond{}.list(c, models, nil))
 }

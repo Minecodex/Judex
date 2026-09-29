@@ -5,6 +5,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"time"
 
 	"github.com/google/uuid"
@@ -167,10 +168,10 @@ type SessionSummary struct {
 
 // ListSessions returns the user's active sessions without secrets.
 func (s *Service) ListSessions(ctx context.Context, user, currentSession uuid.UUID) ([]SessionSummary, error) {
-	rows, err := s.pool.Query(ctx, `
-		SELECT id, created_at, expires_at, last_seen_at FROM user_sessions
+	rows, err := paging.Query(ctx, s.pool, `
+		SELECT id, created_at, expires_at, last_seen_at /*keys*/ FROM user_sessions
 		WHERE user_id=$1 AND revoked_at IS NULL AND expires_at>$2
-		ORDER BY last_seen_at DESC`, user, s.now())
+		/*page*/`, "created_at", "id", user, s.now())
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "session list failed").Wrap(err)
 	}

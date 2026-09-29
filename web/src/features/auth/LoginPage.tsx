@@ -5,32 +5,9 @@ import { useLocation, useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { usePreferences } from "../../stores/preferences";
 import { translate, type Key } from "../../i18n";
-import { APIError } from "../../lib/api/client";
 import { login } from "./api";
+import { errorKey } from "./errors";
 import { safeReturnTo, useAuth } from "./AuthProvider";
-
-export function errorKey(error: unknown): Key | null {
-  if (!(error instanceof APIError)) return "errNetwork";
-  switch (error.code) {
-    case "INVALID_CREDENTIALS":
-    case "UNAUTHENTICATED":
-      return "errInvalidCredentials";
-    case "SESSION_EXPIRED":
-      return "errSessionExpired";
-    case "RATE_LIMITED":
-      return "errRateLimited";
-    case "EMAIL_IN_USE":
-      return "errEmailInUse";
-    case "VALIDATION_ERROR":
-      return "errValidation";
-    case "FORBIDDEN":
-      return "errForbidden";
-    case "NOT_IMPLEMENTED":
-      return "errServer";
-    default:
-      return error.status >= 500 ? "errServer" : "errNetwork";
-  }
-}
 
 export function LoginPage() {
   const { locale } = usePreferences();

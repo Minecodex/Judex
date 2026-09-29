@@ -212,3 +212,9 @@ Intent confirm 不接受任意 URL 转发或 SQL patch，operation 为白名单�
 每个 operation 有稳定 operationId、完整 schema、enum、必填/nullable、security、错误和示例；日期/ID 示例在真正 OpenAPI fixture 中换成合法值。生成 Go DTO 与 TS client，CLI 复用客户端，检查生成后工作树无额外 diff。
 
 接口集成测试验证未知字段拒绝、边界长度、外项目引用、权限、版本、幂等。错误 schema 不能由不同模块各造一套。任何目录中“未来待实现”的生产路由不能返回 200 空数组掩盖 501；阶段未完明确能力关闭，最终 V1 gate 必须全部所需能力可用。
+
+## 2026-09-29 契约落地
+
+当前 OpenAPI 为 109 路径/125 操作，生产 JSON 请求按对应 schema 校验，拒绝缺字段和尾随 JSON。列表使用绑定用户、路径与过滤条件的 keyset cursor；同时间戳按 UUID 排序，跨作用域复用游标拒绝。类型化集合序列化为 [] / {}，可选对象仍保留 null。
+
+用户级 /confirmation-intents 仅允许 project.create，用于尚无项目的 CLI；其他意图仍限于项目。版本材料查询见 /projects/{projectId}/material-versions/{versionId}。成功请求/响应 schema 自动验收覆盖 59 操作，117 个受保护操作有匿名 401 schema 断言；不得将注册完整性当作全成功路径覆盖。

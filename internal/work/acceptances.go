@@ -4,8 +4,7 @@ package work
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -20,6 +19,7 @@ import (
 
 // AcceptanceReview is the frozen snapshot shown to the reviewer (06 §5).
 type AcceptanceReview struct {
+	Manifest          json.RawMessage  `json:"manifest"`
 	ReviewID          string           `json:"reviewId"`
 	ReviewHash        string           `json:"reviewHash"`
 	TargetType        string           `json:"targetType"`
@@ -37,43 +37,7 @@ func (s *Service) TaskAcceptanceReview(ctx context.Context, requester, projectID
 	if _, err := memberTx(ctx, s.pool, projectID, requester); err != nil {
 		return AcceptanceReview{}, err
 	}
-	var (
-		version          int64
-		status           string
-		latestReport     uuid.NullUUID
-		reviewerIdentity uuid.NullUUID
-	)
-	err := s.pool.QueryRow(ctx, `
-		SELECT version, status, latest_report_id, reviewer_identity_id
-		FROM tasks WHERE id=$1 AND project_id=$2`, taskID, projectID).
-		Scan(&version, &status, &latestReport, &reviewerIdentity)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return AcceptanceReview{}, apierrors.New(apierrors.NotFound, "task not found")
-	}
-	if err != nil {
-		return AcceptanceReview{}, apierrors.New(apierrors.Internal, "task lookup failed").Wrap(err)
-	}
-	_, blockers, err := s.RequirementsFor(ctx, poolAsQuery{s.pool}, projectID, taskID)
-	if err != nil {
-		return AcceptanceReview{}, err
-	}
-	hasher := sha256.New()
-	hasher.Write([]byte("task|" + taskID.String() + "|" + toString(version)))
-	if latestReport.Valid {
-		hasher.Write([]byte("|report:" + latestReport.UUID.String()))
-	}
-	review := AcceptanceReview{
-		ReviewID:      uuid.NewString(),
-		ReviewHash:    hex.EncodeToString(hasher.Sum(nil)),
-		TargetType:    "task",
-		TargetID:      taskID,
-		TargetVersion: version,
-		Blockers:      blockers,
-	}
-	if latestReport.Valid {
-		review.Reports = append(review.Reports, map[string]any{"reportId": latestReport.UUID})
-	}
-	return review, nil
+	return s.taskReview(ctx, poolAsQuery{s.pool}, projectID, taskID)
 }
 
 func toString(v int64) string {
@@ -149,18 +113,8 @@ func (s *Service) decideTaskAcceptanceTx(ctx context.Context, tx pgx.Tx, request
 			}
 			return apierrors.New(apierrors.Internal, "task lookup failed").Wrap(err)
 		}
-		// Only the current holder of the reviewer identity decides.
-		if reviewerIdentity.Valid {
-			var holder *uuid.UUID
-			if err := tx.QueryRow(ctx, `
-				SELECT b.user_id FROM agent_identities i
-				LEFT JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version
-				WHERE i.id=$1`, reviewerIdentity.UUID).Scan(&holder); err != nil {
-				return apierrors.New(apierrors.Internal, "binding lookup failed").Wrap(err)
-			}
-			if holder == nil || *holder != requester {
-				return apierrors.New(apierrors.Forbidden, "只有当前验收人可以决定")
-			}
+		if err := RequireIdentityHolder(ctx, tx, requester, projectID, nullUUIDPtr(reviewerIdentity)); err != nil {
+			return err
 		}
 		if status != "delivered" {
 			return apierrors.New(apierrors.InvalidTransition, "task is "+status)
@@ -168,18 +122,19 @@ func (s *Service) decideTaskAcceptanceTx(ctx context.Context, tx pgx.Tx, request
 		if expectedVersion != version {
 			return apierrors.New(apierrors.VersionConflict, "task version conflict")
 		}
-		// Stale review: evidence moved (new report) since the reviewer opened it.
-		hasher := sha256.New()
-		hasher.Write([]byte("task|" + taskID.String() + "|" + itoa(version)))
-		if latestReport.Valid {
-			hasher.Write([]byte("|report:" + latestReport.UUID.String()))
+		snapshot, err := s.taskReview(ctx, tx, projectID, taskID)
+		if err != nil {
+			return err
 		}
-		if hex.EncodeToString(hasher.Sum(nil)) != reviewHash {
-			return apierrors.New(apierrors.ReviewStale, "验收对象已变化，请重新读取")
+		if snapshot.ReviewHash != reviewHash {
+			return apierrors.New(apierrors.ReviewStale, "evidence or responsibility changed; review again")
 		}
 		now := s.now()
 		nextStatus := "rework"
 		if accept {
+			if len(snapshot.Reports) == 0 {
+				return apierrors.New(apierrors.RequirementUnmet, "current agreement has no evidence")
+			}
 			_, blockers, err := s.RequirementsFor(ctx, tx, projectID, taskID)
 			if err != nil {
 				return err
@@ -192,8 +147,7 @@ func (s *Service) decideTaskAcceptanceTx(ctx context.Context, tx pgx.Tx, request
 			}
 			nextStatus = "accepted"
 			acceptanceID := uuid.New()
-			manifest := map[string]any{"taskVersion": version, "latestReportId": latestReport.UUID}
-			rawManifest, _ := jsonMarshal(manifest)
+			rawManifest := snapshot.Manifest
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO task_acceptances (project_id, id, task_id, task_version, reviewer_identity_id,
 					actor_user_id, review_manifest, evidence_hash, created_at)
@@ -231,8 +185,7 @@ func (s *Service) decideTaskAcceptanceTx(ctx context.Context, tx pgx.Tx, request
 
 // txLockProject/memberTxRow adapt pgx.Tx to the helpers' interfaces.
 func txLockProject(ctx context.Context, tx pgx.Tx, projectID uuid.UUID) error {
-	_, err := tx.Exec(ctx, `SELECT id FROM projects WHERE id=$1 FOR UPDATE`, projectID)
-	return err
+	return (postgres.Tx{Tx: tx}).LockActiveProject(ctx, projectID.String())
 }
 
 func memberTxRow(ctx context.Context, q interface {
@@ -250,7 +203,7 @@ func (s *Service) ReopenTask(ctx context.Context, requester, projectID, taskID u
 	}
 	var out Task
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {
@@ -259,26 +212,21 @@ func (s *Service) ReopenTask(ctx context.Context, requester, projectID, taskID u
 		var (
 			status           string
 			reviewerIdentity uuid.NullUUID
+			latestAcceptance *uuid.UUID
 		)
 		if err := tx.QueryRow(ctx, `
-			SELECT status, reviewer_identity_id FROM tasks WHERE id=$1 AND project_id=$2 FOR UPDATE`,
-			taskID, projectID).Scan(&status, &reviewerIdentity); err != nil {
+			SELECT status, reviewer_identity_id,latest_acceptance_id FROM tasks WHERE id=$1 AND project_id=$2 FOR UPDATE`,
+			taskID, projectID).Scan(&status, &reviewerIdentity, &latestAcceptance); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apierrors.New(apierrors.NotFound, "task not found")
 			}
 			return apierrors.New(apierrors.Internal, "task lookup failed").Wrap(err)
 		}
-		if reviewerIdentity.Valid {
-			var holder *uuid.UUID
-			if err := tx.QueryRow(ctx, `
-				SELECT b.user_id FROM agent_identities i
-				LEFT JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version
-				WHERE i.id=$1`, reviewerIdentity.UUID).Scan(&holder); err != nil {
-				return apierrors.New(apierrors.Internal, "binding lookup failed").Wrap(err)
-			}
-			if holder == nil || *holder != requester {
-				return apierrors.New(apierrors.Forbidden, "只有当前验收人可以重开")
-			}
+		if err := RequireIdentityHolder(ctx, tx, requester, projectID, nullUUIDPtr(reviewerIdentity)); err != nil {
+			return err
+		}
+		if latestAcceptance == nil || *latestAcceptance != acceptanceID {
+			return apierrors.New(apierrors.ReviewStale, "task acceptance changed")
 		}
 		if status != "accepted" {
 			return apierrors.New(apierrors.InvalidTransition, "only accepted tasks reopen")
@@ -319,63 +267,7 @@ func (s *Service) PlanAcceptanceReview(ctx context.Context, requester, projectID
 	if _, err := memberTx(ctx, s.pool, projectID, requester); err != nil {
 		return AcceptanceReview{}, err
 	}
-	var (
-		version int64
-		status  string
-		owner   uuid.NullUUID
-	)
-	err := s.pool.QueryRow(ctx, `
-		SELECT version, status, owner_identity_id FROM plans WHERE id=$1 AND project_id=$2`,
-		planID, projectID).Scan(&version, &status, &owner)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return AcceptanceReview{}, apierrors.New(apierrors.NotFound, "plan not found")
-	}
-	if err != nil {
-		return AcceptanceReview{}, apierrors.New(apierrors.Internal, "plan lookup failed").Wrap(err)
-	}
-	rows, err := s.pool.Query(ctx, `
-		SELECT t.id, t.status, t.latest_acceptance_id FROM tasks t
-		WHERE t.plan_id=$1 AND t.project_id=$2 AND t.status<>'cancelled'`, planID, projectID)
-	if err != nil {
-		return AcceptanceReview{}, apierrors.New(apierrors.Internal, "tasks failed").Wrap(err)
-	}
-	defer rows.Close()
-	accepted, total := 0, 0
-	var acceptanceIDs []string
-	hasher := sha256.New()
-	hasher.Write([]byte("plan|" + planID.String() + "|" + itoa(version)))
-	for rows.Next() {
-		var (
-			id         uuid.UUID
-			status     string
-			acceptance uuid.NullUUID
-		)
-		if err := rows.Scan(&id, &status, &acceptance); err != nil {
-			return AcceptanceReview{}, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
-		}
-		total++
-		if status == "accepted" {
-			accepted++
-			if acceptance.Valid {
-				acceptanceIDs = append(acceptanceIDs, acceptance.UUID.String())
-				hasher.Write([]byte("|acc:" + acceptance.UUID.String()))
-			}
-		}
-	}
-	var blockers []Blocker
-	if accepted < total {
-		blockers = append(blockers, Blocker{Phase: "accept", ObjectType: "plan", ObjectID: planID.String(),
-			Reason: itoa(int64(accepted)) + "/" + itoa(int64(total)) + " 任务已验收"})
-	}
-	return AcceptanceReview{
-		ReviewID:          uuid.NewString(),
-		ReviewHash:        hex.EncodeToString(hasher.Sum(nil)),
-		TargetType:        "plan",
-		TargetID:          planID,
-		TargetVersion:     version,
-		TaskAcceptanceIDs: acceptanceIDs,
-		Blockers:          blockers,
-	}, nil
+	return s.planReview(ctx, poolAsQuery{s.pool}, projectID, planID)
 }
 
 // DecidePlanAcceptance: only the plan owner's current holder accepts; tasks
@@ -387,7 +279,7 @@ func (s *Service) DecidePlanAcceptance(ctx context.Context, requester, projectID
 	}
 	var out Plan
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {
@@ -408,6 +300,9 @@ func (s *Service) DecidePlanAcceptance(ctx context.Context, requester, projectID
 			}
 			return apierrors.New(apierrors.Internal, "plan lookup failed").Wrap(err)
 		}
+		if !owner.Valid {
+			return apierrors.New(apierrors.RequirementUnmet, "plan owner required")
+		}
 		if owner.Valid {
 			var holder *uuid.UUID
 			if err := tx.QueryRow(ctx, `
@@ -423,53 +318,30 @@ func (s *Service) DecidePlanAcceptance(ctx context.Context, requester, projectID
 		if status != "active" {
 			return apierrors.New(apierrors.InvalidTransition, "plan is "+status)
 		}
-		rows, err := tx.Query(ctx, `
-			SELECT t.status, t.latest_acceptance_id FROM tasks t
-			WHERE t.plan_id=$1 AND t.project_id=$2 AND t.status<>'cancelled'`, planID, projectID)
+		snapshot, err := s.planReview(ctx, tx, projectID, planID)
 		if err != nil {
-			return apierrors.New(apierrors.Internal, "tasks failed").Wrap(err)
+			return err
 		}
-		accepted, total := 0, 0
-		var acceptanceIDs []string
-		hasher := sha256.New()
-		hasher.Write([]byte("plan|" + planID.String() + "|" + itoa(version)))
-		for rows.Next() {
-			var status string
-			var acceptance uuid.NullUUID
-			if err := rows.Scan(&status, &acceptance); err != nil {
-				rows.Close()
-				return apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
-			}
-			total++
-			if status == "accepted" {
-				accepted++
-				if acceptance.Valid {
-					acceptanceIDs = append(acceptanceIDs, acceptance.UUID.String())
-					hasher.Write([]byte("|acc:" + acceptance.UUID.String()))
-				}
-			}
+		if snapshot.ReviewHash != reviewHash {
+			return apierrors.New(apierrors.ReviewStale, "plan evidence or responsibility changed")
 		}
-		rows.Close()
-		if hex.EncodeToString(hasher.Sum(nil)) != reviewHash {
-			return apierrors.New(apierrors.ReviewStale, "计划验收对象已变化")
-		}
+		acceptanceIDs := snapshot.TaskAcceptanceIDs
 		now := s.now()
 		if accept {
-			if accepted < total {
-				return apierrors.New(apierrors.RequirementUnmet, "任务未全部验收").
-					WithDetails(map[string]any{"accepted": accepted, "total": total})
+			if len(snapshot.Blockers) > 0 {
+				return apierrors.New(apierrors.RequirementUnmet, "tasks have not all been accepted").WithDetails(map[string]any{"blockers": snapshot.Blockers})
 			}
 			acceptanceID := uuid.New()
 			refs, _ := jsonMarshal(acceptanceIDs)
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO plan_acceptances (project_id, id, plan_id, plan_version, owner_identity_id,
-					actor_user_id, task_acceptance_refs, criteria_snapshot, created_at)
-				VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9)`,
+					actor_user_id, task_acceptance_refs, criteria_snapshot, created_at,review_manifest,evidence_hash)
+				VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10::jsonb,$11)`,
 				projectID, acceptanceID, planID, version, nullableNullUUID(owner), requester,
-				refs, criteria, now); err != nil {
+				refs, criteria, now, snapshot.Manifest, reviewHash); err != nil {
 				return apierrors.New(apierrors.Internal, "plan acceptance failed").Wrap(err)
 			}
-			if _, err := tx.Exec(ctx, `UPDATE plans SET status='accepted', latest_acceptance_id=$2 WHERE id=$1`,
+			if _, err := tx.Exec(ctx, `UPDATE plans SET status='accepted', latest_acceptance_id=$2,version=version+1,updated_at=now() WHERE id=$1`,
 				planID, acceptanceID); err != nil {
 				return apierrors.New(apierrors.Internal, "plan update failed").Wrap(err)
 			}
@@ -498,19 +370,26 @@ func (s *Service) ReopenPlan(ctx context.Context, requester, projectID, planID u
 	}
 	var out Plan
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {
 			return err
 		}
 		var status string
-		if err := tx.QueryRow(ctx, `SELECT status FROM plans WHERE id=$1 AND project_id=$2 FOR UPDATE`,
-			planID, projectID).Scan(&status); err != nil {
+		var owner, latest *uuid.UUID
+		if err := tx.QueryRow(ctx, `SELECT status,owner_identity_id,latest_acceptance_id FROM plans WHERE id=$1 AND project_id=$2 FOR UPDATE`,
+			planID, projectID).Scan(&status, &owner, &latest); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apierrors.New(apierrors.NotFound, "plan not found")
 			}
 			return apierrors.New(apierrors.Internal, "plan lookup failed").Wrap(err)
+		}
+		if err := RequireIdentityHolder(ctx, tx, requester, projectID, owner); err != nil {
+			return err
+		}
+		if latest == nil || *latest != acceptanceID {
+			return apierrors.New(apierrors.ReviewStale, "plan acceptance changed")
 		}
 		if status != "accepted" {
 			return apierrors.New(apierrors.InvalidTransition, "only accepted plans reopen")

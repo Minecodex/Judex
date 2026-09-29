@@ -1,13 +1,16 @@
-import { UIWarning, UINotice } from "../../components/ui/FormControls";
-import { Button, Card, Input, Label, TextField } from "@heroui/react";
+import { UINotice, UIWarning } from "../../components/ui/FormControls";
+import { Button, Card, FieldError, Input, Label, TextField } from "@heroui/react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { usePreferences } from "../../stores/preferences";
 import { translate, type Key } from "../../i18n";
 import { register } from "./api";
+import { errorKey } from "./errors";
+import { validateDisplayName, validateEmail, validatePassword } from "./validation";
 import { safeReturnTo, useAuth } from "./AuthProvider";
-import { errorKey } from "./LoginPage";
+
+type FieldErrors = { name?: Key | null; email?: Key | null; password?: Key | null; confirm?: Key | null };
 
 export function RegisterPage() {
   const { locale } = usePreferences();
@@ -20,7 +23,7 @@ export function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmValue, setConfirmValue] = useState("");
   const [reveal, setReveal] = useState(false);
-  const [localError, setLocalError] = useState<Key | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const mutation = useMutation({
     mutationFn: () => register(name.trim(), email.trim(), password),
@@ -34,12 +37,21 @@ export function RegisterPage() {
     document.title = "Judex · " + t("registerTitle");
   }, [locale]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const clear = (field: keyof FieldErrors) =>
+    setFieldErrors((prev) => ({ ...prev, [field]: null }));
+
   const submit = () => {
-    if (password !== confirmValue) {
-      setLocalError("errMismatch");
+    const errors: FieldErrors = {
+      name: validateDisplayName(name),
+      email: validateEmail(email.trim()),
+      password: validatePassword(password),
+      confirm: password !== confirmValue ? "errMismatch" : null,
+    };
+    if (errors.name || errors.email || errors.password || errors.confirm) {
+      setFieldErrors(errors);
       return;
     }
-    setLocalError(null);
+    setFieldErrors({});
     mutation.mutate();
   };
 
@@ -54,33 +66,52 @@ export function RegisterPage() {
           event.preventDefault();
           submit();
         }}>
-          <TextField isRequired name="displayName" value={name} onChange={setName}>
+          <TextField
+            isRequired
+            name="displayName"
+            value={name}
+            onChange={(v) => { setName(v); clear("name"); }}
+            isInvalid={!!fieldErrors.name}
+          >
             <Label>{t("fieldDisplayName")}</Label>
             <Input autoComplete="name" />
+            <FieldError>{fieldErrors.name ? t(fieldErrors.name) : ""}</FieldError>
           </TextField>
-          <TextField isRequired type="email" name="email" value={email} onChange={setEmail}>
+          <TextField
+            isRequired
+            type="email"
+            name="email"
+            value={email}
+            onChange={(v) => { setEmail(v); clear("email"); }}
+            isInvalid={!!fieldErrors.email}
+          >
             <Label>{t("fieldEmail")}</Label>
             <Input autoComplete="email" />
+            <FieldError>{fieldErrors.email ? t(fieldErrors.email) : ""}</FieldError>
           </TextField>
           <TextField
             isRequired
             name="password"
             type={reveal ? "text" : "password"}
             value={password}
-            onChange={setPassword}
+            onChange={(v) => { setPassword(v); clear("password"); }}
+            isInvalid={!!fieldErrors.password}
           >
             <Label>{t("fieldPassword")}</Label>
             <Input autoComplete="new-password" />
+            <FieldError>{fieldErrors.password ? t(fieldErrors.password) : ""}</FieldError>
           </TextField>
           <TextField
             isRequired
             name="passwordConfirm"
             type={reveal ? "text" : "password"}
             value={confirmValue}
-            onChange={setConfirmValue}
+            onChange={(v) => { setConfirmValue(v); clear("confirm"); }}
+            isInvalid={!!fieldErrors.confirm}
           >
             <Label>{t("fieldPasswordConfirm")}</Label>
             <Input autoComplete="new-password" />
+            <FieldError>{fieldErrors.confirm ? t(fieldErrors.confirm) : ""}</FieldError>
           </TextField>
           <label className="judex-auth-reveal">
             <input
@@ -94,7 +125,6 @@ export function RegisterPage() {
           <Button type="submit" isPending={mutation.isPending}>
             {mutation.isPending ? t("submitting") : t("submitRegister")}
           </Button>
-          {localError && <UIWarning role="alert">{t(localError)}</UIWarning>}
           {mutation.isError && (
             <UIWarning role="alert" aria-live="polite">
               {t(errorKey(mutation.error) ?? "errNetwork")}

@@ -1,3 +1,8 @@
+import { workflowEditorZh, workflowEditorEn } from "./workflowEditor";
+import { researchZh, researchEn } from "./research";
+import { lifecycleZh, lifecycleEn } from "./lifecycle";
+import { projectAdminZh, projectAdminEn } from "./projectAdmin";
+import { accessZh, accessEn } from "./access";
 import { commonZh, commonEn } from "./common";
 import { experienceZh, experienceEn } from "./experience";
 import { workflowZh, workflowEn } from "./workflow";
@@ -12,6 +17,11 @@ import { settingsZh, settingsEn } from "./settings";
 import { authZh, authEn } from "./auth";
 import { workspaceZh, workspaceEn } from "./workspace";
 const modules = [
+ {zh:workflowEditorZh,en:workflowEditorEn},
+ {zh: researchZh,en:researchEn},
+ { zh: lifecycleZh, en: lifecycleEn },
+ { zh: projectAdminZh, en: projectAdminEn },
+  { zh: accessZh, en: accessEn },
   { zh: commonZh, en: commonEn },
   { zh: experienceZh, en: experienceEn },
   { zh: workflowZh, en: workflowEn },
@@ -29,6 +39,11 @@ const modules = [
 export type Locale = "zh-CN" | "en";
 // re-exported for feature modules
 export type Key =
+ | keyof typeof workflowEditorZh
+ | keyof typeof researchZh
+ | keyof typeof lifecycleZh
+ | keyof typeof projectAdminZh
+  | keyof typeof accessZh
   | keyof typeof commonZh
   | keyof typeof experienceZh
   | keyof typeof workflowZh

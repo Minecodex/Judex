@@ -46,7 +46,7 @@ func (h *ResearchHandlers) myActions(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(actions, nil))
+	respond{}.ok(c, respond{}.list(c, actions, nil))
 }
 
 func (h *ResearchHandlers) listRepos(c *gin.Context) {
@@ -61,7 +61,7 @@ func (h *ResearchHandlers) listRepos(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(repos, nil))
+	respond{}.ok(c, respond{}.list(c, repos, nil))
 }
 
 func (h *ResearchHandlers) createRepo(c *gin.Context) {
@@ -134,7 +134,7 @@ func (h *ResearchHandlers) listReleases(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(releases, nil))
+	respond{}.ok(c, respond{}.list(c, releases, nil))
 }
 
 func (h *ResearchHandlers) createRelease(c *gin.Context) {
@@ -203,5 +203,5 @@ func (h *ResearchHandlers) listAudit(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(entries, nil))
+	respond{}.ok(c, respond{}.list(c, entries, nil))
 }

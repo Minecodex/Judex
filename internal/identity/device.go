@@ -5,6 +5,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"strings"
 	"time"
 
@@ -34,7 +35,7 @@ func (s *Service) StartDeviceAuthorization(ctx context.Context, deviceName strin
 	}
 	for _, scope := range requestedScopes {
 		switch scope {
-		case auth.ScopeProjectsRead, auth.ScopeContextRead, auth.ScopeMaterialsRead, auth.ScopeMaterialsWrite,
+		case auth.ScopeProjectsRead, auth.ScopeProjectsCreate, auth.ScopeContextRead, auth.ScopeMaterialsRead, auth.ScopeMaterialsWrite,
 			auth.ScopeSubmissionsWrite, auth.ScopeReportsWrite, auth.ScopeProposalsDraft, auth.ScopeAgentRequest,
 			auth.ScopeEventsRead, auth.ScopeIntentsCreate:
 		default:
@@ -58,7 +59,7 @@ func (s *Service) StartDeviceAuthorization(ctx context.Context, deviceName strin
 // ConfirmDeviceAuthorization is the browser-side decision (07 §3): the
 // logged-in user approves/denies; scopes can only be narrowed, never
 // expanded beyond the request.
-func (s *Service) ConfirmDeviceAuthorization(ctx context.Context, requester uuid.UUID, userCode string, approved bool, scopes []string) error {
+func (s *Service) ConfirmDeviceAuthorization(ctx context.Context, requester uuid.UUID, userCode string, approved bool, scopes []string, selectedProjects ...[]uuid.UUID) error {
 	return s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
 		if err := tx.LockUserForShare(ctx, requester.String()); err != nil {
 			return err
@@ -109,6 +110,30 @@ func (s *Service) ConfirmDeviceAuthorization(ctx context.Context, requester uuid
 				ObjectType: "device_authorization", ObjectID: id.String(), OccurredAt: s.now(),
 			})
 		}
+		if len(selectedProjects) > 0 && selectedProjects[0] != nil {
+			var requested []uuid.UUID
+			if err := tx.QueryRow(ctx, `SELECT requested_project_scope FROM device_authorizations WHERE id=$1`, id).Scan(&requested); err != nil {
+				return err
+			}
+			for _, pid := range selectedProjects[0] {
+				allowed := len(requested) == 0
+				for _, r := range requested {
+					if r == pid {
+						allowed = true
+					}
+				}
+				var member bool
+				if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM project_members WHERE project_id=$1 AND user_id=$2 AND state='active')`, pid, requester).Scan(&member); err != nil {
+					return err
+				}
+				if !allowed || !member {
+					return apierrors.New(apierrors.Forbidden, "project scope cannot be expanded")
+				}
+			}
+			if _, err := tx.Exec(ctx, `UPDATE device_authorizations SET requested_project_scope=$2 WHERE id=$1`, id, selectedProjects[0]); err != nil {
+				return err
+			}
+		}
 		grantID := uuid.New()
 		now := s.now()
 		if _, err := tx.Exec(ctx, `
@@ -142,128 +167,117 @@ const (
 	PollCompleted
 )
 
-// PollDeviceToken trades the device code for tokens; repeated polls faster
-// than the interval answer slow_down (07 §3).
-func (s *Service) PollDeviceToken(ctx context.Context, deviceCode string) (PollState, string, error) {
-	// Interval enforcement: reject if the previous poll was < interval ago.
-	var (
-		id        uuid.UUID
-		status    string
-		expiresAt time.Time
-		grantID   uuid.NullUUID
-		userID    uuid.NullUUID
-	)
-	err := s.pool.QueryRow(ctx, `
-		SELECT id, status, expires_at, grant_id, user_id FROM device_authorizations
-		WHERE device_code_hash=$1`, keys.Hash(deviceCode)).
-		Scan(&id, &status, &expiresAt, &grantID, &userID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return 0, "", apierrors.New(apierrors.Unauthenticated, "设备码无效")
-	}
-	if err != nil {
-		return 0, "", apierrors.New(apierrors.Internal, "poll failed").Wrap(err)
-	}
-	if s.now().After(expiresAt) {
-		return PollExpired, "", apierrors.New(apierrors.Unauthenticated, "设备码已过期")
-	}
-	if status == "pending" {
-		// Poor-man's interval enforcement: a poll inside the min interval
-		// answers slow_down (a full limiter lands with rate-limit wiring).
-		return PollSlowDown, "", nil
-	}
-	if status == "denied" || status == "expired" {
-		return PollDenied, "", apierrors.New(apierrors.Unauthenticated, "授权被拒绝或已过期")
-	}
-	if status != "consumed" || !grantID.Valid {
-		return 0, "", apierrors.New(apierrors.Unauthenticated, "授权未完成")
-	}
-	// Issue the token pair bound to the grant.
-	var refreshToken string
-	err = s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		var err error
-		refreshToken, err = s.issueTokens(ctx, tx, grantID.UUID)
-		return err
-	})
-	if err != nil {
-		return 0, "", err
-	}
-	return PollCompleted, refreshToken, nil
+type TokenPair struct {
+	AccessToken      string    `json:"accessToken"`
+	AccessExpiresAt  time.Time `json:"accessExpiresAt"`
+	RefreshToken     string    `json:"refreshToken"`
+	RefreshExpiresAt time.Time `json:"refreshExpiresAt"`
+	Scopes           []string  `json:"scopes"`
 }
 
-// issueTokens creates a fresh access+refresh pair in the grant's family.
-func (s *Service) issueTokens(ctx context.Context, tx pgx.Tx, grantID uuid.UUID) (string, error) {
-	access := keys.NewRandom()
-	refresh := keys.NewRandom()
-	now := s.now()
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO client_tokens (id, grant_id, access_hash, access_expires_at,
-			refresh_hash, refresh_family_id, refresh_expires_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-		uuid.New(), grantID, keys.Hash(access), now.Add(DeviceAccessTTL),
-		keys.Hash(refresh), grantID, now.Add(DeviceRefreshTTL)); err != nil {
-		return "", apierrors.New(apierrors.Internal, "token insert failed").Wrap(err)
-	}
-	// The refresh token is the durable secret; access derives on demand by
-	// returning refresh for storage (CLI keeps one secret, 07 §3).
-	return refresh, nil
-}
-
-// RotateRefreshToken swaps a refresh secret; replaying the OLD one revokes
-// the whole family (07 §3 refresh rotation).
-func (s *Service) RotateRefreshToken(ctx context.Context, oldRefresh string) (string, error) {
-	var (
-		tokenID uuid.UUID
-		grantID uuid.UUID
-		family  uuid.UUID
-		revoked *time.Time
-		expires time.Time
-		rotated *time.Time
-	)
-	err := s.pool.QueryRow(ctx, `
-		SELECT t.id, t.grant_id, t.refresh_family_id, t.revoked_at, t.refresh_expires_at, t.rotated_at
-		FROM client_tokens t
-		JOIN client_grants g ON g.id=t.grant_id
-		WHERE t.refresh_hash=$1`, keys.Hash(oldRefresh)).
-		Scan(&tokenID, &grantID, &family, &revoked, &expires, &rotated)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", apierrors.New(apierrors.GrantRevoked, "refresh token 无效")
-	}
-	if err != nil {
-		return "", apierrors.New(apierrors.Internal, "refresh lookup failed").Wrap(err)
-	}
-	if revoked != nil {
-		return "", apierrors.New(apierrors.GrantRevoked, "token 已撤销")
-	}
-	if s.now().After(expires) {
-		return "", apierrors.New(apierrors.GrantRevoked, "token 已过期")
-	}
-	if rotated != nil {
-		// Replay of an already-rotated token: revoke the family (07 §3).
-		_, _ = s.pool.Exec(ctx, `UPDATE client_tokens SET revoked_at=now() WHERE refresh_family_id=$1 AND revoked_at IS NULL`, family)
-		_, _ = s.pool.Exec(ctx, `UPDATE client_grants SET revoked_at=now() WHERE id=$1 AND revoked_at IS NULL`, grantID)
-		return "", apierrors.New(apierrors.GrantRevoked, "检测到重放，已撤销整个授权")
-	}
-	var newRefresh string
-	err = s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE client_tokens SET rotated_at=$2 WHERE id=$1`, tokenID, s.now()); err != nil {
-			return apierrors.New(apierrors.Internal, "rotate failed").Wrap(err)
+// PollDeviceToken exchanges one approved device code once under a row lock.
+func (s *Service) PollDeviceToken(ctx context.Context, deviceCode string) (PollState, TokenPair, error) {
+	state := PollPending
+	var pair TokenPair
+	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
+		var id uuid.UUID
+		var status string
+		var expires time.Time
+		var grant *uuid.UUID
+		var last, issued *time.Time
+		var interval int
+		if err := tx.QueryRow(ctx, `SELECT id,status,expires_at,grant_id,last_polled_at,tokens_issued_at,interval_seconds FROM device_authorizations WHERE device_code_hash=$1 FOR UPDATE`, keys.Hash(deviceCode)).Scan(&id, &status, &expires, &grant, &last, &issued, &interval); err != nil {
+			return apierrors.New(apierrors.Unauthenticated, "invalid device code")
+		}
+		now := s.now()
+		if !now.Before(expires) {
+			return apierrors.New(apierrors.Unauthenticated, "device code expired")
+		}
+		if issued != nil {
+			return apierrors.New(apierrors.GrantRevoked, "device code already exchanged; sign in again")
+		}
+		if status == "pending" {
+			if last != nil && now.Sub(*last) < time.Duration(interval)*time.Second {
+				state = PollSlowDown
+				interval += 5
+			}
+			_, err := tx.Exec(ctx, `UPDATE device_authorizations SET last_polled_at=$2,interval_seconds=$3 WHERE id=$1`, id, now, interval)
+			return err
+		}
+		if status != "consumed" || grant == nil {
+			return apierrors.New(apierrors.Unauthenticated, "device authorization not approved")
 		}
 		var err error
-		newRefresh, err = s.issueTokens(ctx, tx, grantID)
-		return err
+		pair, err = s.issueTokens(ctx, tx, *grant)
+		if err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, `UPDATE device_authorizations SET tokens_issued_at=$2 WHERE id=$1`, id, now); err != nil {
+			return err
+		}
+		state = PollCompleted
+		return nil
 	})
-	if err != nil {
-		return "", err
+	return state, pair, err
+}
+func (s *Service) issueTokens(ctx context.Context, tx pgx.Tx, grantID uuid.UUID) (TokenPair, error) {
+	now := s.now()
+	out := TokenPair{AccessToken: keys.NewRandom(), RefreshToken: keys.NewRandom(), AccessExpiresAt: now.Add(DeviceAccessTTL), RefreshExpiresAt: now.Add(DeviceRefreshTTL)}
+	var expiry time.Time
+	if err := tx.QueryRow(ctx, `SELECT g.scopes,g.expires_at FROM client_grants g JOIN users u ON u.id=g.user_id WHERE g.id=$1 AND g.revoked_at IS NULL AND g.expires_at>$2 AND u.status='active' AND u.auth_version=g.auth_version`, grantID, now).Scan(&out.Scopes, &expiry); err != nil {
+		return TokenPair{}, apierrors.New(apierrors.GrantRevoked, "grant is no longer active")
 	}
-	return newRefresh, nil
+	if expiry.Before(out.RefreshExpiresAt) {
+		out.RefreshExpiresAt = expiry
+	}
+	if expiry.Before(out.AccessExpiresAt) {
+		out.AccessExpiresAt = expiry
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO client_tokens(id,grant_id,access_hash,access_expires_at,refresh_hash,refresh_family_id,refresh_expires_at) VALUES($1,$2,$3,$4,$5,$2,$6)`, uuid.New(), grantID, keys.Hash(out.AccessToken), out.AccessExpiresAt, keys.Hash(out.RefreshToken), out.RefreshExpiresAt)
+	return out, err
 }
 
-// ResolveGrant authenticates a Bearer refresh secret into a CLI principal:
+// Rotation and replay revocation share a row lock; concurrent use of an old
+// refresh credential can never mint two independently valid successors.
+func (s *Service) RotateRefreshToken(ctx context.Context, oldRefresh string) (TokenPair, error) {
+	var out TokenPair
+	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
+		var token, grant, family uuid.UUID
+		var revoked, rotated *time.Time
+		var expiry time.Time
+		if err := tx.QueryRow(ctx, `SELECT id,grant_id,refresh_family_id,revoked_at,refresh_expires_at,rotated_at FROM client_tokens WHERE refresh_hash=$1 FOR UPDATE`, keys.Hash(oldRefresh)).Scan(&token, &grant, &family, &revoked, &expiry, &rotated); err != nil {
+			return apierrors.New(apierrors.GrantRevoked, "invalid refresh token")
+		}
+		now := s.now()
+		if revoked != nil || !now.Before(expiry) {
+			return apierrors.New(apierrors.GrantRevoked, "refresh token revoked or expired")
+		}
+		if rotated != nil {
+			if _, err := tx.Exec(ctx, `UPDATE client_tokens SET revoked_at=$2 WHERE refresh_family_id=$1 AND revoked_at IS NULL`, family, now); err != nil {
+				return err
+			}
+			if _, err := tx.Exec(ctx, `UPDATE client_grants SET revoked_at=$2 WHERE id=$1 AND revoked_at IS NULL`, grant, now); err != nil {
+				return err
+			}
+			return apierrors.New(apierrors.GrantRevoked, "refresh replay revoked the token family").WithCommittedResult()
+		}
+		if _, err := tx.Exec(ctx, `UPDATE client_tokens SET rotated_at=$2 WHERE id=$1`, token, now); err != nil {
+			return err
+		}
+		var err error
+		out, err = s.issueTokens(ctx, tx, grant)
+		return err
+	})
+	return out, err
+}
+
+// ResolveGrant authenticates a short-lived Bearer access secret into a CLI principal:
 // user must stay active with the same auth_version, the grant unrevoked and
 // within its project scope (07 §3 服务端每次调用核对).
 func (s *Service) ResolveGrant(ctx context.Context, secret string) (*auth.Principal, error) {
 	var (
 		grantID      uuid.UUID
+		accessID     uuid.UUID
 		userID       uuid.UUID
 		scopes       []string
 		projectScope []uuid.UUID
@@ -276,12 +290,12 @@ func (s *Service) ResolveGrant(ctx context.Context, secret string) (*auth.Princi
 	)
 	err := s.pool.QueryRow(ctx, `
 		SELECT g.id, g.user_id, g.scopes, g.project_scope, g.auth_version, g.revoked_at, g.expires_at,
-		       t.revoked_at, t.refresh_expires_at, t.rotated_at
+		       t.revoked_at, t.access_expires_at, t.rotated_at,t.id
 		FROM client_grants g
 		JOIN client_tokens t ON t.grant_id=g.id
-		WHERE t.refresh_hash=$1`, keys.Hash(secret)).
+		WHERE t.access_hash=$1`, keys.Hash(secret)).
 		Scan(&grantID, &userID, &scopes, &projectScope, &authVersion, &grantRevoked, &grantExpiry,
-			&tokenRevoked, &tokenExpiry, &tokenRotated)
+			&tokenRevoked, &tokenExpiry, &tokenRotated, &accessID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apierrors.New(apierrors.Unauthenticated, "无效凭据")
 	}
@@ -290,9 +304,9 @@ func (s *Service) ResolveGrant(ctx context.Context, secret string) (*auth.Princi
 	}
 	now := s.now()
 	switch {
-	case grantRevoked != nil || tokenRevoked != nil:
+	case grantRevoked != nil || tokenRevoked != nil || tokenRotated != nil:
 		return nil, apierrors.New(apierrors.GrantRevoked, "授权已撤销")
-	case now.After(grantExpiry) || now.After(tokenExpiry):
+	case !now.Before(grantExpiry) || !now.Before(tokenExpiry):
 		return nil, apierrors.New(apierrors.GrantRevoked, "授权已过期")
 	}
 	var (
@@ -307,7 +321,7 @@ func (s *Service) ResolveGrant(ctx context.Context, secret string) (*auth.Princi
 		return nil, apierrors.New(apierrors.GrantRevoked, "凭据已轮换")
 	}
 	return &auth.Principal{
-		Kind:         auth.KindCLI,
+		Kind: auth.KindCLI, AccessTokenID: accessID,
 		UserID:       userID,
 		AuthVersion:  int(authVersion),
 		GrantID:      grantID,
@@ -318,9 +332,9 @@ func (s *Service) ResolveGrant(ctx context.Context, secret string) (*auth.Princi
 
 // ListGrants returns the caller's CLI device grants (safe projection).
 func (s *Service) ListGrants(ctx context.Context, user uuid.UUID) ([]map[string]any, error) {
-	rows, err := s.pool.Query(ctx, `
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT id, device_name, scopes, project_scope, created_at, expires_at, revoked_at
-		FROM client_grants WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`, user)
+		/*keys*/ FROM client_grants WHERE user_id=$1 /*page*/`, "created_at", "id", user)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "grants failed").Wrap(err)
 	}
@@ -340,7 +354,7 @@ func (s *Service) ListGrants(ctx context.Context, user uuid.UUID) ([]map[string]
 			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
 		}
 		out = append(out, map[string]any{
-			"id": id, "deviceName": device, "scopes": scopes,
+			"id": id, "deviceName": device, "scopes": scopes, "projectScope": projectScope,
 			"createdAt": createdAt, "expiresAt": expiresAt, "revokedAt": revokedAt,
 		})
 	}

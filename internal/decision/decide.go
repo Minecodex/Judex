@@ -16,17 +16,24 @@ import (
 	"github.com/kakj-go/Judex/internal/job"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/kakj-go/Judex/internal/platform/events"
+	"github.com/kakj-go/Judex/internal/work"
 )
 
 // Decide records one human decision covering the slots the requester
 // currently holds (03 §3): acting binding versions must be current; the
 // final approving decision applies the whole change group atomically; any
 // reject cancels the proposal and stops its timer.
-func (s *Service) Decide(ctx context.Context, requester, projectID, proposalID uuid.UUID, reviewHash string, approve bool, reason string) (Review, error) {
+func (s *Service) Decide(ctx context.Context, requester, projectID, proposalID uuid.UUID, reviewHash string, approve bool, reason string, selection ...DecisionSelection) (Review, error) {
 	var out Review
+	if !approve && reason == "" {
+		return out, apierrors.Fields("reason", "required")
+	}
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
+		}
+		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {
+			return apierrors.New(apierrors.Forbidden, "active membership required")
 		}
 		var (
 			status   string
@@ -57,6 +64,14 @@ func (s *Service) Decide(ctx context.Context, requester, projectID, proposalID u
 		if revHash == nil || *revHash != reviewHash {
 			return apierrors.New(apierrors.ReviewStale, "review hash mismatch")
 		}
+		if deadline != nil && !s.now().Before(*deadline) {
+			if err := s.SettleTimeout(ctx, projectID, proposalID, reviewID); err != nil {
+				return err
+			}
+			var err error
+			out, err = s.GetReview(ctx, requester, projectID, proposalID)
+			return err
+		}
 		// Lock the seats with a join-free FOR UPDATE (FOR UPDATE combined with
 		// LEFT JOIN silently returns no rows in PostgreSQL), then read the
 		// eligibility projection without locking — the project row lock above
@@ -67,7 +82,7 @@ func (s *Service) Decide(ctx context.Context, requester, projectID, proposalID u
 		rows, err := tx.Query(ctx, `
 			SELECT s.id, s.authority_type, s.authority_id, s.state,
 			       COALESCE(b.user_id::text,''), COALESCE(u.display_name,''),
-			       (SELECT name FROM position_templates t WHERE t.id=i.template_id)
+			       (SELECT name FROM position_templates t WHERE t.id=i.template_id),COALESCE(i.current_binding_version,0)
 			FROM approval_slots s
 			LEFT JOIN agent_identities i ON i.id=s.authority_id AND s.authority_type='identity'
 			LEFT JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version
@@ -77,47 +92,70 @@ func (s *Service) Decide(ctx context.Context, requester, projectID, proposalID u
 			return apierrors.New(apierrors.Internal, "slots query failed").Wrap(err)
 		}
 		type slotRow struct {
-			id           uuid.UUID
-			authority    string
-			authorityID  uuid.UUID
-			state        string
-			holder       string
-			displayName  string
-			positionName *string
+			id             uuid.UUID
+			authority      string
+			authorityID    uuid.UUID
+			state          string
+			holder         string
+			displayName    string
+			positionName   *string
+			bindingVersion int64
 		}
 		var slots []slotRow
 		for rows.Next() {
 			var sr slotRow
-			if err := rows.Scan(&sr.id, &sr.authority, &sr.authorityID, &sr.state, &sr.holder, &sr.displayName, &sr.positionName); err != nil {
+			if err := rows.Scan(&sr.id, &sr.authority, &sr.authorityID, &sr.state, &sr.holder, &sr.displayName, &sr.positionName, &sr.bindingVersion); err != nil {
 				rows.Close()
 				return apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
 			}
 			slots = append(slots, sr)
 		}
 		rows.Close()
+		selected := map[uuid.UUID]bool{}
+		bindings := map[uuid.UUID]int64{}
+		if len(selection) > 0 {
+			for _, id := range selection[0].SlotIDs {
+				selected[id] = true
+			}
+			for _, b := range selection[0].Bindings {
+				bindings[b.IdentityID] = b.BindingVersion
+			}
+		}
+		acting := []ActingBinding{}
 		var covered []uuid.UUID
 		for _, sr := range slots {
 
+			if len(selection) > 0 && !selected[sr.id] {
+				continue
+			}
 			if sr.state != "pending" {
 				continue
 			}
 			if sr.authority == "user" && sr.authorityID == requester {
 				covered = append(covered, sr.id)
 			} else if sr.authority == "identity" && sr.holder == requester.String() {
+				if len(selection) > 0 && bindings[sr.authorityID] != sr.bindingVersion {
+					return apierrors.New(apierrors.ReviewStale, "acting binding changed")
+				}
+				acting = append(acting, ActingBinding{IdentityID: sr.authorityID, BindingVersion: sr.bindingVersion})
 				covered = append(covered, sr.id)
 			}
 		}
-		if len(covered) == 0 {
+		if len(covered) == 0 || (len(selection) > 0 && len(covered) != len(selected)) {
 			return apierrors.New(apierrors.Forbidden, "当前登录用户不持有任何待审批职责位")
 		}
 		now := s.now()
 		decisionID := uuid.New()
+		bindingJSON, _ := json.Marshal(acting)
 		source := "human_web"
+		if audit.ContextSource(ctx) == audit.SourceCLI {
+			source = "human_cli"
+		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO approval_decisions (project_id, id, review_id, decision, actor_user_id,
 				acting_bindings_json, decision_source, reason, decided_at)
-			VALUES ($1,$2,$3,$4,$5,'[]',$6,$7,$8)`,
-			projectID, decisionID, reviewID, approveText(approve), requester, source, nullable(reason), now); err != nil {
+			VALUES ($1,$2,$3,$4,$5,$9::jsonb,$6,$7,$8)`,
+			projectID, decisionID, reviewID, approveText(approve), requester, source, nullable(reason), now, bindingJSON); err != nil {
 			return apierrors.New(apierrors.Internal, "decision insert failed").Wrap(err)
 		}
 		for _, slotID := range covered {
@@ -153,7 +191,11 @@ func (s *Service) Decide(ctx context.Context, requester, projectID, proposalID u
 		}
 		// First approval starts the countdown (03 §4).
 		if firstAt == nil {
-			deadlineAt := now.Add(time.Duration(s.defaultTimeoutSecs) * time.Second)
+			var timeout int
+			if err := tx.QueryRow(ctx, `SELECT timeout_seconds_snapshot FROM proposal_versions WHERE id=$1`, reviewID).Scan(&timeout); err != nil {
+				return err
+			}
+			deadlineAt := now.Add(time.Duration(timeout) * time.Second)
 			if _, err := tx.Exec(ctx, `
 				UPDATE proposal_versions SET first_approval_at=$2, deadline_at=$3 WHERE id=$1`,
 				reviewID, now, deadlineAt); err != nil {
@@ -175,7 +217,7 @@ func (s *Service) Decide(ctx context.Context, requester, projectID, proposalID u
 			}
 		}
 		if pending == 0 {
-			created, err := s.applyChanges(ctx, tx, projectID, requester, reviewID)
+			created, err := s.applyReviewed(ctx, tx, projectID, requester, reviewID)
 			if err != nil {
 				return err
 			}
@@ -197,6 +239,9 @@ func (s *Service) Decide(ctx context.Context, requester, projectID, proposalID u
 			ObjectType: "proposal", ObjectID: proposalID.String(), ReviewID: &reviewID, OccurredAt: now,
 		})
 	})
+	if err == nil {
+		return s.GetReview(ctx, requester, projectID, proposalID)
+	}
 	return out, err
 }
 
@@ -237,148 +282,30 @@ func (s *Service) applyChanges(ctx context.Context, tx pgx.Tx, projectID, actor 
 	if err := json.Unmarshal(changesRaw, &changes); err != nil {
 		return nil, apierrors.New(apierrors.Internal, "changes parse failed").Wrap(err)
 	}
-	created := map[string]string{}
-	now := s.now()
-	for _, change := range changes {
-		switch change.Operation {
-		case "create_plan":
-			id := uuid.New()
-			title, _ := change.Fields["title"].(string)
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO plans (project_id, id, title, goal, acceptance_criteria, owner_identity_id, workflow_id, status, created_at, updated_at)
-				VALUES ($1,$2,$3,$4,$5,$6,$7,'active',$8,$8)`,
-				projectID, id, title,
-				strOrDefault(change.Fields, "goal"), strOrDefault(change.Fields, "acceptanceCriteria"),
-				optionalUUIDField(change.Fields, "ownerIdentityId"), optionalUUIDField(change.Fields, "workflowId"), now); err != nil {
-				return nil, apierrors.New(apierrors.Internal, "plan apply failed").Wrap(err)
-			}
-			if change.ClientRef != "" {
-				created[change.ClientRef] = id.String()
-			}
-		case "create_task":
-			id := uuid.New()
-			planRaw, _ := change.Fields["planId"].(string)
-			planID := optionalUUIDField(change.Fields, "planId")
-			if ref, ok := planRefFromCreated(created, planRaw); ok {
-				if parsed, err := uuid.Parse(ref); err == nil {
-					planID = &parsed
-				}
-			}
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO tasks (project_id, id, plan_id, title, expected_output, acceptance_criteria,
-					kind, reviewer_identity_id, workflow_id, node_id, status, created_at, updated_at)
-				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'ready',$11,$11)`,
-				projectID, id, planID,
-				strOrDefault(change.Fields, "title"), strOrDefault(change.Fields, "expectedOutput"),
-				strOrDefault(change.Fields, "acceptanceCriteria"), strOrDefault2(change.Fields, "kind", "task"),
-				optionalUUIDField(change.Fields, "reviewerIdentityId"), optionalUUIDField(change.Fields, "workflowId"),
-				nullableStringField(change.Fields, "nodeId"), now); err != nil {
-				return nil, apierrors.New(apierrors.Internal, "task apply failed").Wrap(err)
-			}
-			if ids, ok := change.Fields["participantIdentityIds"].([]any); ok {
-				for _, raw := range ids {
-					if str, ok := raw.(string); ok {
-						if pid, err := uuid.Parse(str); err == nil {
-							if _, err := tx.Exec(ctx, `
-								INSERT INTO task_participants (project_id, task_id, identity_id) VALUES ($1,$2,$3)`,
-								projectID, id, pid); err != nil {
-								return nil, apierrors.New(apierrors.Internal, "participant apply failed").Wrap(err)
-							}
-						}
-					}
-				}
-			}
-			if change.ClientRef != "" {
-				created[change.ClientRef] = id.String()
-			}
-		case "activate_object":
-			// Internal op used by work_arrangement to flip drafts to ready.
-			target := resolveTarget(change.TargetID, created)
-			if _, err := tx.Exec(ctx, `UPDATE tasks SET status='ready', version=version+1 WHERE id=$1 AND project_id=$2`,
-				target, projectID); err != nil {
-				return nil, apierrors.New(apierrors.Internal, "activate failed").Wrap(err)
-			}
-		case "cancel_task":
-			target := resolveTarget(change.TargetID, created)
-			var status string
-			if err := tx.QueryRow(ctx, `SELECT status FROM tasks WHERE id=$1 AND project_id=$2`, target, projectID).Scan(&status); err != nil {
-				return nil, apierrors.New(apierrors.InvalidReference, "cancel target not found")
-			}
-			if status == "accepted" {
-				return nil, apierrors.New(apierrors.InvalidTransition, "accepted 对象不允许直接取消")
-			}
-			if _, err := tx.Exec(ctx, `UPDATE tasks SET status='cancelled', version=version+1 WHERE id=$1 AND project_id=$2`,
-				target, projectID); err != nil {
-				return nil, apierrors.New(apierrors.Internal, "cancel failed").Wrap(err)
-			}
-		case "cancel_plan":
-			target := resolveTarget(change.TargetID, created)
-			if _, err := tx.Exec(ctx, `UPDATE plans SET status='cancelled', version=version+1 WHERE id=$1 AND project_id=$2`,
-				target, projectID); err != nil {
-				return nil, apierrors.New(apierrors.Internal, "cancel failed").Wrap(err)
-			}
-		case "update_scope", "set_assignment", "set_requirements", "link_material", "link_topic":
-			// Structured but lighter-touch ops: applied as field updates with
-			// expectedVersion checks on the target.
-			target := resolveTarget(change.TargetID, created)
-			if change.TargetType == "task" {
-				if _, err := tx.Exec(ctx, `UPDATE tasks SET version=version+1 WHERE id=$1 AND project_id=$2`,
-					target, projectID); err != nil {
-					return nil, apierrors.New(apierrors.Internal, "update failed").Wrap(err)
-				}
-			}
-		default:
-			return nil, apierrors.Newf(apierrors.Validation, "unknown operation %s", change.Operation)
+	var raw []byte
+	if err := tx.QueryRow(ctx, `SELECT review_manifest_json FROM proposal_versions WHERE id=$1`, reviewID).Scan(&raw); err != nil {
+		return nil, err
+	}
+	var manifest struct {
+		Constraints []work.WorkflowConstraint `json:"workflowConstraints"`
+	}
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		return nil, err
+	}
+	current, err := work.ChangeWorkflowConstraints(ctx, tx, projectID, changes)
+	if err != nil {
+		return nil, err
+	}
+	if len(current) != len(manifest.Constraints) {
+		return nil, apierrors.New(apierrors.ReviewStale, "workflow references changed")
+	}
+	for i, ref := range current {
+		old := manifest.Constraints[i]
+		if ref.WorkflowID != old.WorkflowID || ref.NodeID != old.NodeID || ref.Hash != old.Hash {
+			return nil, apierrors.New(apierrors.ReviewStale, "workflow constraints changed")
 		}
 	}
-	return created, nil
-}
-
-func resolveTarget(targetID string, created map[string]string) uuid.UUID {
-	if ref, ok := created[targetID]; ok {
-		targetID = ref
-	}
-	id, _ := uuid.Parse(targetID)
-	return id
-}
-
-func planRefFromCreated(created map[string]string, raw string) (string, bool) {
-	if raw == "" {
-		return "", false
-	}
-	ref, ok := created[raw]
-	return ref, ok
-}
-
-func strOrDefault(fields map[string]any, key string) string {
-	v, _ := fields[key].(string)
-	return v
-}
-
-func strOrDefault2(fields map[string]any, key, fallback string) string {
-	if v, ok := fields[key].(string); ok && v != "" {
-		return v
-	}
-	return fallback
-}
-
-func optionalUUIDField(fields map[string]any, key string) any {
-	raw, _ := fields[key].(string)
-	if raw == "" {
-		return nil
-	}
-	if id, err := uuid.Parse(raw); err == nil {
-		return id
-	}
-	return nil
-}
-
-func nullableStringField(fields map[string]any, key string) any {
-	raw, _ := fields[key].(string)
-	if raw == "" {
-		return nil
-	}
-	return raw
+	return work.ApplyChanges(ctx, tx, projectID, actor, changes)
 }
 
 // SettleTimeout is the deadline command (03 §4): locks project→proposal→
@@ -387,7 +314,7 @@ func nullableStringField(fields map[string]any, key string) any {
 // Human decisions racing the timer are serialized by the project lock.
 func (s *Service) SettleTimeout(ctx context.Context, projectID, proposalID, reviewID uuid.UUID) error {
 	return s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		var status string
@@ -439,7 +366,7 @@ func (s *Service) SettleTimeout(ctx context.Context, projectID, proposalID, revi
 				return err
 			}
 		}
-		created, err := s.applyChanges(ctx, tx, projectID, uuid.Nil, reviewID)
+		created, err := s.applyReviewed(ctx, tx, projectID, uuid.Nil, reviewID)
 		if err != nil {
 			return err
 		}
@@ -461,4 +388,13 @@ func strPtrOrNil(v string) *string {
 		return nil
 	}
 	return &v
+}
+
+type ActingBinding struct {
+	IdentityID     uuid.UUID `json:"identityId"`
+	BindingVersion int64     `json:"bindingVersion"`
+}
+type DecisionSelection struct {
+	SlotIDs  []uuid.UUID
+	Bindings []ActingBinding
 }

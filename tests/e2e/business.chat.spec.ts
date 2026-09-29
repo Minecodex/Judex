@@ -18,8 +18,7 @@ async function registerAndEnterWorkspace(page: import("@playwright/test").Page, 
   await page.getByTestId("workspace-new-project").click();
   await page.getByLabel(/新建项目|New project/).fill(`三栏项目-${name}`);
   await page.locator("form button[type=submit]").first().click();
-  await page.getByRole("button", { name: `三栏项目-${name}` }).click();
-  // 三栏工作区出现：左栏概览入口 + 右栏工作面板
+  // 创建成功后自动进入三栏工作区：左栏概览入口 + 右栏工作面板
   await expect(page.getByTestId("ws-nav-home")).toBeVisible({ timeout: 10000 });
   await expect(page.getByTestId("ws-panel-work")).toBeVisible();
 }

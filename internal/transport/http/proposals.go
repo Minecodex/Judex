@@ -42,20 +42,22 @@ func (h *ProposalHandlers) list(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(proposals, nil))
+	respond{}.ok(c, respond{}.list(c, proposals, nil))
 }
 
 func bindChanges(c *gin.Context) ([]decision.Change, error) {
 	var req struct {
-		Kind    string `json:"kind" binding:"required"`
-		TopicID string `json:"topicId"`
-		Reason  string `json:"reason"`
-		Changes []struct {
+		Kind            string `json:"kind" binding:"required"`
+		ExpectedVersion int64  `json:"expectedVersion"`
+		TopicID         string `json:"topicId"`
+		Reason          string `json:"reason"`
+		Changes         []struct {
 			Operation       string         `json:"operation"`
 			TargetType      string         `json:"targetType"`
 			TargetID        string         `json:"targetId"`
 			ClientRef       string         `json:"clientRef"`
 			ExpectedVersion int64          `json:"expectedVersion"`
+			DependsOn       []string       `json:"dependsOn"`
 			Fields          map[string]any `json:"fields"`
 		} `json:"changes" binding:"required"`
 	}
@@ -66,10 +68,11 @@ func bindChanges(c *gin.Context) ([]decision.Change, error) {
 	for _, raw := range req.Changes {
 		changes = append(changes, decision.Change{
 			Operation: raw.Operation, TargetType: raw.TargetType, TargetID: raw.TargetID,
-			ClientRef: raw.ClientRef, ExpectedVersion: raw.ExpectedVersion, Fields: raw.Fields,
+			ClientRef: raw.ClientRef, ExpectedVersion: raw.ExpectedVersion, Fields: raw.Fields, DependsOn: raw.DependsOn,
 		})
 	}
 	c.Set("proposal_kind", req.Kind)
+	c.Set("proposal_version", req.ExpectedVersion)
 	c.Set("proposal_topic", req.TopicID)
 	c.Set("proposal_reason", req.Reason)
 	return changes, nil
@@ -102,7 +105,12 @@ func (h *ProposalHandlers) create(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.created(c, gin.H{"id": id, "status": "draft", "version": 1})
+	proposal, err := h.Decisions.GetProposal(c.Request.Context(), p.UserID, projectID, id)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.created(c, proposal)
 }
 
 func (h *ProposalHandlers) updateDraft(c *gin.Context) {
@@ -117,10 +125,17 @@ func (h *ProposalHandlers) updateDraft(c *gin.Context) {
 		respond{}.error(c, apierrors.Fields("proposalId", "invalid"))
 		return
 	}
-	_ = p
-	_ = projectID
-	_ = proposalID
-	respond{}.error(c, apierrors.New(apierrors.NotImplemented, "draft 更新走 create-revision 语义：废弃后重建草稿"))
+	changes, err := bindChanges(c)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	revision, err := h.Decisions.UpdateDraft(c.Request.Context(), p.UserID, projectID, proposalID, c.GetInt64("proposal_version"), changes, c.GetString("proposal_reason"))
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, gin.H{"id": proposalID, "revision": revision, "status": "draft"})
 }
 
 func (h *ProposalHandlers) submit(c *gin.Context) {
@@ -188,12 +203,13 @@ func (h *ProposalHandlers) decide(c *gin.Context) {
 		return
 	}
 	var req struct {
-		ReviewID        string   `json:"reviewId" binding:"required"`
-		ReviewHash      string   `json:"reviewHash" binding:"required"`
-		ExpectedVersion int64    `json:"expectedVersion"`
-		Decision        string   `json:"decision" binding:"required"`
-		SlotIDs         []string `json:"slotIds"`
-		Reason          string   `json:"reason"`
+		ReviewID        string                   `json:"reviewId" binding:"required"`
+		ReviewHash      string                   `json:"reviewHash" binding:"required"`
+		ExpectedVersion int64                    `json:"expectedVersion"`
+		Decision        string                   `json:"decision" binding:"required"`
+		SlotIDs         []uuid.UUID              `json:"slotIds"`
+		ActingBindings  []decision.ActingBinding `json:"actingBindingVersions"`
+		Reason          string                   `json:"reason"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
@@ -208,7 +224,7 @@ func (h *ProposalHandlers) decide(c *gin.Context) {
 		return
 	}
 	result, err := h.Decisions.Decide(c.Request.Context(), p.UserID, projectID, proposalID,
-		req.ReviewHash, req.Decision == "approve", req.Reason)
+		req.ReviewHash, req.Decision == "approve", req.Reason, decision.DecisionSelection{SlotIDs: req.SlotIDs, Bindings: req.ActingBindings})
 	if err != nil {
 		respond{}.error(c, err)
 		return
@@ -229,15 +245,16 @@ func (h *ProposalHandlers) delegate(c *gin.Context) {
 		return
 	}
 	var req struct {
-		ReviewID   string `json:"reviewId" binding:"required"`
-		ReviewHash string `json:"reviewHash" binding:"required"`
-		Reason     string `json:"reason" binding:"required"`
+		SlotIDs    []uuid.UUID `json:"slotIds" binding:"required"`
+		ReviewID   string      `json:"reviewId" binding:"required"`
+		ReviewHash string      `json:"reviewHash" binding:"required"`
+		Reason     string      `json:"reason" binding:"required"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	result, err := h.Decisions.Delegate(c.Request.Context(), p.UserID, projectID, proposalID, req.ReviewHash, req.Reason)
+	result, err := h.Decisions.Delegate(c.Request.Context(), p.UserID, projectID, proposalID, req.ReviewHash, req.Reason, req.SlotIDs...)
 	if err != nil {
 		respond{}.error(c, err)
 		return

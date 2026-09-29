@@ -16,6 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kakj-go/Judex/internal/identity"
+	"github.com/kakj-go/Judex/internal/material"
 	"github.com/kakj-go/Judex/internal/platform/auth"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/kakj-go/Judex/internal/transport/http/middleware"
@@ -36,7 +37,9 @@ type Options struct {
 	Auth *AuthOptions
 	// Capabilities reports what is actually wired in this process
 	// (identity/projects/persistence/agentExecution); nil = scaffold mode.
-	Capabilities map[string]bool
+	Capabilities   map[string]bool
+	PreviewService *material.Service
+	PreviewOrigin  string
 }
 
 // AuthOptions carries the wiring the middleware needs.
@@ -122,6 +125,16 @@ func NewRouter(opts Options, spec *SpecRouter) (*gin.Engine, error) {
 			},
 		})
 	})
+	spec.Register("getCapabilities", func(c *gin.Context) {
+		respond{}.ok(c, gin.H{
+			"registerEnabled": true, "protocolVersion": "1",
+			"uploadLimits":           gin.H{"maxFileBytes": 100 << 20, "maxBundleBytes": 200 << 20, "maxFilesPerSubmission": 20, "maxTextBytes": 64 << 10, "partSizeBytes": 8 << 20},
+			"discussionRounds":       gin.H{"default": 3, "min": 1, "max": 100},
+			"approvalTimeoutSeconds": gin.H{"default": 86400, "min": 60, "max": 31536000},
+			"confirmation":           gin.H{"browserConfirmRequired": true, "intentTtlSeconds": 600},
+		})
+	})
+	mountPreview(router, opts.PreviewService, opts.PreviewOrigin)
 	spec.Mount(&router.RouterGroup)
 	router.NoMethod(func(c *gin.Context) {
 		respond{}.error(c, errMethodNotAllowed)

@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -24,6 +25,7 @@ import (
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/kakj-go/Judex/internal/platform/events"
+	"github.com/kakj-go/Judex/internal/work"
 )
 
 // Topic is the API projection (06 §4).
@@ -63,19 +65,21 @@ type Message struct {
 
 // Submission is the unified entry record.
 type Submission struct {
-	ID                 uuid.UUID  `json:"id"`
-	ClientSubmissionID string     `json:"clientSubmissionId"`
-	Purpose            string     `json:"purpose"`
-	Source             string     `json:"source"`
-	Text               string     `json:"text"`
-	TopicID            *uuid.UUID `json:"topicId"`
-	TaskID             *uuid.UUID `json:"taskId"`
-	IdentityID         *uuid.UUID `json:"identityId"`
-	ActorUserID        *uuid.UUID `json:"actorUserId"`
-	Status             string     `json:"status"`
-	MaterialVersionIDs []string   `json:"materialVersionIds"`
-	MessageID          *uuid.UUID `json:"messageId"`
-	CreatedAt          time.Time  `json:"createdAt"`
+	ExpectedTaskVersion int64      `json:"expectedTaskVersion,omitempty"`
+	ReportID            *uuid.UUID `json:"reportId,omitempty"`
+	ID                  uuid.UUID  `json:"id"`
+	ClientSubmissionID  string     `json:"clientSubmissionId"`
+	Purpose             string     `json:"purpose"`
+	Source              string     `json:"source"`
+	Text                string     `json:"text"`
+	TopicID             *uuid.UUID `json:"topicId"`
+	TaskID              *uuid.UUID `json:"taskId"`
+	IdentityID          *uuid.UUID `json:"identityId"`
+	ActorUserID         *uuid.UUID `json:"actorUserId"`
+	Status              string     `json:"status"`
+	MaterialVersionIDs  []string   `json:"materialVersionIds"`
+	MessageID           *uuid.UUID `json:"messageId"`
+	CreatedAt           time.Time  `json:"createdAt"`
 }
 
 type Service struct {
@@ -119,7 +123,7 @@ func (s *Service) CreateTopic(ctx context.Context, requester, projectID uuid.UUI
 	}
 	var out Topic
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := memberRoleTx(ctx, tx, projectID, requester); err != nil {
@@ -167,10 +171,10 @@ func (s *Service) ListTopics(ctx context.Context, requester, projectID uuid.UUID
 	if _, err := memberRoleTx(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT id, title, kind, context_type, context_id, last_message_seq, created_at
-		FROM topics WHERE project_id=$1 AND kind<>'handoff'
-		ORDER BY created_at DESC LIMIT 100`, projectID)
+		/*keys*/ FROM topics WHERE project_id=$1 AND kind<>'handoff'
+		/*page*/`, "created_at", "id", projectID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "topics failed").Wrap(err)
 	}
@@ -194,7 +198,7 @@ func (s *Service) LinkTopic(ctx context.Context, requester, projectID, topicID u
 		}
 	}
 	return s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := memberRoleTx(ctx, tx, projectID, requester); err != nil {
@@ -214,20 +218,28 @@ func (s *Service) LinkTopic(ctx context.Context, requester, projectID, topicID u
 }
 
 // ListMessages pages messages by seq (beforeSeq anchor for history fill).
-func (s *Service) ListMessages(ctx context.Context, requester, projectID, topicID uuid.UUID, beforeSeq int64, limit int) ([]Message, error) {
+func (s *Service) ListMessages(ctx context.Context, requester, projectID, topicID uuid.UUID, beforeSeq int64, limit int, after ...int64) ([]Message, error) {
 	if _, err := memberRoleTx(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
-	if limit < 1 || limit > 100 {
+	if limit < 1 || limit > 101 {
 		limit = 50
+	}
+	afterSeq := int64(0)
+	if len(after) > 0 {
+		afterSeq = after[0]
+	}
+	direction := "DESC"
+	if afterSeq > 0 {
+		direction = "ASC"
 	}
 	rows, err := s.pool.Query(ctx, `
 		SELECT m.id, m.topic_id, m.seq, m.kind, m.author_user_id,
 		       COALESCE(u.display_name, ''), m.identity_id, m.submission_id, m.run_id,
-		       m.content, m.state, m.created_at
+		       m.content, m.state, m.created_at, (SELECT source FROM submissions WHERE id=m.submission_id), ARRAY(SELECT material_version_id::text FROM submission_materials WHERE submission_id=m.submission_id ORDER BY material_version_id)
 		FROM messages m LEFT JOIN users u ON u.id = m.author_user_id
-		WHERE m.project_id=$1 AND m.topic_id=$2 AND ($3=0 OR m.seq<$3)
-		ORDER BY m.seq DESC LIMIT $4`, projectID, topicID, beforeSeq, limit)
+		WHERE m.project_id=$1 AND m.topic_id=$2 AND ($3=0 OR m.seq<$3) AND ($5=0 OR m.seq>$5)
+		ORDER BY m.seq `+direction+` LIMIT $4`, projectID, topicID, beforeSeq, limit, afterSeq)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "messages failed").Wrap(err)
 	}
@@ -243,7 +255,7 @@ func (s *Service) ListMessages(ctx context.Context, requester, projectID, topicI
 			runN        uuid.NullUUID
 		)
 		if err := rows.Scan(&m.ID, &m.TopicID, &m.Seq, &m.Kind, &authorNull, &authorName,
-			&identityN, &submissionN, &runN, &m.Content, &m.State, &m.CreatedAt); err != nil {
+			&identityN, &submissionN, &runN, &m.Content, &m.State, &m.CreatedAt, &m.Source, &m.MaterialVersionIDs); err != nil {
 			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
 		}
 		if authorNull.Valid {
@@ -263,11 +275,10 @@ func (s *Service) ListMessages(ctx context.Context, requester, projectID, topicI
 			id := runN.UUID
 			m.RunID = &id
 		}
-		m.MaterialVersionIDs = []string{}
 		out = append(out, m)
 	}
 	// Reverse to ascending order.
-	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
+	for i, j := 0, len(out)-1; afterSeq == 0 && i < j; i, j = i+1, j-1 {
 		out[i], out[j] = out[j], out[i]
 	}
 	return out, rows.Err()
@@ -289,7 +300,7 @@ func (s *Service) CreateSubmission(ctx context.Context, requester, projectID uui
 	default:
 		return Submission{}, apierrors.Fields("purpose", "enum")
 	}
-	if l := utf8.RuneCountInString(sub.Text); l < 1 || l > 65536 {
+	if l := utf8.RuneCountInString(sub.Text); (l < 1 && len(sub.MaterialVersionIDs) == 0) || l > 65536 {
 		return Submission{}, apierrors.Fields("text", "length")
 	}
 	if sub.TopicID != nil {
@@ -307,7 +318,7 @@ func (s *Service) CreateSubmission(ctx context.Context, requester, projectID uui
 	}
 	var out Submission
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		role, err := memberRoleTx(ctx, tx, projectID, requester)
@@ -319,13 +330,13 @@ func (s *Service) CreateSubmission(ctx context.Context, requester, projectID uui
 		var existing Submission
 		scanErr := tx.QueryRow(ctx, `
 			SELECT id, client_submission_id, purpose, source, text, topic_id, task_id, identity_id,
-			       actor_user_id, status, created_at
+			       actor_user_id, status, created_at,expected_task_version
 			FROM submissions
 			WHERE project_id=$1 AND actor_user_id=$2 AND client_submission_id=$3`,
 			projectID, requester, sub.ClientSubmissionID).
 			Scan(&existing.ID, &existing.ClientSubmissionID, &existing.Purpose, &existing.Source,
 				&existing.Text, &existing.TopicID, &existing.TaskID, &existing.IdentityID,
-				&existing.ActorUserID, &existing.Status, &existing.CreatedAt)
+				&existing.ActorUserID, &existing.Status, &existing.CreatedAt, &existing.ExpectedTaskVersion)
 		if scanErr == nil {
 			// Attach message ref if present.
 			var messageID uuid.NullUUID
@@ -335,6 +346,15 @@ func (s *Service) CreateSubmission(ctx context.Context, requester, projectID uui
 				existing.MessageID = &id
 			}
 			existing.MaterialVersionIDs, _ = s.submissionMaterials(ctx, tx, existing.ID)
+			if submissionHash(existing) != submissionHash(sub) {
+				return apierrors.New(apierrors.IdempotencyConflict, "clientSubmissionId reused with different content")
+			}
+			var report *uuid.UUID
+			if sub.TaskID != nil {
+				if err := tx.QueryRow(ctx, `SELECT id FROM work_reports WHERE submission_id=$1 AND task_id=$2`, existing.ID, sub.TaskID).Scan(&report); err == nil {
+					existing.ReportID = report
+				}
+			}
 			out = existing
 			return nil
 		}
@@ -364,6 +384,16 @@ func (s *Service) CreateSubmission(ctx context.Context, requester, projectID uui
 		})
 		if err != nil {
 			return err
+		}
+		if sub.Purpose == "progress" || sub.Purpose == "delivery" {
+			if sub.TaskID == nil {
+				return apierrors.Fields("taskId", "required")
+			}
+			report, _, err := work.NewService(s.pool, s.now).ReportInTx(ctx, tx, requester, projectID, work.ReportInput{SubmissionID: &created.ID, TaskID: *sub.TaskID, IdentityID: sub.IdentityID, Kind: sub.Purpose, Text: sub.Text, MaterialVersionIDs: sub.MaterialVersionIDs, ExpectedTaskVersion: sub.ExpectedTaskVersion})
+			if err != nil {
+				return err
+			}
+			created.ReportID = &report
 		}
 		out = created
 		return nil
@@ -396,16 +426,14 @@ func (s *Service) submissionMaterials(ctx context.Context, q interface {
 func (s *Service) finalizeSubmissionTx(ctx context.Context, tx pgx.Tx, requester, projectID uuid.UUID, sub Submission, materialCheck func(uuid.UUID) error) (Submission, error) {
 	now := s.now()
 	id := uuid.New()
-	payload := map[string]any{"text": sub.Text, "purpose": sub.Purpose, "materials": sub.MaterialVersionIDs}
-	rawPayload, _ := json.Marshal(payload)
-	sum := sha256.Sum256(rawPayload)
+	hash := submissionHash(sub)
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO submissions (project_id, id, actor_user_id, identity_id, source, client_submission_id,
 			text, topic_id, task_id, purpose, status, payload_hash, expected_task_version, code_refs_json, created_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'ready',$11,$12,'[]',$13)`,
 		projectID, id, requester, nullableUUID(sub.IdentityID), sub.Source, sub.ClientSubmissionID,
 		sub.Text, nullableUUID(sub.TopicID), nullableUUID(sub.TaskID), sub.Purpose,
-		hex.EncodeToString(sum[:]), 0, now); err != nil {
+		hash, sub.ExpectedTaskVersion, now); err != nil {
 		var pgErr interface{ SQLState() string }
 		if errors.As(err, &pgErr) && pgErr.SQLState() == "23505" {
 			return Submission{}, apierrors.New(apierrors.IdempotencyConflict, "duplicate clientSubmissionId")
@@ -472,4 +500,26 @@ func nullableUUID(id *uuid.UUID) any {
 		return nil
 	}
 	return *id
+}
+
+func submissionHash(sub Submission) string {
+	payload := map[string]any{"text": sub.Text, "purpose": sub.Purpose, "materials": sub.MaterialVersionIDs, "topic": sub.TopicID, "task": sub.TaskID, "identity": sub.IdentityID, "expectedVersion": sub.ExpectedTaskVersion}
+	if len(sub.MaterialVersionIDs) == 0 {
+		payload["materials"] = []string{}
+	}
+	raw, _ := json.Marshal(payload)
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
+}
+
+func (s *Service) GetTopic(ctx context.Context, user, project, topic uuid.UUID) (Topic, error) {
+	if _, err := memberRoleTx(ctx, s.pool, project, user); err != nil {
+		return Topic{}, err
+	}
+	var out Topic
+	err := s.pool.QueryRow(ctx, `SELECT id,title,kind,context_type,context_id,last_message_seq,created_at FROM topics WHERE id=$1 AND project_id=$2`, topic, project).Scan(&out.ID, &out.Title, &out.Kind, &out.ContextType, &out.ContextID, &out.LastMessageSeq, &out.CreatedAt)
+	if err != nil {
+		return out, apierrors.New(apierrors.NotFound, "topic not found")
+	}
+	return out, nil
 }

@@ -19,11 +19,11 @@ export type ProjectEventType = (typeof PROJECT_EVENT_TYPES)[number];
 export const EVENT_INVALIDATION_ROOTS: Record<string, string[]> = {
   "message.committed": ["messages", "topics", "runs", "actions"],
   "proposal.changed": ["proposals", "proposalReview", "actions", "tasks", "plans"],
-  "task.changed": ["tasks", "actions"],
-  "plan.changed": ["plans", "tasks", "actions"],
+  "task.changed": ["tasks", "task", "executionMap", "actions"],
+  "plan.changed": ["plans", "plan", "tasks", "executionMap", "actions"],
   "handoff.changed": ["handoffs", "actions", "topics"],
   "material.ready": ["materials", "actions"],
-  "membership.changed": ["members", "bootstrap"],
+  "membership.changed": ["members", "bootstrap", "identities", "positions"],
   "workflow.published": ["workflows", "plans"],
 };
 

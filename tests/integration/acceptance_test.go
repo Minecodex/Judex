@@ -33,7 +33,7 @@ func TestTaskAndPlanAcceptance(t *testing.T) {
 	plan, _ := svc.CreatePlanDraft(ctx, owner.ID, proj.ID, "验收计划", "", "", &reviewerIdent.ID, nil)
 	task, err := svc.CreateTaskDraft(ctx, owner.ID, proj.ID, work.TaskDraft{
 		Title: "T", PlanID: &plan.ID,
-		ParticipantIDs:    []uuid.UUID{workerIdent.ID},
+		ParticipantIDs:     []uuid.UUID{workerIdent.ID},
 		ReviewerIdentityID: &reviewerIdent.ID,
 	})
 	if err != nil {
@@ -55,11 +55,12 @@ func TestTaskAndPlanAcceptance(t *testing.T) {
 	if _, err := svc.DecideTaskAcceptance(ctx, worker.ID, proj.ID, task.ID, review.ReviewHash, true, "", 3); errors.IsCode(err, errors.Forbidden) == false {
 		t.Fatalf("non-reviewer accept must be forbidden, got %v", err)
 	}
-	// Stale hash: a new report invalidates the open review.
-	if _, _, err := svc.Report(ctx, worker.ID, proj.ID, work.ReportInput{
-		TaskID: task.ID, IdentityID: &workerIdent.ID, Kind: "progress",
-		Text: "补充说明", ExpectedTaskVersion: 3,
-	}); err != nil {
+	// Changing the reviewed agreement invalidates the open snapshot. A delivered
+	// task rejects progress; use a fixture version change to exercise stale review.
+	if _, _, err := svc.Report(ctx, worker.ID, proj.ID, work.ReportInput{TaskID: task.ID, IdentityID: &workerIdent.ID, Kind: "progress", Text: "late", ExpectedTaskVersion: 3}); !errors.IsCode(err, errors.InvalidTransition) {
+		t.Fatalf("delivered progress: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE tasks SET version=4 WHERE id=$1`, task.ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.DecideTaskAcceptance(ctx, owner.ID, proj.ID, task.ID, review.ReviewHash, true, "", 4); errors.IsCode(err, errors.ReviewStale) == false {

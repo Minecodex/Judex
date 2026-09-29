@@ -5,6 +5,8 @@ package work
 import (
 	"context"
 	"errors"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"strings"
 	"time"
 
@@ -19,62 +21,18 @@ import (
 
 // BugDetails carries the bug payload (03 §8).
 type BugDetails struct {
-	SourceTaskID       *uuid.UUID
-	ObservedReleaseRef string
-	Environment        string
-	Steps              string
-	Expected           string
-	Actual             string
-	Severity           string
+	SourceTaskID       *uuid.UUID `json:"sourceTaskId,omitempty"`
+	ObservedReleaseRef string     `json:"observedReleaseRef"`
+	Environment        string     `json:"environment"`
+	Steps              string     `json:"steps"`
+	Expected           string     `json:"expected"`
+	Actual             string     `json:"actual"`
+	Severity           string     `json:"severity"`
 }
 
-// CreateBug drafts a bug task with its details; linking to an accepted task
-// proposes a reopen request rather than un-accepting (03 §8).
+// CreateBug uses the same task draft transaction and preserves source acceptance.
 func (s *Service) CreateBug(ctx context.Context, requester, projectID uuid.UUID, title string, details BugDetails, planID *uuid.UUID) (Task, error) {
-	if strings.TrimSpace(title) == "" {
-		return Task{}, apierrors.Fields("title", "required")
-	}
-	switch details.Severity {
-	case "low", "medium", "high", "critical":
-	default:
-		details.Severity = "medium"
-	}
-	var out Task
-	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
-			return err
-		}
-		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {
-			return err
-		}
-		now := s.now()
-		id := uuid.New()
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO tasks (project_id, id, plan_id, title, expected_output, acceptance_criteria,
-				kind, status, created_at, updated_at)
-			VALUES ($1,$2,$3,$4,$5,$6,'bug','draft',$7,$7)`,
-			projectID, id, nullableUUID(planID), title, details.Expected, details.Actual, now); err != nil {
-			return apierrors.New(apierrors.Internal, "bug insert failed").Wrap(err)
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO bug_details (project_id, task_id, source_task_id, observed_release_ref,
-				environment, steps, expected, actual, severity)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-			projectID, id, nullableUUID(details.SourceTaskID), details.ObservedReleaseRef,
-			details.Environment, details.Steps, details.Expected, details.Actual, details.Severity); err != nil {
-			return apierrors.New(apierrors.Internal, "bug details failed").Wrap(err)
-		}
-		if err := audit.Append(ctx, tx, audit.Entry{
-			ProjectID: &projectID, ActorType: audit.ActorUser, ActorUserID: &requester,
-			Source: audit.SourceWeb, Operation: "bug.create",
-			ObjectType: "task", ObjectID: id.String(), OccurredAt: now,
-		}); err != nil {
-			return err
-		}
-		out = Task{ID: id, Title: title, Kind: "bug", Status: "draft", CreatedAt: now}
-		return nil
-	})
-	return out, err
+	return s.CreateTaskDraft(ctx, requester, projectID, TaskDraft{Title: title, Kind: "bug", PlanID: planID, ExpectedOutput: details.Expected, BugDetails: &details})
 }
 
 // ReleaseReport is an environment/version fact report (03 §8).
@@ -102,10 +60,13 @@ func (s *Service) ReportRelease(ctx context.Context, requester, projectID uuid.U
 	}
 	var out ReleaseReport
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {
+			return err
+		}
+		if err := validateCodeRefs(ctx, tx, projectID, repositoryCommits); err != nil {
 			return err
 		}
 		now := s.now()
@@ -138,9 +99,9 @@ func (s *Service) ListReleases(ctx context.Context, requester, projectID uuid.UU
 	if _, err := memberTx(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
-		SELECT id, version_label, environment, url, status, repository_commits_json, reported_by, created_at
-		FROM release_reports WHERE project_id=$1 ORDER BY created_at DESC LIMIT 50`, projectID)
+	rows, err := paging.Query(ctx, s.pool, `
+		SELECT id, version_label, environment, url, status, repository_commits_json, reported_by, created_at /*keys*/
+		FROM release_reports WHERE project_id=$1 /*page*/`, "created_at", "id", projectID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "releases failed").Wrap(err)
 	}
@@ -170,7 +131,7 @@ func (s *Service) CreateFixPropagation(ctx context.Context, requester, projectID
 	}
 	var created []uuid.UUID
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {
@@ -192,9 +153,9 @@ func (s *Service) CreateFixPropagation(ctx context.Context, requester, projectID
 			propagationID := uuid.New()
 			targetTask := uuid.New()
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO tasks (project_id, id, title, kind, status, created_at, updated_at)
-				VALUES ($1,$2,$3,'task','draft',$4,$4)`,
-				projectID, targetTask, "修复传播 → "+ref, now); err != nil {
+				INSERT INTO tasks (project_id, id, title, kind, status, created_at, updated_at,created_by)
+				VALUES ($1,$2,$3,'task','draft',$4,$4,$5)`,
+				projectID, targetTask, "修复传播 → "+ref, now, requester); err != nil {
 				return apierrors.New(apierrors.Internal, "target task failed").Wrap(err)
 			}
 			if _, err := tx.Exec(ctx, `
@@ -216,4 +177,30 @@ func (s *Service) CreateFixPropagation(ctx context.Context, requester, projectID
 		})
 	})
 	return created, err
+}
+
+// insertBugDetails keeps bug evidence project scoped in both draft and approval paths.
+func insertBugDetails(ctx context.Context, tx interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+}, project, task uuid.UUID, d *BugDetails) error {
+	if d == nil {
+		return apierrors.Fields("bugDetails", "required for bug tasks")
+	}
+	switch d.Severity {
+	case "low", "medium", "high", "critical":
+	default:
+		return apierrors.Fields("bugDetails.severity", "enum")
+	}
+	if d.SourceTaskID != nil {
+		var valid bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM tasks WHERE project_id=$1 AND id=$2)`, project, *d.SourceTaskID).Scan(&valid); err != nil {
+			return err
+		}
+		if !valid {
+			return apierrors.New(apierrors.InvalidReference, "bug source outside project")
+		}
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO bug_details(project_id,task_id,source_task_id,observed_release_ref,environment,steps,expected,actual,severity) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, project, task, d.SourceTaskID, d.ObservedReleaseRef, d.Environment, d.Steps, d.Expected, d.Actual, d.Severity)
+	return err
 }

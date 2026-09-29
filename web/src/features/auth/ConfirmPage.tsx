@@ -1,3 +1,5 @@
+import {loadIntentReview} from "./intentReview";
+import { ReviewDetails } from "../work/ReviewDetails";
 import { UIWarning, UINotice } from "../../components/ui/FormControls";
 import { Button, Card } from "@heroui/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -16,6 +18,9 @@ type Intent = {
   objectId: string;
   expiresAt: string;
   resultRef: string | null;
+  intentHash: string;
+  reviewHash: string;
+  payload: Record<string, unknown>;
 };
 
 // ConfirmPage（docs/plans/v1/07 §5 / 08 §5）：CLI 请求的正式决定在此由本人
@@ -29,20 +34,27 @@ export function ConfirmPage() {
     () => new URLSearchParams(location.search).get("project") ?? "",
   );
 
+  const intentPrefix=projectId?`/projects/${projectId}/confirmation-intents`:"/confirmation-intents";
   const intent = useQuery({
     queryKey: ["intent", intentId],
     queryFn: () =>
-      request<Intent>(`/projects/${projectId}/confirmation-intents/${intentId}`),
-    enabled: !!projectId && !!intentId,
+      request<Intent>(`${intentPrefix}/${intentId}`),
+    enabled: !!intentId,
     refetchInterval: (query) =>
       query.state.data?.state === "pending" ? 3000 : false,
   });
 
+  const review = useQuery({
+    queryKey: ["intentEvidence", user?.id, intentId, intent.data?.reviewHash],
+    enabled: !!intent.data && !!user,
+    queryFn:()=>loadIntentReview(projectId,intent.data!,t("lcReceiptHint")),
+  });
+  const currentReview = review.data && review.data.reviewHash === intent.data?.reviewHash;
   const decide = useMutation({
     mutationFn: (approve: boolean) =>
-      request(`/projects/${projectId}/confirmation-intents/${intentId}/confirm`, {
+      request(`${intentPrefix}/${intentId}/confirm`, {
         method: "POST",
-        body: JSON.stringify({ decision: approve ? "approve" : "reject" }),
+        body: JSON.stringify({ decision: approve ? "approve" : "reject", intentHash: intent.data?.intentHash }),
         idempotencyKey: crypto.randomUUID(),
       }),
     onSuccess: () => intent.refetch(),
@@ -52,13 +64,6 @@ export function ConfirmPage() {
     document.title = "Judex · " + t("cfTitle");
   }, [locale]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!projectId) {
-    return (
-      <EntryCard>
-        <p className="judex-workspace-status">{t("cfNeedProject")}</p>
-      </EntryCard>
-    );
-  }
 
   return (
     <EntryCard>
@@ -84,11 +89,16 @@ export function ConfirmPage() {
               ? new Date(intent.data.expiresAt).toLocaleString()
               : "-"}
           </small>
+          {review.data?.changes&&<ReviewDetails changes={review.data.changes} />}
+          {review.data?.evidence&&<ReviewDetails evidence={review.data.evidence} />}
+          {review.isError && <UIWarning>{review.error.message}</UIWarning>}
+          {!currentReview && review.data && <UIWarning>{t("accessReload")}</UIWarning>}
           {intent.data?.state === "pending" ? (
             <div className="judex-inline-form">
               <Button
                 variant="primary"
                 data-testid="confirm-approve"
+                isDisabled={!currentReview}
                 isPending={decide.isPending}
                 onClick={() => decide.mutate(true)}
               >

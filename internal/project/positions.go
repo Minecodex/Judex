@@ -5,6 +5,7 @@ package project
 import (
 	"context"
 	"errors"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"strings"
 	"unicode/utf8"
 
@@ -52,7 +53,7 @@ func (s *Service) CreatePosition(ctx context.Context, requester, projectID uuid.
 	}
 	var out Position
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		role, err := s.MembershipForTx(ctx, tx, requester, projectID)
@@ -105,7 +106,7 @@ func (s *Service) UpdatePosition(ctx context.Context, requester, projectID, posi
 	}
 	var out Position
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		role, err := s.MembershipForTx(ctx, tx, requester, projectID)
@@ -170,11 +171,11 @@ func (s *Service) ListPositions(ctx context.Context, requester, projectID uuid.U
 	if _, err := s.MembershipFor(ctx, requester, projectID); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT t.id, t.name, t.status, t.current_version, v.public_summary, v.prompt, v.model_id, v.revision
-		FROM position_templates t
+		/*keys*/ FROM position_templates t
 		JOIN position_versions v ON v.template_id=t.id AND v.revision=t.current_version
-		WHERE t.project_id=$1 ORDER BY t.created_at`, projectID)
+		WHERE t.project_id=$1 /*page*/`, "t.created_at", "t.id", projectID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "positions failed").Wrap(err)
 	}

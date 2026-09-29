@@ -25,6 +25,7 @@ const (
 )
 
 type Config struct {
+	RegisterPerIP   int64
 	Environment     string
 	HTTPAddress     string
 	WebDirectory    string
@@ -54,11 +55,14 @@ type Config struct {
 
 // SandboxConfig configures the OpenSandbox server + per-run sandboxes.
 type SandboxConfig struct {
-	Endpoint string // JUDEX_OPENSANDBOX_ENDPOINT, e.g. http://osb:80
-	APIKey   string // JUDEX_OPENSANDBOX_API_KEY (custom header)
-	Image    string // JUDEX_OPENSANDBOX_IMAGE, pinned at deploy time
-	CPU      string // JUDEX_OPENSANDBOX_CPU, K8s quantity
-	Memory   string // JUDEX_OPENSANDBOX_MEMORY, K8s quantity
+	Endpoint             string // JUDEX_OPENSANDBOX_ENDPOINT, e.g. http://osb:80
+	APIKey               string // JUDEX_OPENSANDBOX_API_KEY (custom header)
+	Image                string // JUDEX_OPENSANDBOX_IMAGE, pinned at deploy time
+	CPU                  string // JUDEX_OPENSANDBOX_CPU, K8s quantity
+	Memory               string // JUDEX_OPENSANDBOX_MEMORY, K8s quantity
+	MaterialNamespace    string
+	MaterialImage        string
+	MaterialStorageClass string
 }
 
 // ModelGatewayConfig is the direct gateway wiring for background agents.
@@ -117,6 +121,10 @@ func FromEnv(get func(string) string) (Config, error) {
 	if c.NeedsDatabase() && c.DatabaseURL == "" {
 		return c, fmt.Errorf("JUDEX_DATABASE_URL is required for mode %s", c.Mode)
 	}
+	c.RegisterPerIP, err = strconv.ParseInt(value("JUDEX_REGISTER_PER_IP", "10"), 10, 64)
+	if err != nil || c.RegisterPerIP < 1 || c.RegisterPerIP > 10000 {
+		return c, fmt.Errorf("JUDEX_REGISTER_PER_IP must be between 1 and 10000")
+	}
 	c.WorkerCount, err = strconv.Atoi(value("JUDEX_WORKER_COUNT", "2"))
 	if err != nil || c.WorkerCount < 1 || c.WorkerCount > 64 {
 		return c, fmt.Errorf("JUDEX_WORKER_COUNT must be an integer in [1,64]")
@@ -145,11 +153,12 @@ func FromEnv(get func(string) string) (Config, error) {
 	c.PreviewOrigin = value("JUDEX_PREVIEW_ORIGIN", "")
 
 	c.Sandbox = SandboxConfig{
-		Endpoint: value("JUDEX_OPENSANDBOX_ENDPOINT", ""),
-		APIKey:   value("JUDEX_OPENSANDBOX_API_KEY", ""),
-		Image:    value("JUDEX_OPENSANDBOX_IMAGE", ""),
-		CPU:      value("JUDEX_OPENSANDBOX_CPU", ""),
-		Memory:   value("JUDEX_OPENSANDBOX_MEMORY", ""),
+		Endpoint:          value("JUDEX_OPENSANDBOX_ENDPOINT", ""),
+		MaterialNamespace: value("JUDEX_MATERIAL_NAMESPACE", ""), MaterialImage: value("JUDEX_MATERIAL_IMAGE", ""), MaterialStorageClass: value("JUDEX_MATERIAL_STORAGE_CLASS", ""),
+		APIKey: value("JUDEX_OPENSANDBOX_API_KEY", ""),
+		Image:  value("JUDEX_OPENSANDBOX_IMAGE", ""),
+		CPU:    value("JUDEX_OPENSANDBOX_CPU", ""),
+		Memory: value("JUDEX_OPENSANDBOX_MEMORY", ""),
 	}
 	c.ModelGateway = ModelGatewayConfig{
 		Protocol: value("JUDEX_MODEL_PROTOCOL", ""),
@@ -168,7 +177,7 @@ func FromEnv(get func(string) string) (Config, error) {
 
 // NeedsDatabase reports whether the mode touches PostgreSQL.
 func (c Config) NeedsDatabase() bool {
-	return c.Mode == ModeAll || c.Mode == ModeWorker || c.Mode == ModeMigrate
+	return c.Mode == ModeAll || c.Mode == ModeWorker || c.Mode == ModeMigrate || (c.Mode == ModeAPI && c.DatabaseURL != "")
 }
 
 // RunsHTTP reports whether the mode serves HTTP.

@@ -9,6 +9,7 @@ package work
 import (
 	"context"
 	"errors"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -45,6 +46,7 @@ type TaskStats struct {
 
 // Task is the API projection (06 §5).
 type Task struct {
+	BugDetails         *BugDetails   `json:"bugDetails,omitempty"`
 	ID                 uuid.UUID     `json:"id"`
 	PlanID             *uuid.UUID    `json:"planId"`
 	ParentTaskID       *uuid.UUID    `json:"parentTaskId"`
@@ -113,7 +115,7 @@ func (s *Service) CreatePlanDraft(ctx context.Context, requester, projectID uuid
 	}
 	var out Plan
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {
@@ -122,9 +124,9 @@ func (s *Service) CreatePlanDraft(ctx context.Context, requester, projectID uuid
 		now := s.now()
 		id := uuid.New()
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO plans (project_id, id, title, goal, acceptance_criteria, owner_identity_id, workflow_id, status, created_at, updated_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,'draft',$8,$8)`,
-			projectID, id, title, goal, criteria, nullableUUID(ownerIdentityID), nullableUUID(workflowID), now); err != nil {
+			INSERT INTO plans (project_id, id, title, goal, acceptance_criteria, owner_identity_id, workflow_id, status, created_at, updated_at,created_by)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,'draft',$8,$8,$9)`,
+			projectID, id, title, goal, criteria, nullableUUID(ownerIdentityID), nullableUUID(workflowID), now, requester); err != nil {
 			return apierrors.New(apierrors.Internal, "plan insert failed").Wrap(err)
 		}
 		if err := audit.Append(ctx, tx, audit.Entry{
@@ -143,19 +145,23 @@ func (s *Service) CreatePlanDraft(ctx context.Context, requester, projectID uuid
 }
 
 // ListPlans returns plans with task stats.
-func (s *Service) ListPlans(ctx context.Context, requester, projectID uuid.UUID) ([]Plan, error) {
+func (s *Service) ListPlans(ctx context.Context, requester, projectID uuid.UUID, planIDs ...uuid.UUID) ([]Plan, error) {
 	if _, err := memberTx(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
+	var selected *uuid.UUID
+	if len(planIDs) > 0 {
+		selected = &planIDs[0]
+	}
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT p.id, p.title, p.goal, p.acceptance_criteria, p.status, p.owner_identity_id,
 		       p.workflow_id, p.latest_acceptance_id, p.version, p.created_at,
 		       count(t.id), count(t.id) FILTER (WHERE t.status='accepted'),
 		       count(t.id) FILTER (WHERE t.status NOT IN ('accepted','cancelled')),
-		       count(t.id) FILTER (WHERE t.status='cancelled')
-		FROM plans p LEFT JOIN tasks t ON t.plan_id=p.id
-		WHERE p.project_id=$1
-		GROUP BY p.id ORDER BY p.created_at DESC LIMIT 100`, projectID)
+		       count(t.id) FILTER (WHERE t.status='cancelled') /*keys*/
+		FROM plans p LEFT JOIN tasks t ON t.project_id=p.project_id AND (t.plan_id=p.id OR EXISTS(SELECT 1 FROM plan_task_references r WHERE r.plan_id=p.id AND r.task_id=t.id))
+		WHERE p.project_id=$1 AND ($2::uuid IS NULL OR p.id=$2)
+		/*page*/ GROUP BY p.id`, "p.created_at", "p.id", projectID, selected)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "plans failed").Wrap(err)
 	}
@@ -175,6 +181,7 @@ func (s *Service) ListPlans(ctx context.Context, requester, projectID uuid.UUID)
 
 // TaskDraft carries the create-task payload.
 type TaskDraft struct {
+	BugDetails         *BugDetails
 	Title              string
 	PlanID             *uuid.UUID
 	ParentTaskID       *uuid.UUID
@@ -215,7 +222,7 @@ func (s *Service) CreateTaskDraft(ctx context.Context, requester, projectID uuid
 	}
 	var out Task
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {
@@ -236,7 +243,7 @@ func (s *Service) CreateTaskDraft(ctx context.Context, requester, projectID uuid
 			if parentProject != projectID {
 				return apierrors.New(apierrors.InvalidReference, "parent task in another project")
 			}
-			if draft.PlanID == nil || parentPlan == nil || *parentPlan != *draft.PlanID {
+			if (draft.PlanID == nil) != (parentPlan == nil) || (draft.PlanID != nil && parentPlan != nil && *parentPlan != *draft.PlanID) {
 				return apierrors.New(apierrors.InvalidReference, "parent must share the owning plan")
 			}
 		}
@@ -253,6 +260,9 @@ func (s *Service) CreateTaskDraft(ctx context.Context, requester, projectID uuid
 				return apierrors.New(apierrors.InvalidReference, "plan in another project")
 			}
 		}
+		if err := validateRequirementReferences(ctx, tx, projectID, draft.Requirements); err != nil {
+			return err
+		}
 		// Requirement cycles: task_acceptance edges among existing tasks must
 		// stay acyclic (03 §9 依赖环检查 under the project lock).
 		if err := checkRequirementCycle(ctx, tx, projectID, draft.Requirements); err != nil {
@@ -262,13 +272,18 @@ func (s *Service) CreateTaskDraft(ctx context.Context, requester, projectID uuid
 		id := uuid.New()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO tasks (project_id, id, plan_id, parent_task_id, title, expected_output,
-				acceptance_criteria, kind, reviewer_identity_id, workflow_id, node_id, status, created_at, updated_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'draft',$12,$12)`,
+				acceptance_criteria, kind, reviewer_identity_id, workflow_id, node_id, status, created_at, updated_at,created_by)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'draft',$12,$12,$13)`,
 			projectID, id, nullableUUID(draft.PlanID), nullableUUID(draft.ParentTaskID), title,
 			draft.ExpectedOutput, draft.AcceptanceCriteria, draft.Kind,
 			nullableUUID(draft.ReviewerIdentityID), nullableUUID(draft.WorkflowID),
-			nullableString(draft.NodeID), now); err != nil {
+			nullableString(draft.NodeID), now, requester); err != nil {
 			return apierrors.New(apierrors.Internal, "task insert failed").Wrap(err)
+		}
+		if draft.Kind == "bug" {
+			if err := insertBugDetails(ctx, tx, projectID, id, draft.BugDetails); err != nil {
+				return err
+			}
 		}
 		for _, identityID := range draft.ParticipantIDs {
 			if _, err := tx.Exec(ctx, `
@@ -360,10 +375,10 @@ func (s *Service) ListTasks(ctx context.Context, requester, projectID uuid.UUID,
 	if _, err := memberTx(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
-		SELECT id, plan_id, parent_task_id, title, kind, status, version, created_at
+	rows, err := paging.Query(ctx, s.pool, `
+		SELECT id, plan_id, parent_task_id, title, kind, status, version, created_at /*keys*/
 		FROM tasks WHERE project_id=$1 AND ($2::uuid IS NULL OR plan_id=$2)
-		ORDER BY created_at DESC LIMIT 100`, projectID, planID)
+		/*page*/`, "created_at", "id", projectID, planID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "tasks failed").Wrap(err)
 	}

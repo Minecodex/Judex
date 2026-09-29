@@ -154,7 +154,7 @@ components:
           type: string
         verificationUri:
           type: string
-          format: uri
+          format: uri-reference
         expiresIn:
           type: integer
           description: 秒。

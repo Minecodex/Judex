@@ -89,7 +89,7 @@ func (h *WorkHandlers) taskDecide(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, task)
+	h.respondTask(c, projectID, task.ID)
 }
 
 func (h *WorkHandlers) taskReopen(c *gin.Context) {
@@ -123,7 +123,7 @@ func (h *WorkHandlers) taskReopen(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, task)
+	h.respondTask(c, projectID, task.ID)
 }
 
 func (h *WorkHandlers) planReview(c *gin.Context) {
@@ -159,10 +159,11 @@ func (h *WorkHandlers) planDecide(c *gin.Context) {
 		return
 	}
 	var req struct {
-		ReviewID   string `json:"reviewId" binding:"required"`
-		ReviewHash string `json:"reviewHash" binding:"required"`
-		Decision   string `json:"decision" binding:"required"`
-		Reason     string `json:"reason"`
+		ExpectedVersion int64  `json:"expectedVersion"`
+		ReviewID        string `json:"reviewId" binding:"required"`
+		ReviewHash      string `json:"reviewHash" binding:"required"`
+		Decision        string `json:"decision" binding:"required"`
+		Reason          string `json:"reason"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
@@ -172,13 +173,22 @@ func (h *WorkHandlers) planDecide(c *gin.Context) {
 		respond{}.error(c, apierrors.Fields("decision", "enum"))
 		return
 	}
-	plan, err := h.Work.DecidePlanAcceptance(c.Request.Context(), p.UserID, projectID, planID,
+	review, err := h.Work.PlanAcceptanceReview(c.Request.Context(), p.UserID, projectID, planID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	if review.TargetVersion != req.ExpectedVersion {
+		respond{}.error(c, apierrors.New(apierrors.VersionConflict, "plan version changed"))
+		return
+	}
+	_, err = h.Work.DecidePlanAcceptance(c.Request.Context(), p.UserID, projectID, planID,
 		req.ReviewHash, req.Decision == "accept", req.Reason)
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, plan)
+	h.getPlan(c)
 }
 
 func (h *WorkHandlers) planReopen(c *gin.Context) {
@@ -207,12 +217,12 @@ func (h *WorkHandlers) planReopen(c *gin.Context) {
 		respond{}.error(c, apierrors.Fields("acceptanceId", "invalid"))
 		return
 	}
-	plan, err := h.Work.ReopenPlan(c.Request.Context(), p.UserID, projectID, planID, acceptanceID, req.Reason)
+	_, err = h.Work.ReopenPlan(c.Request.Context(), p.UserID, projectID, planID, acceptanceID, req.Reason)
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, plan)
+	h.getPlan(c)
 }
 
 func (h *WorkHandlers) startTask(c *gin.Context) {
@@ -245,7 +255,7 @@ func (h *WorkHandlers) startTask(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, task)
+	h.respondTask(c, projectID, task.ID)
 }
 
 func (h *WorkHandlers) executionMap(c *gin.Context) {
@@ -280,7 +290,7 @@ func (h *WorkHandlers) listPlans(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(plans, nil))
+	respond{}.ok(c, respond{}.list(c, plans, nil))
 }
 
 func optionalUUID(raw string) (*uuid.UUID, error) {
@@ -348,7 +358,7 @@ func (h *WorkHandlers) listTasks(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(tasks, nil))
+	respond{}.ok(c, respond{}.list(c, tasks, nil))
 }
 
 func (h *WorkHandlers) createTask(c *gin.Context) {
@@ -359,24 +369,24 @@ func (h *WorkHandlers) createTask(c *gin.Context) {
 		return
 	}
 	var req struct {
-		Title              string `json:"title" binding:"required"`
-		PlanID             string `json:"planId"`
-		ParentTaskID       string `json:"parentTaskId"`
-		ExpectedOutput     string `json:"expectedOutput"`
-		AcceptanceCriteria string `json:"acceptanceCriteria"`
-		Kind               string `json:"kind"`
-		ReviewerIdentityID string `json:"reviewerIdentityId"`
-		WorkflowID         string `json:"workflowId"`
-		NodeID             string `json:"nodeId"`
-		ParticipantIDs     []struct {
-			IdentityID string `json:"identityId"`
-		} `json:"participants"`
-		Requirements []struct {
-			Phase    string `json:"phase"`
-			Kind     string `json:"kind"`
-			TargetID string `json:"targetId"`
-			Hard     bool   `json:"hard"`
-			Label    string `json:"label"`
+		Title              string           `json:"title" binding:"required"`
+		PlanID             string           `json:"planId"`
+		ParentTaskID       string           `json:"parentTaskId"`
+		ExpectedOutput     string           `json:"expectedOutput"`
+		AcceptanceCriteria string           `json:"acceptanceCriteria"`
+		Kind               string           `json:"kind"`
+		ReviewerIdentityID string           `json:"reviewerIdentityId"`
+		WorkflowID         string           `json:"workflowId"`
+		NodeID             string           `json:"nodeId"`
+		ParticipantIDs     []string         `json:"participantIdentityIds"`
+		BugDetails         *work.BugDetails `json:"bugDetails"`
+		Requirements       []struct {
+			Phase             string     `json:"phase"`
+			Kind              string     `json:"kind"`
+			TargetID          string     `json:"targetId"`
+			MaterialVersionID *uuid.UUID `json:"materialVersionId"`
+			Hard              bool       `json:"hard"`
+			Label             string     `json:"label"`
 		} `json:"requirements"`
 	}
 	if err := bindJSON(c, &req); err != nil {
@@ -385,7 +395,7 @@ func (h *WorkHandlers) createTask(c *gin.Context) {
 	}
 	draft := work.TaskDraft{
 		Title: req.Title, ExpectedOutput: req.ExpectedOutput,
-		AcceptanceCriteria: req.AcceptanceCriteria, Kind: req.Kind,
+		AcceptanceCriteria: req.AcceptanceCriteria, Kind: req.Kind, BugDetails: req.BugDetails,
 	}
 	if draft.PlanID, err = optionalUUID(req.PlanID); err != nil {
 		respond{}.error(c, err)
@@ -407,9 +417,9 @@ func (h *WorkHandlers) createTask(c *gin.Context) {
 		draft.NodeID = &req.NodeID
 	}
 	for _, participant := range req.ParticipantIDs {
-		id, err := uuid.Parse(participant.IdentityID)
+		id, err := uuid.Parse(participant)
 		if err != nil {
-			respond{}.error(c, apierrors.Fields("participants[].identityId", "invalid"))
+			respond{}.error(c, apierrors.Fields("participantIdentityIds[]", "invalid"))
 			return
 		}
 		draft.ParticipantIDs = append(draft.ParticipantIDs, id)
@@ -421,10 +431,15 @@ func (h *WorkHandlers) createTask(c *gin.Context) {
 			return
 		}
 		draft.Requirements = append(draft.Requirements, work.Requirement{
-			Phase: raw.Phase, Kind: raw.Kind, TargetID: target, Hard: raw.Hard, Label: raw.Label,
+			Phase: raw.Phase, Kind: raw.Kind, TargetID: target, MaterialVersionID: raw.MaterialVersionID, Hard: raw.Hard, Label: raw.Label,
 		})
 	}
 	task, err := h.Work.CreateTaskDraft(c.Request.Context(), p.UserID, projectID, draft)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	task, err = h.Work.GetTask(c.Request.Context(), p.UserID, projectID, task.ID)
 	if err != nil {
 		respond{}.error(c, err)
 		return
@@ -439,55 +454,74 @@ func (h *WorkHandlers) getTask(c *gin.Context) {
 		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
 		return
 	}
-	tasks, err := h.Work.ListTasks(c.Request.Context(), p.UserID, projectID, nil)
+	taskID, err := uuid.Parse(c.Param("taskId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("taskId", "uuid"))
+		return
+	}
+	task, err := h.Work.GetTask(c.Request.Context(), p.UserID, projectID, taskID)
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	taskID, err := uuid.Parse(c.Param("taskId"))
-	if err != nil {
-		respond{}.error(c, apierrors.Fields("taskId", "invalid"))
-		return
-	}
-	for _, task := range tasks {
-		if task.ID == taskID {
-			respond{}.ok(c, task)
-			return
-		}
-	}
-	respond{}.error(c, apierrors.New(apierrors.NotFound, "task not found"))
+	respond{}.ok(c, task)
 }
 
 func (h *WorkHandlers) getPlan(c *gin.Context) {
-	p := principalFrom(c)
 	projectID, err := projectParam(c)
-	if err != nil {
-		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
-		return
-	}
-	plans, err := h.Work.ListPlans(c.Request.Context(), p.UserID, projectID)
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	planID, err := uuid.Parse(c.Param("planId"))
+	id, err := uuid.Parse(c.Param("planId"))
 	if err != nil {
-		respond{}.error(c, apierrors.Fields("planId", "invalid"))
+		respond{}.error(c, apierrors.Fields("planId", "uuid"))
 		return
 	}
-	for _, plan := range plans {
-		if plan.ID == planID {
-			respond{}.ok(c, plan)
-			return
-		}
+	plans, err := h.Work.ListPlans(c.Request.Context(), principalFrom(c).UserID, projectID, id)
+	if err != nil {
+		respond{}.error(c, err)
+		return
 	}
-	respond{}.error(c, apierrors.New(apierrors.NotFound, "plan not found"))
+	if len(plans) != 1 {
+		respond{}.error(c, apierrors.New(apierrors.NotFound, "plan not found"))
+		return
+	}
+	respond{}.ok(c, plans[0])
 }
 
-func (h *WorkHandlers) discardPlan(c *gin.Context) {
-	respond{}.error(c, apierrors.New(apierrors.NotImplemented, "plan discard lands with P3-03 proposals"))
+func (h *WorkHandlers) discardPlan(c *gin.Context) { h.discard(c, "plan", "planId") }
+func (h *WorkHandlers) discardTask(c *gin.Context) { h.discard(c, "task", "taskId") }
+func (h *WorkHandlers) discard(c *gin.Context, kind, param string) {
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	target, err := uuid.Parse(c.Param(param))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields(param, "uuid"))
+		return
+	}
+	var req struct {
+		ExpectedVersion int64 `json:"expectedVersion"`
+	}
+	if err = bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	if err = h.Work.Discard(c.Request.Context(), principalFrom(c).UserID, projectID, target, kind, req.ExpectedVersion); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, gin.H{"id": target, "status": "cancelled", "version": req.ExpectedVersion + 1})
 }
 
-func (h *WorkHandlers) discardTask(c *gin.Context) {
-	respond{}.error(c, apierrors.New(apierrors.NotImplemented, "task discard lands with P3-03 proposals"))
+func (h *WorkHandlers) respondTask(c *gin.Context, projectID, taskID uuid.UUID) {
+	task, err := h.Work.GetTask(c.Request.Context(), principalFrom(c).UserID, projectID, taskID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, task)
 }

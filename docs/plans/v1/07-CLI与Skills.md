@@ -114,3 +114,13 @@ Skill 流程：
 发行 assets：各平台二进制、sha256sums、版本化 skill zip、安装说明、协议兼容范围、升级/卸载说明。server、web、CLI 和 skill 同版本 manifest，不能只发布 server 镜像。
 
 参考：[RFC 8628 设备授权流程](https://www.rfc-editor.org/rfc/rfc8628) 提供 CLI 授权的码、轮询与过期机制依据；它只解决客户端授权，本节每项业务确认是 Judex 独立事务协议，不能混为同一次长期授权。
+
+## 2026-09-29 实现与发行
+
+空 projectIds 的 grant 只允许发现项目和明确授权的首次建项目流程，不允许读写任意项目。首次项目使用用户级确认意图，浏览器确认不会自动扩展已有 grant。正式决定默认等待同一结果至两分钟，--no-wait 只返回待确认意图；decision result --global 可查询首次建项目结果。
+
+凭据包含独立 access/refresh；刷新用操作系统跨进程文件锁及原子写入，设备码只兑换一次。pending list/retry 使用原请求正文、服务器和幂等键。material bundle 提供清单预览与确定性 ZIP，上传复用本地收据，固定版本下载核验字节。events 使用 SSE 游标。
+
+Codex 默认目录 ~/.agents/skills/judex，Claude Code 为 ~/.claude/skills/judex；SKILL.md 包含 name/description frontmatter。安装收据只拥有发行清单内五个文件，拒绝覆盖修改文件，卸载保留用户额外文件。实际 Codex app-server 发现/卸载已验证，额外 AI 宿主会话尚未运行。
+
+npm run release:build -- VERSION 生成六平台 CLI、双架构 Linux server、web、Chart、OpenAPI 和 Skill。构建记录源树指纹，制品/Skill 版本一致，全文件校验和可由 node tests/release.mjs dist/release/VERSION 复核。Windows amd64 包已实际运行，其余架构仅构建。

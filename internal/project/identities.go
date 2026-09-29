@@ -5,6 +5,7 @@ package project
 import (
 	"context"
 	"errors"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"strings"
 	"time"
 
@@ -42,10 +43,10 @@ func (s *Service) ListIdentities(ctx context.Context, requester, projectID uuid.
 	if _, err := s.MembershipFor(ctx, requester, projectID); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT i.id, i.kind, i.status, i.template_id, i.current_binding_version,
 		       COALESCE((SELECT name FROM position_templates t WHERE t.id=i.template_id), '')
-		FROM agent_identities i WHERE i.project_id=$1 ORDER BY i.created_at`, projectID)
+		/*keys*/ FROM agent_identities i WHERE i.project_id=$1 /*page*/`, "i.created_at", "i.id", projectID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "identities failed").Wrap(err)
 	}
@@ -90,7 +91,7 @@ func (s *Service) ListIdentities(ctx context.Context, requester, projectID uuid.
 func (s *Service) CreateIdentity(ctx context.Context, requester, projectID, positionID, userID uuid.UUID) (Identity, error) {
 	var out Identity
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		role, err := s.MembershipForTx(ctx, tx, requester, projectID)
@@ -132,6 +133,11 @@ func (s *Service) CreateIdentity(ctx context.Context, requester, projectID, posi
 		namePtr := &name
 		out = Identity{ID: identityID, Kind: "position", Status: "active", TemplateID: positionPtr,
 			PositionName: namePtr, CurrentBindingVersion: 1}
+		var display string
+		if err := tx.QueryRow(ctx, `SELECT display_name FROM users WHERE id=$1`, userID).Scan(&display); err != nil {
+			return err
+		}
+		out.CurrentBinding = &BindingSummary{BindingVersion: 1, UserID: userID, DisplayName: display, ValidFrom: now}
 		return audit.Append(ctx, tx, audit.Entry{
 			ProjectID: &projectID, ActorType: audit.ActorUser, ActorUserID: &requester,
 			Source: audit.SourceWeb, Operation: "identity.create",
@@ -149,7 +155,7 @@ func (s *Service) ReplaceIdentityBinding(ctx context.Context, requester, project
 	}
 	var out Identity
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		role, err := s.MembershipForTx(ctx, tx, requester, projectID)
@@ -210,7 +216,9 @@ func (s *Service) ReplaceIdentityBinding(ctx context.Context, requester, project
 
 // Invitation is the invite aggregate (06 §3).
 type Invitation struct {
-	projectID      uuid.UUID      `json:"-"`
+	ProjectID      uuid.UUID      `json:"projectId"`
+	ProjectTitle   string         `json:"projectTitle"`
+	PositionNames  []string       `json:"positionNames"`
 	ID             uuid.UUID      `json:"id"`
 	TargetEmail    string         `json:"targetEmail"`
 	TargetUserID   *uuid.UUID     `json:"targetUserId"`
@@ -237,7 +245,7 @@ func (s *Service) CreateInvitation(ctx context.Context, requester, projectID uui
 	token := keys.NewRandom()
 	var out Invitation
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		role, err := s.MembershipForTx(ctx, tx, requester, projectID)

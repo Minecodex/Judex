@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"sort"
 	"strings"
 	"time"
@@ -28,6 +29,7 @@ import (
 
 // Node is one process node (structured authority).
 type Node struct {
+	DelegationUserIDs     []string `json:"delegationUserIds,omitempty"`
 	ID                    string   `json:"id"`
 	Name                  string   `json:"name"`
 	Responsibility        string   `json:"responsibility"`
@@ -43,6 +45,7 @@ type Edge struct {
 
 // HardRule is a whitelisted structured precondition (02 §7).
 type HardRule struct {
+	NodeID   string `json:"nodeId,omitempty"`
 	Kind     string `json:"kind"`
 	Phase    string `json:"phase"`
 	TargetID string `json:"targetId,omitempty"`
@@ -69,6 +72,7 @@ type Definition struct {
 
 // Version is one immutable revision (draft or published).
 type Version struct {
+	DraftHash   string     `json:"draftHash,omitempty"`
 	ID          uuid.UUID  `json:"id"`
 	Revision    int64      `json:"revision"`
 	State       string     `json:"state"`
@@ -110,7 +114,7 @@ func Validate(body Body) error {
 		if node.DefaultApprovalPolicy != "all" && node.DefaultApprovalPolicy != "none" {
 			return apierrors.Fields("nodes[].defaultApprovalPolicy", "enum")
 		}
-		for _, id := range node.AllowedPositionIds {
+		for _, id := range append(append([]string{}, node.AllowedPositionIds...), node.DelegationUserIDs...) {
 			if _, err := uuid.Parse(id); err != nil {
 				return apierrors.Fields("nodes[].allowedPositionIds", "invalid")
 			}
@@ -128,6 +132,14 @@ func Validate(body Body) error {
 		return apierrors.Fields("advisoryEdges", "cycle")
 	}
 	for i, rule := range body.HardRules {
+		if rule.NodeID != "" && !seen[rule.NodeID] {
+			return apierrors.Fields("hardRules.nodeId", "unknown-node")
+		}
+		if rule.TargetID != "" {
+			if _, err := uuid.Parse(rule.TargetID); err != nil {
+				return apierrors.Fields("hardRules.targetId", "uuid")
+			}
+		}
 		switch rule.Kind {
 		case "task_acceptance", "handoff_receipt", "material_ready":
 		default:
@@ -217,7 +229,7 @@ func (s *Service) Create(ctx context.Context, requester, projectID uuid.UUID, bo
 	}
 	var out Definition
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := s.membership(ctx, tx, requester, projectID); err != nil {
@@ -237,10 +249,10 @@ func (s *Service) Create(ctx context.Context, requester, projectID uuid.UUID, bo
 		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO workflow_versions (project_id, id, definition_id, revision, state, instructions,
-				nodes_json, advisory_edges_json, approval_policies_json, hard_rules_json, mermaid, author_user_id, created_at)
-			VALUES ($1,$2,$3,1,'draft',$4,$5,$6,$7,$8,$9,$10,$11)`,
+				nodes_json, advisory_edges_json, approval_policies_json, hard_rules_json, mermaid, author_user_id, created_at,name)
+			VALUES ($1,$2,$3,1,'draft',$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
 			projectID, versionID, id, body.Instructions, nodesJSON, edgesJSON, policiesJSON, hardJSON,
-			GenerateMermaid(body), requester, now); err != nil {
+			GenerateMermaid(body), requester, now, body.Name); err != nil {
 			return apierrors.New(apierrors.Internal, "draft insert failed").Wrap(err)
 		}
 		if _, err := events.AppendProjectEvent(ctx, tx, projectID, "workflow.published", "workflow", id.String(), nil,
@@ -292,7 +304,7 @@ func (s *Service) UpdateDraft(ctx context.Context, requester, projectID, workflo
 	}
 	var out Version
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		role, err := s.membership(ctx, tx, requester, projectID)
@@ -324,10 +336,10 @@ func (s *Service) UpdateDraft(ctx context.Context, requester, projectID, workflo
 			policiesJSON, _ := json.Marshal(body.ApprovalPolicies)
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO workflow_versions (project_id, id, definition_id, revision, state, instructions,
-					nodes_json, advisory_edges_json, approval_policies_json, hard_rules_json, mermaid, author_user_id, created_at)
-				VALUES ($1,$2,$3,$4,'draft',$5,$6,$7,$8,$9,$10,$11,$12)`,
+					nodes_json, advisory_edges_json, approval_policies_json, hard_rules_json, mermaid, author_user_id, created_at,name)
+				VALUES ($1,$2,$3,$4,'draft',$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
 				projectID, draftID, workflowID, revision, body.Instructions, nodesJSON, edgesJSON, policiesJSON, hardJSON,
-				GenerateMermaid(body), requester, s.now()); err != nil {
+				GenerateMermaid(body), requester, s.now(), body.Name); err != nil {
 				return apierrors.New(apierrors.Internal, "draft create failed").Wrap(err)
 			}
 		} else if err != nil {
@@ -339,9 +351,9 @@ func (s *Service) UpdateDraft(ctx context.Context, requester, projectID, workflo
 			policiesJSON, _ := json.Marshal(body.ApprovalPolicies)
 			if _, err := tx.Exec(ctx, `
 				UPDATE workflow_versions SET instructions=$3, nodes_json=$4, advisory_edges_json=$5,
-					approval_policies_json=$6, hard_rules_json=$7, mermaid=$8
+					approval_policies_json=$6, hard_rules_json=$7, mermaid=$8,name=$9
 				WHERE id=$1 AND project_id=$2`,
-				draftID, projectID, body.Instructions, nodesJSON, edgesJSON, policiesJSON, hardJSON, GenerateMermaid(body)); err != nil {
+				draftID, projectID, body.Instructions, nodesJSON, edgesJSON, policiesJSON, hardJSON, GenerateMermaid(body), body.Name); err != nil {
 				return apierrors.New(apierrors.Internal, "draft update failed").Wrap(err)
 			}
 		}
@@ -363,7 +375,7 @@ func (s *Service) UpdateDraft(ctx context.Context, requester, projectID, workflo
 func (s *Service) Publish(ctx context.Context, requester, projectID, workflowID uuid.UUID, expectedVersion int64, draftHash string) (Version, error) {
 	var out Version
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		role, err := s.membership(ctx, tx, requester, projectID)
@@ -380,26 +392,30 @@ func (s *Service) Publish(ctx context.Context, requester, projectID, workflowID 
 			return apierrors.New(apierrors.VersionConflict, "workflow version conflict")
 		}
 		var (
-			versionID  uuid.UUID
-			revision   int64
-			nodesJSON  []byte
-			edgesJSON  []byte
-			hardJSON   []byte
-			policyJSON []byte
-			mermaid    string
+			versionID          uuid.UUID
+			revision           int64
+			nodesJSON          []byte
+			edgesJSON          []byte
+			hardJSON           []byte
+			policyJSON         []byte
+			mermaid            string
+			name, instructions string
 		)
 		err = tx.QueryRow(ctx, `
-			SELECT id, revision, nodes_json, advisory_edges_json, hard_rules_json, approval_policies_json, mermaid
+			SELECT id, revision, nodes_json, advisory_edges_json, hard_rules_json, approval_policies_json, mermaid,name,instructions
 			FROM workflow_versions WHERE definition_id=$1 AND project_id=$2 AND state='draft' FOR UPDATE`,
-			workflowID, projectID).Scan(&versionID, &revision, &nodesJSON, &edgesJSON, &hardJSON, &policyJSON, &mermaid)
+			workflowID, projectID).Scan(&versionID, &revision, &nodesJSON, &edgesJSON, &hardJSON, &policyJSON, &mermaid, &name, &instructions)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apierrors.New(apierrors.NotFound, "no draft to publish")
 		}
 		if err != nil {
 			return apierrors.New(apierrors.Internal, "draft lookup failed").Wrap(err)
 		}
-		if draftHash != "" && draftHash != hashBytes(nodesJSON, hardJSON, policyJSON) {
+		if draftHash != "" && draftHash != draftReviewHash(name, instructions, nodesJSON, edgesJSON, hardJSON, policyJSON) {
 			return apierrors.New(apierrors.ReviewStale, "draft changed since review")
+		}
+		if err = validateDelegations(ctx, tx, projectID, workflowID, role, nodesJSON); err != nil {
+			return err
 		}
 		publishedAt := s.now()
 		if _, err := tx.Exec(ctx, `
@@ -430,11 +446,11 @@ func (s *Service) List(ctx context.Context, requester, projectID uuid.UUID) ([]D
 	if _, err := s.membership(ctx, s.pool, requester, projectID); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT d.id, d.name, d.published_version_id,
 		       EXISTS(SELECT 1 FROM workflow_versions v WHERE v.definition_id=d.id AND v.state='draft'),
 		       d.version
-		FROM workflow_definitions d WHERE d.project_id=$1 ORDER BY d.created_at`, projectID)
+		/*keys*/ FROM workflow_definitions d WHERE d.project_id=$1 /*page*/`, "d.created_at", "d.id", projectID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "list failed").Wrap(err)
 	}
@@ -452,12 +468,15 @@ func (s *Service) List(ctx context.Context, requester, projectID uuid.UUID) ([]D
 
 // ListVersions returns revisions (published bodies included, draft last).
 func (s *Service) ListVersions(ctx context.Context, requester, projectID, workflowID uuid.UUID, includeDraft bool) ([]Version, error) {
-	rows, err := s.pool.Query(ctx, `
+	if _, err := s.membership(ctx, s.pool, requester, projectID); err != nil {
+		return nil, err
+	}
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT id, revision, state, instructions, nodes_json, advisory_edges_json, hard_rules_json,
-		       approval_policies_json, mermaid, published_at
-		FROM workflow_versions WHERE definition_id=$1 AND project_id=$2
+		       approval_policies_json, mermaid, published_at,name
+		/*keys*/ FROM workflow_versions WHERE definition_id=$1 AND project_id=$2
 		  AND (state='published' OR $3)
-		ORDER BY revision DESC LIMIT 50`, workflowID, projectID, includeDraft)
+		/*page*/`, "created_at", "id", workflowID, projectID, includeDraft)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "versions failed").Wrap(err)
 	}
@@ -467,20 +486,22 @@ func (s *Service) ListVersions(ctx context.Context, requester, projectID, workfl
 		var (
 			v          Version
 			instr      string
+			name       string
 			nodesJSON  []byte
 			edgesJSON  []byte
 			hardJSON   []byte
 			policyJSON []byte
 		)
-		if err := rows.Scan(&v.ID, &v.Revision, &v.State, &instr, &nodesJSON, &edgesJSON, &hardJSON, &policyJSON, &v.Mermaid, &v.PublishedAt); err != nil {
+		if err := rows.Scan(&v.ID, &v.Revision, &v.State, &instr, &nodesJSON, &edgesJSON, &hardJSON, &policyJSON, &v.Mermaid, &v.PublishedAt, &name); err != nil {
 			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
 		}
-		body := &Body{Instructions: instr}
+		body := &Body{Name: name, Instructions: instr}
 		_ = json.Unmarshal(nodesJSON, &body.Nodes)
 		_ = json.Unmarshal(edgesJSON, &body.AdvisoryEdges)
 		_ = json.Unmarshal(hardJSON, &body.HardRules)
 		_ = json.Unmarshal(policyJSON, &body.ApprovalPolicies)
 		v.Body = body
+		v.DraftHash = draftReviewHash(name, instr, nodesJSON, edgesJSON, hardJSON, policyJSON)
 		out = append(out, v)
 	}
 	return out, rows.Err()
@@ -514,4 +535,9 @@ func canonicalize(v any) any {
 	default:
 		return v
 	}
+}
+
+func draftReviewHash(name, instructions string, nodes, edges, rules, policies []byte) string {
+	raw, _ := json.Marshal(map[string]any{"schemaVersion": 1, "name": name, "instructions": instructions, "nodes": json.RawMessage(nodes), "advisoryEdges": json.RawMessage(edges), "hardRules": json.RawMessage(rules), "approvalPolicies": json.RawMessage(policies)})
+	return fmt.Sprintf("%x", sha256Sum(raw))
 }

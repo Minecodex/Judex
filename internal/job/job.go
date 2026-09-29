@@ -143,6 +143,7 @@ func (e *Engine) Register(h Handler) {
 
 // ErrNoJob is returned by Claim when the queue has nothing runnable.
 var ErrNoJob = errors.New("job: nothing to claim")
+var ErrBusy = errors.New("job: session busy")
 
 // Claim takes the next runnable job: a short transaction locks candidate rows
 // FOR UPDATE SKIP LOCKED, flips them to running, bumps the fencing token and
@@ -159,7 +160,7 @@ func (e *Engine) Claim(ctx context.Context) (*Job, error) {
 			state = 'running',
 			attempt = attempt + 1,
 			lease_owner = $1,
-			lease_until = $2,
+			lease_until = $3,
 			fencing_token = fencing_token + 1,
 			updated_at = $2
 		WHERE id = (
@@ -171,7 +172,7 @@ func (e *Engine) Claim(ctx context.Context) (*Job, error) {
 			LIMIT 1
 		)
 		RETURNING id, kind, payload, attempt, max_attempts, fencing_token, lease_owner, run_after, last_error_code`,
-		e.owner, e.now()).Scan(
+		e.owner, e.now(), e.now().Add(e.opts.LeaseTTL)).Scan(
 		&j.ID, &j.Kind, &j.Payload, &j.Attempt, &j.MaxAttempts,
 		&j.FencingToken, &j.LeaseOwner, &j.RunAfter, &j.LastErrorCode)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -206,6 +207,10 @@ func (e *Engine) Heartbeat(ctx context.Context, j *Job) error {
 // token: a stale worker whose lease was taken over writes zero rows.
 func (e *Engine) Finish(ctx context.Context, j *Job, execErr error) error {
 	now := e.now()
+	if errors.Is(execErr, ErrBusy) {
+		_, err := e.pool.Exec(ctx, `UPDATE background_jobs SET state='queued',attempt=GREATEST(0,attempt-1),lease_owner=NULL,lease_until=NULL,run_after=$2,updated_at=$3 WHERE id=$1 AND fencing_token=$4`, j.ID, now.Add(e.opts.PollInterval), now, j.FencingToken)
+		return err
+	}
 	if execErr == nil {
 		_, err := e.pool.Exec(ctx, `
 			UPDATE background_jobs SET state='succeeded', lease_owner=NULL, lease_until=NULL,
@@ -297,7 +302,7 @@ func (e *Engine) execute(ctx context.Context, handler Handler, j *Job) {
 			}
 		}
 	}()
-	execCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	execCtx, cancel := context.WithTimeout(hbCtx, 10*time.Minute)
 	defer cancel()
 	err := handler.Execute(execCtx, *j)
 	if err := e.Finish(context.WithoutCancel(ctx), j, err); err != nil {

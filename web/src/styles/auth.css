@@ -111,36 +111,84 @@
 
 .judex-workspace-item {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 14px 16px;
   border: 1px solid var(--judex-border, #e3e0d8);
   border-radius: var(--judex-radius, 10px);
   background: var(--judex-panel, #fff);
+  transition: border-color 0.15s ease;
 }
 [data-theme="dark"] .judex-workspace-item {
   background: var(--judex-panel, #242320);
   border-color: var(--judex-border, #32302a);
 }
+.judex-workspace-item:hover {
+  border-color: var(--judex-muted, #6f6b60);
+}
+.judex-workspace-item .judex-workspace-item-main {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-start;
+}
+.judex-workspace-item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--weight-medium, 500);
+}
 
 .judex-workspace-empty {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
-  padding: 48px 24px;
+  text-align: center;
+  padding: 56px 24px;
   border: 1px dashed var(--judex-border, #d8d4c9);
   border-radius: var(--judex-radius, 12px);
   color: var(--judex-muted, #6f6b60);
 }
-
-.judex-workspace-status {
+.judex-workspace-empty strong {
+  color: var(--judex-fg, #26251f);
+  font-size: 16px;
+}
+.judex-workspace-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  background: var(--judex-panel, #fff);
+  border: 1px solid var(--judex-border, #e3e0d8);
   color: var(--judex-muted, #6f6b60);
 }
-
-.judex-workspace-boundary {
-  margin-top: auto;
+[data-theme="dark"] .judex-workspace-empty strong {
+  color: var(--judex-fg, #ece9e2);
+}
+[data-theme="dark"] .judex-workspace-empty-icon {
+  background: var(--judex-panel, #242320);
+  border-color: var(--judex-border, #32302a);
+}
+.judex-workspace-empty-steps {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 18px;
+  margin: 10px 0 0;
+  padding: 0;
   font-size: var(--judex-font-sm, 13px);
+}
+.judex-workspace-empty-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.judex-workspace-status {
   color: var(--judex-muted, #6f6b60);
 }
 

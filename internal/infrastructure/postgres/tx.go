@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 )
 
 var pgxTxOpts = pgx.TxOptions{}
@@ -46,6 +47,23 @@ func (t Tx) LockUserForShare(ctx context.Context, userID string) error {
 func (t Tx) LockProjectForUpdate(ctx context.Context, projectID string) error {
 	_, err := t.Exec(ctx, "SELECT id FROM projects WHERE id = $1 FOR UPDATE", projectID)
 	return err
+}
+
+// LockActiveProject is the shared write barrier. Archive/restore alone use
+// LockProjectForUpdate; every normal domain mutation uses this guard.
+func (t Tx) LockActiveProject(ctx context.Context, projectID string) error {
+	var status string
+	err := t.QueryRow(ctx, "SELECT status FROM projects WHERE id=$1 FOR UPDATE", projectID).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apierrors.New(apierrors.NotFound, "project not found")
+	}
+	if err != nil {
+		return err
+	}
+	if status != "active" {
+		return apierrors.New(apierrors.InvalidTransition, "project is archived")
+	}
+	return nil
 }
 
 // AdvisoryLock takes a session advisory lock inside this transaction

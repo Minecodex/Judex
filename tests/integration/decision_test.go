@@ -70,7 +70,7 @@ func TestProposalAllSlotsAtomicApply(t *testing.T) {
 		{Operation: "create_task", TargetType: "task", ClientRef: "task1",
 			Fields: map[string]any{
 				"title": "实现功能", "planId": "plan1",
-				"reviewerIdentityId": ownerReviewer.String(),
+				"reviewerIdentityId":     ownerReviewer.String(),
 				"participantIdentityIds": []any{workerDev.String()},
 			}},
 	}
@@ -186,7 +186,8 @@ func TestProposalRejectCancels(t *testing.T) {
 func TestProposalTimeoutSettle(t *testing.T) {
 	shortTimeout := decision.NewService(nil, func() time.Time { return time.Now().UTC() }, 1)
 	fixture := integration.StartPG(t)
-	svc := decision.NewService(fixture.Pool, nil, 1)
+	now := time.Now().UTC()
+	svc := decision.NewService(fixture.Pool, func() time.Time { return now }, 1)
 	_ = shortTimeout
 	limiter := identity.NewRateLimiter(fixture.Pool.Pool, nil)
 	ids := identity.NewService(fixture.Pool, limiter, identity.Options{RegisterPerIP: 1000}, nil)
@@ -210,7 +211,7 @@ func TestProposalTimeoutSettle(t *testing.T) {
 			{Operation: "create_plan", TargetType: "plan", ClientRef: "p1",
 				Fields: map[string]any{"title": "超时计划", "ownerIdentityId": ownerIdent.ID.String()}},
 			{Operation: "create_task", TargetType: "task",
-				Fields: map[string]any{"title": "超时任务", "planId": "p1",
+				Fields: map[string]any{"title": "超时任务", "planId": "p1", "reviewerIdentityId": otherIdent.ID.String(),
 					"participantIdentityIds": []any{otherIdent.ID.String()}}},
 		})
 	if err != nil {
@@ -237,7 +238,7 @@ func TestProposalTimeoutSettle(t *testing.T) {
 	if _, err := svc.Decide(ctx, other.ID, proj.ID, proposalID, reviewHash, true, ""); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(1100 * time.Millisecond)
+	now = now.Add(25 * time.Hour)
 	if err := svc.SettleTimeout(ctx, proj.ID, proposalID, reviewID); err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +275,7 @@ func TestDelegateAndRevision(t *testing.T) {
 
 	proposalID, err := svc.CreateDraft(ctx, owner.ID, proj.ID, "work_arrangement", nil, "",
 		[]decision.Change{{Operation: "create_task", TargetType: "task",
-			Fields: map[string]any{"title": "代批任务", "participantIdentityIds": []any{memberIdent.ID.String()}}}})
+			Fields: map[string]any{"title": "代批任务", "reviewerIdentityId": memberIdent.ID.String(), "participantIdentityIds": []any{memberIdent.ID.String()}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,8 +290,12 @@ func TestDelegateAndRevision(t *testing.T) {
 	if _, err := svc.Delegate(ctx, member.ID, proj.ID, proposalID, review.ReviewHash, "越权"); errors.IsCode(err, errors.Forbidden) == false {
 		t.Fatalf("plain member delegate must be forbidden, got %v", err)
 	}
-	// Manager delegates the pending seat -> approved + applied.
-	if _, err := svc.Delegate(ctx, manager.ID, proj.ID, proposalID, review.ReviewHash, "出差代批"); err != nil {
+	// Manager membership does not confer delegation authority.
+	if _, err := svc.Delegate(ctx, manager.ID, proj.ID, proposalID, review.ReviewHash, "no grant", review.Slots[0].ID); !errors.IsCode(err, errors.Forbidden) {
+		t.Fatalf("manager delegation: %v", err)
+	}
+	// Explicit project owner delegates the selected seat.
+	if _, err := svc.Delegate(ctx, owner.ID, proj.ID, proposalID, review.ReviewHash, "出差代批", review.Slots[0].ID); err != nil {
 		t.Fatalf("manager delegate: %v", err)
 	}
 	var status, source string
@@ -301,14 +306,14 @@ func TestDelegateAndRevision(t *testing.T) {
 		t.Fatalf("decision must record delegate source, got %v %s", err, source)
 	}
 	var actor uuid.UUID
-	if err := pool.QueryRow(ctx, `SELECT actor_user_id FROM approval_decisions WHERE review_id=$1`, review.ReviewID).Scan(&actor); err != nil || actor != manager.ID {
+	if err := pool.QueryRow(ctx, `SELECT actor_user_id FROM approval_decisions WHERE review_id=$1`, review.ReviewID).Scan(&actor); err != nil || actor != owner.ID {
 		t.Fatalf("delegate must record the REAL actor, got %v", actor)
 	}
 
 	// Revision: terminal proposal -> new draft revision; old tickets stay.
 	revision, err := svc.CreateRevision(ctx, owner.ID, proj.ID, proposalID,
 		[]decision.Change{{Operation: "create_task", TargetType: "task",
-			Fields: map[string]any{"title": "修订任务", "participantIdentityIds": []any{memberIdent.ID.String()}}}},
+			Fields: map[string]any{"title": "修订任务", "reviewerIdentityId": memberIdent.ID.String(), "participantIdentityIds": []any{memberIdent.ID.String()}}}},
 		"按退回意见修改")
 	if err != nil || revision != 2 {
 		t.Fatalf("revision: %v %d", err, revision)
@@ -355,7 +360,7 @@ func TestBindingReplacementContinuesPending(t *testing.T) {
 			{Operation: "create_plan", TargetType: "plan",
 				Fields: map[string]any{"title": "P", "ownerIdentityId": otherIdent.ID.String()}},
 			{Operation: "create_task", TargetType: "task",
-				Fields: map[string]any{"title": "T", "participantIdentityIds": []any{oldIdent.ID.String()}}},
+				Fields: map[string]any{"title": "T", "reviewerIdentityId": oldIdent.ID.String(), "participantIdentityIds": []any{oldIdent.ID.String()}}},
 		})
 	if err != nil {
 		t.Fatal(err)

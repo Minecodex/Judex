@@ -60,7 +60,7 @@ func TestBugReleaseFix(t *testing.T) {
 
 	// Release report: fact record.
 	release, err := svc.ReportRelease(ctx, owner.ID, proj.ID, "v1.2.0", "staging", "https://x/v1.2.0", "success",
-		[]map[string]any{{"repositoryId": repo.ID.String(), "branch": "release", "commit": "abc123"}})
+		[]map[string]any{{"repositoryId": repo.ID.String(), "branch": "release", "commit": "0123456789012345678901234567890123456789", "verification": "reported"}})
 	if err != nil || release.Status != "success" {
 		t.Fatalf("release: %v %+v", err, release)
 	}

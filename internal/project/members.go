@@ -5,6 +5,7 @@ package project
 import (
 	"context"
 	"errors"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"strings"
 	"time"
 
@@ -32,11 +33,11 @@ func (s *Service) ListMembers(ctx context.Context, requester, projectID uuid.UUI
 	if _, err := s.MembershipFor(ctx, requester, projectID); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
+	rows, err := paging.Query(ctx, s.pool, `
 		SELECT m.user_id, u.display_name, u.email_display, m.role, m.state, m.joined_at
-		FROM project_members m JOIN users u ON u.id = m.user_id
+		/*keys*/ FROM project_members m JOIN users u ON u.id = m.user_id
 		WHERE m.project_id=$1 AND m.state='active'
-		ORDER BY m.joined_at, m.user_id`, projectID)
+		/*page*/`, "m.joined_at", "m.user_id", projectID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "member list failed").Wrap(err)
 	}
@@ -60,7 +61,7 @@ func (s *Service) UpdateMemberRole(ctx context.Context, requester, projectID, ta
 		return Member{}, apierrors.Fields("role", "enum")
 	}
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		m, err := s.MembershipForTx(ctx, tx, requester, projectID)
@@ -136,7 +137,7 @@ func (s *Service) RemoveMember(ctx context.Context, requester, projectID, target
 		return nil, apierrors.Fields("reason", "required")
 	}
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		m, err := s.MembershipForTx(ctx, tx, requester, projectID)
@@ -200,7 +201,7 @@ func (s *Service) RemoveMember(ctx context.Context, requester, projectID, target
 // (02 §4 无悬空 owner).
 func (s *Service) LeaveProject(ctx context.Context, requester, projectID uuid.UUID, expectedProjectVersion int64) error {
 	return s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		m, err := s.MembershipForTx(ctx, tx, requester, projectID)
@@ -265,7 +266,7 @@ type OwnerTransfer struct {
 func (s *Service) RequestOwnerTransfer(ctx context.Context, requester, projectID, target uuid.UUID, expectedProjectVersion int64) (OwnerTransfer, error) {
 	var out OwnerTransfer
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		m, err := s.MembershipForTx(ctx, tx, requester, projectID)
@@ -344,7 +345,7 @@ func (s *Service) GetOwnerTransfer(ctx context.Context, requester, projectID, tr
 func (s *Service) DecideOwnerTransfer(ctx context.Context, requester, projectID, transferID uuid.UUID, accept bool) (OwnerTransfer, error) {
 	var out OwnerTransfer
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(ctx, `
@@ -436,7 +437,7 @@ func (s *Service) OperatorTransferOwner(ctx context.Context, projectID, toUser u
 		return apierrors.New(apierrors.Validation, "operator and reason are required")
 	}
 	return s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if _, err := s.MembershipForTx(ctx, tx, toUser, projectID); err != nil {

@@ -453,7 +453,7 @@ components:
             - 'null'
           format: uuid
         currentBinding:
-          type: object
+          type: [object, 'null']
           description: 当前有效绑定；coordinator 或未绑定为 null。
           required: [bindingVersion, userId, displayName, validFrom]
           properties:
@@ -505,7 +505,7 @@ components:
       properties:
         revision:
           type: integer
-          minimum: 1
+          minimum: 0
         prompt:
           type: string
           maxLength: 20000
@@ -515,7 +515,7 @@ components:
       properties:
         expectedRevision:
           type: integer
-          minimum: 1
+          minimum: 0
         prompt:
           type: string
           maxLength: 20000
@@ -562,6 +562,10 @@ components:
           type: string
         responsibility:
           type: string
+        delegationUserIds:
+          type: array
+          items: {type: string, format: uuid}
+          description: 项目 owner 发布的节点代批授权；不扩大其他节点权限。
         allowedPositionIds:
           type: array
           items:
@@ -574,6 +578,7 @@ components:
       type: object
       required: [kind]
       properties:
+        nodeId: {type: string, description: 缺省适用于整个流程；指定时仅约束该节点。}
         kind:
           type: string
           enum: [task_acceptance, handoff_receipt, material_ready]
@@ -639,6 +644,7 @@ components:
       type: object
       required: [id, revision, state, publishedAt]
       properties:
+        draftHash: {type: string}
         id:
           type: string
           format: uuid

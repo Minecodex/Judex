@@ -10,7 +10,9 @@ package handoff
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"strings"
 	"time"
 
@@ -25,25 +27,30 @@ import (
 
 // Handoff is the aggregate projection (06 §5).
 type Handoff struct {
-	ID                 uuid.UUID `json:"id"`
-	Title              string    `json:"title"`
-	TargetTaskID       uuid.UUID `json:"targetTaskId"`
-	ReceiverIdentityID uuid.UUID `json:"receiverIdentityId"`
-	Kind               string    `json:"kind"`
-	State              string    `json:"state"`
-	Version            int64     `json:"version"`
-	Sources            []Source  `json:"sources"`
+	ReceiverDisplayName string    `json:"receiverDisplayName"`
+	ID                  uuid.UUID `json:"id"`
+	Title               string    `json:"title"`
+	TargetTaskID        uuid.UUID `json:"targetTaskId"`
+	ReceiverIdentityID  uuid.UUID `json:"receiverIdentityId"`
+	Kind                string    `json:"kind"`
+	State               string    `json:"state"`
+	Version             int64     `json:"version"`
+	Sources             []Source  `json:"sources"`
 }
 
 // Source is one source seat inside a handoff.
 type Source struct {
-	ID               uuid.UUID  `json:"id"`
-	SourceTaskID     uuid.UUID  `json:"sourceTaskId"`
-	SenderIdentityID uuid.UUID  `json:"senderIdentityId"`
-	CurrentVersionID *uuid.UUID `json:"currentVersionId"`
-	CurrentVersion   *int64     `json:"currentVersion"`
-	State            string     `json:"state"`
-	Reason           *string    `json:"reason"`
+	Evidence          json.RawMessage `json:"evidence"`
+	SenderDisplayName string          `json:"senderDisplayName"`
+	Summary           string          `json:"summary"`
+	ReportID          *uuid.UUID      `json:"reportId"`
+	ID                uuid.UUID       `json:"id"`
+	SourceTaskID      uuid.UUID       `json:"sourceTaskId"`
+	SenderIdentityID  uuid.UUID       `json:"senderIdentityId"`
+	CurrentVersionID  *uuid.UUID      `json:"currentVersionId"`
+	CurrentVersion    *int64          `json:"currentVersion"`
+	State             string          `json:"state"`
+	Reason            *string         `json:"reason"`
 }
 
 type Service struct {
@@ -84,11 +91,31 @@ func (s *Service) Create(ctx context.Context, requester, projectID uuid.UUID, ti
 	}
 	var out Handoff
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if err := memberTx(ctx, tx, projectID, requester); err != nil {
 			return err
+		}
+		var targetOK bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM tasks WHERE project_id=$1 AND id=$2)`, projectID, targetTaskID).Scan(&targetOK); err != nil {
+			return err
+		}
+		if !targetOK {
+			return apierrors.New(apierrors.InvalidReference, "target task outside project")
+		}
+		identities := []uuid.UUID{receiverIdentityID}
+		for _, source := range sourceSpecs {
+			identities = append(identities, source.SenderIdentityID)
+		}
+		for _, id := range identities {
+			var valid bool
+			if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM agent_identities i JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version JOIN project_members m ON m.project_id=i.project_id AND m.user_id=b.user_id WHERE i.id=$1 AND i.project_id=$2 AND i.status='active' AND m.state='active')`, id, projectID).Scan(&valid); err != nil {
+				return err
+			}
+			if !valid {
+				return apierrors.New(apierrors.InvalidReference, "handoff identity outside project or unbound")
+			}
 		}
 		for _, spec := range sourceSpecs {
 			var srcProject uuid.UUID
@@ -137,13 +164,13 @@ func (s *Service) Create(ctx context.Context, requester, projectID uuid.UUID, ti
 
 // SendSource freezes a source version (sender identity holder only) and
 // moves it to pending (03 §6 来源发送).
-func (s *Service) SendSource(ctx context.Context, requester, projectID, handoffID, sourceID uuid.UUID, summary string) (Source, error) {
+func (s *Service) SendSource(ctx context.Context, requester, projectID, handoffID, sourceID uuid.UUID, summary string, expectedReport ...uuid.UUID) (Source, error) {
 	if strings.TrimSpace(summary) == "" {
 		return Source{}, apierrors.Fields("summary", "required")
 	}
 	var out Source
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if err := memberTx(ctx, tx, projectID, requester); err != nil {
@@ -190,11 +217,20 @@ func (s *Service) SendSource(ctx context.Context, requester, projectID, handoffI
 		versionID := uuid.New()
 		// Pull the latest report of the source task as evidence when present.
 		var reportID uuid.NullUUID
-		_ = tx.QueryRow(ctx, `SELECT id FROM work_reports WHERE task_id=$1 ORDER BY created_at DESC LIMIT 1`, sourceTask).Scan(&reportID)
+		if err := tx.QueryRow(ctx, `SELECT r.id FROM tasks t JOIN work_reports r ON r.id=t.latest_report_id AND r.agreement_version=t.agreement_version WHERE t.id=$1 AND t.project_id=$2`, sourceTask, projectID).Scan(&reportID); err != nil || !reportID.Valid {
+			return apierrors.New(apierrors.RequirementUnmet, "current source report required")
+		}
+		if len(expectedReport) > 0 && reportID.UUID != expectedReport[0] {
+			return apierrors.New(apierrors.ReviewStale, "source report changed")
+		}
+		evidence, err := freezeEvidence(ctx, tx, projectID, sourceTask)
+		if err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO source_versions (project_id, id, source_id, revision, report_id, summary, state, sent_by, sent_at, created_at)
-			VALUES ($1,$2,$3,$4,$5,$6,'pending',$7,$8,$9)`,
-			projectID, versionID, sourceID, nextRev, reportID, summary, requester, now, now); err != nil {
+			INSERT INTO source_versions (project_id, id, source_id, revision, report_id, summary, state, sent_by, sent_at, created_at,evidence_manifest)
+			VALUES ($1,$2,$3,$4,$5,$6,'pending',$7,$8,$9,$10::jsonb)`,
+			projectID, versionID, sourceID, nextRev, reportID, summary, requester, now, now, evidence); err != nil {
 			return apierrors.New(apierrors.Internal, "version insert failed").Wrap(err)
 		}
 		if _, err := tx.Exec(ctx, `
@@ -225,13 +261,13 @@ func (s *Service) SendSource(ctx context.Context, requester, projectID, handoffI
 // the receipt without implicitly accepting the source task; reject requires
 // a reason and, for a not-yet-accepted source task, marks it rework — an
 // already accepted source task only yields a reopen request instead.
-func (s *Service) DecideSource(ctx context.Context, requester, projectID, handoffID, sourceID uuid.UUID, accept bool, reason string) (Source, error) {
+func (s *Service) DecideSource(ctx context.Context, requester, projectID, handoffID, sourceID uuid.UUID, accept bool, reason string, expectedVersion ...uuid.UUID) (Source, error) {
 	if !accept && strings.TrimSpace(reason) == "" {
 		return Source{}, apierrors.Fields("reason", "required")
 	}
 	var out Source
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		if err := memberTx(ctx, tx, projectID, requester); err != nil {
@@ -271,6 +307,9 @@ func (s *Service) DecideSource(ctx context.Context, requester, projectID, handof
 				return apierrors.New(apierrors.NotFound, "source not found")
 			}
 			return apierrors.New(apierrors.Internal, "source lookup failed").Wrap(err)
+		}
+		if len(expectedVersion) > 0 && (!versionID.Valid || versionID.UUID != expectedVersion[0]) {
+			return apierrors.New(apierrors.ReviewStale, "handoff source version changed")
 		}
 		if !versionID.Valid || versionState != "pending" {
 			return apierrors.New(apierrors.InvalidTransition, "source version is "+versionState)
@@ -355,10 +394,10 @@ func (s *Service) aggregateState(ctx context.Context, tx pgx.Tx, handoffID uuid.
 		}
 	}
 	switch {
-	case pendingOrDraft > 0:
-		return "waiting", nil
 	case rejected > 0:
 		return "needs_revision", nil
+	case pendingOrDraft > 0:
+		return "waiting", nil
 	default:
 		return "accepted", nil
 	}
@@ -369,9 +408,9 @@ func (s *Service) List(ctx context.Context, requester, projectID uuid.UUID) ([]H
 	if err := memberTx(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
-	rows, err := s.pool.Query(ctx, `
-		SELECT id, title, target_task_id, receiver_identity_id, kind, version FROM handoffs
-		WHERE project_id=$1 ORDER BY created_at DESC LIMIT 100`, projectID)
+	rows, err := paging.Query(ctx, s.pool, `
+		SELECT id, title, target_task_id, receiver_identity_id, kind, version /*keys*/ FROM handoffs
+		WHERE project_id=$1 /*page*/`, "created_at", "id", projectID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "handoffs failed").Wrap(err)
 	}
@@ -388,10 +427,15 @@ func (s *Service) List(ctx context.Context, requester, projectID uuid.UUID) ([]H
 		return nil, err
 	}
 	for i := range out {
+		if err := s.pool.QueryRow(ctx, `SELECT COALESCE(u.display_name,'') FROM agent_identities i LEFT JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version LEFT JOIN users u ON u.id=b.user_id WHERE i.id=$1 AND i.project_id=$2`, out[i].ReceiverIdentityID, projectID).Scan(&out[i].ReceiverDisplayName); err != nil {
+			return nil, err
+		}
 		srcRows, err := s.pool.Query(ctx, `
 			SELECT hs.id, hs.source_task_id, hs.sender_identity_id, hs.current_source_version_id,
 			       COALESCE((SELECT v.revision FROM source_versions v WHERE v.id=hs.current_source_version_id),0),
-			       COALESCE((SELECT v.state FROM source_versions v WHERE v.id=hs.current_source_version_id),'draft')
+			       COALESCE((SELECT v.state FROM source_versions v WHERE v.id=hs.current_source_version_id),'draft'),
+ (SELECT v.report_id FROM source_versions v WHERE v.id=hs.current_source_version_id),COALESCE((SELECT v.summary FROM source_versions v WHERE v.id=hs.current_source_version_id),''),
+ COALESCE((SELECT u.display_name FROM agent_identities i JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version JOIN users u ON u.id=b.user_id WHERE i.id=hs.sender_identity_id),''),(SELECT v.evidence_manifest FROM source_versions v WHERE v.id=hs.current_source_version_id)
 			FROM handoff_sources hs WHERE hs.handoff_id=$1`, out[i].ID)
 		if err != nil {
 			return nil, err
@@ -400,7 +444,7 @@ func (s *Service) List(ctx context.Context, requester, projectID uuid.UUID) ([]H
 			var src Source
 			var versionID uuid.NullUUID
 			var rev int64
-			if err := srcRows.Scan(&src.ID, &src.SourceTaskID, &src.SenderIdentityID, &versionID, &rev, &src.State); err != nil {
+			if err := srcRows.Scan(&src.ID, &src.SourceTaskID, &src.SenderIdentityID, &versionID, &rev, &src.State, &src.ReportID, &src.Summary, &src.SenderDisplayName, &src.Evidence); err != nil {
 				srcRows.Close()
 				return nil, err
 			}
@@ -426,10 +470,10 @@ func (s *Service) List(ctx context.Context, requester, projectID uuid.UUID) ([]H
 			}
 		}
 		switch {
-		case pending > 0:
-			out[i].State = "waiting"
 		case rejected > 0:
 			out[i].State = "needs_revision"
+		case pending > 0:
+			out[i].State = "waiting"
 		default:
 			out[i].State = "accepted"
 		}

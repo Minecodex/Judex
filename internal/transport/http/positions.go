@@ -50,7 +50,7 @@ func (h *PositionHandlers) listPositions(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(positions, nil))
+	respond{}.ok(c, respond{}.list(c, positions, nil))
 }
 
 type positionRequest struct {
@@ -155,7 +155,7 @@ func (h *PositionHandlers) listIdentities(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(identities, nil))
+	respond{}.ok(c, respond{}.list(c, identities, nil))
 }
 
 func (h *PositionHandlers) createIdentity(c *gin.Context) {
@@ -237,7 +237,7 @@ func (h *PositionHandlers) listInvitations(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(invitations, nil))
+	respond{}.ok(c, respond{}.list(c, invitations, nil))
 }
 
 func (h *PositionHandlers) createInvitation(c *gin.Context) {
@@ -302,7 +302,7 @@ func (h *PositionHandlers) listMyInvitations(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(invitations, nil))
+	respond{}.ok(c, respond{}.list(c, invitations, nil))
 }
 
 func (h *PositionHandlers) resolveInvitation(c *gin.Context) {
@@ -316,6 +316,7 @@ func (h *PositionHandlers) resolveInvitation(c *gin.Context) {
 	respond{}.ok(c, gin.H{
 		"id": invitation.ID, "targetEmail": invitation.TargetEmail, "state": invitation.State,
 		"expiresAt": invitation.ExpiresAt, "emailMatches": email == invitation.TargetEmail,
+		"projectTitle": invitation.ProjectTitle, "positionNames": invitation.PositionNames,
 	})
 }
 

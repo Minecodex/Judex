@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/kakj-go/Judex/internal/platform/paging"
 	"net/http"
 	"strconv"
 	"sync"
@@ -132,9 +133,9 @@ func (h *SSEHandlers) Subscribe(c *gin.Context) {
 			return
 		}
 	}
-	if after == 0 {
-		if raw := c.GetHeader("Last-Event-ID"); raw != "" {
-			after, _ = strconv.ParseInt(raw, 10, 64)
+	if raw := c.GetHeader("Last-Event-ID"); raw != "" {
+		if resume, err := strconv.ParseInt(raw, 10, 64); err == nil && resume > after {
+			after = resume
 		}
 	}
 	var cursor int64
@@ -197,6 +198,9 @@ func (h *SSEHandlers) Subscribe(c *gin.Context) {
 		case <-ctx.Done():
 			return
 		case <-poll.C:
+			if !h.stillMember(ctx, projectID, p.UserID) || !liveAuthority(ctx, h.Pool, p) {
+				return
+			}
 			drain()
 		case <-wake:
 			if !h.stillMember(ctx, projectID, p.UserID) {
@@ -226,9 +230,9 @@ func (h *SSEHandlers) stillMember(ctx context.Context, projectID, userID uuid.UU
 // listNotifications returns the caller's notifications (06 §4).
 func (h *SSEHandlers) listNotifications(c *gin.Context) {
 	p := principalFrom(c)
-	rows, err := h.Pool.Query(c.Request.Context(), `
-		SELECT id, type, object_ref, read_at, created_at FROM notifications
-		WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`, p.UserID)
+	rows, err := paging.Query(c.Request.Context(), h.Pool, `
+		SELECT id, type, object_ref, read_at, created_at /*keys*/ FROM notifications
+		WHERE user_id=$1 /*page*/`, "created_at", "id", p.UserID)
 	if err != nil {
 		respond{}.error(c, apierrors.New(apierrors.Internal, "notifications failed").Wrap(err))
 		return
@@ -252,7 +256,7 @@ func (h *SSEHandlers) listNotifications(c *gin.Context) {
 		items = append(items, gin.H{"id": id, "type": typeName, "objectRef": ref,
 			"readAt": readAt, "createdAt": createdAt})
 	}
-	respond{}.ok(c, respond{}.list(items, nil))
+	respond{}.ok(c, respond{}.list(c, items, nil))
 }
 
 // markNotificationsRead flags read (no business state change, 04 §6).

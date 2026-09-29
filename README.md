@@ -2,9 +2,9 @@
 
 当前前端是以项目与聊天为中心的协作工作区：中央讨论与人工决定、右侧任务执行图和设置。运行与边界见 [聊天协作前端重构](docs/聊天协作前端重构.md)。旧独立原型 `docs/demo` 已删除，前端统一在 `web/` 维护。
 
-## 正式工程入口（2026-09-25）
+## 正式工程入口
 
-已生成工程骨架：`cmd/` 放 server 与 CLI 入口（Agent harness 位于 `internal/agent`，随 server 进程运行）；`internal/` 放 Go + Gin 模块化单体；`web/` 放 React + HeroUI + Tailwind + Zustand + TanStack Query；`tests/` 集中测试；`deploy/` 放 Docker / Helm；根目录提供 Makefile 和 Apache-2.0 LICENSE / NOTICE。
+工程组成：`cmd/` 放 server 与 CLI 入口（Agent harness 位于 `internal/agent`，随 server 进程运行）；`internal/` 放 Go + Gin 模块化单体；`web/` 放 React + HeroUI + Tailwind + Zustand + TanStack Query；`tests/` 集中测试；`deploy/` 放 Docker / Helm；根目录提供 Makefile 和 Apache-2.0 LICENSE / NOTICE。
 
 需要 Go 1.25+、Node.js 22.12+、npm。在根目录执行 `go mod download`、`npm ci`，然后分别在两个终端运行：
 
@@ -14,11 +14,11 @@ go run ./cmd/judex-server
 ```
 
 ```sh
-# 完整交互预览 http://127.0.0.1:5173
+# 真实 API 开发前端 http://127.0.0.1:5173
 npm run dev
 ```
 
-生产构建执行 `npm run build`，由 Go 服务在 8080 托管，默认使用真实 API 模式。开发模式显式使用浏览器预览数据，保留完整工作室交互；生产模式不会自动回退到假数据。当前前端尚未完成真实登录后的工作区入口及业务命令接入；演示通过不代表生产联调完成。前端证据与缺口见 [前端生产就绪审计](docs/前端生产就绪审计.md)，本轮未审查后端实现。
+生产构建执行 `npm run build`，由 Go 服务托管，使用真实 API。开发模式也默认 API；演示需显式执行 `npm run dev:demo --workspace @judex/web`。启动业务服务前配置 PostgreSQL；材料功能需 S3，Agent 需模型目录或网关，沙箱需 OpenSandbox。当前实现和验证边界见 [修复记录](docs/plans/v1/REMEDIATION.md) 与 [验证报告](docs/plans/v1/FINAL-REPORT.md)。
 
 ```sh
 go test ./...
@@ -37,7 +37,7 @@ go run ./cmd/judex -server http://127.0.0.1:8080 status
 
 ## 完整业务实施计划
 
-后端、CLI／Skill、注册登录和正式前端联调的实施合同见 [V1 开发计划](docs/plans/v1/README.md)，包括 8 阶段、56 项任务及真实验收门槛。该计划尚待执行，不代表业务已实现。
+后端、CLI／Skill、注册登录和正式前端联调的实施合同见 [V1 开发计划](docs/plans/v1/README.md)，包括 8 阶段、56 项任务及真实验收门槛。计划是实现与验收合同；当前证据和剩余项见上述修复记录，不能按历史任务完成数判断整套 V1 已验收。
 
 ## 设计与实现边界
 

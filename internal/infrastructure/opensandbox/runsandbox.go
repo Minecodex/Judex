@@ -16,9 +16,12 @@ import (
 // created until the model actually invokes a sandbox tool, and the same
 // sandbox serves every tool call of that run. Close kills the sandbox.
 type RunSandbox struct {
-	Client    Sandbox
-	RunID     uuid.UUID
-	ProjectID uuid.UUID
+	Client       Sandbox
+	RunID        uuid.UUID
+	ProjectID    uuid.UUID
+	BeforeCreate func(context.Context) error
+	AfterCreate  func(context.Context, string) error
+	AfterClose   func(context.Context, error)
 
 	once      sync.Once
 	external  string
@@ -28,7 +31,20 @@ type RunSandbox struct {
 // Exec implements tools.SandboxExec (int/os timeout in milliseconds).
 func (r *RunSandbox) Exec(ctx context.Context, command string, timeoutMs int) (exit int, stdout, stderr []byte, unknown bool, err error) {
 	r.once.Do(func() {
+		if r.BeforeCreate != nil {
+			if err := r.BeforeCreate(ctx); err != nil {
+				r.createErr = err
+				return
+			}
+		}
 		r.external, r.createErr = r.Client.Create(ctx, r.RunID, r.ProjectID)
+		if r.external != "" && r.AfterCreate != nil {
+			recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+			defer cancel()
+			if err := r.AfterCreate(recordCtx, r.external); err != nil {
+				r.createErr = err
+			}
+		}
 	})
 	if r.createErr != nil {
 		return 0, nil, nil, true, r.createErr
@@ -41,7 +57,12 @@ func (r *RunSandbox) Exec(ctx context.Context, command string, timeoutMs int) (e
 // was provisioned. Best effort — expiry reaps stragglers.
 func (r *RunSandbox) Close(ctx context.Context) {
 	if r.external != "" {
-		_ = r.Client.Kill(ctx, r.external)
+		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+		defer cancel()
+		err := r.Client.Kill(cleanup, r.external)
+		if r.AfterClose != nil {
+			r.AfterClose(cleanup, err)
+		}
 	}
 }
 

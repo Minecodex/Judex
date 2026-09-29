@@ -26,6 +26,18 @@ const (
 // Source mirrors audit_events.source (decision channel).
 type Source string
 
+type sourceContextKey struct{}
+
+func WithSource(ctx context.Context, source Source) context.Context {
+	return context.WithValue(ctx, sourceContextKey{}, source)
+}
+func ContextSource(ctx context.Context) Source {
+	if s, ok := ctx.Value(sourceContextKey{}).(Source); ok {
+		return s
+	}
+	return SourceWeb
+}
+
 const (
 	SourceWeb      Source = "web"
 	SourceCLI      Source = "cli"
@@ -57,6 +69,9 @@ type Entry struct {
 // here so the row exists even if the caller later rolls back other effects —
 // the transaction guarantees all-or-nothing with the business change.
 func Append(ctx context.Context, tx pgx.Tx, e Entry) error {
+	if e.Source == SourceWeb {
+		e.Source = ContextSource(ctx)
+	}
 	_, err := tx.Exec(ctx, `
 		INSERT INTO audit_events
 			(id, project_id, actor_type, actor_user_id, identity_id, binding_version,

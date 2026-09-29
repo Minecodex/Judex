@@ -1,4 +1,12 @@
-import { UIWarning } from "../../components/ui/FormControls";
+import {useCollection,LoadMore} from "../../lib/api/collections";
+import { useAuth } from "../auth/AuthProvider";
+import type { Identity } from "../projects/TeamSettings";
+import { ResearchPanel } from "./ResearchPanel";
+import { PlanDecisions, ExecutionGraph, HandoffEditor, type WorkItem } from "./LifecyclePanels";
+import { WorkChangeForm } from "./WorkChangeForm";
+import { ArrangementForm } from "./ArrangementForm";
+import { ReviewDetails, type Change, type EvidenceReview } from "./ReviewDetails";
+import { UIWarning, FormField, UISelect, UIOption, UICheckbox } from "../../components/ui/FormControls";
 import { Button, Card, Input } from "@heroui/react";
 import { Plus, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,19 +17,21 @@ import { request } from "../../lib/api/client";
 import { errorText } from "../projects/ProjectWorkspace";
 
 type Plan = { id: string; title: string; status: string; version: number; taskStats: { total: number; accepted: number } };
-type Task = { id: string; title: string; status: string; version: number; planId: string | null };
+type Task = WorkItem & { participants: {identityId:string}[]; id: string; title: string; status: string; version: number; planId: string | null };
 type Proposal = { id: string; kind: string; status: string; version: number };
 type Review = {
+  version: number;
   reviewId: string;
   reviewHash: string;
   status: string;
-  slots: { id: string; displayName: string; state: string; positionName: string | null }[];
+  slots: { id: string; displayName: string; state: string; positionName: string | null; authorityType: string; authorityId: string; bindingVersion: number; canDecide: boolean; canDelegate: boolean }[];
   deadlineAt: string | null;
+  changes: Change[];
 };
 
 // WorkPanel（P3-10）：计划/任务/提案/待办的真实 API 面板。所有命令携带
 // expectedVersion 与幂等键；批准/验收不做乐观更新。
-export function WorkPanel({ projectId }: { projectId: string }) {
+export function WorkPanel({ projectId, onOpenHandoff }: { projectId: string; onOpenHandoff?: (id: string) => void }) {
   const { locale } = usePreferences();
   const t = (key: Key) => translate(locale, key);
   const client = useQueryClient();
@@ -30,10 +40,7 @@ export function WorkPanel({ projectId }: { projectId: string }) {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
 
-  const plans = useQuery({
-    queryKey: ["plans", projectId],
-    queryFn: () => request<{ items: Plan[] }>(`/projects/${projectId}/plans`),
-  });
+  const plans=useCollection<Plan>(["plans",projectId],`/projects/${projectId}/plans`);
   const actions = useQuery({
     queryKey: ["actions", projectId],
     queryFn: () => request<{ items: { kind: string; objectType: string; objectId: string; summary: string }[] }>(
@@ -41,13 +48,7 @@ export function WorkPanel({ projectId }: { projectId: string }) {
     ),
     refetchInterval: 8000,
   });
-  const tasks = useQuery({
-    queryKey: ["tasks", projectId, selectedPlan ?? ""],
-    queryFn: () =>
-      request<{ items: Task[] }>(`/projects/${projectId}/tasks${selectedPlan ? `?planId=${selectedPlan}` : ""}`),
-    enabled: !!selectedPlan || true,
-  });
-
+  const tasks=useCollection<Task>(["tasks",projectId,selectedPlan??""],`/projects/${projectId}/tasks${selectedPlan?`?planId=${selectedPlan}`:""}`);
   const createPlan = useMutation({
     mutationFn: () =>
       request(`/projects/${projectId}/plans`, {
@@ -110,8 +111,14 @@ export function WorkPanel({ projectId }: { projectId: string }) {
           )}
         </ul>
       )}
-      {selectedPlan && <TaskList projectId={projectId} planId={selectedPlan} onOpen={setSelectedTask} />}
-      {selectedTask && <TaskDetail projectId={projectId} taskId={selectedTask} />}
+      <LoadMore query={plans} label={t("wpPlans")} />
+      {selectedPlan ? <TaskList projectId={projectId} planId={selectedPlan} onOpen={setSelectedTask} /> : <ul className="judex-workspace-list">{(tasks.data?.items ?? []).map((task) => <li key={task.id}><Button variant="ghost" onPress={() => setSelectedTask(task.id)}>{task.title} · {task.status}</Button></li>)}</ul>}
+      {!selectedPlan&&<LoadMore query={tasks} label={t("paTask")} />}
+      {selectedPlan && <PlanDecisions key={selectedPlan} projectId={projectId} planId={selectedPlan} />}
+      {selectedTask && <TaskDetail key={selectedTask} projectId={projectId} taskId={selectedTask} />}
+      <ExecutionGraph projectId={projectId} onTask={setSelectedTask} />
+      <ResearchPanel projectId={projectId} />
+      <HandoffEditor projectId={projectId} onOpen={onOpenHandoff} />
       <div className="judex-workspace-section">
         <h3>{t("wpTodos")}</h3>
       </div>
@@ -140,13 +147,10 @@ export function WorkPanel({ projectId }: { projectId: string }) {
 function TaskList({ projectId, planId, onOpen }: { projectId: string; planId: string; onOpen: (id: string) => void }) {
   const { locale } = usePreferences();
   const t = (key: Key) => translate(locale, key);
-  const tasks = useQuery({
-    queryKey: ["tasks", projectId, planId],
-    queryFn: () => request<{ items: Task[] }>(`/projects/${projectId}/tasks?planId=${planId}`),
-  });
+  const tasks=useCollection<Task>(["tasks",projectId,planId],`/projects/${projectId}/tasks?planId=${planId}`);
   if (tasks.isPending) return <p className="judex-workspace-status">{t("shellLoading")}</p>;
   return (
-    <ul className="judex-workspace-list">
+    <><ul className="judex-workspace-list">
       {(tasks.data?.items ?? []).map((task) => (
         <li key={task.id} className="judex-workspace-item">
           <Button variant="ghost" onClick={() => onOpen(task.id)}>
@@ -158,7 +162,7 @@ function TaskList({ projectId, planId, onOpen }: { projectId: string; planId: st
         </li>
       ))}
       {(tasks.data?.items ?? []).length === 0 && <li className="judex-workspace-status">{t("wpNoTasks")}</li>}
-    </ul>
+    </ul><LoadMore query={tasks} /></>
   );
 }
 
@@ -166,51 +170,61 @@ function TaskDetail({ projectId, taskId }: { projectId: string; taskId: string }
   const { locale } = usePreferences();
   const t = (key: Key) => translate(locale, key);
   const client = useQueryClient();
-  const tasks = useQuery({
-    queryKey: ["tasks", projectId, ""],
-    queryFn: () => request<{ items: Task[] }>(`/projects/${projectId}/tasks`),
-  });
-  const task = tasks.data?.items?.find((item) => item.id === taskId);
+  const detail = useQuery({ queryKey: ["task", projectId, taskId], queryFn: () => request<Task>(`/projects/${projectId}/tasks/${taskId}`) });
+  const task = detail.data;
+  const { user } = useAuth(); const [identity, setIdentity] = useState(""); const [materials, setMaterials] = useState<string[]>([]);
+  const identities = useQuery({queryKey:["identities",projectId],queryFn:()=>request<{items:Identity[]}>(`/projects/${projectId}/identities`)});
+  const availableMaterials = useQuery({queryKey:["materials",projectId],queryFn:()=>request<{items:{id:string;title:string;currentVersionId:string}[]}>(`/projects/${projectId}/materials`)});
+  const held=(identities.data?.items??[]).filter((i)=>i.currentBinding?.userId===user?.id && task?.participants?.some((p)=>p.identityId===i.id));
+  const actingIdentity=held.length===1?held[0].id:identity;
+
+  const [changing, setChanging] = useState(false);
+  const [reason, setReason] = useState("");
   const invalidate = () => {
     client.invalidateQueries({ queryKey: ["tasks", projectId] });
+    client.invalidateQueries({ queryKey: ["task", projectId, taskId] });
     client.invalidateQueries({ queryKey: ["actions", projectId] });
+    for(const key of ["plans","plan","executionMap"]) void client.invalidateQueries({queryKey:[key,projectId]});
   };
   const start = useMutation({
     mutationFn: () =>
       request(`/projects/${projectId}/tasks/${taskId}/start`, {
         method: "POST",
-        body: JSON.stringify({ expectedVersion: task?.version ?? 1 }),
+        body: JSON.stringify({ expectedVersion: task?.version ?? 1, identityId: actingIdentity }),
         idempotencyKey: crypto.randomUUID(),
       }),
     onSuccess: invalidate,
   });
   const deliver = useMutation({
-    mutationFn: () =>
+    mutationFn: (kind: "progress" | "delivery") =>
       request(`/projects/${projectId}/tasks/${taskId}/reports`, {
         method: "POST",
-        body: JSON.stringify({ kind: "delivery", text: "交付", expectedTaskVersion: task?.version ?? 1 }),
+        body: JSON.stringify({ kind, text: reportText, expectedTaskVersion: task?.version ?? 1, identityId: actingIdentity, materialVersionIds: materials }),
         idempotencyKey: crypto.randomUUID(),
       }),
     onSuccess: invalidate,
   });
+  const [acceptanceReview, setAcceptanceReview] = useState<EvidenceReview | null>(null);
+  const [reportText, setReportText] = useState("");
+  const openReview = useMutation({ mutationFn: () => request<EvidenceReview>(`/projects/${projectId}/tasks/${taskId}/acceptance-review`), onSuccess: setAcceptanceReview });
   const accept = useMutation({
-    mutationFn: async () => {
-      const review = await request<Review & { targetVersion: number }>(
-        `/projects/${projectId}/tasks/${taskId}/acceptance-review`,
-      );
+    mutationFn: async (decision: "accept" | "reject") => {
+      const review = acceptanceReview;
+      if (!review) throw new Error("Review required");
       return request(`/projects/${projectId}/tasks/${taskId}/acceptances`, {
         method: "POST",
         body: JSON.stringify({
           reviewId: review.reviewId,
           reviewHash: review.reviewHash,
           expectedVersion: review.targetVersion,
-          decision: "accept",
+          decision, reason,
         }),
         idempotencyKey: crypto.randomUUID(),
       });
     },
-    onSuccess: invalidate,
+    onSuccess: () => { setAcceptanceReview(null); invalidate(); },
   });
+  const reopen = useMutation({ mutationFn: () => request(`/projects/${projectId}/tasks/${taskId}/reopens`, { method: "POST", idempotencyKey: crypto.randomUUID(), body: JSON.stringify({ expectedVersion: task?.version, acceptanceId: task?.latestAcceptanceId, reason }) }), onSuccess: invalidate });
   if (!task) return null;
   return (
     <Card className="judex-thread-card">
@@ -219,23 +233,42 @@ function TaskDetail({ projectId, taskId }: { projectId: string; taskId: string }
         <small>
           {task.status} · v{task.version}
         </small>
+        <FormField label={t("paParticipants")}><UISelect value={actingIdentity} onChange={(e)=>setIdentity(e.target.value)}><UIOption value="">{t("paChoose")}</UIOption>{held.map((i)=><UIOption key={i.id} value={i.id}>{i.positionName}</UIOption>)}</UISelect></FormField>
+        {availableMaterials.data?.items?.map((m)=><UICheckbox key={m.id} checked={materials.includes(m.currentVersionId)} onChange={()=>setMaterials((values)=>values.includes(m.currentVersionId)?values.filter((v)=>v!==m.currentVersionId):[...values,m.currentVersionId])}>{m.title}</UICheckbox>)}
+        <Input aria-label={t("accessReport")} value={reportText} onChange={(e) => setReportText(e.target.value)} />
         <div className="judex-inline-form">
           {task.status === "ready" && (
-            <Button variant="secondary" isPending={start.isPending} onClick={() => start.mutate()}>
+            <Button variant="secondary" isPending={start.isPending} isDisabled={!actingIdentity} onClick={() => start.mutate()}>
               {t("wpStart")}
             </Button>
           )}
           {(task.status === "working" || task.status === "rework" || task.status === "ready") && (
-            <Button variant="secondary" isPending={deliver.isPending} onClick={() => deliver.mutate()}>
+            <Button variant="secondary" isPending={deliver.isPending} isDisabled={!actingIdentity || !reportText.trim()} onClick={() => deliver.mutate("delivery")}>
               {t("wpDeliver")}
             </Button>
           )}
+          {(task.status === "working" || task.status === "rework") && <Button isDisabled={!actingIdentity || !reportText.trim()} isPending={deliver.isPending} onPress={()=>deliver.mutate("progress")}>{t("lcProgress")}</Button>}
           {task.status === "delivered" && (
-            <Button variant="primary" isPending={accept.isPending} onClick={() => accept.mutate()}>
+            <Button variant="primary" isPending={accept.isPending} onClick={() => openReview.mutate()}>
               {t("wpAccept")}
             </Button>
           )}
         </div>
+        {acceptanceReview && <>
+          <ReviewDetails evidence={acceptanceReview} />
+          <Button isPending={accept.isPending} isDisabled={acceptanceReview.blockers?.some((b) => b.phase === "accept" || b.phase === "both")} onPress={() => accept.mutate("accept")}>{t("accessConfirm")}</Button>
+          <Input aria-label={t("paReason")} value={reason} onChange={(e) => setReason(e.target.value)} />
+          <Button variant="danger" isDisabled={!reason.trim()} isPending={accept.isPending} onPress={() => accept.mutate("reject")}>{t("wpReject")}</Button>
+          <Button variant="ghost" onPress={() => setAcceptanceReview(null)}>{t("accessCancel")}</Button>
+        </>}
+        {openReview.isError && <UIWarning>{openReview.error.message}</UIWarning>}
+        {task.status === "accepted" && <>
+          <Input aria-label={t("paReason")} value={reason} onChange={(e) => setReason(e.target.value)} />
+          <Button isDisabled={!reason.trim()} isPending={reopen.isPending} onPress={() => reopen.mutate()}>{t("lcReopen")}</Button>
+        </>}
+        {reopen.isError && <UIWarning>{reopen.error.message}</UIWarning>}
+        {task.status !== "accepted" && task.status !== "cancelled" && <Button variant="ghost" onPress={() => setChanging(!changing)}>{t("lcChange")}</Button>}
+        {changing && <WorkChangeForm projectId={projectId} target={task} kind="task" />}
         {(start.isError || deliver.isError || accept.isError) && (
           <UIWarning role="alert">
             {errorText(locale, start.error ?? deliver.error ?? accept.error)}
@@ -251,32 +284,9 @@ function ProposalList({ projectId }: { projectId: string }) {
   const t = (key: Key) => translate(locale, key);
   const client = useQueryClient();
   const [creating, setCreating] = useState(false);
-  const [title, setTitle] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
 
-  const proposals = useQuery({
-    queryKey: ["proposals", projectId],
-    queryFn: () => request<{ items: Proposal[] }>(`/projects/${projectId}/proposals`),
-    refetchInterval: 8000,
-  });
-
-  const create = useMutation({
-    mutationFn: () =>
-      request(`/projects/${projectId}/proposals`, {
-        method: "POST",
-        body: JSON.stringify({
-          kind: "work_arrangement",
-          changes: [{ operation: "create_plan", targetType: "plan", clientRef: "p", fields: { title: title.trim() } }],
-        }),
-        idempotencyKey: crypto.randomUUID(),
-      }),
-    onSuccess: () => {
-      setTitle("");
-      setCreating(false);
-      client.invalidateQueries({ queryKey: ["proposals", projectId] });
-    },
-  });
-
+  const proposals=useCollection<Proposal>(["proposals",projectId],`/projects/${projectId}/proposals`);
   const invalidate = () => {
     client.invalidateQueries({ queryKey: ["proposals", projectId] });
     client.invalidateQueries({ queryKey: ["actions", projectId] });
@@ -291,24 +301,7 @@ function ProposalList({ projectId }: { projectId: string }) {
           {t("wpNewProposal")}
         </Button>
       </div>
-      {creating && (
-        <form
-          className="judex-inline-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (title.trim()) create.mutate();
-          }}
-        >
-          <Input aria-label={t("wpNewProposal")} value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
-          <Button type="submit" isPending={create.isPending}>
-            {create.isPending ? t("submitting") : t("pwCreate")}
-          </Button>
-          <Button variant="ghost" onClick={() => setCreating(false)}>
-            <X size={15} />
-          </Button>
-          {create.isError && <span role="alert">{errorText(locale, create.error)}</span>}
-        </form>
-      )}
+      {creating && <ArrangementForm projectId={projectId} onCreated={() => setCreating(false)} />}
       {proposals.isPending ? (
         <p className="judex-workspace-status">{t("shellLoading")}</p>
       ) : (
@@ -324,6 +317,7 @@ function ProposalList({ projectId }: { projectId: string }) {
           {(proposals.data?.items ?? []).length === 0 && <li className="judex-workspace-status">{t("wpNoProposals")}</li>}
         </ul>
       )}
+      <LoadMore query={proposals} />
       {selected && <ProposalDetail projectId={projectId} proposalId={selected} onChanged={invalidate} />}
     </div>
   );
@@ -334,6 +328,7 @@ function ProposalDetail({ projectId, proposalId, onChanged }: { projectId: strin
   const t = (key: Key) => translate(locale, key);
   const client = useQueryClient();
   const [reason, setReason] = useState("");
+  const [delegated,setDelegated]=useState<string[]>([]);
   const review = useQuery({
     queryKey: ["proposalReview", projectId, proposalId],
     queryFn: () => request<Review>(`/projects/${projectId}/proposals/${proposalId}/review`),
@@ -351,7 +346,7 @@ function ProposalDetail({ projectId, proposalId, onChanged }: { projectId: strin
     mutationFn: () =>
       request(`/projects/${projectId}/proposals/${proposalId}/submit`, {
         method: "POST",
-        body: JSON.stringify({ expectedVersion: proposal?.version ?? 1 }),
+        body: JSON.stringify({ expectedVersion: review.data?.version ?? proposal?.version ?? 1, draftHash: review.data?.reviewHash }),
         idempotencyKey: crypto.randomUUID(),
       }),
     onSuccess: () => {
@@ -367,9 +362,10 @@ function ProposalDetail({ projectId, proposalId, onChanged }: { projectId: strin
         body: JSON.stringify({
           reviewId: review.data?.reviewId,
           reviewHash: review.data?.reviewHash,
-          expectedVersion: proposal?.version ?? 1,
+          expectedVersion: review.data?.version ?? proposal?.version ?? 1,
           decision,
-          slotIds: (review.data?.slots ?? []).filter((s) => s.state === "pending").map((s) => s.id),
+          slotIds: (review.data?.slots ?? []).filter((s) => s.canDecide).map((s) => s.id),
+          actingBindingVersions: (review.data?.slots ?? []).filter((s) => s.canDecide && s.authorityType === "identity").map((s) => ({ identityId: s.authorityId, bindingVersion: s.bindingVersion })),
           reason,
         }),
         idempotencyKey: crypto.randomUUID(),
@@ -377,6 +373,7 @@ function ProposalDetail({ projectId, proposalId, onChanged }: { projectId: strin
     onSuccess: onChanged,
   });
 
+  const delegate=useMutation({mutationFn:()=>request(`/projects/${projectId}/proposals/${proposalId}/delegate-decisions`,{method:"POST",body:JSON.stringify({reviewId:review.data?.reviewId,reviewHash:review.data?.reviewHash,slotIds:delegated,reason})}),onSuccess:()=>{setDelegated([]);onChanged();}});
   if (proposals.isPending || review.isPending) return <p className="judex-workspace-status">{t("shellLoading")}</p>;
   return (
     <Card className="judex-thread-card">
@@ -385,6 +382,7 @@ function ProposalDetail({ projectId, proposalId, onChanged }: { projectId: strin
           <strong>
             {proposal?.kind} · {proposal?.status}
           </strong>
+          <ReviewDetails changes={review.data?.changes} />
           {review.data?.slots?.map((slot) => (
             <small key={slot.id}>
               {slot.displayName}
@@ -392,12 +390,12 @@ function ProposalDetail({ projectId, proposalId, onChanged }: { projectId: strin
             </small>
           ))}
           {review.data?.deadlineAt && <small>deadline: {new Date(review.data.deadlineAt).toLocaleString()}</small>}
-          {proposal?.status === "draft" && (
+          {review.data?.status === "draft" && (
             <Button variant="secondary" isPending={submit.isPending} onClick={() => submit.mutate()}>
               {t("wpSubmitProposal")}
             </Button>
           )}
-          {proposal?.status === "pending" && (
+          {review.data?.status === "pending" && (
             <div className="judex-inline-form" data-ready={!!review.data?.reviewHash}>
               <Input
                 aria-label={t("wpReason")}
@@ -408,7 +406,7 @@ function ProposalDetail({ projectId, proposalId, onChanged }: { projectId: strin
               <Button
                 variant="primary"
                 isPending={decide.isPending}
-                isDisabled={!review.data?.reviewHash || !review.data?.slots?.length}
+                isDisabled={!review.data?.reviewHash || !review.data?.slots?.some((s) => s.canDecide)}
                 onClick={() => decide.mutate("approve")}
               >
                 {t("wpApprove")}
@@ -416,7 +414,7 @@ function ProposalDetail({ projectId, proposalId, onChanged }: { projectId: strin
               <Button
                 variant="danger"
                 isPending={decide.isPending}
-                isDisabled={!review.data?.reviewHash || !review.data?.slots?.length}
+                isDisabled={!review.data?.reviewHash || !review.data?.slots?.some((s) => s.canDecide)}
                 onClick={() => {
                   if (reason.trim()) decide.mutate("reject");
                 }}
@@ -425,6 +423,11 @@ function ProposalDetail({ projectId, proposalId, onChanged }: { projectId: strin
               </Button>
             </div>
           )}
+          {review.data?.status==="pending" && review.data.slots.some((s)=>s.canDelegate)&&<section className="judex-panel-stack">
+            <strong>{t("weDelegateSelect")}</strong>{review.data.slots.filter((s)=>s.canDelegate).map((s)=><UICheckbox key={s.id} checked={delegated.includes(s.id)} onChange={()=>setDelegated((values)=>values.includes(s.id)?values.filter((id)=>id!==s.id):[...values,s.id])}>{s.displayName} · {s.positionName}</UICheckbox>)}
+            <Button variant="secondary" isDisabled={!reason.trim()||!delegated.length} isPending={delegate.isPending} onPress={()=>delegate.mutate()}>{t("weDelegateConfirm")}</Button>
+          </section>}
+          {delegate.isError&&<UIWarning>{delegate.error.message}</UIWarning>}
           {(submit.isError || decide.isError) && (
             <UIWarning role="alert">{errorText(locale, submit.error ?? decide.error)}</UIWarning>
           )}

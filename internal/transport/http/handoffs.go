@@ -44,7 +44,7 @@ func (h *HandoffHandlers) list(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(handoffs, nil))
+	respond{}.ok(c, respond{}.list(c, handoffs, nil))
 }
 
 func (h *HandoffHandlers) create(c *gin.Context) {
@@ -118,7 +118,8 @@ func handoffSourceParams(c *gin.Context) (uuid.UUID, uuid.UUID, error) {
 	return handoffID, sourceID, nil
 }
 
-func (h *HandoffHandlers) send(c *gin.Context) {
+func (h *HandoffHandlers) send(c *gin.Context) { h.sendAt(c, 200) }
+func (h *HandoffHandlers) sendAt(c *gin.Context, status int) {
 	p := principalFrom(c)
 	projectID, err := projectParam(c)
 	if err != nil {
@@ -131,18 +132,25 @@ func (h *HandoffHandlers) send(c *gin.Context) {
 		return
 	}
 	var req struct {
-		Summary string `json:"summary" binding:"required"`
+		Summary       string `json:"summary" binding:"required"`
+		ReviewHash    string `json:"reviewHash"`
+		SourceVersion int64  `json:"sourceVersion"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	source, err := h.Handoffs.SendSource(c.Request.Context(), p.UserID, projectID, handoffID, sourceID, req.Summary)
+	expected, err := uuid.Parse(req.ReviewHash)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("reviewHash", "report id required"))
+		return
+	}
+	source, err := h.Handoffs.SendReviewed(c.Request.Context(), p.UserID, projectID, handoffID, sourceID, expected, req.SourceVersion, req.Summary)
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, source)
+	respond{}.data(c, status, source)
 }
 
 func (h *HandoffHandlers) decide(c *gin.Context) {
@@ -158,8 +166,10 @@ func (h *HandoffHandlers) decide(c *gin.Context) {
 		return
 	}
 	var req struct {
-		Decision string `json:"decision" binding:"required"`
-		Reason   string `json:"reason"`
+		Decision      string `json:"decision" binding:"required"`
+		ReviewHash    string `json:"reviewHash"`
+		SourceVersion int64  `json:"sourceVersion"`
+		Reason        string `json:"reason"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
@@ -169,8 +179,13 @@ func (h *HandoffHandlers) decide(c *gin.Context) {
 		respond{}.error(c, apierrors.Fields("decision", "enum"))
 		return
 	}
+	expected, err := uuid.Parse(req.ReviewHash)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("reviewHash", "source version id required"))
+		return
+	}
 	source, err := h.Handoffs.DecideSource(c.Request.Context(), p.UserID, projectID, handoffID, sourceID,
-		req.Decision == "accept", req.Reason)
+		req.Decision == "accept", req.Reason, expected)
 	if err != nil {
 		respond{}.error(c, err)
 		return
@@ -178,48 +193,44 @@ func (h *HandoffHandlers) decide(c *gin.Context) {
 	respond{}.ok(c, source)
 }
 
-func (h *HandoffHandlers) revise(c *gin.Context) {
-	p := principalFrom(c)
-	projectID, err := projectParam(c)
-	if err != nil {
-		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
-		return
-	}
-	handoffID, sourceID, err := handoffSourceParams(c)
-	if err != nil {
-		respond{}.error(c, err)
-		return
-	}
-	var req struct {
-		Summary string `json:"summary" binding:"required"`
-	}
-	if err := bindJSON(c, &req); err != nil {
-		respond{}.error(c, err)
-		return
-	}
-	source, err := h.Handoffs.SendSource(c.Request.Context(), p.UserID, projectID, handoffID, sourceID, req.Summary)
-	if err != nil {
-		respond{}.error(c, err)
-		return
-	}
-	respond{}.created(c, source)
-}
+func (h *HandoffHandlers) revise(c *gin.Context) { h.sendAt(c, 201) }
 
 func (h *HandoffHandlers) reminder(c *gin.Context) {
-	respond{}.accepted(c, gin.H{"reminded": true}, nil)
+	project, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	handoff, err := uuid.Parse(c.Param("handoffId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("handoffId", "uuid"))
+		return
+	}
+	count, err := h.Handoffs.Remind(c.Request.Context(), principalFrom(c).UserID, project, handoff)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, gin.H{"reminded": true, "recipientCount": count})
 }
 
 func (h *HandoffHandlers) listReports(c *gin.Context) {
-	_, err := projectParam(c)
+	project, err := projectParam(c)
 	if err != nil {
-		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		respond{}.error(c, err)
 		return
 	}
-	if _, err := uuid.Parse(c.Param("taskId")); err != nil {
-		respond{}.error(c, apierrors.Fields("taskId", "invalid"))
+	task, err := uuid.Parse(c.Param("taskId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("taskId", "uuid"))
 		return
 	}
-	respond{}.ok(c, respond{}.list([]any{}, nil))
+	reports, err := h.Work.ListReports(c.Request.Context(), principalFrom(c).UserID, project, task)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, respond{}.list(c, reports, nil))
 }
 
 func (h *HandoffHandlers) createReport(c *gin.Context) {
@@ -235,18 +246,20 @@ func (h *HandoffHandlers) createReport(c *gin.Context) {
 		return
 	}
 	var req struct {
-		Kind                string   `json:"kind" binding:"required"`
-		SubmissionID        string   `json:"submissionId"`
-		IdentityID          string   `json:"identityId"`
-		Text                string   `json:"text"`
-		MaterialVersionIDs  []string `json:"materialVersionIds"`
-		ExpectedTaskVersion int64    `json:"expectedTaskVersion"`
+		CodeRefs            []map[string]any `json:"codeRefs"`
+		EnvironmentRefs     []map[string]any `json:"environmentRefs"`
+		Kind                string           `json:"kind" binding:"required"`
+		SubmissionID        string           `json:"submissionId"`
+		IdentityID          string           `json:"identityId"`
+		Text                string           `json:"text"`
+		MaterialVersionIDs  []string         `json:"materialVersionIds"`
+		ExpectedTaskVersion int64            `json:"expectedTaskVersion"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	input := work.ReportInput{TaskID: taskID, Kind: req.Kind, Text: req.Text,
+	input := work.ReportInput{TaskID: taskID, CodeRefs: req.CodeRefs, EnvironmentRefs: req.EnvironmentRefs, Kind: req.Kind, Text: req.Text,
 		MaterialVersionIDs: req.MaterialVersionIDs, ExpectedTaskVersion: req.ExpectedTaskVersion}
 	if req.SubmissionID != "" {
 		id, err := uuid.Parse(req.SubmissionID)
@@ -269,5 +282,14 @@ func (h *HandoffHandlers) createReport(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, gin.H{"id": reportID})
+	reports, err := h.Work.ListReports(c.Request.Context(), p.UserID, projectID, taskID, reportID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	if len(reports) != 1 {
+		respond{}.error(c, apierrors.New(apierrors.Internal, "report result missing"))
+		return
+	}
+	respond{}.ok(c, reports[0])
 }

@@ -80,6 +80,7 @@ type ToolCall struct {
 
 // ToolSchema describes a tool for the request (05 §6).
 type ToolSchema struct {
+	Description   string         `json:"description,omitempty"`
 	Name          string         `json:"name"`
 	SchemaVersion int            `json:"schema_version"`
 	InputSchema   map[string]any `json:"input_schema"`
@@ -193,7 +194,7 @@ func (p *OpenAIProvider) Stream(ctx context.Context, req Request) (<-chan Event,
 	}
 	for _, tool := range req.Tools {
 		body.Tools = append(body.Tools, toolWire{Type: "function", Function: ToolFunction{
-			Name: tool.Name, Parameters: tool.InputSchema,
+			Name: tool.Name, Description: tool.Description, Parameters: tool.InputSchema,
 		}})
 	}
 	raw, _ := json.Marshal(body)

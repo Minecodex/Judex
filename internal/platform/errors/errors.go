@@ -86,11 +86,12 @@ type FieldIssue struct {
 // Error is the canonical API error. Details must be JSON-serializable and
 // must never contain secrets, prompts or full tokens.
 type Error struct {
-	Code      Code
-	Message   string
-	Details   any
-	Retryable bool
-	cause     error
+	Code         Code
+	Message      string
+	Details      any
+	Retryable    bool
+	CommitResult bool // domain conflict persisted after rolling back its proposed changes
+	cause        error
 }
 
 func (e *Error) Error() string {
@@ -131,6 +132,8 @@ func (e *Error) WithRetryable(retryable bool) *Error {
 	e.Retryable = retryable
 	return e
 }
+
+func (e *Error) WithCommittedResult() *Error { e.CommitResult = true; return e }
 
 // Wrap keeps the cause for logs without exposing it to clients.
 func (e *Error) Wrap(err error) *Error {

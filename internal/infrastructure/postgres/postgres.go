@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
+	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/pressly/goose/v3"
 )
 
@@ -121,14 +122,23 @@ func (p *Pool) Migrate(ctx context.Context) error {
 // must be side-effect-free outside the database. Business commands rely on
 // row locks instead of isolation tricks (docs/plans/v1/01 §4).
 func (p *Pool) Transact(ctx context.Context, fn func(ctx context.Context, tx Tx) error) error {
+	if tx := p.transaction(ctx); tx != nil {
+		return fn(ctx, Tx{tx})
+	}
 	var lastErr error
 	for attempt := 0; attempt < 3; attempt++ {
 		tx, err := p.BeginTx(ctx, pgxTxOpts)
 		if err != nil {
 			return err
 		}
-		err = fn(ctx, Tx{tx})
+		err = fn(WithTransaction(ctx, p, tx), Tx{tx})
 		if err != nil {
+			if apierrors.From(err).CommitResult {
+				if commitErr := tx.Commit(ctx); commitErr != nil {
+					return commitErr
+				}
+				return err
+			}
 			tx.Rollback(ctx)
 			var ser *serializationFailure
 			if errors.As(err, &ser) && attempt < 2 {

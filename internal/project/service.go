@@ -18,6 +18,7 @@ import (
 
 	"github.com/kakj-go/Judex/internal/audit"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
+	"github.com/kakj-go/Judex/internal/platform/auth"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/kakj-go/Judex/internal/platform/events"
 )
@@ -195,15 +196,19 @@ func (s *Service) MembershipFor(ctx context.Context, requester, projectID uuid.U
 // ListForUser returns projects where the user is an active member, newest
 // first (cursor pagination wired at the handler layer).
 func (s *Service) ListForUser(ctx context.Context, user uuid.UUID, limit int, afterCreatedAt *time.Time, afterID *uuid.UUID) ([]Project, bool, error) {
+	var scope []uuid.UUID
+	if actor := auth.FromContext(ctx); actor != nil && actor.Kind == auth.KindCLI {
+		scope = actor.ProjectScope
+	}
 	rows, err := s.pool.Query(ctx, `
 		SELECT p.id, p.title, p.description, p.kind, p.status, p.version,
 		       p.max_discussion_rounds, p.approval_timeout_seconds, p.default_model_id,
 		       p.created_at, p.updated_at, m.role
 		FROM project_members m JOIN projects p ON p.id = m.project_id
-		WHERE m.user_id=$1 AND m.state='active'
+		WHERE m.user_id=$1 AND m.state='active' AND (cardinality($5::uuid[])=0 OR p.id=ANY($5))
 		  AND ($2::timestamptz IS NULL OR (p.created_at, p.id) < ($2, $3::uuid))
 		ORDER BY p.created_at DESC, p.id DESC
-		LIMIT $4`, user, afterCreatedAt, afterID, limit+1)
+		LIMIT $4`, user, afterCreatedAt, afterID, limit+1, nonNilProjectScope(scope))
 	if err != nil {
 		return nil, false, apierrors.New(apierrors.Internal, "project list failed").Wrap(err)
 	}
@@ -361,7 +366,7 @@ func (s *Service) Update(ctx context.Context, requester, projectID uuid.UUID, ex
 		}
 	}
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockProjectForUpdate(ctx, projectID.String()); err != nil {
+		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
 		m, err := s.MembershipForTx(ctx, tx, requester, projectID)
@@ -412,4 +417,11 @@ type UpdateRequest struct {
 	ApprovalTimeoutSeconds *int
 	DefaultModelID         *uuid.UUID
 	DefaultModelSet        bool
+}
+
+func nonNilProjectScope(ids []uuid.UUID) []uuid.UUID {
+	if ids == nil {
+		return []uuid.UUID{}
+	}
+	return ids
 }

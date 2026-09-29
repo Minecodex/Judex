@@ -46,12 +46,13 @@ const DefaultExecImage = "docker.io/library/alpine:3.20"
 
 // Config mirrors the deployment Sandbox section (11 §2).
 type Config struct {
-	Endpoint string // OpenSandbox server root, e.g. http://osb-server:80
-	APIKey   string
-	Image    string // allowlist entry, pinned digest at deploy time
-	CPU      string // K8s quantity, e.g. 500m
-	Memory   string // K8s quantity, e.g. 256Mi
-	HTTP     *http.Client
+	Endpoint   string // OpenSandbox server root, e.g. http://osb-server:80
+	APIKey     string
+	Image      string // allowlist entry, pinned digest at deploy time
+	CPU        string // K8s quantity, e.g. 500m
+	Memory     string // K8s quantity, e.g. 256Mi
+	HTTP       *http.Client
+	ProjectPVC string // pre-provisioned project projection claim; never auto-deleted
 }
 
 // SandboxResult reports command execution outcomes; unknown outcomes must be
@@ -156,15 +157,19 @@ type sandboxObject struct {
 // injected by the controller regardless of image.
 func (c *client) Create(ctx context.Context, runID, projectID uuid.UUID) (string, error) {
 	body := map[string]any{
-		"image":    map[string]any{"uri": c.cfg.Image},
+		"image":      map[string]any{"uri": c.cfg.Image},
 		"entrypoint": []string{"sleep", "infinity"},
 		"resourceLimits": map[string]any{
 			"cpu": c.cfg.CPU, "memory": c.cfg.Memory,
 		},
-		"timeout": 1800,
-		"labels": map[string]string{
+		"timeout":       1800,
+		"networkPolicy": map[string]any{"defaultAction": "deny", "egress": []any{}},
+		"metadata": map[string]string{
 			"app": "judex", "runId": runID.String(), "projectId": projectID.String(),
 		},
+	}
+	if c.cfg.ProjectPVC != "" {
+		body["volumes"] = []any{map[string]any{"name": "project", "pvc": map[string]any{"claimName": c.cfg.ProjectPVC, "createIfNotExists": false, "deleteOnSandboxTermination": false}, "mountPath": "/workspace/project", "readOnly": true}}
 	}
 	_, raw, err := c.do(ctx, "POST", "/sandboxes", body)
 	if err != nil {
@@ -185,18 +190,20 @@ func (c *client) Create(ctx context.Context, runID, projectID uuid.UUID) (string
 				case "Running":
 					return obj.ID, nil
 				case "Failed":
-					return "", apierrors.Newf(apierrors.SandboxUnavailable,
+					return created.ID, apierrors.Newf(apierrors.SandboxUnavailable,
 						"沙箱启动失败: %s", obj.Status.Message)
 				}
 			}
 		}
 		if time.Now().After(deadline) {
-			_ = c.Kill(context.WithoutCancel(ctx), created.ID)
-			return "", apierrors.New(apierrors.SandboxUnavailable, "沙箱等待 Running 超时")
+			cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+			_ = c.Kill(cleanup, created.ID)
+			cancel()
+			return created.ID, apierrors.New(apierrors.SandboxUnavailable, "沙箱等待 Running 超时")
 		}
 		select {
 		case <-ctx.Done():
-			return "", ctx.Err()
+			return created.ID, ctx.Err()
 		case <-time.After(2 * time.Second):
 		}
 	}
@@ -208,8 +215,8 @@ type execEvent struct {
 	Text          string `json:"text"`
 	ExecutionTime int64  `json:"execution_time"`
 	Error         *struct {
-		EName    string   `json:"ename"`
-		EValue   string   `json:"evalue"`
+		EName     string   `json:"ename"`
+		EValue    string   `json:"evalue"`
 		Traceback []string `json:"traceback"`
 	} `json:"error"`
 }
@@ -337,6 +344,9 @@ func shellQuote(s string) string {
 }
 
 func (c *client) Kill(ctx context.Context, externalID string) error {
-	_, _, err := c.do(ctx, "DELETE", "/sandboxes/"+externalID, nil)
+	status, _, err := c.do(ctx, "DELETE", "/sandboxes/"+externalID, nil)
+	if status == 404 {
+		return nil
+	}
 	return err
 }

@@ -207,6 +207,8 @@ components:
         kind:
           type: string
           enum: [task, bug]
+        bugDetails:
+          $ref: '#/components/schemas/BugDetails'
         participantIdentityIds:
           type: array
           items:
@@ -504,6 +506,8 @@ components:
         operation:
           type: string
           enum:
+            - activate_object
+            - reference_task
             - create_plan
             - create_task
             - update_scope
@@ -566,6 +570,10 @@ components:
       type: object
       required: [reviewId, reviewHash, proposalId, status, slots, changes]
       properties:
+        version: {type: integer, minimum: 1}
+        workflowConstraints:
+          type: array
+          items: {type: object, additionalProperties: true}
         reviewId:
           type: string
           format: uuid
@@ -576,7 +584,7 @@ components:
           format: uuid
         status:
           type: string
-          enum: [pending, approved, cancelled, stale]
+          enum: [draft, pending, approved, cancelled, stale]
         submittedAt:
           type:
             - string
@@ -616,6 +624,10 @@ components:
       type: object
       required: [id, authorityType, authorityId, state]
       properties:
+        currentUserId: {type: [string, 'null'], format: uuid}
+        bindingVersion: {type: integer}
+        canDecide: {type: boolean}
+        canDelegate: {type: boolean}
         id:
           type: string
           format: uuid
@@ -684,14 +696,17 @@ components:
           type: string
           maxLength: 2000
     DelegateDecisionRequest:
-      allOf:
-        - $ref: '#/components/schemas/ProposalDecisionRequest'
-        - type: object
-          required: [reason]
-          properties:
-            delegatedFor:
-              type: string
-              description: 被代批职责说明。
+      type: object
+      required: [reviewId, reviewHash, slotIds, reason]
+      properties:
+        reviewId: {type: string, format: uuid}
+        reviewHash: {type: string}
+        slotIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: {type: string, format: uuid}
+        reason: {type: string, minLength: 1, maxLength: 2000}
     ProposalRevisionRequest:
       type: object
       required: [previousReviewId, changes, reason]

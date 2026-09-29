@@ -28,6 +28,7 @@ const (
 // grant may request; membership/binding checks are still per call.
 const (
 	ScopeProjectsRead     = "projects:read"
+	ScopeProjectsCreate   = "projects:create"
 	ScopeContextRead      = "context:read"
 	ScopeMaterialsRead    = "materials:read"
 	ScopeMaterialsWrite   = "materials:write"
@@ -60,7 +61,7 @@ func (p *Principal) HasScope(scope string) bool {
 }
 
 // InProjectScope reports whether the principal's grant covers the project
-// (empty CLI project scope means "all my projects" per 07 §3).
+// Empty CLI scope permits discovery of owned projects, never access to a project.
 func (p *Principal) InProjectScope(projectID uuid.UUID) bool {
 	if p == nil {
 		return false
@@ -69,7 +70,7 @@ func (p *Principal) InProjectScope(projectID uuid.UUID) bool {
 		return true
 	}
 	if len(p.ProjectScope) == 0 {
-		return true
+		return false
 	}
 	for _, id := range p.ProjectScope {
 		if id == projectID {
@@ -82,14 +83,15 @@ func (p *Principal) InProjectScope(projectID uuid.UUID) bool {
 // Principal is the resolved actor attached to every request context. UserID
 // is the real human account; GrantID/SessionID identify the channel.
 type Principal struct {
-	Kind         Kind
-	UserID       uuid.UUID
-	AuthVersion  int
-	SessionID    uuid.UUID // web only
-	CSRFToken    string    // web only; echo for same-session writes
-	GrantID      uuid.UUID // cli only
-	Scopes       []string  // cli only
-	ProjectScope []uuid.UUID
+	AccessTokenID uuid.UUID
+	Kind          Kind
+	UserID        uuid.UUID
+	AuthVersion   int
+	SessionID     uuid.UUID // web only
+	CSRFToken     string    // web only; echo for same-session writes
+	GrantID       uuid.UUID // cli only
+	Scopes        []string  // cli only
+	ProjectScope  []uuid.UUID
 }
 
 // CanConfirmHumanDecision reports whether this channel may execute a human

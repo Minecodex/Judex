@@ -11,8 +11,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -36,6 +38,8 @@ func (e *CLIError) Error() string {
 // ExitCode maps API errors to CLI exit codes (07 §6).
 func (e *CLIError) ExitCode() int {
 	switch {
+	case e.Code == "PENDING_CONFIRMATION":
+		return 6
 	case e.Status == 0:
 		return 7 // network
 	case e.Status == 401 || e.Code == "UNAUTHENTICATED" || e.Code == "GRANT_REVOKED":
@@ -55,11 +59,13 @@ func (e *CLIError) ExitCode() int {
 
 // Client talks to a Judex server.
 type Client struct {
-	Server string // base URL, e.g. https://judex.internal
-	Token  string // bearer refresh secret (rotates via /auth/token/refresh)
-	HTTP   *http.Client
-	// OnRotation persists a new refresh token when the server rotates it.
-	OnRotation func(newToken string)
+	OutboxDirectory string
+	Server          string // base URL, e.g. https://judex.internal
+	Token           string // short-lived bearer access token
+	RefreshToken    string
+	AccessExpiresAt time.Time
+	TokenSource     func(context.Context) (string, error)
+	HTTP            *http.Client
 }
 
 func New(server string) *Client {
@@ -78,13 +84,28 @@ type envelope struct {
 // Do performs one API call; JSON bodies in, unwrapped data out. Write
 // operations generate an idempotency key automatically unless given.
 func (c *Client) Do(ctx context.Context, method, path string, body any, out any, idempotencyKey string) error {
-	var reader io.Reader
+	var rawBody []byte
 	if body != nil {
-		raw, err := json.Marshal(body)
+		var err error
+		rawBody, err = json.Marshal(body)
 		if err != nil {
 			return err
 		}
-		reader = bytes.NewReader(raw)
+	}
+	pendingFile := ""
+	if method != "GET" && method != "HEAD" && !strings.HasPrefix(path, "/auth/") {
+		if idempotencyKey == "" {
+			idempotencyKey = NewKey()
+		}
+		command, file, err := c.prepareCommand(method, path, rawBody, idempotencyKey)
+		if err != nil {
+			return err
+		}
+		idempotencyKey, rawBody, pendingFile = command.Key, command.Body, file
+	}
+	var reader io.Reader
+	if rawBody != nil {
+		reader = bytes.NewReader(rawBody)
 	}
 	req, err := http.NewRequestWithContext(ctx, method, c.Server+"/api/v1"+path, reader)
 	if err != nil {
@@ -93,8 +114,8 @@ func (c *Client) Do(ctx context.Context, method, path string, body any, out any,
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	if c.Token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.Token)
+	if err := c.authorize(ctx, req); err != nil {
+		return err
 	}
 	if idempotencyKey != "" {
 		req.Header.Set("Idempotency-Key", idempotencyKey)
@@ -113,6 +134,9 @@ func (c *Client) Do(ctx context.Context, method, path string, body any, out any,
 		return &CLIError{Status: resp.StatusCode, Code: "HTTP_ERROR", Message: strings.TrimSpace(string(raw))}
 	}
 	if resp.StatusCode >= 400 {
+		if resp.StatusCode < 500 {
+			retireCommand(pendingFile)
+		}
 		if env.Error != nil {
 			return &CLIError{Status: resp.StatusCode, Code: env.Error.Code, Message: env.Error.Message, Retryable: env.Error.Retryable}
 		}
@@ -123,27 +147,22 @@ func (c *Client) Do(ctx context.Context, method, path string, body any, out any,
 			return &CLIError{Status: resp.StatusCode, Code: "SCHEMA", Message: err.Error()}
 		}
 	}
+	retireCommand(pendingFile)
 	return nil
 }
 
 // NewKey returns a fresh idempotency key.
-func NewKey() string {
-	raw := make([]byte, 16)
-	if _, err := readRandom(raw); err != nil {
-		return fmt.Sprintf("%d", time.Now().UnixNano())
-	}
-	return fmt.Sprintf("%x", raw)
-}
+func NewKey() string { return uuid.NewString() }
 
 // DeviceLogin runs the full device flow (07 §3): request codes, poll until
 // approved, return the refresh token.
 func (c *Client) DeviceLogin(ctx context.Context, deviceName string, scopes []string) (string, error) {
 	var auth struct {
-		DeviceCode       string `json:"deviceCode"`
-		UserCode         string `json:"userCode"`
-		VerificationUri  string `json:"verificationUri"`
-		ExpiresIn        int    `json:"expiresIn"`
-		Interval         int    `json:"interval"`
+		DeviceCode      string `json:"deviceCode"`
+		UserCode        string `json:"userCode"`
+		VerificationUri string `json:"verificationUri"`
+		ExpiresIn       int    `json:"expiresIn"`
+		Interval        int    `json:"interval"`
 	}
 	if err := c.Do(ctx, "POST", "/auth/device/authorizations",
 		map[string]any{"deviceName": deviceName, "requestedScopes": scopes}, &auth, ""); err != nil {
@@ -156,37 +175,37 @@ func (c *Client) DeviceLogin(ctx context.Context, deviceName string, scopes []st
 		interval = 5 * time.Second
 	}
 	for time.Now().Before(deadline) {
-		time.Sleep(interval)
-		var result struct {
-			Status string `json:"status"` // envelope-unwrapped on 200
+		timer := time.NewTimer(interval)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return "", ctx.Err()
+		case <-timer.C:
 		}
-		// The pending path answers 200 with status=pending; completion
-		// answers 201 with the token pair.
-		err := c.Do(ctx, "POST", "/auth/device/token",
-			map[string]any{"deviceCode": auth.DeviceCode}, &result, "")
-		var cliErr *CLIError
-		if errors.As(err, &cliErr) {
-			if cliErr.Code == "UNAUTHENTICATED" || cliErr.Code == "GRANT_REVOKED" {
+		var result struct {
+			Status string `json:"status"`
+			TokenPair
+		}
+		err := c.Do(ctx, "POST", "/auth/device/token", map[string]any{"deviceCode": auth.DeviceCode}, &result, "")
+		if err != nil {
+			var ce *CLIError
+			if errors.As(err, &ce) && (ce.Status == 401 || ce.Status == 403) {
 				return "", err
 			}
 			continue
 		}
-		// 201 path returns tokens in data.
-		var tokenPair struct {
-			RefreshToken string `json:"refreshToken"`
+		if result.RefreshToken != "" {
+			c.Token = result.AccessToken
+			c.RefreshToken = result.RefreshToken
+			c.AccessExpiresAt = result.AccessExpiresAt
+			c.TokenSource = nil
+			return result.RefreshToken, nil
 		}
-		_ = c.Do(ctx, "POST", "/auth/device/token",
-			map[string]any{"deviceCode": auth.DeviceCode}, &tokenPair, "")
-		if tokenPair.RefreshToken != "" {
-			return tokenPair.RefreshToken, nil
-		}
-		if result.Status == "pending" || result.Status == "slow_down" {
-			if result.Status == "slow_down" {
-				interval += 2 * time.Second
-			}
-			continue
+		if result.Status == "slow_down" {
+			interval += 5 * time.Second
 		}
 	}
+
 	return "", &CLIError{Status: 401, Code: "EXPIRED", Message: "设备授权超时"}
 }
 
@@ -200,8 +219,8 @@ func (c *Client) UploadPart(ctx context.Context, projectID, uploadID string, par
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("X-Judex-Part-SHA256", sha)
-	if c.Token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.Token)
+	if err := c.authorize(ctx, req); err != nil {
+		return err
 	}
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
@@ -224,12 +243,12 @@ func (c *Client) UploadPart(ctx context.Context, projectID, uploadID string, par
 func (c *Client) Download(ctx context.Context, projectID, materialID, versionID, entry string, w io.Writer) error {
 	req, err := http.NewRequestWithContext(ctx, "GET",
 		fmt.Sprintf("%s/api/v1/projects/%s/materials/%s/versions/%s/content?entry=%s",
-			c.Server, projectID, materialID, versionID, entry), nil)
+			c.Server, projectID, materialID, versionID, url.QueryEscape(entry)), nil)
 	if err != nil {
 		return err
 	}
-	if c.Token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.Token)
+	if err := c.authorize(ctx, req); err != nil {
+		return err
 	}
 	resp, err := c.HTTP.Do(req)
 	if err != nil {

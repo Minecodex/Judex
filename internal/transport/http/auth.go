@@ -28,6 +28,8 @@ func NewIdentityHandlers(service *identity.Service, auth middleware.AuthConfig, 
 }
 
 func (h *IdentityHandlers) Register(spec *SpecRouter) {
+	spec.Register("updateMe", withAuth(h.updateMe))
+	spec.Register("changePassword", withAuth(h.changePassword))
 	spec.Register("register", h.register)
 	spec.Register("login", h.login)
 	spec.Register("getSession", h.getSession)
@@ -39,6 +41,18 @@ func (h *IdentityHandlers) Register(spec *SpecRouter) {
 	spec.Register("createDeviceAuthorization", h.deviceAuthorize)
 	spec.Register("pollDeviceToken", h.deviceToken)
 	spec.Register("confirmDeviceAuthorization", withAuth(h.deviceConfirm))
+	spec.Register("getDeviceAuthorization", withAuth(func(c *gin.Context) {
+		if !principalFrom(c).CanConfirmHumanDecision() {
+			respond{}.error(c, apierrors.New(apierrors.Forbidden, "browser required"))
+			return
+		}
+		review, err := h.Service.DeviceReview(c.Request.Context(), c.Query("userCode"))
+		if err != nil {
+			respond{}.error(c, err)
+			return
+		}
+		respond{}.ok(c, review)
+	}))
 	spec.Register("refreshToken", h.refreshGrant)
 	spec.Register("listClientGrants", withAuth(h.listGrants))
 	spec.Register("revokeClientGrant", withAuth(h.revokeGrant))
@@ -135,6 +149,15 @@ func (h *IdentityHandlers) getSession(c *gin.Context) {
 		respond{}.error(c, apierrors.New(apierrors.Unauthenticated, "authentication required"))
 		return
 	}
+	if p.Kind == "cli" {
+		user, expires, err := h.Service.GrantProjection(c.Request.Context(), p.UserID, p.GrantID)
+		if err != nil {
+			respond{}.error(c, err)
+			return
+		}
+		respond{}.ok(c, gin.H{"user": user, "grantId": p.GrantID, "scopes": p.Scopes, "projectScope": p.ProjectScope, "expiresAt": expires, "csrfToken": ""})
+		return
+	}
 	// The session middleware already verified expiry/auth_version; re-query
 	// only the mutable projection fields.
 	user, expiresAt, err := h.Service.SessionProjection(c.Request.Context(), p.SessionID)
@@ -203,7 +226,7 @@ func (h *IdentityHandlers) listSessions(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(sessions, nil))
+	respond{}.ok(c, respond{}.list(c, sessions, nil))
 }
 
 func (h *IdentityHandlers) revokeSession(c *gin.Context) {
@@ -263,26 +286,22 @@ func (h *IdentityHandlers) deviceToken(c *gin.Context) {
 		respond{}.ok(c, gin.H{"status": "pending", "interval": 5})
 		return
 	}
-	// Completed: return the token pair (refresh doubles as the CLI secret).
-	respond{}.created(c, gin.H{
-		"accessToken": refreshToken, "refreshToken": refreshToken,
-		"accessExpiresIn": int(15 * 60), "refreshExpiresIn": int(30 * 24 * 3600),
-		"tokenType": "bearer",
-	})
+	respond{}.created(c, refreshToken)
 }
 
 func (h *IdentityHandlers) deviceConfirm(c *gin.Context) {
 	p := principalFrom(c)
 	var req struct {
-		UserCode string   `json:"userCode" binding:"required"`
-		Approved bool     `json:"approved"`
-		Scopes   []string `json:"scopes"`
+		UserCode     string      `json:"userCode" binding:"required"`
+		Approved     bool        `json:"approved"`
+		Scopes       []string    `json:"scopes"`
+		ProjectScope []uuid.UUID `json:"projectScope"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	if err := h.Service.ConfirmDeviceAuthorization(c.Request.Context(), p.UserID, req.UserCode, req.Approved, req.Scopes); err != nil {
+	if err := h.Service.ConfirmDeviceAuthorization(c.Request.Context(), p.UserID, req.UserCode, req.Approved, req.Scopes, req.ProjectScope); err != nil {
 		respond{}.error(c, err)
 		return
 	}
@@ -306,10 +325,7 @@ func (h *IdentityHandlers) refreshGrant(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, gin.H{
-		"refreshToken": rotated, "tokenType": "bearer",
-		"refreshExpiresIn": int(30 * 24 * 3600),
-	})
+	respond{}.ok(c, rotated)
 }
 
 func (h *IdentityHandlers) listGrants(c *gin.Context) {
@@ -319,7 +335,7 @@ func (h *IdentityHandlers) listGrants(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(grants, nil))
+	respond{}.ok(c, respond{}.list(c, grants, nil))
 }
 
 func (h *IdentityHandlers) revokeGrant(c *gin.Context) {

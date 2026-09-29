@@ -5,12 +5,16 @@
 package cli
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/kakj-go/Judex/internal/version"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -27,19 +31,26 @@ type Output struct {
 }
 
 var (
-	serverFlag  string
-	profileFlag string
-	jsonFlag    bool
+	serverFlag    string
+	projectFlag   string
+	noWaitFlag    bool
+	requestIDFlag string
+	profileFlag   string
+	jsonFlag      bool
 )
 
 // Profile is the non-secret context (.judex/project.json is safe to commit).
 type Profile struct {
+	UserID     string `json:"userId,omitempty"`
 	Server     string `json:"server"`
 	ProjectID  string `json:"projectId,omitempty"`
 	IdentityID string `json:"identityId,omitempty"`
 }
 
 func credentialsPath() string {
+	if dir := os.Getenv("JUDEX_CONFIG_DIR"); dir != "" {
+		return filepath.Join(dir, "credentials.json")
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ".judex-credentials.json"
@@ -48,6 +59,9 @@ func credentialsPath() string {
 }
 
 func profilePath() string {
+	if dir := os.Getenv("JUDEX_CONFIG_DIR"); dir != "" {
+		return filepath.Join(dir, "project.json")
+	}
 	if dir, err := os.Getwd(); err == nil {
 		candidate := filepath.Join(dir, ".judex", "project.json")
 		if _, err := os.Stat(candidate); err == nil {
@@ -81,7 +95,15 @@ func SaveToken(server, token string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	raw, _ := json.MarshalIndent(map[string]string{profileKey(): token, "server": server}, "", "  ")
+	stored := map[string]string{}
+	if existing, err := os.ReadFile(path); err == nil {
+		if err = json.Unmarshal(existing, &stored); err != nil {
+			return fmt.Errorf("invalid credentials file: %w", err)
+		}
+	}
+	stored[profileKey()] = token
+	stored["server:"+profileKey()] = server
+	raw, _ := json.MarshalIndent(stored, "", "  ")
 	if err := os.WriteFile(path, raw, 0o600); err != nil {
 		return err
 	}
@@ -94,8 +116,28 @@ func SaveToken(server, token string) error {
 	return nil
 }
 
-func ClearToken() {
-	_ = os.Remove(credentialsPath())
+func ClearToken() error {
+	path := credentialsPath()
+	raw, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var doc map[string]string
+	if err = json.Unmarshal(raw, &doc); err != nil {
+		return err
+	}
+	delete(doc, profileKey())
+	delete(doc, "server:"+profileKey())
+	delete(doc, "access:"+profileKey())
+	delete(doc, "accessExpiry:"+profileKey())
+	raw, err = json.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, raw, 0600)
 }
 
 func profileKey() string {
@@ -136,9 +178,30 @@ func NewClient() (*client.Client, error) {
 	}
 	c := client.New(server)
 	token, err := LoadToken()
+	if err == nil && os.Getenv("JUDEX_TOKEN") == "" {
+		var stored map[string]string
+		if raw, readErr := os.ReadFile(credentialsPath()); readErr == nil && json.Unmarshal(raw, &stored) == nil {
+			saved := stored["server:"+profileKey()]
+			if saved == "" {
+				saved = stored["server"]
+			}
+			if saved != "" && strings.TrimSuffix(saved, "/") != strings.TrimSuffix(server, "/") {
+				err = errors.New("stored credential belongs to another server")
+			}
+		}
+	}
 	if err == nil {
-		c.Token = token
-		c.OnRotation = func(newToken string) { _ = SaveToken(server, newToken) }
+		if os.Getenv("JUDEX_TOKEN") != "" {
+			c.Token = token
+		} else {
+			c.TokenSource = storedAccessSource(c, server)
+		}
+		subject := profile.UserID
+		if subject == "" || os.Getenv("JUDEX_TOKEN") != "" {
+			subject = token
+		}
+		scope := sha256.Sum256([]byte(server + "\n" + profileKey() + "\n" + subject))
+		c.OutboxDirectory = filepath.Join(filepath.Dir(credentialsPath()), "outbox", hex.EncodeToString(scope[:]))
 	}
 	return c, nil
 }
@@ -184,26 +247,44 @@ func Root() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
+	root.PersistentFlags().BoolVar(&noWaitFlag, "no-wait", false, "仅创建确认意图，不等待浏览器结果")
+	root.PersistentFlags().StringVar(&requestIDFlag, "request-id", "", "固定业务请求幂等 UUID")
+	root.PersistentFlags().StringVar(&projectFlag, "project", "", "项目 ID（不修改已保存选择）")
 	root.PersistentFlags().StringVar(&serverFlag, "server", "", "服务器地址（覆盖 profile）")
 	root.PersistentFlags().StringVar(&profileFlag, "profile", "default", "凭据 profile")
 	root.PersistentFlags().BoolVar(&jsonFlag, "json", false, "机器可读输出")
-	root.AddCommand(versionCommand(), statusCommand(), doctorCommand())
+	root.AddCommand(versionCommand(), statusCommand(), doctorCommand(), pendingCommand())
 
 	authCmd := &cobra.Command{Use: "auth", Short: "登录与凭据"}
 	authCmd.AddCommand(authLoginCommand(), authWhoamiCommand(), authLogoutCommand())
 	root.AddCommand(authCmd)
 
 	projectCmd := &cobra.Command{Use: "project", Short: "项目"}
-	projectCmd.AddCommand(projectListCommand(), projectUseCommand())
+	projectCmd.AddCommand(projectListCommand(), projectUseCommand(), projectShowCommand(), projectCreateCommand())
 	root.AddCommand(projectCmd)
+	identityCmd := &cobra.Command{Use: "identity", Short: "本人职责"}
+	identityCmd.AddCommand(identityListCommand(), identityUseCommand())
+	root.AddCommand(identityCmd)
+	planCmd := &cobra.Command{Use: "plan", Short: "计划"}
+	planCmd.AddCommand(planAcceptCommand())
+	root.AddCommand(planCmd)
+	bugCmd := &cobra.Command{Use: "bug", Short: "问题草稿"}
+	bugCmd.AddCommand(fileCommand("create", "创建 Bug 草稿", "/tasks", func(body map[string]any) { body["kind"] = "bug" }))
+	root.AddCommand(bugCmd)
+	releaseCmd := &cobra.Command{Use: "release", Short: "部署事实"}
+	releaseCmd.AddCommand(fileCommand("report", "记录本地部署结果", "/release-reports", nil))
+	root.AddCommand(releaseCmd)
+	runCmd := &cobra.Command{Use: "run", Short: "平台分析运行"}
+	runCmd.AddCommand(runCommand("show"), runCommand("watch"), runCommand("cancel"))
+	root.AddCommand(runCmd)
 
 	inboxCmd := &cobra.Command{Use: "inbox", Short: "待办"}
 	inboxCmd.AddCommand(inboxCommand())
 	root.AddCommand(inboxCmd)
 
 	materialCmd := &cobra.Command{Use: "material", Short: "资料"}
-	materialCmd.AddCommand(materialListCommand(), materialUploadCommand())
-	root.AddCommand(materialCmd)
+	materialCmd.AddCommand(materialListCommand(), materialUploadCommand(), materialDownloadCommand())
+	root.AddCommand(materialCmd, bundleCommand())
 
 	root.AddCommand(submitCommand(), reportCommand())
 
@@ -212,15 +293,18 @@ func Root() *cobra.Command {
 	root.AddCommand(proposalCmd)
 
 	decisionCmd := &cobra.Command{Use: "decision", Short: "审批"}
-	decisionCmd.AddCommand(decisionReviewCommand())
+	decisionCmd.AddCommand(decisionReviewCommand(), decisionCommand(true), decisionCommand(false), intentResultCommand())
+	contextCmd := &cobra.Command{Use: "context", Short: "任务上下文"}
+	contextCmd.AddCommand(contextCommand())
+	root.AddCommand(contextCmd)
 	root.AddCommand(decisionCmd)
 
 	taskCmd := &cobra.Command{Use: "task", Short: "任务"}
-	taskCmd.AddCommand(taskAcceptCommand())
+	taskCmd.AddCommand(taskAcceptCommand(), taskReopenCommand())
 	root.AddCommand(taskCmd)
 
 	handoffCmd := &cobra.Command{Use: "handoff", Short: "交接"}
-	handoffCmd.AddCommand(handoffSendCommand(), handoffReceiveCommand())
+	handoffCmd.AddCommand(handoffSendCommand(), handoffReceiveCommand(), handoffRejectCommand())
 	root.AddCommand(handoffCmd)
 
 	eventsCmd := &cobra.Command{Use: "events", Short: "事件"}
@@ -235,7 +319,7 @@ func Root() *cobra.Command {
 
 func versionCommand() *cobra.Command {
 	return &cobra.Command{Use: "version", Short: "协议与客户端版本", RunE: func(cmd *cobra.Command, args []string) error {
-		return emit(map[string]string{"cli": "1", "protocol": "1"}, nil)
+		return emit(map[string]string{"cli": version.Version, "commit": version.Commit, "protocol": "1"}, nil)
 	}}
 }
 
@@ -268,12 +352,23 @@ func authLoginCommand() *cobra.Command {
 		if err != nil {
 			return emit(nil, err)
 		}
-		if err := SaveToken(c.Server, token); err != nil {
+		if err := SaveTokenPair(c.Server, client.TokenPair{AccessToken: c.Token, AccessExpiresAt: c.AccessExpiresAt, RefreshToken: token}); err != nil {
 			return emit(nil, err)
 		}
 		profile := LoadProfile()
 		profile.Server = c.Server
-		_ = SaveProfile(profile)
+		var session struct {
+			User struct {
+				ID string `json:"id"`
+			} `json:"user"`
+		}
+		if err = c.Do(cmd.Context(), "GET", "/auth/session", nil, &session, ""); err != nil {
+			return emit(nil, err)
+		}
+		profile.UserID = session.User.ID
+		if err = SaveProfile(profile); err != nil {
+			return emit(nil, err)
+		}
 		return emit(map[string]string{"status": "logged_in", "server": c.Server}, nil)
 	}}
 	cmd.Flags().StringSliceVar(&scopes, "scopes", nil, "请求的 scopes")
@@ -296,25 +391,30 @@ func authWhoamiCommand() *cobra.Command {
 
 func authLogoutCommand() *cobra.Command {
 	return &cobra.Command{Use: "logout", Short: "撤销本设备授权", RunE: func(cmd *cobra.Command, args []string) error {
-		ClearToken()
+		c, err := NewClient()
+		if err != nil {
+			return emit(nil, err)
+		}
+		var session struct {
+			GrantID string `json:"grantId"`
+		}
+		err = c.Do(cmd.Context(), "GET", "/auth/session", nil, &session, "")
+		if err == nil && session.GrantID != "" {
+			err = c.Do(cmd.Context(), "DELETE", "/me/client-grants/"+session.GrantID, nil, nil, requestKey())
+		}
+		var ce *client.CLIError
+		if err != nil && !(errors.As(err, &ce) && ce.Status == 401) {
+			return emit(nil, err)
+		}
+		if err = ClearToken(); err != nil {
+			return emit(nil, err)
+		}
 		return emit(map[string]string{"status": "logged_out"}, nil)
 	}}
 }
 
 func projectListCommand() *cobra.Command {
-	return &cobra.Command{Use: "list", Short: "我的项目", RunE: func(cmd *cobra.Command, args []string) error {
-		c, err := NewClient()
-		if err != nil {
-			return emit(nil, err)
-		}
-		var page struct {
-			Items []map[string]any `json:"items"`
-		}
-		if err := c.Do(cmd.Context(), "GET", "/projects", nil, &page, ""); err != nil {
-			return emit(nil, err)
-		}
-		return emit(page.Items, nil)
-	}}
+	return listCommand("我的项目", func() (string, error) { return "/projects", nil })
 }
 
 func projectUseCommand() *cobra.Command {
@@ -329,6 +429,9 @@ func projectUseCommand() *cobra.Command {
 }
 
 func currentProject() (string, error) {
+	if projectFlag != "" {
+		return projectFlag, nil
+	}
 	profile := LoadProfile()
 	if profile.ProjectID == "" {
 		return "", errors.New("未选择项目：运行 judex project use ID")
@@ -337,39 +440,19 @@ func currentProject() (string, error) {
 }
 
 func inboxCommand() *cobra.Command {
-	return &cobra.Command{Use: "list", Short: "我的待办", RunE: func(cmd *cobra.Command, args []string) error {
-		c, err := NewClient()
-		if err != nil {
-			return emit(nil, err)
+	return listCommand("我的待办", func() (string, error) {
+		if projectFlag != "" {
+			return "/me/actions?projectId=" + projectFlag, nil
 		}
-		var page struct {
-			Items []map[string]any `json:"items"`
-		}
-		if err := c.Do(cmd.Context(), "GET", "/me/actions", nil, &page, ""); err != nil {
-			return emit(nil, err)
-		}
-		return emit(page.Items, nil)
-	}}
+		return "/me/actions", nil
+	})
 }
 
 func materialListCommand() *cobra.Command {
-	return &cobra.Command{Use: "list", Short: "项目共享资料", RunE: func(cmd *cobra.Command, args []string) error {
-		projectID, err := currentProject()
-		if err != nil {
-			return emit(nil, err)
-		}
-		c, err := NewClient()
-		if err != nil {
-			return emit(nil, err)
-		}
-		var page struct {
-			Items []map[string]any `json:"items"`
-		}
-		if err := c.Do(cmd.Context(), "GET", "/projects/"+projectID+"/materials", nil, &page, ""); err != nil {
-			return emit(nil, err)
-		}
-		return emit(page.Items, nil)
-	}}
+	return listCommand("资料", func() (string, error) {
+		project, err := currentProject()
+		return "/projects/" + project + "/materials", err
+	})
 }
 
 func materialUploadCommand() *cobra.Command {
@@ -409,9 +492,9 @@ func submitCommand() *cobra.Command {
 		if err := json.Unmarshal(raw, &body); err != nil {
 			return emit(nil, err)
 		}
-		body["clientSubmissionId"] = client.NewKey()
+
 		var result map[string]any
-		if err := c.Do(cmd.Context(), "POST", "/projects/"+projectID+"/submissions", body, &result, client.NewKey()); err != nil {
+		if err := c.Do(cmd.Context(), "POST", "/projects/"+projectID+"/submissions", body, &result, requestKey()); err != nil {
 			return emit(nil, err)
 		}
 		return emit(result, nil)
@@ -425,7 +508,10 @@ func reportCommand() *cobra.Command {
 	var file string
 	var kind string
 	var taskID string
-	cmd := &cobra.Command{Use: "report", Short: "progress/delivery 上报", RunE: func(cmd *cobra.Command, args []string) error {
+	cmd := &cobra.Command{Use: "report [progress|delivery]", Args: cobra.MaximumNArgs(1), Short: "progress/delivery 上报", RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			kind = args[0]
+		}
 		projectID, err := currentProject()
 		if err != nil {
 			return emit(nil, err)
@@ -434,18 +520,22 @@ func reportCommand() *cobra.Command {
 		if err != nil {
 			return emit(nil, err)
 		}
-		raw, _ := os.ReadFile(file)
+		raw, err := os.ReadFile(file)
+		if err != nil {
+			return emit(nil, err)
+		}
 		var fields map[string]any
-		if len(raw) > 0 {
-			_ = json.Unmarshal(raw, &fields)
+		if err = json.Unmarshal(raw, &fields); err != nil {
+			return emit(nil, err)
 		}
-		body := map[string]any{"kind": kind, "text": fmt.Sprintf("%v", fields["text"])}
-		if v, ok := fields["expectedTaskVersion"].(float64); ok {
-			body["expectedTaskVersion"] = int64(v)
+		fields["kind"] = kind
+		if fields["expectedTaskVersion"] == nil {
+			return emit(nil, fmt.Errorf("expectedTaskVersion required; read task context first"))
 		}
+		body := fields
 		var result map[string]any
 		path := fmt.Sprintf("/projects/%s/tasks/%s/reports", projectID, taskID)
-		if err := c.Do(cmd.Context(), "POST", path, body, &result, client.NewKey()); err != nil {
+		if err := c.Do(cmd.Context(), "POST", path, body, &result, requestKey()); err != nil {
 			return emit(nil, err)
 		}
 		return emit(result, nil)
@@ -454,6 +544,7 @@ func reportCommand() *cobra.Command {
 	cmd.Flags().StringVar(&kind, "kind", "progress", "progress | delivery")
 	cmd.Flags().StringVar(&taskID, "task", "", "任务 ID")
 	_ = cmd.MarkFlagRequired("task")
+	_ = cmd.MarkFlagRequired("file")
 	return cmd
 }
 
@@ -477,7 +568,7 @@ func proposalDraftCommand() *cobra.Command {
 			return emit(nil, err)
 		}
 		var result map[string]any
-		if err := c.Do(cmd.Context(), "POST", "/projects/"+projectID+"/proposals", body, &result, client.NewKey()); err != nil {
+		if err := c.Do(cmd.Context(), "POST", "/projects/"+projectID+"/proposals", body, &result, requestKey()); err != nil {
 			return emit(nil, err)
 		}
 		return emit(result, nil)
@@ -489,8 +580,14 @@ func proposalDraftCommand() *cobra.Command {
 
 func proposalSubmitCommand() *cobra.Command {
 	var id, review string
-	cmd := &cobra.Command{Use: "submit ID --review HASH", Short: "提交审批（冻结审阅）", RunE: func(cmd *cobra.Command, args []string) error {
-		projectID, err := currentProject()
+	cmd := &cobra.Command{Use: "submit ID", Args: cobra.MaximumNArgs(1), Short: "提交提案（浏览器确认）", RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			id = args[0]
+		}
+		if id == "" {
+			return fmt.Errorf("proposal ID required")
+		}
+		project, err := currentProject()
 		if err != nil {
 			return emit(nil, err)
 		}
@@ -498,18 +595,26 @@ func proposalSubmitCommand() *cobra.Command {
 		if err != nil {
 			return emit(nil, err)
 		}
-		var result map[string]any
-		path := fmt.Sprintf("/projects/%s/proposals/%s/submit", projectID, id)
-		body := map[string]any{"expectedVersion": 1}
-		_ = review
-		if err := c.Do(cmd.Context(), "POST", path, body, &result, client.NewKey()); err != nil {
+		var snapshot map[string]any
+		if err = c.Do(cmd.Context(), "GET", "/projects/"+project+"/proposals/"+id+"/review", nil, &snapshot, ""); err != nil {
 			return emit(nil, err)
 		}
-		return emit(result, nil)
+		if review != "" && review != snapshot["reviewHash"] {
+			return emit(nil, fmt.Errorf("review hash changed"))
+		}
+		version, ok := snapshot["version"].(float64)
+		if !ok || version < 1 {
+			return emit(nil, fmt.Errorf("proposal review lacks a version"))
+		}
+		var result map[string]any
+		err = c.Do(cmd.Context(), "POST", "/projects/"+project+"/confirmation-intents", map[string]any{"operation": "proposal.submit", "objectId": id, "reviewHash": snapshot["reviewHash"], "payload": map[string]any{"expectedVersion": version}}, &result, requestKey())
+		if err != nil {
+			return emit(nil, err)
+		}
+		return emitIntent(cmd, c, "/projects/"+project+"/confirmation-intents", result)
 	}}
-	cmd.Flags().StringVar(&id, "id", "", "提案 ID")
-	cmd.Flags().StringVar(&review, "review", "", "草稿哈希（可选）")
-	_ = cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "proposal ID")
+	cmd.Flags().StringVar(&review, "review", "", "review hash")
 	return cmd
 }
 
@@ -558,16 +663,16 @@ func taskAcceptCommand() *cobra.Command {
 			},
 		}
 		var created map[string]any
-		if err := c.Do(cmd.Context(), "POST", "/projects/"+projectID+"/confirmation-intents", intent, &created, client.NewKey()); err != nil {
+		if err := c.Do(cmd.Context(), "POST", "/projects/"+projectID+"/confirmation-intents", intent, &created, requestKey()); err != nil {
 			return emit(nil, err)
 		}
-		return emit(created, nil)
+		return emitIntent(cmd, c, "/projects/"+projectID+"/confirmation-intents", created)
 	}}
 }
 
 func handoffSendCommand() *cobra.Command {
 	var version int
-	cmd := &cobra.Command{Use: "send SOURCE --version N", Short: "发送来源（经确认意图）", RunE: func(cmd *cobra.Command, args []string) error {
+	cmd := &cobra.Command{Use: "send SOURCE --version N", Short: "发送来源（经确认意图）", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		projectID, err := currentProject()
 		if err != nil {
 			return emit(nil, err)
@@ -577,24 +682,45 @@ func handoffSendCommand() *cobra.Command {
 		if err != nil {
 			return emit(nil, err)
 		}
+		source, err := loadSource(cmd, c, projectID, args[0])
+		if err != nil {
+			return emit(nil, err)
+		}
+		if source.CurrentVersion != nil && *source.CurrentVersion != int64(version) {
+			return emit(nil, fmt.Errorf("source version changed"))
+		}
+		var task map[string]any
+		if err = c.Do(cmd.Context(), "GET", "/projects/"+projectID+"/tasks/"+source.TaskID, nil, &task, ""); err != nil {
+			return emit(nil, err)
+		}
+		if task["latestReportId"] == nil {
+			return emit(nil, fmt.Errorf("source has no delivery report"))
+		}
 		intent := map[string]any{
 			"operation": "handoff.send", "objectId": args[0],
-			"reviewHash": fmt.Sprintf("v%d", version),
+			"reviewHash": task["latestReportId"],
 			"payload":    map[string]any{"summary": "由 CLI 提交"},
 		}
 		var created map[string]any
-		if err := c.Do(cmd.Context(), "POST", "/projects/"+projectID+"/confirmation-intents", intent, &created, client.NewKey()); err != nil {
+		if err := c.Do(cmd.Context(), "POST", "/projects/"+projectID+"/confirmation-intents", intent, &created, requestKey()); err != nil {
 			return emit(nil, err)
 		}
-		return emit(created, nil)
+		return emitIntent(cmd, c, "/projects/"+projectID+"/confirmation-intents", created)
 	}}
 	cmd.Flags().IntVar(&version, "version", 1, "source version")
 	return cmd
 }
 
-func handoffReceiveCommand() *cobra.Command {
-	var accept bool
-	cmd := &cobra.Command{Use: "receive SOURCE", Short: "接收/拒收来源（经确认意图）", RunE: func(cmd *cobra.Command, args []string) error {
+func handoffReceiveCommand() *cobra.Command { return handoffDecisionCommand(true) }
+func handoffRejectCommand() *cobra.Command  { return handoffDecisionCommand(false) }
+func handoffDecisionCommand(defaultAccept bool) *cobra.Command {
+	accept := defaultAccept
+	name := "receive"
+	if !defaultAccept {
+		name = "reject"
+	}
+	var reason string
+	cmd := &cobra.Command{Use: name + " SOURCE", Short: "接收/拒收来源（经确认意图）", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		projectID, err := currentProject()
 		if err != nil {
 			return emit(nil, err)
@@ -602,41 +728,36 @@ func handoffReceiveCommand() *cobra.Command {
 		c, err := NewClient()
 		if err != nil {
 			return emit(nil, err)
+		}
+		source, err := loadSource(cmd, c, projectID, args[0])
+		if err != nil {
+			return emit(nil, err)
+		}
+		if source.CurrentVersionID == nil {
+			return emit(nil, fmt.Errorf("source has not been sent"))
+		}
+		if !accept && reason == "" {
+			return emit(nil, fmt.Errorf("rejection reason required"))
 		}
 		decision := "reject"
 		if accept {
 			decision = "accept"
 		}
 		intent := map[string]any{
-			"operation": "handoff.decision", "objectId": args[0], "reviewHash": "cli",
-			"payload": map[string]any{"decision": decision},
+			"operation": "handoff.decision", "objectId": args[0], "reviewHash": *source.CurrentVersionID,
+			"payload": map[string]any{"decision": decision, "reason": reason},
 		}
 		var created map[string]any
-		if err := c.Do(cmd.Context(), "POST", "/projects/"+projectID+"/confirmation-intents", intent, &created, client.NewKey()); err != nil {
+		if err := c.Do(cmd.Context(), "POST", "/projects/"+projectID+"/confirmation-intents", intent, &created, requestKey()); err != nil {
 			return emit(nil, err)
 		}
-		return emit(created, nil)
+		return emitIntent(cmd, c, "/projects/"+projectID+"/confirmation-intents", created)
 	}}
-	cmd.Flags().BoolVar(&accept, "accept", false, "接收（默认拒收）")
+	cmd.Flags().StringVar(&reason, "reason", "", "rejection reason")
+	if defaultAccept {
+		cmd.Flags().BoolVar(&accept, "accept", true, "接收来源")
+	}
 	return cmd
-}
-
-func eventsWatchCommand() *cobra.Command {
-	return &cobra.Command{Use: "watch", Short: "拉取项目事件（只读）", RunE: func(cmd *cobra.Command, args []string) error {
-		projectID, err := currentProject()
-		if err != nil {
-			return emit(nil, err)
-		}
-		c, err := NewClient()
-		if err != nil {
-			return emit(nil, err)
-		}
-		var page map[string]any
-		if err := c.Do(cmd.Context(), "GET", "/projects/"+projectID+"/topics", nil, &page, ""); err != nil {
-			return emit(nil, err)
-		}
-		return emit(page, nil)
-	}}
 }
 
 func skillInstallCommand() *cobra.Command {
@@ -669,11 +790,7 @@ func skillUninstallCommand() *cobra.Command {
 		if err != nil {
 			return emit(nil, err)
 		}
-		manifest := filepath.Join(dest, "manifest.json")
-		if _, err := os.Stat(manifest); err != nil {
-			return emit(nil, errors.New("目标目录不是 judex 技能安装（缺少 manifest.json），拒绝删除"))
-		}
-		if err := os.RemoveAll(dest); err != nil {
+		if err := removeSkill(dest); err != nil {
 			return emit(nil, err)
 		}
 		return emit(map[string]string{"removed": dest}, nil)
@@ -715,7 +832,7 @@ func skillTarget(target, custom string) (string, error) {
 	}
 	switch target {
 	case "codex":
-		return filepath.Join(home, ".codex", "skills", "judex"), nil
+		return filepath.Join(home, ".agents", "skills", "judex"), nil
 	case "claude-code":
 		return filepath.Join(home, ".claude", "skills", "judex"), nil
 	case "path":
@@ -726,31 +843,6 @@ func skillTarget(target, custom string) (string, error) {
 	default:
 		return "", errors.New("未知 target：" + target)
 	}
-}
-
-func copySkill(source, dest string) error {
-	if _, err := os.Stat(filepath.Join(source, "manifest.json")); err != nil {
-		return errors.New("源目录缺少 manifest.json，不是发行技能")
-	}
-	// 不覆盖用户自改同名技能：存在且哈希不同则提示。
-	if _, err := os.Stat(dest); err == nil {
-		fmt.Fprintln(os.Stderr, "提示：目标已存在同名技能，将仅在 manifest 匹配时覆盖。")
-	}
-	return filepath.Walk(source, func(p string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, _ := filepath.Rel(source, p)
-		target := filepath.Join(dest, rel)
-		if info.IsDir() {
-			return os.MkdirAll(target, 0o755)
-		}
-		raw, err := os.ReadFile(p)
-		if err != nil {
-			return err
-		}
-		return os.WriteFile(target, raw, 0o644)
-	})
 }
 
 func doctorCommand() *cobra.Command {

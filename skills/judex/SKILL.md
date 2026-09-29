@@ -1,3 +1,8 @@
+---
+name: judex
+description: Use the judex CLI to read project tasks, report selected local work, and request human decisions. Never approve on behalf of a person. Not for developing Judex itself.
+---
+
 # Judex 协作技能
 
 ## 何时使用
@@ -14,7 +19,7 @@
 
 - 查看我的任务：`judex inbox list` → `judex decision review <ID>`（提案详情）
 - 提交本地成果：核对任务 → 明确列出要上传的文件清单并让用户确认 → `judex material upload <每个文件>` → `judex report --task <ID> --kind delivery --file report.json`
-- 同意提案：`judex decision review <ID>` → 向用户复述变化清单与审批人 → `judex proposal submit`/确认意图 → 用户浏览器确认 → 你查询结果并汇报
+- 同意提案：`judex decision review <ID>` → 向用户复述变化清单与审批人 → `judex decision approve ID --review HASH` 创建确认意图 → 用户浏览器确认 → 你通过 `judex decision result INTENT` 查询结果并汇报
 - 交接：`judex handoff send <SOURCE> --version N`（经确认意图）
 
 详细命令表、报告格式与错误恢复见 references/。

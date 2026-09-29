@@ -44,7 +44,7 @@ func TestRoutingAndScaffoldBoundaries(t *testing.T) {
 		{"GET", "/api/v1/system", 200, "Judex"},
 		{"GET", "/api/v1/workspace", 404, "NOT_FOUND"},
 		{"POST", "/api/v1/auth/register", 501, "NOT_IMPLEMENTED"}, {"POST", "/api/v1/auth/login", 501, "NOT_IMPLEMENTED"},
-		{"GET", "/api/v1/projects", 501, "NOT_IMPLEMENTED"},
+		{"GET", "/api/v1/projects", 401, "UNAUTHENTICATED"},
 		{"GET", "/api/v1/missing", 404, "NOT_FOUND"}, {"GET", "/assets/missing.js", 404, "NOT_FOUND"},
 		{"GET", "/projects/example", 200, "<title>Judex"}, {"GET", "/assets/app.js", 200, "export const"},
 		{"POST", "/healthz", 405, "METHOD_NOT_ALLOWED"},
