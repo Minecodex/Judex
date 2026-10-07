@@ -14,7 +14,10 @@ export async function openTool(page: Page, id: string) {
   if (await page.getByTestId("settings-page").isVisible())
     await page.getByTestId("settings-back").click();
   await page.getByTestId("workspace-add-tool").click();
-  await page.getByTestId("work-nav-" + id).click();
+  await page
+    .getByTestId("workspace-launcher")
+    .getByTestId("work-nav-" + id)
+    .click();
 }
 export async function openAccount(page: Page) {
   if (await page.getByTestId("settings-page").isVisible())

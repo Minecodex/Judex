@@ -23,3 +23,5 @@ Go vet、race 单元与 HTTP/部署契约测试、CLI/server 编译；安装 Hel
 CI 失败会阻止合并。修复失败后在同一个功能分支继续提交，重新运行检查；不要通过删除必需检查或设置管理员绕过来把失败当作通过。
 
 锁文件在无 node_modules 的干净目录从已固定的 workspace 依赖生成，保留已有版本并包含全部平台原生可选包，避免 Windows 生成的锁文件遗漏 Linux TypeScript / 构建工具依赖。
+
+E2E 共用 `openTool` 助手在工作面板的 `workspace-launcher` 内选择入口，避免把聊天快捷入口与工作面板的同名动作混在一个全局选择器中。
