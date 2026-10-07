@@ -21,3 +21,5 @@ Go vet、race 单元与 HTTP/部署契约测试、CLI/server 编译；安装 Hel
 此工作流验证组织仓库实际提交的代码。现有 K8s smoke 需要兼容 OpenSandbox Operator/CRD 和可拉取镜像，应在独立 namespace 按 `tests/README.md` 执行；本工作流不把该集群验收或未提交的本地改动计为通过。
 
 CI 失败会阻止合并。修复失败后在同一个功能分支继续提交，重新运行检查；不要通过删除必需检查或设置管理员绕过来把失败当作通过。
+
+锁文件在无 node_modules 的干净目录从已固定的 workspace 依赖生成，保留已有版本并包含全部平台原生可选包，避免 Windows 生成的锁文件遗漏 Linux TypeScript / 构建工具依赖。
