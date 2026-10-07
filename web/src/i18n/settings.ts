@@ -13,6 +13,7 @@ const copy = {
   accountLight: ["浅色", "Light"],
   accountDark: ["深色", "Dark"],
   accountBack: ["返回应用", "Back to app"],
+  accountProjects: ["返回项目列表", "Back to projects"],
   accountSearch: ["搜索设置…", "Search settings…"],
   accountPersonalGroup: ["个人", "Personal"],
   accountProjectGroup: ["当前项目", "Current project"],

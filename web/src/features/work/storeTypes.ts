@@ -10,7 +10,7 @@ import type {
   WorkState,
 } from "./types";
 
-export type ActResult = { ok: boolean; id?: string };
+export type ActResult = { ok: boolean; id?: string; inviteUrl?: string };
 export type ActOptions = { toast?: boolean };
 export type ActFn = <K extends keyof ActionPayloads>(
   name: K,

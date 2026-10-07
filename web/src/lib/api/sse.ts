@@ -23,7 +23,8 @@ export type ProjectEventRow = {
 
 // useProjectEvents 订阅一个项目的事件流并失效相关查询。
 // cursor：起始游标（来自 bootstrap.eventCursor）；连接失败超过阈值后从 0 重放。
-export function useProjectEvents(projectId: string | null, cursor: number | undefined) {
+// onEvent：每个已知事件帧的额外回调（用于失效调用方私有查询键）。
+export function useProjectEvents(projectId: string | null, cursor: number | undefined, onEvent?: (row: ProjectEventRow) => void) {
   const client = useQueryClient();
   const cursorRef = useRef<number | undefined>(cursor);
   const projectRef = useRef(projectId);
@@ -59,6 +60,7 @@ export function useProjectEvents(projectId: string | null, cursor: number | unde
       for (const root of invalidationRoots(row.type)) {
         void client.invalidateQueries({ queryKey: [root, projectId] });
       }
+      onEvent?.(row);
     };
 
     const listeners: Array<[string, EventListener]> = PROJECT_EVENT_TYPES.map(

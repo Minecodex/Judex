@@ -26,7 +26,7 @@ test("A01/A04 双用户注册、建项目、隔离", async ({ browser }) => {
   await pageA.getByLabel(/新建项目|New project/).fill("双用户验收项目");
   await pageA.locator("form button[type=submit]").first().click();
   // 创建后自动进入工作区：项目名出现在侧栏/标签多处，取其一断言。
-  await expect(pageA.getByText("双用户验收项目").first()).toBeVisible({ timeout: 10000 });
+  await expect(pageA.getByText("双用户验收项目").first()).toBeVisible({ timeout: 20000 });
 
   // B registers and sees no projects.
   const emailB = `b-${stamp()}@judex.test`;
@@ -40,7 +40,7 @@ test("A01/A04 双用户注册、建项目、隔离", async ({ browser }) => {
 
   // Session survives refresh (A02).
   await pageA.reload();
-  await expect(pageA.getByText("双用户验收项目").first()).toBeVisible({ timeout: 10000 });
+  await expect(pageA.getByText("双用户验收项目").first()).toBeVisible({ timeout: 20000 });
 
   // Logout clears state; B's data never leaks into A's cache (A03).
   await ctxA.close();

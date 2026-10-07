@@ -6,6 +6,7 @@ import {
 } from "../../components/ui/FormControls";
 import { useState } from "react";
 import { useWork } from "./store";
+import { dataMode } from "../../lib/api/client";
 import { Btn, Dialog, Field } from "./ui";
 import type { Task, Handoff } from "./types";
 export function HandoffDialog({
@@ -34,7 +35,7 @@ export function HandoffDialog({
     (v) =>
       v.projectId === project.id &&
       ["delivered", "accepted"].includes(v.status) &&
-      v.files.length &&
+      (v.files.length > 0 || dataMode === "api") &&
       (kind === "stage" ? v.id === task.id : v.id !== target),
   );
   return (

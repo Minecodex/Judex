@@ -3,6 +3,7 @@ import { FolderOpen, Plus } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { useWork } from "../work/store";
 import { member } from "../work/selectors";
+import { dataMode } from "../../lib/api/client";
 export function ProjectSwitcher({
   onCreate,
   onSwitch,
@@ -33,6 +34,10 @@ export function ProjectSwitcher({
         value={project.id}
         onChange={(key) => {
           if (!key) return;
+          if (dataMode === "api") {
+            location.assign("/?project=" + key);
+            return;
+          }
           go({
             projectId: String(key),
             view: "home",

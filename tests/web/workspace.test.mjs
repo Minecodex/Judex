@@ -4,9 +4,9 @@ import { EVENT_INVALIDATION_ROOTS, invalidationRoots } from "../../web/src/lib/a
 import {
   closeTab,
   openTab,
-  parseTabKey,
+  routeTab,
   tabKey,
-} from "../../web/src/features/workspace/tabs.ts";
+} from "../../web/src/features/chat/conversationTabs.ts";
 
 test("sse invalidation covers every known project event type", () => {
   for (const type of Object.keys(EVENT_INVALIDATION_ROOTS)) {
@@ -27,37 +27,48 @@ test("sse invalidation: message events refresh messages/topics/runs; unknown eve
   assert.deepEqual(invalidationRoots(""), []);
 });
 
-test("tab keys round-trip for home/topic/handoff and unknown keys fall back home", () => {
+test("tab keys encode home/topic/handoff and routeTab reads route", () => {
   assert.equal(tabKey({ kind: "home" }), "home");
   assert.equal(tabKey({ kind: "topic", id: "t1" }), "topic:t1");
   assert.equal(tabKey({ kind: "handoff", id: "h1" }), "handoff:h1");
-  assert.deepEqual(parseTabKey("home"), { kind: "home" });
-  assert.deepEqual(parseTabKey("topic:t1"), { kind: "topic", id: "t1" });
-  assert.deepEqual(parseTabKey("handoff:h1"), { kind: "handoff", id: "h1" });
-  for (const bad of [null, "", "topic", "topic:", "workspace:t1", "handoff:"]) {
-    assert.deepEqual(parseTabKey(bad), { kind: "home" }, `${bad} → home`);
-  }
+  const base = { design: "studio", projectId: "p", view: "home" };
+  assert.deepEqual(routeTab({ ...base, view: "topic", id: "t1" }), {
+    kind: "topic",
+    id: "t1",
+  });
+  assert.deepEqual(routeTab({ ...base, view: "handoff", id: "h1" }), {
+    kind: "handoff",
+    id: "h1",
+  });
+  assert.deepEqual(routeTab({ ...base, conversation: "handoff:h1" }), {
+    kind: "handoff",
+    id: "h1",
+  });
+  assert.deepEqual(routeTab({ ...base, conversation: "t1" }), {
+    kind: "topic",
+    id: "t1",
+  });
+  assert.deepEqual(routeTab(base), { kind: "home" });
 });
 
-test("openTab reuses existing tabs and activates; closeTab falls back to the neighbour", () => {
-  const home = { tabs: [{ kind: "home" }], active: { kind: "home" } };
-  const one = openTab(home, { kind: "topic", id: "t1" });
-  assert.equal(one.tabs.length, 2);
-  assert.deepEqual(one.active, { kind: "topic", id: "t1" });
-  const again = openTab(one, { kind: "topic", id: "t1" });
-  assert.equal(again.tabs.length, 2, "no duplicate tabs");
-  const two = openTab(again, { kind: "handoff", id: "h1" });
-  assert.equal(two.tabs.length, 3);
-  // 关闭当前活动标签 → 回退到前一个标签
-  const closed = closeTab(two, "handoff:h1");
+test("openTab dedupes and appends; closeTab falls back to the neighbour, home is not closable", () => {
+  const home = { kind: "home" };
+  let tabs = openTab([home], { kind: "topic", id: "t1" });
+  assert.equal(tabs.length, 2);
+  tabs = openTab(tabs, { kind: "topic", id: "t1" });
+  assert.equal(tabs.length, 2, "no duplicate tabs");
+  tabs = openTab(tabs, { kind: "handoff", id: "h1" });
+  assert.equal(tabs.length, 3);
+  // 关闭当前活动标签 → 活动回退到前一个
+  const closed = closeTab(tabs, "handoff:h1", "handoff:h1");
   assert.equal(closed.tabs.length, 2);
-  assert.deepEqual(closed.active, { kind: "topic", id: "t1" });
-  // 首页标签不可关闭：集合与活动状态都保持不变
-  const keptHome = closeTab(closed, "home");
+  assert.equal(closed.active, "topic:t1");
+  // 首页标签不可关闭：集合与活动都保持不变
+  const keptHome = closeTab(closed.tabs, "home", closed.active);
   assert.equal(keptHome.tabs.length, 2);
-  assert.deepEqual(keptHome.active, { kind: "topic", id: "t1" });
-  // 关闭当前活动标签后活动回退到前一个，集合只剩首页
-  const closedActive = closeTab(closed, "topic:t1");
+  assert.equal(keptHome.active, "topic:t1");
+  // 关闭当前活动标签后只剩首页
+  const closedActive = closeTab(closed.tabs, "topic:t1", closed.active);
   assert.equal(closedActive.tabs.length, 1);
-  assert.deepEqual(closedActive.active, { kind: "home" });
+  assert.equal(closedActive.active, "home");
 });

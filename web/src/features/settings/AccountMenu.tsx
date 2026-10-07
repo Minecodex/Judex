@@ -14,9 +14,11 @@ import {
   Globe,
   Sun,
   Moon,
+  FolderOpen,
 } from "lucide-react";
 import { useWork } from "../work/store";
 import { InviteDialog } from "../work/TeamPages";
+import { dataMode } from "../../lib/api/client";
 export function AccountMenu({ onLogout }: { onLogout: () => Promise<void> }) {
   const {
     state,
@@ -49,7 +51,7 @@ export function AccountMenu({ onLogout }: { onLogout: () => Promise<void> }) {
           </span>
           <span>
             <strong>{state.currentUser}</strong>
-            <small>{t("chatDemoPerson")}</small>
+            {dataMode === "demo" && <small>{t("chatDemoPerson")}</small>}
           </span>
           <ChevronUp size={16} />
         </HeroButton>
@@ -103,6 +105,20 @@ export function AccountMenu({ onLogout }: { onLogout: () => Promise<void> }) {
               <Settings2 size={17} />
               {t("accountSettings")}
             </HeroButton>
+            {dataMode === "api" && (
+              <HeroButton
+                variant="ghost"
+                className="judex-account-menu-action"
+                data-testid="account-projects"
+                onPress={() => {
+                  setOpen(false);
+                  location.assign("/");
+                }}
+              >
+                <FolderOpen size={17} />
+                {t("accountProjects")}
+              </HeroButton>
+            )}
             <div className="judex-account-menu-divider" />
             <HeroButton
               variant="ghost"
@@ -126,25 +142,27 @@ export function AccountMenu({ onLogout }: { onLogout: () => Promise<void> }) {
                 {t(theme === "dark" ? "accountDark" : "accountLight")}
               </small>
             </HeroButton>
-            <UIDisclosure
-              className="judex-account-preview"
-              title={<>{t("chatDemoPerson")}</>}
-            >
-              <p>{t("accountPreviewNote")}</p>
-              <UISelect
-                data-testid="work-person"
-                aria-label={t("chatDemoPerson")}
-                value={state.currentUser}
-                onChange={(e) => {
-                  switchPerson(e.target.value);
-                  setOpen(false);
-                }}
+            {dataMode === "demo" && (
+              <UIDisclosure
+                className="judex-account-preview"
+                title={<>{t("chatDemoPerson")}</>}
               >
-                {people.map((person) => (
-                  <UIOption key={person}>{person}</UIOption>
-                ))}
-              </UISelect>
-            </UIDisclosure>
+                <p>{t("accountPreviewNote")}</p>
+                <UISelect
+                  data-testid="work-person"
+                  aria-label={t("chatDemoPerson")}
+                  value={state.currentUser}
+                  onChange={(e) => {
+                    switchPerson(e.target.value);
+                    setOpen(false);
+                  }}
+                >
+                  {people.map((person) => (
+                    <UIOption key={person}>{person}</UIOption>
+                  ))}
+                </UISelect>
+              </UIDisclosure>
+            )}
             <div className="judex-account-menu-divider" />
             <HeroButton
               variant="ghost"

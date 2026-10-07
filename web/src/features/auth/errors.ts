@@ -1,6 +1,6 @@
 // APIError → i18n key 的统一映射。VALIDATION_ERROR 优先用 details.fields
 // 还原字段级原因（后端 apierrors.Fields），避免只给"请检查输入"的笼统提示。
-import type { Key } from "../../i18n";
+import { translate, type Key, type Locale } from "../../i18n";
 import { APIError } from "../../lib/api/client";
 
 type ValidationDetails = { fields?: { path?: string; code?: string }[] };
@@ -36,4 +36,10 @@ export function errorKey(error: unknown): Key | null {
     default:
       return error.status >= 500 ? "errServer" : "errNetwork";
   }
+}
+
+// 统一错误文案：APIError 映射到 i18n 键，其余错误原样输出。
+export function errorText(locale: Locale, error: unknown): string {
+  const key = errorKey(error);
+  return key ? translate(locale, key) : String(error);
 }

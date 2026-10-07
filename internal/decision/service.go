@@ -148,6 +148,14 @@ func nullableUUID(id *uuid.UUID) any {
 	return *id
 }
 
+// nullableUUIDValue maps a nullable uuid column to nil-or-value for JSON output.
+func nullableUUIDValue(id uuid.NullUUID) any {
+	if !id.Valid {
+		return nil
+	}
+	return id.UUID
+}
+
 // computeSlots derives the fixed recipient set from the frozen changes
 // (03 §3): plan owner identities, task participants and reviewers, plus the
 // sender when they hold one of those seats. Same real user covering several

@@ -9,7 +9,6 @@
 @import "./agents.css";
 @import "./membership.css";
 @import "./work.css";
-@import "./work-lifecycle.css";
 @import "./work-layouts.css";
 @import "./task-cards.css";
 @import "./shell.css";
@@ -17,7 +16,6 @@
 @import "./chat-workspace.css";
 @import "./chat-layout.css";
 @import "./chat-tabs.css";
-@import "./workspace.css";
 @import "./settings.css";
 @import "./controls.css";
 

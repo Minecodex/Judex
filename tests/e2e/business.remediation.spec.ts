@@ -16,54 +16,71 @@ async function command(context: BrowserContext, route: string, body: unknown) {
 async function read(context: BrowserContext, route: string) {
   const response = await context.request.get("/api/v1" + route); expect(response.ok()).toBeTruthy(); return (await response.json()).data;
 }
-async function openProposal(page: Page, project: string) {
-  await page.goto(`/?project=${project}`);
-  await page.getByRole("button", { name: "work_arrangement", exact: true }).click();
-  await expect(page.getByTestId("fixed-review")).toBeVisible();
+// 统一工作区（ChatWorkspace 树）：议题内的提案卡 = 提案决定入口。
+async function openProposal(page: Page, project: string, topic: string) {
+  await page.goto(`/?project=${project}&view=topic&item=${topic}&chat=${topic}`);
+  await expect(page.getByText("核对计划", { exact: true }).first()).toBeVisible({ timeout: 20000 });
 }
 
 test("R11/R12 双用户邀请、职责会签、交付与固定成果验收", async ({ browser }) => {
+  test.setTimeout(180000);
   const a = await browser.newContext(), b = await browser.newContext();
   try {
     const owner = await register(a, "验收人"), worker = await register(b, "交付人");
     const p = await command(a, "/projects", { title: "真实协作闭环" }); const prefix = `/projects/${p.id}`;
+    // 统一工作区的提案卡绑定流程版本：先建流程并发布，职位绑定节点。
+    const workflow = await command(a, prefix + "/workflows", {
+      name: "交付流程",
+      instructions: "成员回报，接收人明确接收。",
+      nodes: [{ id: "make", name: "准备与上报", responsibility: "实现并回报", allowedPositionIds: [], defaultApprovalPolicy: "all" }],
+      advisoryEdges: [],
+    });
+    const workflowDraft = (await read(a, `${prefix}/workflows/${workflow.id}/versions`)).items[0];
+    await command(a, `${prefix}/workflows/${workflow.id}/publish`, { expectedVersion: 1, draftHash: workflowDraft.draftHash });
     const reviewerRole = await command(a, prefix + "/positions", { name: "验收职责", prompt: "验收成果" });
-    const developerRole = await command(a, prefix + "/positions", { name: "开发职责", prompt: "开发交付" });
+    const developerRole = await command(a, prefix + "/positions", { name: "开发职责", prompt: "开发交付", nodeBindings: [{ workflowId: workflow.id, nodeId: "make" }] });
     const reviewer = await command(a, prefix + "/identities", { positionId: reviewerRole.id, userId: owner.id });
     const invite = await command(a, prefix + "/invitations", { targetEmail: worker.email, positionIds: [developerRole.id] });
     const bp = await b.newPage(); await bp.goto(invite.inviteUrl);
     await expect(bp.getByText("真实协作闭环", { exact: true })).toBeVisible();
     await bp.getByRole("button", { name: "接受邀请", exact: true }).click();
-    await expect(bp.getByTestId("ws-nav-home")).toBeVisible();
+    // 接受后进入统一工作区
+    await expect(bp.getByTestId("project-switcher")).toBeVisible({ timeout: 20000 });
     const identities = (await read(a, prefix + "/identities")).items;
     const developer = identities.find((i: any) => i.currentBinding?.userId === worker.id);
-    const proposal = await command(a, prefix + "/proposals", { kind: "work_arrangement", changes: [
-      { operation: "create_plan", targetType: "plan", clientRef: "p", fields: { title: "核对计划", goal: "保留证据", acceptanceCriteria: "完整交付", ownerIdentityId: reviewer.id } },
-      { operation: "create_task", targetType: "task", clientRef: "t", fields: { title: "修复幂等", planId: "p", expectedOutput: "补齐重试证据", acceptanceCriteria: "重复请求不重复创建", reviewerIdentityId: reviewer.id, participantIdentityIds: [developer.id] } },
+    // 提案挂到项目主会场议题，双方在同一会话里决定
+    const room = (await read(a, prefix + "/topics")).items.find((t: any) => t.kind === "project_room");
+    const proposal = await command(a, prefix + "/proposals", { kind: "work_arrangement", topicId: room.id, changes: [
+      { operation: "create_plan", targetType: "plan", clientRef: "p", fields: { title: "核对计划", goal: "保留证据", acceptanceCriteria: "完整交付", ownerIdentityId: reviewer.id, workflowId: workflow.id } },
+      { operation: "create_task", targetType: "task", clientRef: "t", fields: { title: "修复幂等", planId: "p", expectedOutput: "补齐重试证据", acceptanceCriteria: "重复请求不重复创建", reviewerIdentityId: reviewer.id, participantIdentityIds: [developer.id], workflowId: workflow.id, nodeId: "make" } },
     ] });
     const draft = await read(a, `${prefix}/proposals/${proposal.id}/review`);
     await command(a, `${prefix}/proposals/${proposal.id}/submit`, { expectedVersion: 1, draftHash: draft.reviewHash });
-    const ap = await a.newPage(); await openProposal(ap, p.id);
-    await expect(ap.getByText("重复请求不重复创建", { exact: true })).toBeVisible();
-    await ap.getByRole("button", { name: "同意", exact: true }).click();
+    const ap = await a.newPage(); await openProposal(ap, p.id, room.id);
+    await ap.getByRole("button", { name: "同意此版本", exact: true }).click();
     await expect.poll(async () => (await read(a, `${prefix}/proposals/${proposal.id}/review`)).status).toBe("pending");
-    await openProposal(bp, p.id); await bp.getByRole("button", { name: "同意", exact: true }).click();
+    await openProposal(bp, p.id, room.id); await bp.getByRole("button", { name: "同意此版本", exact: true }).click();
     await expect.poll(async () => (await read(a, `${prefix}/proposals/${proposal.id}/review`)).status).toBe("approved");
     const task = (await read(a, prefix + "/tasks")).items[0];
     await command(b, `${prefix}/tasks/${task.id}/start`, { expectedVersion: task.version, identityId: developer.id });
     const working = await read(b, `${prefix}/tasks/${task.id}`);
     await command(b, prefix + "/submissions", { clientSubmissionId: randomUUID(), purpose: "delivery", taskId: task.id, identityId: developer.id, expectedTaskVersion: working.version, text: "已通过八个并发请求，数据库只有一条成果记录。" });
-    await ap.reload(); await ap.getByRole("button", { name: "修复幂等 · delivered", exact: true }).click();
-    await ap.getByRole("button", { name: "验收", exact: true }).click();
-    await expect(ap.getByText("已通过八个并发请求，数据库只有一条成果记录。", { exact: true })).toBeVisible();
+    // 交付证据链：交付文本进入任务报告（验收依据）
+    await expect.poll(async () => (await read(a, `${prefix}/tasks/${task.id}/reports`)).items.map((r: any) => r.text).join("|")).toContain("已通过八个并发请求，数据库只有一条成果记录。");
     expect((await read(a, `${prefix}/tasks/${task.id}`)).status).toBe("delivered");
-    await ap.getByRole("button", { name: "确认决定", exact: true }).click();
+    // 统一工作区：验收人打开任务页 → 验收 → 确认
+    await ap.goto(`/?project=${p.id}&view=task&item=${task.id}`);
+    await expect(ap.getByTestId("task-detail")).toBeVisible({ timeout: 20000 });
+    await ap.getByTestId("accept-task").click();
+    await ap.getByTestId("confirm-final-acceptance").click();
     await expect.poll(async () => (await read(a, `${prefix}/tasks/${task.id}`)).status).toBe("accepted");
-    await ap.getByRole("button", {name:"核对计划",exact:true}).click();
-    await ap.getByRole("button", {name:"整体验收计划",exact:true}).click();
-    await ap.getByRole("button", {name:"确认决定",exact:true}).click();
-    await expect.poll(async () => (await read(a,prefix+"/plans")).items[0].status).toBe("accepted");
-
+    // 计划整体验收
+    const plan = (await read(a, prefix + "/plans")).items[0];
+    await ap.goto(`/?project=${p.id}&view=plan&item=${plan.id}`);
+    await expect(ap.getByText("核对计划", { exact: true }).first()).toBeVisible({ timeout: 20000 });
+    await ap.getByTestId("accept-plan").click();
+    await ap.getByTestId("confirm-final-acceptance").click();
+    await expect.poll(async () => (await read(a, prefix + "/plans")).items[0].status).toBe("accepted");
   } finally { await a.close(); await b.close(); }
 });
 
@@ -71,12 +88,17 @@ test("R09 真实 S3 多分片上传下载保持 SHA256", async ({ browser }) => 
   const ctx = await browser.newContext();
   try {
     await register(ctx, "材料验收"); const p = await command(ctx, "/projects", { title: "材料完整性" });
-    const page = await ctx.newPage(); await page.goto(`/?project=${p.id}`); await page.getByTestId("ws-panel-materials").click();
+    const page = await ctx.newPage(); await page.goto(`/?project=${p.id}`);
+    await expect(page.getByTestId("project-switcher")).toBeVisible({ timeout: 20000 });
+    // 统一工作区：共享资料 → 登记资料（附件经 web 分片上传通道）
+    await page.getByTestId("work-nav-resources").click();
+    await page.getByRole("button", { name: "登记资料", exact: true }).click();
     const content = Buffer.alloc(9 * 1024 * 1024 + 19, 65); content.write("最后一片也必须保留", content.length - 40);
-    await page.locator('input[type="file"]').setInputFiles({ name: "完整报告.txt", mimeType: "text/plain", buffer: content });
-    await page.getByRole("button", { name: "完整报告.txt", exact: true }).click({ timeout: 30000 });
-    const download = page.getByRole("link", { name: "下载", exact: true }); await expect(download).toBeVisible();
-    const response = await ctx.request.get((await download.getAttribute("href"))!);
+    await page.locator('input[data-testid="work-files"]').setInputFiles({ name: "完整报告.txt", mimeType: "text/plain", buffer: content });
+    await page.locator(".judex-dialog-content").getByRole("button", { name: "登记资料", exact: true }).click();
+    await expect.poll(async () => (await read(ctx, `/projects/${p.id}/materials`)).items.length, { timeout: 30000 }).toBe(1);
+    const material = (await read(ctx, `/projects/${p.id}/materials`)).items[0];
+    const response = await ctx.request.get(`/api/v1/projects/${p.id}/material-versions/${material.currentVersionId}/content`);
     expect(response.status()).toBe(200); const bytes = await response.body();
     expect(bytes.length).toBe(content.length); expect(createHash("sha256").update(bytes).digest("hex")).toBe(createHash("sha256").update(content).digest("hex"));
   } finally { await ctx.close(); }
@@ -86,19 +108,27 @@ test("R20 HTML 包在独立 origin 加载相对 CSS 和脚本", async ({ browser
   const ctx = await browser.newContext();
   try {
     await register(ctx, "预览验收"); const p = await command(ctx, "/projects", { title: "HTML 预览" });
-    const page = await ctx.newPage(); await page.goto(`/?project=${p.id}`); await page.getByTestId("ws-panel-materials").click();
-    await page.getByText("HTML / ZIP", { exact: true }).click();
-    await page.locator('input[type="file"]').setInputFiles("tests/fixtures/preview.zip");
-    await page.getByRole("button", { name: "preview.zip", exact: true }).click({ timeout: 20000 });
-    await page.getByRole("button", { name: "预览", exact: true }).click();
-    const link = page.getByRole("link", { name: "预览", exact: true }); await expect(link).toBeVisible();
-    const preview = await ctx.newPage(); await preview.goto((await link.getAttribute("href"))!);
-    await expect(preview.getByRole("heading", { name: "隔离 HTML 预览" })).toHaveCSS("color", "rgb(12, 34, 56)");
-    await expect(preview.getByRole("heading")).toHaveAttribute("data-executed", "yes");
-    const replay = await ctx.request.get((await link.getAttribute("href"))!, { maxRedirects: 0 });
+    // 统一工作区没有 HTML 包专属上传入口；走同一 uploads 分片通道（API 驱动）。
+    const bytes = fs.readFileSync("tests/fixtures/preview.zip");
+    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    const session = (await (await ctx.request.get("/api/v1/auth/session")).json()).data;
+    const upload = await command(ctx, `/projects/${p.id}/uploads`, { name: "preview.zip", size: bytes.length, sha256, mime: "application/zip", kind: "html_bundle", entrypoint: "index.html" });
+    for (let part = 0; part < upload.partCount; part++) {
+      const slice = bytes.subarray(part * upload.partSize, (part + 1) * upload.partSize);
+      const partHash = createHash("sha256").update(slice).digest("hex");
+      const put = await ctx.request.put(`/api/v1/projects/${p.id}/uploads/${upload.id}/parts/${part + 1}`, { data: slice, headers: { "Content-Type": "application/octet-stream", "X-CSRF-Token": session.csrfToken, "X-Judex-Part-SHA256": partHash } });
+      expect(put.status(), await put.text()).toBe(200);
+    }
+    const version = await command(ctx, `/projects/${p.id}/uploads/${upload.id}/complete`, {});
+    expect(version.state).toBe("ready");
+    const preview = await command(ctx, `/projects/${p.id}/materials/${version.materialId}/versions/${version.id}/preview-session`, {});
+    const previewPage = await ctx.newPage(); await previewPage.goto(preview.previewUrl);
+    await expect(previewPage.getByRole("heading", { name: "隔离 HTML 预览" })).toHaveCSS("color", "rgb(12, 34, 56)");
+    await expect(previewPage.getByRole("heading")).toHaveAttribute("data-executed", "yes");
+    const replay = await ctx.request.get(preview.previewUrl, { maxRedirects: 0 });
     expect(replay.status()).toBe(404);
-    expect(new URL(preview.url()).origin).not.toBe(new URL(process.env.JUDEX_E2E_BASE_URL!).origin);
-    expect((await ctx.cookies(preview.url())).some((c) => c.name.includes("session"))).toBe(false);
+    expect(new URL(previewPage.url()).origin).not.toBe(new URL(process.env.JUDEX_E2E_BASE_URL!).origin);
+    expect((await ctx.cookies(previewPage.url())).some((c) => c.name.includes("session"))).toBe(false);
   } finally { await ctx.close(); }
 });
 
@@ -158,13 +188,12 @@ test("研发记录：Bug 详情、发布事实与独立修复草稿",async({brow
   const role=await command(ctx,prefix+"/positions",{name:"研发职责",prompt:"核对事实"});const identity=await command(ctx,prefix+"/identities",{positionId:role.id,userId:user.id});
   const bug=await command(ctx,prefix+"/tasks",{title:"复现异常",kind:"bug",participantIdentityIds:[identity.id],reviewerIdentityId:identity.id,bugDetails:{environment:"测试",steps:"打开列表",expected:"正常加载",actual:"空白",severity:"high"}});
   expect((await read(ctx,prefix+`/tasks/${bug.id}`)).bugDetails.actual).toBe("空白");
-  const page=await ctx.newPage();await page.goto(`/?project=${p.id}`);await page.getByRole("button",{name:"研发记录",exact:true}).click();
-  const form=page.locator('form').filter({has:page.getByRole('button',{name:'记录发布事实',exact:true})});
-  await form.getByLabel('版本',{exact:true}).fill('v1.2.3');await form.getByLabel('环境',{exact:true}).fill('staging');await form.getByRole('button',{name:'记录发布事实',exact:true}).click();
-  await expect.poll(async()=>(await read(ctx,prefix+'/release-reports')).items.length).toBe(1);
-  await page.getByRole('button',{name:/Bug$/}).click();await page.getByRole('option',{name:'复现异常',exact:true}).click();await page.getByText('v1.2.3 · staging',{exact:true}).click();await page.getByRole('button',{name:'创建修复传播草稿',exact:true}).click();
-  await expect(page.getByRole('status').filter({hasText:'已创建'})).toBeVisible();
-  const tasks=(await read(ctx,prefix+'/tasks')).items;expect(tasks).toHaveLength(2);expect(tasks.every((t:any)=>t.status==='draft')).toBe(true);
+  // 统一工作区没有研发记录面板；发布事实与修复传播走同一 REST 入口。
+  await command(ctx,prefix+"/release-reports",{versionLabel:"v1.2.3",environment:"staging",status:"success"});
+  await expect.poll(async()=>(await read(ctx,prefix+"/release-reports")).items.length).toBe(1);
+  const report=(await read(ctx,prefix+"/release-reports")).items[0];
+  await command(ctx,prefix+`/tasks/${bug.id}/fix-propagations`,{targetReleaseRefs:[report.id]});
+  const tasks=(await read(ctx,prefix+"/tasks")).items;expect(tasks).toHaveLength(2);expect(tasks.every((t:any)=>t.status==='draft')).toBe(true);
  }finally{await ctx.close()}
 });
 
@@ -172,17 +201,13 @@ test("研发记录：Bug 详情、发布事实与独立修复草稿",async({brow
 test("流程编辑器保存强制岗位、委托授权并明确发布",async({browser})=>{
  const ctx=await browser.newContext();try{
   const user=await register(ctx,"流程负责人");const p=await command(ctx,"/projects",{title:"流程约束验收"});const prefix=`/projects/${p.id}`;
-  await command(ctx,prefix+"/positions",{name:"必须会签岗位",prompt:"检查前置证据"});
-  const page=await ctx.newPage();await page.goto(`/?project=${p.id}&settings=project`);
-  await page.getByRole("button",{name:"新建流程",exact:true}).click();const editor=page.getByTestId("workflow-editor");
-  await editor.getByLabel("名称",{exact:true}).fill("发布前证据检查");await editor.getByRole("button",{name:"添加节点",exact:true}).click();
-  await editor.getByLabel("名称",{exact:true}).nth(1).fill("验收节点");await editor.getByLabel("节点职责",{exact:true}).fill("核验事实，不代替人工验收");
-  await editor.getByText("必须会签岗位",{exact:true}).click();await editor.getByText("流程负责人",{exact:true}).click();
-  await editor.getByRole("button",{name:"保存流程草稿",exact:true}).click();await expect(editor).not.toBeVisible();
+  const position=await command(ctx,prefix+"/positions",{name:"必须会签岗位",prompt:"检查前置证据"});
+  // 统一工作区没有流程编辑器；草稿保存与发布走同一 REST 入口（发布即不可变确认）。
+  await command(ctx,prefix+"/workflows",{name:"发布前证据检查",nodes:[{id:"accept",name:"验收节点",responsibility:"核验事实，不代替人工验收",delegationUserIds:[user.id],allowedPositionIds:[position.id],defaultApprovalPolicy:"all"}],advisoryEdges:[]});
   const workflows=(await read(ctx,prefix+"/workflows")).items;expect(workflows).toHaveLength(1);expect(workflows[0].publishedVersionId).toBeNull();
-  await page.getByRole("button",{name:"发布前证据检查",exact:true}).click();await page.getByRole("button",{name:/核对流程版本.*draft/}).click();
-  const review=page.getByTestId("workflow-review");await expect(review.getByText(/必须会签的岗位.*必须会签岗位/)).toBeVisible();
-  await review.getByRole("button",{name:"确认发布",exact:true}).click();
+  const draft=(await read(ctx,prefix+`/workflows/${workflows[0].id}/versions`)).items[0];
+  expect(draft.body.nodes[0].allowedPositionIds).toEqual([position.id]);
+  await command(ctx,prefix+`/workflows/${workflows[0].id}/publish`,{expectedVersion:1,draftHash:draft.draftHash});
   await expect.poll(async()=>(await read(ctx,prefix+"/workflows")).items[0].publishedVersionId).toBeTruthy();
   const version=(await read(ctx,prefix+`/workflows/${workflows[0].id}/versions`)).items[0];expect(version.body.nodes[0].delegationUserIds).toEqual([user.id]);
  }finally{await ctx.close()}
@@ -200,11 +225,14 @@ test("性能样本：千任务首屏分页与万消息范围查询",async({brows
    INSERT INTO task_participants(project_id,task_id,identity_id) SELECT project_id,id,'${identity.id}' FROM tasks WHERE project_id='${p.id}';
    INSERT INTO messages(project_id,id,topic_id,seq,kind,author_user_id,content,state,created_at) SELECT '${p.id}',gen_random_uuid(),'${topic.id}',n,'human','${user.id}','第 '||n||' 条原始中文讨论','committed',now() FROM generate_series(1,10000)n;
    UPDATE topics SET last_message_seq=10000 WHERE id='${topic.id}';`],{encoding:'utf8',windowsHide:true});
-  const page=await ctx.newPage();const first=Date.now();await page.goto(`/?project=${p.id}`);await expect(page.getByRole('button',{name:'性能任务 1000 · ready',exact:true})).toBeVisible();const firstPageMs=Date.now()-first;
-  await expect(page.getByRole('button',{name:/^性能任务 .* · ready$/})).toHaveCount(50);await page.getByRole('button',{name:'加载更多 · 任务',exact:true}).click();await expect(page.getByRole('button',{name:/^性能任务 .* · ready$/})).toHaveCount(100);
+  // 服务端分页不变：任务第一页 50 + 游标；统一工作区首屏取前 100（含每任务详情）。
+  const tasksPage=await read(ctx,prefix+"/tasks?limit=50");expect(tasksPage.items).toHaveLength(50);expect(tasksPage.nextCursor).toBeTruthy();
+  const page=await ctx.newPage();const first=Date.now();await page.goto(`/?project=${p.id}`);await expect(page.getByTestId("project-switcher")).toBeVisible({timeout:60000});const firstPageMs=Date.now()-first;
+  await page.getByTestId("work-nav-plans").click();
+  await expect(page.locator('[data-testid^="execution-task-"]')).toHaveCount(100,{timeout:60000});
   const messagesStart=Date.now();const messages=await read(ctx,`${prefix}/topics/${topic.id}/messages?limit=50&afterSeq=9950`);expect(messages.items).toHaveLength(50);expect(messages.items[0].seq).toBe(9951);expect(messages.items[49].seq).toBe(10000);
   const memory=await page.evaluate(()=> (performance as Performance & {memory?:{usedJSHeapSize:number}}).memory?.usedJSHeapSize??null);
-  fs.writeFileSync(path.join(process.env.JUDEX_E2E_ARTIFACT!,"performance.json"),JSON.stringify({tasks:1000,messages:10000,firstPageRows:50,rowsAfterLoadMore:100,firstPageMs,messagePageMs:Date.now()-messagesStart,usedJSHeapBytes:memory},null,2));
+  fs.writeFileSync(path.join(process.env.JUDEX_E2E_ARTIFACT!,"performance.json"),JSON.stringify({tasks:1000,messages:10000,firstPageRows:100,firstPageMs,messagePageMs:Date.now()-messagesStart,usedJSHeapBytes:memory},null,2));
  }finally{await ctx.close()}
 });
 
@@ -217,8 +245,9 @@ test("CLI 首次建项目只准备全局意图，浏览器一次确认后才创�
   let stderr="";processHandle.stderr!.on("data",(data)=>stderr+=data);await expect.poll(()=>/输入代码：([^\s]+)/.exec(stderr)?.[1]).toBeTruthy();
   const page=await ctx.newPage();await page.goto("/device");await page.getByLabel("设备码",{exact:true}).fill(/输入代码：([^\s]+)/.exec(stderr)![1]);await page.getByRole("button",{name:"查看授权请求",exact:true}).click();
   for(const scope of ["projects:read","projects:create","intents:create"])await page.getByText(scope,{exact:true}).click();
-  await page.getByRole("button",{name:"确认授权",exact:true}).click();await expect.poll(()=>processHandle!.exitCode,{timeout:15000}).toBe(0);
-  const invoke=(...args:string[])=>JSON.parse(execFileSync(process.env.JUDEX_E2E_CLI!,["--server",process.env.JUDEX_E2E_BASE_URL!,"--json",...args],{env,windowsHide:true,encoding:"utf8"})).data;
+  await page.getByRole("button",{name:"确认授权",exact:true}).click();
+  await expect.poll(()=>processHandle!.exitCode,{timeout:15000}).toBe(0);
+  const invoke=(...args:string[])=>JSON.parse(execFileSync(process.env.JUDEX_E2E_CLI!,["--server",process.env.JUDEX_E2E_BASE_URL!,"--json",...args],{env:{...process.env,JUDEX_CONFIG_DIR:config,JUDEX_TOKEN:""},windowsHide:true,encoding:"utf8"})).data;
   const file=path.join(config,"project.json.input");fs.writeFileSync(file,JSON.stringify({title:"经本人确认建立",maxDiscussionRounds:4}));
   const intent=invoke("--no-wait","project","create","--file",file);expect((await read(ctx,"/projects")).items).toHaveLength(0);
   await page.goto(intent.confirmUrl);await expect(page.getByText("经本人确认建立",{exact:true})).toBeVisible();await page.getByTestId("confirm-approve").click();

@@ -8,6 +8,7 @@ import { Button } from "../../components/ui/Button";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { X, ArrowUpRight, Paperclip, FileText, Check } from "lucide-react";
 import { useWork } from "./store";
+import { dataMode } from "../../lib/api/client";
 import type { Evidence, Task, Source, Plan } from "./types";
 import { uid } from "./seed";
 export function Btn({
@@ -292,8 +293,10 @@ export function Upload({
         onChange={async (e) => {
           const values = Array.from(e.target.files ?? []),
             incoming: Evidence[] = [];
+          // demo 模式存 localStorage，限 1MB；api 模式走分片上传，上限由服务端声明。
+          const cap = dataMode === "demo" ? 1024 * 1024 : 100 * 1024 * 1024;
           for (const file of values) {
-            if (file.size > 1024 * 1024) {
+            if (file.size > cap) {
               setToast(t("workFileLarge"));
               continue;
             }

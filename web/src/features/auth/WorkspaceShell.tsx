@@ -1,9 +1,10 @@
 import { useCollection, LoadMore } from "../../lib/api/collections";
-import { Button, Card } from "@heroui/react";
+import { Card } from "@heroui/react";
+import { Button } from "../../components/ui/Button";
 import { FolderPlus, ListChecks, MessageSquare, Plus, UserPlus, X } from "lucide-react";
 import { UIStatus } from "../../components/ui/FormControls";
 import { AccountSecurity } from "../settings/AccountSecurity";
-import { WorkspaceApp } from "../workspace/WorkspaceApp";
+import ChatWorkspace from "../chat/ChatWorkspace";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
@@ -57,11 +58,11 @@ export function WorkspaceShell() {
 
   if (activeProject && tab !== "security") {
     return (
-      <WorkspaceApp
+      <ChatWorkspace
         key={activeProject}
+        mode="api"
         projectId={activeProject}
         onLogout={signOutAndRedirect}
-        onExit={() => setActiveProject(null)}
       />
     );
   }
@@ -101,8 +102,6 @@ export function WorkspaceShell() {
           </Button>
         </nav>
         {tab === "security" ? (
-          <AccountSecurity />
-        ) : activeProject ? (
           <AccountSecurity />
         ) : projects.isPending ? (
           <p className="judex-workspace-status">{t("shellLoading")}</p>

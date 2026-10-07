@@ -169,6 +169,9 @@ export const workZh = {
   workInviteName: "成员姓名",
   workChoosePositions: "为他选择职位",
   workCreateInvite: "创建演示邀请",
+  workSendInvite: "创建邀请",
+  workInviteEmail: "受邀人邮箱",
+  workInviteLink: "邀请链接，发给受邀人",
   workInviteLocal:
     "邀请仅保存在本地 Demo，不发送邮件。切换成受邀身份可以继续体验。",
   workWelcome: "你的伙伴身份，已经准备好了。",
@@ -421,6 +424,9 @@ export const workEn: Record<keyof typeof workZh, string> = {
   workInviteName: "Person's name",
   workChoosePositions: "Assign positions",
   workCreateInvite: "Create demo invitation",
+  workSendInvite: "Create invitation",
+  workInviteEmail: "Invitee's email",
+  workInviteLink: "Invite link to share",
   workInviteLocal:
     "Saved locally; no email is sent. Switch to the invited identity to continue.",
   workWelcome: "Your companions are ready.",

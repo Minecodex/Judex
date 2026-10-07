@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
-import { Button, Card } from "@heroui/react";
+import { Card } from "@heroui/react";
+import { Button } from "../../components/ui/Button";
 import { FormField, UIInput, UICheckbox, UIWarning, UINotice } from "../../components/ui/FormControls";
 import { request } from "../../lib/api/client";
 import { listProjects } from "./api";
@@ -34,7 +35,7 @@ export function DevicePage() {
     <h2>{t("accessDevice")}</h2><p>{t("accessAccount")}: {user?.email}</p>
     <form className="judex-auth-form" onSubmit={(e) => { e.preventDefault(); confirm.reset(); setReviewCode(code.trim()); }}>
       <FormField label={t("accessCode")}><UIInput value={code} onChange={(e) => setCode(e.target.value)} /></FormField>
-      <Button type="submit" isDisabled={!code.trim()}>{t("accessReview")}</Button>
+      <Button type="submit" disabled={!code.trim()}>{t("accessReview")}</Button>
     </form>
     {review.isError && <UIWarning>{t("accessUnavailable")}</UIWarning>}
     {review.data && <>
@@ -47,8 +48,8 @@ export function DevicePage() {
       {(projects.data ?? []).filter((p) => !review.data.projectScope?.length || review.data.projectScope.includes(p.id)).map((p) =>
         <UICheckbox key={p.id} checked={projectScope.includes(p.id)} onChange={() => setProjectScope(toggle(projectScope, p.id))}>{p.title}</UICheckbox>)}
       {confirm.isSuccess ? <UINotice>{t("accessDone")}</UINotice> : <div className="judex-inline-form">
-        <Button isPending={confirm.isPending} isDisabled={review.data.state !== "pending" || !scopes.length} onPress={() => confirm.mutate(true)}>{t("accessApprove")}</Button>
-        <Button variant="danger" isDisabled={review.data.state !== "pending"} onPress={() => confirm.mutate(false)}>{t("accessDeny")}</Button>
+        <Button isPending={confirm.isPending} disabled={review.data.state !== "pending" || !scopes.length} onPress={() => confirm.mutate(true)}>{t("accessApprove")}</Button>
+        <Button variant="danger" disabled={review.data.state !== "pending"} onPress={() => confirm.mutate(false)}>{t("accessDeny")}</Button>
       </div>}
     </>}
     {confirm.isError && <UIWarning>{String(confirm.error.message)}</UIWarning>}
@@ -75,7 +76,7 @@ export function InvitePage() {
       <p>{invitation.data.targetEmail}</p><p>{t("accessState")}: {invitation.data.state}</p>
       <p>{t("accessExpires")}: {new Date(invitation.data.expiresAt).toLocaleString()}</p>
       {!invitation.data.emailMatches && <UIWarning>{t("accessMismatch")}</UIWarning>}
-      <Button isPending={accept.isPending} isDisabled={!invitation.data.emailMatches || invitation.data.state !== "pending"} onPress={() => accept.mutate()}>{t("accessAccept")}</Button>
+      <Button isPending={accept.isPending} disabled={!invitation.data.emailMatches || invitation.data.state !== "pending"} onPress={() => accept.mutate()}>{t("accessAccept")}</Button>
     </>}
     {accept.isError && <UIWarning>{accept.error.message}</UIWarning>}
   </div></Card.Content></Card>;

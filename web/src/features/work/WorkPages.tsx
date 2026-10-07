@@ -20,6 +20,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useWork } from "./store";
+import { dataMode } from "../../lib/api/client";
 import {
   Btn,
   Dialog,
@@ -502,7 +503,7 @@ export function TaskPage({
             </Btn>
             {canWork(state, task) &&
               ["delivered", "accepted"].includes(task.status) &&
-              task.files.length > 0 && (
+              (task.files.length > 0 || dataMode === "api") && (
                 <Btn
                   secondary
                   testId="propose-handoff"

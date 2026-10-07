@@ -1,7 +1,8 @@
 import {loadIntentReview} from "./intentReview";
 import { ReviewDetails } from "../work/ReviewDetails";
 import { UIWarning, UINotice } from "../../components/ui/FormControls";
-import { Button, Card } from "@heroui/react";
+import { Card } from "@heroui/react";
+import { Button } from "../../components/ui/Button";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
@@ -9,7 +10,7 @@ import { usePreferences } from "../../stores/preferences";
 import { translate, type Key } from "../../i18n";
 import { request } from "../../lib/api/client";
 import { useAuth } from "./AuthProvider";
-import { errorText } from "../projects/ProjectWorkspace";
+import { errorText } from "./errors";
 
 type Intent = {
   id: string;
@@ -98,7 +99,7 @@ export function ConfirmPage() {
               <Button
                 variant="primary"
                 data-testid="confirm-approve"
-                isDisabled={!currentReview}
+                disabled={!currentReview}
                 isPending={decide.isPending}
                 onClick={() => decide.mutate(true)}
               >

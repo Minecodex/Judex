@@ -4,6 +4,7 @@ package decision
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"github.com/kakj-go/Judex/internal/platform/paging"
@@ -334,7 +335,8 @@ func (s *Service) ListProposals(ctx context.Context, requester, projectID uuid.U
 		return nil, err
 	}
 	rows, err := paging.Query(ctx, s.pool, `
-		SELECT id, kind, status, current_review_id, version, created_at /*keys*/
+		SELECT id, kind, status, current_review_id, version, created_at, topic_id, created_by,
+		       (SELECT max(v.revision) FROM proposal_versions v WHERE v.proposal_id=proposals.id) /*keys*/
 		FROM proposals WHERE project_id=$1 /*page*/`, "created_at", "id", projectID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "proposals failed").Wrap(err)
@@ -349,13 +351,18 @@ func (s *Service) ListProposals(ctx context.Context, requester, projectID uuid.U
 			reviewID uuid.NullUUID
 			version  int64
 			created  time.Time
+			topicID  uuid.NullUUID
+			sender   uuid.NullUUID
+			revision sql.NullInt64
 		)
-		if err := rows.Scan(&id, &kind, &status, &reviewID, &version, &created); err != nil {
+		if err := rows.Scan(&id, &kind, &status, &reviewID, &version, &created, &topicID, &sender, &revision); err != nil {
 			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
 		}
 		out = append(out, map[string]any{
 			"id": id, "kind": kind, "status": status,
 			"currentReviewId": reviewID.UUID, "version": version, "createdAt": created,
+			"topicId": nullableUUIDValue(topicID), "senderUserId": nullableUUIDValue(sender),
+			"revision": revision.Int64,
 		})
 	}
 	return out, rows.Err()

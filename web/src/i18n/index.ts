@@ -1,7 +1,3 @@
-import { workflowEditorZh, workflowEditorEn } from "./workflowEditor";
-import { researchZh, researchEn } from "./research";
-import { lifecycleZh, lifecycleEn } from "./lifecycle";
-import { projectAdminZh, projectAdminEn } from "./projectAdmin";
 import { accessZh, accessEn } from "./access";
 import { commonZh, commonEn } from "./common";
 import { experienceZh, experienceEn } from "./experience";
@@ -15,12 +11,8 @@ import { shellZh, shellEn } from "./shell";
 import { chatZh, chatEn } from "./chat";
 import { settingsZh, settingsEn } from "./settings";
 import { authZh, authEn } from "./auth";
-import { workspaceZh, workspaceEn } from "./workspace";
+import { lifecycleZh, lifecycleEn } from "./lifecycle";
 const modules = [
- {zh:workflowEditorZh,en:workflowEditorEn},
- {zh: researchZh,en:researchEn},
- { zh: lifecycleZh, en: lifecycleEn },
- { zh: projectAdminZh, en: projectAdminEn },
   { zh: accessZh, en: accessEn },
   { zh: commonZh, en: commonEn },
   { zh: experienceZh, en: experienceEn },
@@ -34,15 +26,11 @@ const modules = [
   { zh: chatZh, en: chatEn },
   { zh: settingsZh, en: settingsEn },
   { zh: authZh, en: authEn },
-  { zh: workspaceZh, en: workspaceEn },
+  { zh: lifecycleZh, en: lifecycleEn },
 ];
 export type Locale = "zh-CN" | "en";
 // re-exported for feature modules
 export type Key =
- | keyof typeof workflowEditorZh
- | keyof typeof researchZh
- | keyof typeof lifecycleZh
- | keyof typeof projectAdminZh
   | keyof typeof accessZh
   | keyof typeof commonZh
   | keyof typeof experienceZh
@@ -56,7 +44,7 @@ export type Key =
   | keyof typeof chatZh
   | keyof typeof settingsZh
   | keyof typeof authZh
-  | keyof typeof workspaceZh;
+  | keyof typeof lifecycleZh;
 const zh = Object.assign({}, ...modules.map((m) => m.zh)) as Record<
   Key,
   string

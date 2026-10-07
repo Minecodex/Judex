@@ -256,11 +256,15 @@ function ChatShell({ onLogout }: { onLogout: () => Promise<void> }) {
 }
 export default function ChatWorkspace({
   onLogout,
+  mode,
+  projectId,
 }: {
   onLogout: () => Promise<void>;
+  mode?: "demo" | "api";
+  projectId?: string;
 }) {
   return (
-    <WorkProvider>
+    <WorkProvider mode={mode} projectId={projectId}>
       <ChatApplication onLogout={onLogout} />
     </WorkProvider>
   );

@@ -3,6 +3,7 @@
 Go 单体服务托管生产前端。Helm 同时声明 PostgreSQL、SeaweedFS、OpenSandbox，也可独立选择外部 PG / S3。需要可用 K8s、动态 PVC StorageClass、Helm 3.16+、安装 Operator / CRD 的权限及集群可拉取的 Judex 镜像。
 
 ```sh
+npm run build
 docker build -f deploy/docker/server.Dockerfile -t judex/server:0.1.0-dev .
 helm lint deploy/helm/judex -f deploy/helm/judex/values-dev.yaml
 helm upgrade --install judex deploy/helm/judex -n judex-dev --create-namespace -f deploy/helm/judex/values-dev.yaml --wait --timeout 10m
@@ -21,7 +22,7 @@ kubectl -n judex-dev port-forward service/judex 8080:8080
 - 内置 S3：SeaweedFS 的 master / volume / filer / S3 同一 StatefulSet，数据和索引写 PVC。应用桶创建待存储模块实现。
 - Secret 使用 lookup 保留现有凭据；PVC、生成的 Secret 和执行 namespace 卸载时保留，清理由运维按归属处理。
 
-当前 Go 壳层只读取 HTTP / Web 配置。Chart 注入的 PG / S3 / OpenSandbox 变量是预留连接契约，尚未连接或运行迁移。`/readyz` 只检查 HTTP 服务，不检查基础设施健康。
+业务服务实际连接 PostgreSQL、S3 和已配置的模型 / OpenSandbox；Chart 创建带数据库 advisory lock 的迁移 Job 与内置对象桶初始化 Job。发布使用 `--wait --wait-for-jobs` 等待服务及初始化完成。`/readyz` 检查服务排空状态与数据库连接，不替代对象存储、模型或沙箱的业务验证。
 
 ## OpenSandbox
 
@@ -68,4 +69,37 @@ kubectl -n judex port-forward svc/judex 18097:8080   # http://127.0.0.1:18097
 
 注意：port-forward 目标 Pod 重建（rollout/崩溃）会断流，需重开；生产模式用 Ingress（`ingress.enabled`）。`/api/v1/system` 的 `capabilities` 按实际接线如实上报（identity/projects/persistence/agentExecution）。
 
-改代码后更新本地部署：`npm run build` → `docker build -f deploy/docker/server.Dockerfile -t judex/server:0.1.0-dev .` → `kubectl -n judex rollout restart deploy/judex`。本机 Docker 与 Kubernetes 节点 containerd 是不同镜像存储。每次构建使用新 tag，按上面的 docker save/ctr import 导入后用 Helm 更新 image.tag；本地未推送 registry 的镜像保持 IfNotPresent，不要依赖 Always 拉取。
+## 更新已有本地部署（PowerShell）
+
+本机 Docker 与 Kubernetes 节点 containerd 是不同镜像存储。每次构建使用独立 tag，先导入节点，再用 Helm 更新；仅重启旧 tag 不能保证使用新构建。本地未推送 registry 的镜像使用 `IfNotPresent`。
+
+以下命令针对已有的 `docker-desktop` 集群、`desktop-control-plane` 节点容器和 `judex` Release / Namespace，在仓库根目录顺序执行，任何命令失败都应停止后续步骤。PowerShell 使用文件传递镜像归档，避免旧版本 PowerShell 的文本管道损坏二进制数据：
+
+```powershell
+$imageVersion = 'local-' + (Get-Date -Format yyyyMMdd-HHmmss)
+$imageArchive = Join-Path $env:TEMP "judex-$imageVersion.tar"
+$nodeArchive = "/tmp/judex-$imageVersion.tar"
+
+npm run build
+docker build -f deploy/docker/server.Dockerfile --build-arg VERSION=$imageVersion -t "judex/server:$imageVersion" .
+docker save --output $imageArchive "judex/server:$imageVersion"
+docker cp $imageArchive "desktop-control-plane:$nodeArchive"
+docker exec desktop-control-plane ctr --namespace k8s.io images import $nodeArchive
+# 确认 import 成功后再清理本次归档。
+docker exec desktop-control-plane rm -- $nodeArchive
+Remove-Item -LiteralPath $imageArchive
+
+helm upgrade judex deploy/helm/judex --kube-context docker-desktop -n judex --reset-then-reuse-values --set-string image.repository=judex/server --set-string image.tag=$imageVersion --set image.pullPolicy=IfNotPresent --wait --wait-for-jobs --timeout 10m
+kubectl --context docker-desktop -n judex rollout status deployment/judex --timeout=180s
+kubectl --context docker-desktop -n judex get pods
+```
+
+`--reset-then-reuse-values` 将当前 Chart 默认配置与已有 Release 自定义配置合并，保留现有模型和凭据引用，并补齐新增配置字段。升级前检查模板变化；同步当前 Chart 可能更新沙箱配置或重启数据服务，现有 PVC 和 Secret 按 Chart 保留。
+
+发布后重新启动本地转发（原转发随旧 Pod 退出会断开），并检查 `/healthz`、`/readyz`、`/api/v1/system` 返回的版本是否为本次 tag：
+
+```powershell
+kubectl --context docker-desktop -n judex port-forward service/judex 18097:8080
+```
+
+部署验证可在临时 Namespace 运行 `tests/k8s/smoke.mjs`；浏览器业务 E2E 通过 `JUDEX_E2E_BASE_URL` 指向临时部署，必须把该访问 Origin 加入 `server.allowedOrigins`。测试资源按运行标签核对归属后删除。

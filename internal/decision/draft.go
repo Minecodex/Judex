@@ -43,11 +43,16 @@ func (s *Service) GetProposal(ctx context.Context, user, project, id uuid.UUID) 
 		return nil, err
 	}
 	var kind, status string
-	var version int64
+	var version, revision int64
 	var created time.Time
 	var review *uuid.UUID
-	if err := s.pool.QueryRow(ctx, `SELECT kind,status,version,created_at,current_review_id FROM proposals WHERE id=$1 AND project_id=$2`, id, project).Scan(&kind, &status, &version, &created, &review); err != nil {
+	var topicID, sender uuid.NullUUID
+	if err := s.pool.QueryRow(ctx, `
+		SELECT kind,status,version,created_at,current_review_id,topic_id,created_by,
+		       (SELECT max(v.revision) FROM proposal_versions v WHERE v.proposal_id=proposals.id)
+		FROM proposals WHERE id=$1 AND project_id=$2`, id, project).Scan(&kind, &status, &version, &created, &review, &topicID, &sender, &revision); err != nil {
 		return nil, apierrors.New(apierrors.NotFound, "proposal not found")
 	}
-	return map[string]any{"id": id, "kind": kind, "status": status, "version": version, "createdAt": created, "currentReviewId": review}, nil
+	return map[string]any{"id": id, "kind": kind, "status": status, "version": version, "createdAt": created, "currentReviewId": review,
+		"topicId": nullableUUIDValue(topicID), "senderUserId": nullableUUIDValue(sender), "revision": revision}, nil
 }

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useWork } from "./store";
 import { Btn, Dialog, EmptyState, Field, Heading, Person } from "./ui";
+import { dataMode } from "../../lib/api/client";
 import type { Position, Seat } from "./types";
 export function InvitePage() {
   const { state, project, t, text, act, go } = useWork();
@@ -74,14 +75,16 @@ export function InvitePage() {
 export function InviteDialog({ onClose }: { onClose: () => void }) {
   const { state, project, t, text, act } = useWork(),
     [name, setName] = useState(""),
-    [ids, setIds] = useState<string[]>([]);
+    [ids, setIds] = useState<string[]>([]),
+    [link, setLink] = useState("");
   return (
     <Dialog title={t("workInviteTitle")} onClose={onClose} wide>
       <p className="judex-modal-description">{t("workInviteHint")}</p>
-      <Field label={t("workInviteName")}>
+      <Field label={t(dataMode === "api" ? "workInviteEmail" : "workInviteName")}>
         <UIInput
           className="judex-input"
           data-testid="next-invite-name"
+          type={dataMode === "api" ? "email" : undefined}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -115,27 +118,34 @@ export function InviteDialog({ onClose }: { onClose: () => void }) {
             </UICheckbox>
           ))}
       </div>
-      <p className="judex-muted">{t("workInviteLocal")}</p>
+      {dataMode === "demo" && (
+        <p className="judex-muted">{t("workInviteLocal")}</p>
+      )}
+      {link && (
+        <Field label={t("workInviteLink")}>
+          <UIInput className="judex-input" readOnly value={link} />
+        </Field>
+      )}
       <div className="judex-modal-actions">
         <Btn secondary onClick={onClose}>
           {t("cancel")}
         </Btn>
         <Btn
           testId="next-create-invite"
+          disabled={dataMode === "api" && !name.includes("@")}
           onClick={async () => {
-            if (
-              (
-                await act("invitePerson", {
-                  projectId: project.id,
-                  name,
-                  positionIds: ids,
-                })
-              ).ok
-            )
-              onClose();
+            const r = await act("invitePerson", {
+              projectId: project.id,
+              name,
+              positionIds: ids,
+            });
+            if (r.ok) {
+              if (r.inviteUrl) setLink(r.inviteUrl);
+              else onClose();
+            }
           }}
         >
-          {t("workCreateInvite")}
+          {t(dataMode === "api" ? "workSendInvite" : "workCreateInvite")}
         </Btn>
       </div>
     </Dialog>
@@ -503,33 +513,35 @@ export function PreferencesPage() {
           <p>{t("promptBoundary")}</p>
         </aside>
       </div>
-      <div className="judex-next-demo-settings">
-        <p>{t("workSimulated")}</p>
-        {management && (
-          <Btn
-            secondary
-            onClick={() => void act("remindPending", { projectId: project.id })}
-            testId="simulate-receipt-reminder"
-          >
-            {t("workReminderDemo")}
-          </Btn>
-        )}
-        <p>{t("workResetHint")}</p>
-        {resetting ? (
-          <div>
-            <Btn danger testId="reset-next" onClick={reset}>
-              {t("confirm")}
+      {dataMode === "demo" && (
+        <div className="judex-next-demo-settings">
+          <p>{t("workSimulated")}</p>
+          {management && (
+            <Btn
+              secondary
+              onClick={() => void act("remindPending", { projectId: project.id })}
+              testId="simulate-receipt-reminder"
+            >
+              {t("workReminderDemo")}
             </Btn>
-            <Btn secondary onClick={() => setResetting(false)}>
-              {t("cancel")}
+          )}
+          <p>{t("workResetHint")}</p>
+          {resetting ? (
+            <div>
+              <Btn danger testId="reset-next" onClick={reset}>
+                {t("confirm")}
+              </Btn>
+              <Btn secondary onClick={() => setResetting(false)}>
+                {t("cancel")}
+              </Btn>
+            </div>
+          ) : (
+            <Btn secondary onClick={() => setResetting(true)}>
+              {t("workReset")}
             </Btn>
-          </div>
-        ) : (
-          <Btn secondary onClick={() => setResetting(true)}>
-            {t("workReset")}
-          </Btn>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </>
   );
 }
