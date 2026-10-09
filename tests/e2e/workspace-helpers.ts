@@ -21,7 +21,7 @@ export async function openTool(page: Page, id: string) {
   if (await page.getByTestId("settings-page").isVisible())
     await page.getByTestId("settings-back").click();
   await page.getByTestId("workspace-add-tool").click();
-  await page.getByRole("menuitem",{name:id==="plans"?"计划信息":id==="resources"?"共享资料":id,exact:true}).click();
+  await page.getByRole("menu").getByRole("menuitem",{name:id==="plans"?"计划信息":id==="resources"?"共享资料":id,exact:true}).click();
 }
 export async function openAccount(page: Page) {
   if (
