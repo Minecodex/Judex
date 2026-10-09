@@ -9,6 +9,8 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const root = fileURLToPath(new URL("../../", import.meta.url));
+const collaborationGateway = process.env.JUDEX_E2E_COLLABORATION_GATEWAY
+  ?? (process.env.JUDEX_REAL_MODEL_SMOKE === "1" ? "0" : "1");
 const runId = `judex-e2e-${process.pid}-${Date.now()}`;
 const pg = `${runId}-pg`, s3 = `${runId}-s3`;
 const artifact = path.join(root, ".cache/e2e", runId);
@@ -46,12 +48,12 @@ try {
   const listener = net.createServer(); await new Promise((resolve) => listener.listen(0, "127.0.0.1", resolve));
   const port = listener.address().port; await new Promise((resolve) => listener.close(resolve));
   const base = `http://127.0.0.1:${port}`;
-  const env = { ...process.env, JUDEX_MATERIAL_CONVERTER_URL: process.env.JUDEX_MATERIAL_CONVERTER_URL??"", GIN_MODE: "release", JUDEX_ENV: "development", JUDEX_MODE: "all", JUDEX_HTTP_ADDR: `127.0.0.1:${port}`, JUDEX_WEB_DIR: "web/dist",
+  const env = { ...process.env, JUDEX_E2E_COLLABORATION_GATEWAY: collaborationGateway, JUDEX_MATERIAL_CONVERTER_URL: process.env.JUDEX_MATERIAL_CONVERTER_URL??"", GIN_MODE: "release", JUDEX_ENV: "development", JUDEX_MODE: "all", JUDEX_HTTP_ADDR: `127.0.0.1:${port}`, JUDEX_WEB_DIR: "web/dist",
     JUDEX_DATABASE_URL: `postgres://postgres:${password}@127.0.0.1:${pgPort}/judex?sslmode=disable`, JUDEX_ALLOWED_ORIGINS: base, JUDEX_PREVIEW_ORIGIN: `http://localhost:${port}`,
     JUDEX_S3_ENDPOINT: `http://127.0.0.1:${s3Port}`, JUDEX_S3_ACCESS_KEY: "judex", JUDEX_S3_SECRET_KEY: password, JUDEX_S3_BUCKET: "judex", JUDEX_S3_PATH_STYLE: "true",
     JUDEX_REGISTER_PER_IP: "1000", JUDEX_MODEL_CATALOG_FILE: "", JUDEX_MODEL_PROTOCOL: "", JUDEX_OPENSANDBOX_ENDPOINT: "",
   };
-  if(process.env.JUDEX_E2E_COLLABORATION_GATEWAY==="1"){
+  if(collaborationGateway==="1"){
     const reservation=net.createServer();await new Promise(resolve=>reservation.listen(0,"127.0.0.1",resolve));
     const gatewayPort=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));
     const gatewayExe=path.join(artifact,process.platform==="win32"?"gateway.exe":"gateway");
