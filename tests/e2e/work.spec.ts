@@ -130,6 +130,9 @@ for (const design of ["studio"]) {
 test("hard prerequisites, task acceptance, plan owner acceptance and reopening form a complete path", async ({
   page,
 }) => {
+  // Four task acceptances, a plan acceptance and reopening share this journey.
+  // Keep each state check bounded while allowing the full route on CI runners.
+  test.setTimeout(120000);
   await open(page, "task", "package");
   await expect(page.getByTestId("start-task")).toBeDisabled();
   await open(page, "handoff", "first-review");

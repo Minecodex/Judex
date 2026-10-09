@@ -24,6 +24,8 @@ git push -u origin feature/your-change
 
 CLI `--no-wait` 确认测试仅点击一次浏览器确认，然后轮询只读回执直到 `committed`，继续核对结果引用；点击返回不等于服务端确认请求已提交。
 
+跨多任务前置、四次任务验收、计划验收与重开的完整界面旅程使用 120 秒整项预算；每次状态核对仍限 10 秒，普通界面用例默认 45 秒，业务断言不变。
+
 工作流也支持主分支 push 和手动运行。手动运行使用 Actions 页面的 Run workflow，选择待检查的分支；功能分支首次引入新工作流时，先创建 PR 触发检查。
 
 此工作流验证组织仓库实际提交的代码。现有 K8s smoke 需要兼容 OpenSandbox Operator/CRD 和可拉取镜像，应在独立 namespace 按 `tests/README.md` 执行；本工作流不把该集群验收或未提交的本地改动计为通过。
