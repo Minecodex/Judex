@@ -1,5 +1,5 @@
 import {expect,test} from "@playwright/test";
-import {chooseValue,toggleLanguage,toggleTheme} from "./workspace-helpers";
+import {chooseValue,toggleLanguage,toggleTheme,openTaskAction} from "./workspace-helpers";
 test("collaboration navigation, task activity, human choice, nested fork and fixed source",async({page},info)=>{
  const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
  await page.goto("/?project=leaf&view=topic&item=labels");
@@ -15,12 +15,12 @@ test("collaboration navigation, task activity, human choice, nested fork and fix
  await page.locator(".judex-collab-search input").fill("无匹配");
  await expect(page.getByTestId("work-discussion-input")).toHaveValue("每份会话独立草稿");
  await page.locator(".judex-collab-search input").fill("");
- const inspector=page.locator(".judex-collab-inspector");
- await inspector.getByRole("button",{name:"上报进展",exact:true}).click();
+ const inspector=page.getByTestId("task-inspector");
+ await openTaskAction(page,"上报进展");
  await page.getByTestId("collaboration-report-body").fill("普通进展保留在任务记录");
  await page.getByTestId("collaboration-submit-record").click();await expect(page.getByRole("dialog")).toHaveCount(0);
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem("judex.web.preview.v1")!).topics.length)).toBe(before);
- await inspector.getByRole("button",{name:"上报进展",exact:true}).click();
+ await openTaskAction(page,"上报进展");
  await chooseValue(page,"collaboration-input-kind","question");
  await page.getByTestId("collaboration-report-body").fill("多方核对持续问题");
  await page.getByTestId("collaboration-submit-record").click();await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -35,7 +35,7 @@ test("collaboration navigation, task activity, human choice, nested fork and fix
  await expect(page.getByTestId("chat-thread")).toContainText("共享历史");
  await page.locator(".judex-collab-lineage").getByRole("button").click();
  await expect(page.locator('.judex-collab-message-focus[data-message-seq="1"]')).toBeVisible();
- await inspector.getByRole("button",{name:"流程参考",exact:true}).click();await expect(inspector).toContainText("从想法到交付");
+ await page.getByTestId("workspace-add-tool").click();await page.getByRole("menuitem",{name:"流程参考",exact:true}).click();await expect(inspector).toContainText("从想法到交付");
  await toggleTheme(page);await toggleLanguage(page);await page.setViewportSize({width:1120,height:900});
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.screenshot({path:info.outputPath("collaboration-dark-en.png"),fullPage:true});

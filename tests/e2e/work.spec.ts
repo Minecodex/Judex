@@ -19,7 +19,7 @@ test("an open acceptance dialog cannot approve evidence changed by a later local
   // External agreement revision is followed by a report in the legal rework state.
   await other.evaluate(()=>{const s=JSON.parse(localStorage.getItem("judex.web.preview.v1")!);const task=s.tasks.find((v:any)=>v.id==="guide");task.status="rework";task.revision++;localStorage.setItem("judex.web.preview.v1",JSON.stringify(s));});
   await other.reload();
-  await other.getByRole("dialog").getByRole("button",{name:"提交交付",exact:true}).click();
+  await openTaskAction(other,"提交交付");
   await other
     .getByTestId("collaboration-report-body")
     .fill("这是在审阅开始后提交的新版本，需要重新核对。");
@@ -64,7 +64,7 @@ async function person(page: Page, name: string) {
 async function report(page: Page, taskId: string, actor: string) {
   await person(page, actor);
   await open(page, "task", taskId);
-  await page.getByRole("dialog").getByRole("button",{name:"提交交付",exact:true}).click();
+  await openTaskAction(page,"提交交付");
   await page.getByTestId("collaboration-report-body").fill("已在本地完成并记录验证结果。");
   await page.getByTestId("collaboration-submit-record").click();
 }
@@ -153,7 +153,7 @@ test("hard prerequisites, task acceptance, plan owner acceptance and reopening f
   await page.getByTestId("confirm-final-acceptance").click();
   expect((await state(page)).plans[0].status).toBe("accepted");
   await open(page, "task", "build");
-  await page.getByTestId("reopen-task").click();
+  await openTaskAction(page,"重新打开任务");
   await page.getByTestId("work-reason").fill("发现分页边界需要复核");
   await page.getByTestId("confirm-work-reason").click();
   await open(page, "plan", "leaf-first");
@@ -184,7 +184,7 @@ test("new plan and direct task start as drafts; references do not duplicate owne
   await page.getByTestId("new-work-criteria").fill("资料可追溯");
   await chooseValue(page,"new-work-plan","");
   await page.getByTestId("create-work-draft").click();
-  await page.getByTestId("decide-draft").click();
+  await openTaskAction(page,"确认任务安排");
   expect((await state(page)).tasks.at(-1).planId).toBeNull();
   await open(page, "plan", "leaf-next");
   await expect(page.getByTestId("execution-task-build")).toBeVisible();

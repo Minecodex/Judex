@@ -29,7 +29,6 @@ test('both selected tab borders remain opaque and complete at display scales', a
 test('workspace feature buttons visibly respond to hover, press and keyboard focus', async ({page},info) => {
   for(const theme of ['light','dark']) {
     await page.goto('/projects/leaf/chat/labels?view=workspace');await page.evaluate(theme=>localStorage.setItem('judex.theme',theme),theme);await page.reload();
-    await page.getByTestId('workspace-add-tool').click();
     await expect(page.getByTestId('workspace-launcher')).toBeVisible();
     const accent=theme==='light'?'rgb(45, 102, 81)':'rgb(159, 197, 170)';
     for(const id of ['plans','resources']) {
@@ -42,7 +41,7 @@ test('workspace feature buttons visibly respond to hover, press and keyboard foc
     const item=page.getByTestId('workspace-launcher').getByTestId('work-nav-plans');await item.hover();await page.mouse.down();
     await expect.poll(()=>item.evaluate(element=>getComputedStyle(element).borderColor)).toBe(theme==='light'?'rgb(61, 107, 81)':'rgb(176, 206, 184)');
     await page.mouse.up();await expect(page.getByTestId('workspace-tab-plans')).toBeVisible();
-    await page.getByTestId('workspace-add-tool').click();await page.getByTestId('workspace-launcher').getByTestId('work-nav-plans').focus();await page.keyboard.press('Tab');
+    await page.goto('/projects/leaf/chat/labels?view=workspace');await expect(page.getByTestId('workspace-launcher')).toBeVisible();await page.getByTestId('workspace-launcher').getByTestId('work-nav-plans').focus();await page.keyboard.press('Tab');
     await expect(page.getByTestId('workspace-launcher').getByTestId('work-nav-resources')).toBeFocused();
     expect(await page.getByTestId('workspace-launcher').getByTestId('work-nav-resources').evaluate(element=>getComputedStyle(element).outlineStyle)).toBe('solid');
     await page.keyboard.press('Enter');await expect(page.getByTestId('workspace-tab-resources')).toBeVisible();
