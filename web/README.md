@@ -27,6 +27,6 @@ React / TypeScript / Vite，HeroUI 是唯一基础 UI 库，Tailwind 负责工�
 
 生产模式的认证会话、工作区入口、服务器读写、实时事件与真实材料上传均已接入（统一前端重构，2026-10）；历史缺口与逐条关闭状态见 [前端生产就绪审计](../docs/前端生产就绪审计.md) 的缺口复核。
 
-2026-10-07 已按用户接受的根目录 [demo.html](../demo.html) 统一正式登录、项目列表、三栏协作与其余业务模块；保留多标签、完整设置和默认功能选择页。源码与验收见 [界面统一改造](../docs/界面优化预览.md)，主题及组件规则见 [统一界面组件规范](../docs/统一界面组件规范.md)。独立 `design-preview/` 只用于重新生成视觉参考，执行 `node web/design-preview/build.mjs`；正式生产与 demo 数据源继续共用 ChatWorkspace 树。
+2026-10-07 已按用户接受的视觉基准统一正式登录、项目列表、三栏协作与其余业务模块；保留多标签、完整设置和默认功能选择页。当前[项目协同原型](../docs/plans/cooperation-ui/demo.html)继续用于入口对照，源码与早期视觉验收见 [界面统一改造](../docs/界面优化预览.md)，主题及组件规则见 [统一界面组件规范](../docs/统一界面组件规范.md)。独立 `design-preview/` 用于重新生成视觉参考；正式生产与 demo 数据源继续共用 ChatWorkspace 树。
 
 正式构建需要项目要求的 Go 工具链与 Python 3（可通过 `JUDEX_PYTHON` 指定解释器）。正式 `build` 的 postbuild 会交叉构建 Windows/macOS 双架构 CLI 和独立 Skills ZIP，生成 `dist/downloads`；本地 AI 接入页读取真实清单并下载。部署时 `JUDEX_RELEASE_VERSION` 必须与服务端 Docker `VERSION` 一致。原生发行校验执行 `node tests/client-downloads.mjs`；开发服务的 `/downloads` 与 API 使用同一代理目标，可通过 `JUDEX_API_PROXY` 指向当前后端。
