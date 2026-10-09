@@ -18,6 +18,8 @@ git push -u origin feature/your-change
 
 业务 job 在测试前显式拉取固定存储镜像，避免本地镜像缓存掩盖公共仓库授权或可用性问题。原 MinIO 镜像匿名拉取返回拒绝，测试改用项目既有 SeaweedFS；应用继续通过同一 S3 API 读写、分片与恢复，不改变业务存储接口。
 
+业务脚本直接用 Node 启动时，也从 Windows 的 Node 目录或 Linux/macOS 的 `lib/node_modules` 定位 npm CLI，不依赖 npm 父进程注入 `npm_execpath`。
+
 工作流也支持主分支 push 和手动运行。手动运行使用 Actions 页面的 Run workflow，选择待检查的分支；功能分支首次引入新工作流时，先创建 PR 触发检查。
 
 此工作流验证组织仓库实际提交的代码。现有 K8s smoke 需要兼容 OpenSandbox Operator/CRD 和可拉取镜像，应在独立 namespace 按 `tests/README.md` 执行；本工作流不把该集群验收或未提交的本地改动计为通过。

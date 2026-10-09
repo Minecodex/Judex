@@ -7,6 +7,7 @@ import path from "node:path";
 import net from "node:net";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { npmCliPath } from './npm-runtime.mjs';
 const require = createRequire(import.meta.url);
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const collaborationGateway = process.env.JUDEX_E2E_COLLABORATION_GATEWAY
@@ -18,7 +19,7 @@ fs.mkdirSync(artifact, { recursive: true });
 const password = randomBytes(18).toString("hex");
 const run = (command, args, options = {}) => String(execFileSync(command, args, { cwd: root, encoding: "utf8", windowsHide: true, ...options }) ?? "").trim();
 const docker = (...args) => run("docker", args);
-const npm = process.env.npm_execpath || path.join(path.dirname(process.execPath), "node_modules/npm/bin/npm-cli.js");
+const npm = npmCliPath();
 let server, gateway;
 async function waitFor(url, ready = response => response.ok) {
   const deadline = Date.now() + 60000;
