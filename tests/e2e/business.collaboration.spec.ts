@@ -113,8 +113,8 @@ test("C01 true API reports, human discussion choice, forked history, CLI single 
    await a.goto(intent.confirmUrl);
     await expect(a.getByTestId("confirm-approve")).toBeEnabled({timeout:10000});
     await a.getByTestId("confirm-approve").click();
-   const receipt=run(["decision","result",intent.id]);
-   expect(receipt.state).toBe("committed");
+   let receipt:any;
+   await expect.poll(()=>{receipt=run(["decision","result",intent.id]);return receipt.state;}).toBe("committed");
    expect(receipt.resultRef).toMatch(/^topic:/);
   }
   await b.reload();await expect(b.locator(".judex-collab-nav")).toContainText("CLI 会话分支");
