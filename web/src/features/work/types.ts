@@ -1,6 +1,7 @@
+import type { TaskActivity, DiscussionSuggestion, SourceRef } from "../chat/collaborationTypes";
 export type Text = { zh: string; en: string };
 export const words = (zh: string, en = zh): Text => ({ zh, en });
-export type Member = { name: string; role: "owner" | "manager" | "member" };
+export type Member = { name: string; role: "owner" | "manager" | "member"; userId?: string; email?: string };
 export type Project = {
   maxDiscussionRounds?: number;
   id: string;
@@ -12,6 +13,8 @@ export type Project = {
 export type Position = {
   id: string;
   projectId: string;
+  presetId?: string;
+  publicSummary?: Text;
   name: Text;
   prompt: Text;
   tone: string;
@@ -21,9 +24,16 @@ export type Seat = {
   id: string;
   positionId: string;
   person: string;
+  userId?: string;
+  status?: string;
   notes: Text;
 };
 export type Plan = {
+ capabilities?:import('./runtimeTypes').WorkCapabilities;discardedAt?:string|null;revision?:number;createdBy?:string;
+ taskStats?: {total:number;accepted:number;active:number;cancelled:number;required?:number;draft?:number;skipped?:number};
+ myTaskCount?:number;ownerName?:string;updatedAt?:number;
+ mainTopicId?: string;
+ businessStatus?: string;
   id: string;
   projectId: string;
   title: Text;
@@ -36,6 +46,7 @@ export type Plan = {
   referenceTaskIds: string[];
 };
 export type Evidence = {
+ versionId?:string;
   id: string;
   name: string;
   text: string;
@@ -45,6 +56,8 @@ export type Evidence = {
   type?: string;
 };
 export type Requirement = {
+ satisfied?:boolean;
+ waived?:boolean;inheritedFrom?:string;sourceTaskId?:string;fingerprint?:string;
   at?: "start" | "accept" | "both";
   id: string;
   label: Text;
@@ -53,6 +66,11 @@ export type Requirement = {
   hard: boolean;
 };
 export type Task = {
+ kind?:'task'|'bug';bugDetails?:import('../../lib/api/schema').components['schemas']['Task']['bugDetails'];
+ capabilities?:import('./runtimeTypes').WorkCapabilities;discardedAt?:string|null;executionException?:import('./runtimeTypes').ExecutionException|null;createdBy?:string;
+ mainTopicId?:string;
+ participantNames?:string[];
+ businessStatus?: string;
   revision: number;
   id: string;
   projectId: string;
@@ -98,17 +116,31 @@ export type Handoff = {
   sources: Source[];
   history: { source: Source; at: number }[];
 };
+export type FlowBody = import('../../lib/api/schema').components['schemas']['WorkflowDraftBody'];
 export type Flow = {
+  status?: 'draft' | 'published';
+  presetId?: string;
+  definitionVersion?: number;
+  body?: FlowBody;
+  draft?: {body: FlowBody; hash: string; revision: number};
   id: string;
   projectId: string;
   name: Text;
   version: number;
   instructions: Text;
-  nodes: { id: string; label: Text }[];
+  nodes: { id: string; label: Text; responsibility?: Text; kind?: 'activity'|'decision'; phase?: Text }[];
   edges: [string, string][];
+  connections?: {from:string;to:string;kind?:'sequence'|'feedback';label?:Text}[];
   history: { version: number; instructions: Text; actor: string }[];
 };
 export type Topic = {
+ linksVersion?:number;
+ kind?: "project_room"|"discussion"|"handoff";
+ parentTopicId?: string;
+ forkAfterSeq?: number;
+ lastMessageSeq?: number;
+ mainPlanId?: string;
+ sourceRefs?: SourceRef[];
   discussionRuns?: import('../chat/discussionPolicy').DiscussionRun[];
   context?: { kind: "handoff"; id: string };
   id: string;
@@ -117,6 +149,12 @@ export type Topic = {
   planIds: string[];
   taskIds: string[];
   messages: {
+    seq?:number;
+    inherited?:boolean;
+    originTopicId?:string;
+    taskId?:string;
+    sourceRef?:SourceRef;
+    materials?:{versionId:string;name:string}[];
     submissionType?: 'message' | 'material' | 'work_report';
     seatId?: string;
     id: string;
@@ -144,6 +182,8 @@ export type Audit = {
   at: number;
 };
 export type WorkState = {
+ taskActivities?: TaskActivity[];
+ discussionSuggestions?: DiscussionSuggestion[];
   proposals?: import('../chat/proposalModel').WorkProposal[];
   schema: 4;
   projects: Project[];
@@ -155,9 +195,10 @@ export type WorkState = {
   flows: Flow[];
   topics: Topic[];
   invites: Invite[];
-  preferences: { projectId: string; person: string; prompt: string }[];
+  preferences: { projectId: string; positionId: string; person: string; userId?: string; revision: number; prompt: string }[];
   events: Audit[];
   currentUser: string;
+  currentUserId?: string;
 };
 export type ErrorCode =
   | "discussionLimit"
@@ -172,6 +213,7 @@ export type Result =
   { state: WorkState; error?: never } | { error: ErrorCode; state?: never };
 export type Design = "studio";
 export type View =
+  | "proposal"
   | "workspace"
   | "overview"
   | "home"
@@ -189,6 +231,15 @@ export type View =
   | "settings"
   | "resources";
 export type Route = {
+ taskSection?:import('./runtimeTypes').TaskSection;
+ page?:"projects"|"hub"|"route"|"chat";
+ hubTab?:import("../cooperation/routing").HubTab;
+ scopePlanId?:string;scopeTaskId?:string;focusTaskId?:string;
+ editor?:"plan"|"task"|"topic"|"proposal";proposalTopicId?:string;editTopicId?:string;invite?:boolean;originProjects?:boolean;
+ taskContextId?:string;
+ activityId?:string;
+ sourceId?:string;
+ messageSeq?:number;
   settingsSection?: import('../settings/navigation').SettingsSection;
   settingsItem?: string;
   conversation?: string;

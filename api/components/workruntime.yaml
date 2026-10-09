@@ -1,0 +1,224 @@
+components:
+  schemas:
+    WorkCapabilities:
+      type: object
+      required:
+        - editDraft
+        - discardDraft
+        - proposeChange
+        - skip
+        - restore
+      properties:
+        editDraft:
+          type: boolean
+        discardDraft:
+          type: boolean
+        proposeChange:
+          type: boolean
+        skip:
+          type: boolean
+        restore:
+          type: boolean
+    ExceptionWaiver:
+      type: object
+      required:
+        - taskId
+        - requirementId
+        - fingerprint
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        requirementId:
+          type: string
+          format: uuid
+        fingerprint:
+          type: string
+    ExecutionException:
+      type: object
+      required:
+        - id
+        - reason
+        - previousStatus
+        - actorUserId
+        - createdAt
+        - waivers
+      properties:
+        id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        previousStatus:
+          type: string
+          enum:
+            - ready
+            - working
+            - delivered
+            - rework
+        actorUserId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        waivers:
+          type: array
+          items:
+            $ref: ../components/workruntime.yaml#/components/schemas/ExceptionWaiver
+    ExceptionImpact:
+      type: object
+      required:
+        - taskId
+        - planId
+        - title
+        - status
+        - version
+        - alreadyStarted
+        - requirements
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        planId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        title:
+          type: string
+        status:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        alreadyStarted:
+          type: boolean
+        requirements:
+          type: array
+          items:
+            $ref: ../components/work.yaml#/components/schemas/TaskRequirement
+    ExecutionReview:
+      type: object
+      required:
+        - taskId
+        - targetVersion
+        - operation
+        - reviewHash
+        - title
+        - current
+        - affectedTasks
+        - referencingPlanIds
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        targetVersion:
+          type: integer
+          minimum: 1
+        operation:
+          type: string
+          enum:
+            - skip
+            - restore
+        reviewHash:
+          type: string
+        title:
+          type: string
+        current:
+          anyOf:
+            - $ref: ../components/workruntime.yaml#/components/schemas/ExecutionException
+            - type: 'null'
+        affectedTasks:
+          type: array
+          items:
+            $ref: ../components/workruntime.yaml#/components/schemas/ExceptionImpact
+        referencingPlanIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+    ExecutionCommand:
+      type: object
+      required:
+        - expectedVersion
+        - reviewHash
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        reviewHash:
+          type: string
+        reason:
+          type: string
+          minLength: 1
+        waivers:
+          type: array
+          items:
+            $ref: ../components/workruntime.yaml#/components/schemas/ExceptionWaiver
+        acknowledgeStarted:
+          type: boolean
+    DraftDiscardReview:
+      type: object
+      required:
+        - targetId
+        - targetType
+        - targetVersion
+        - title
+        - reviewHash
+        - tasks
+        - blockers
+      properties:
+        targetId:
+          type: string
+          format: uuid
+        targetType:
+          type: string
+          enum:
+            - task
+            - plan
+        targetVersion:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+        reviewHash:
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: ../components/workruntime.yaml#/components/schemas/ExceptionImpact
+        blockers:
+          type: array
+          items:
+            $ref: ../components/workruntime.yaml#/components/schemas/WorkBlocker
+    WorkDraftUpdate:
+      type: object
+      required:
+        - expectedVersion
+        - fields
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        fields:
+          type: object
+          minProperties: 1
+          additionalProperties: true
+    WorkBlocker:
+      type: object
+      required:
+        - phase
+        - objectType
+        - objectId
+        - reason
+      properties:
+        phase:
+          type: string
+        objectType:
+          type: string
+        objectId:
+          type: string
+        reason:
+          type: string

@@ -34,6 +34,9 @@ objectStorage:
   embedded:
     enabled: true
     image: chrislusf/seaweedfs:4.47
+    maxVolumes: 16
+    growthCount: 1
+    volumeSizeLimitMB: 1024
     storage: 20Gi
     storageClass: ""
   external:
@@ -53,9 +56,17 @@ opensandbox:
       replicaCount: 1
       image:
         repository: sandbox-registry.cn-zhangjiakou.cr.aliyuncs.com/opensandbox/controller
-        tag: v0.2.1
+        tag: latest
   opensandbox-server:
     server:
+      volumes:
+        - name: sandbox-template
+          configMap: {name: judex-sandbox-template}
+      volumeMounts:
+        - name: sandbox-template
+          mountPath: /etc/opensandbox/judex-template.yaml
+          subPath: template.yaml
+          readOnly: true
       replicaCount: 1
       image:
         repository: sandbox-registry.cn-zhangjiakou.cr.aliyuncs.com/opensandbox/server
@@ -81,7 +92,34 @@ opensandbox:
       namespace = "{{ .Release.Namespace }}-sandboxes"
       informer_enabled = true
       workload_provider = "batchsandbox"
-      batchsandbox_template_file = "/etc/opensandbox/example.batchsandbox-template.yaml"
+      batchsandbox_template_file = "/etc/opensandbox/judex-template.yaml"
       [egress]
       image = "sandbox-registry.cn-zhangjiakou.cr.aliyuncs.com/opensandbox/egress:v1.1.6"
       mode = "dns+nft"
+
+# 业务服务进程（P7-01）：mode=all|api|worker；allowedOrigins 生产必填。
+server:
+  materialPreview:
+    enabled: false
+    image: judex/material-converter:local-materials
+  materialProjection:
+    enabled: true
+    storageClass: ""
+    image: ""
+  mode: all
+  allowedOrigins: []
+  previewOrigin: ""
+  # 模型目录 Secret（含 models.yaml；密钥走 Secret 引用）。
+  modelCatalogSecret: ""
+  # 模型密钥 Secret：键名与 models.yaml 的 apiKeyEnv 一致，整包注入为环境变量。
+  modelEnvSecret: ""
+  # 直连模型网关（讨论批次执行器用；apiKeyKey 取 modelEnvSecret 中的键名）。
+  modelGateway:
+    protocol: ""
+    baseUrl: ""
+    model: ""
+    apiKeyKey: ""
+  # Agent 运行沙箱（entrypoint 仅作保活；execd 由平台注入，端口 44772）。
+  sandboxImage: "docker.io/library/alpine:3.20"
+  sandboxCPU: "500m"
+  sandboxMemory: "256Mi"

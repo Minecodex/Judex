@@ -1,15 +1,26 @@
 # 测试入口
 
-测试代码统一放在本目录，构建产物和报告忽略提交。
-
-| 目录 | 命令 | 当前覆盖 |
+| 范围 | 命令 | 覆盖 |
 | --- | --- | --- |
-| backend | `go test ./tests/backend` | 配置、探针、退出就绪状态、静态文件、API 错误边界 |
-| deploy | `go test ./tests/deploy` | 内置 / 外部 PG 与 S3 四种组合、OpenSandbox 命名空间与单活、无效配置 |
-| web | `npm run test:web` | 原型业务状态规则与卡片树布局 |
-| e2e | `npm run build` 后 `npm run test:e2e` | 真实 Gin 壳层、无假注册、生产模式、交接 / 验收 / 流程等交互 |
-| k8s | `node tests/k8s/smoke.mjs` | 临时 namespace 部署与 HTTP 探针，需集群和可拉取镜像 |
+| Go | `go test ./...`、`go vet ./...` | 领域、HTTP 契约、真实 PG、模型/沙箱受控测试；live 测试另需真实配置 |
+| Web | `npm run test:web` | 状态、认证、布局、工作权限、资料与模板逻辑；数量以当前输出为准 |
+| 浏览器全套 | `npm run test:e2e` | 桌面 demo 与真实生产业务两套入口 |
+| 生产浏览器 | `node tests/e2e/business.setup.mjs` | 真实 PG/S3、Office 转换、双用户业务、CLI、全表／对象恢复校验；可传入 spec 或 grep 限定场景 |
+| 部署模板 | `go test ./tests/deploy` | 四种 PG/S3 配置、资源边界和无效配置 |
+| K8s 探针 | `node tests/k8s/smoke.mjs` | 指定 JUDEX_TEST_IMAGE，临时 namespace 部署与生产 capability 检查 |
+| K8s 矩阵 | `node tests/k8s/matrix.mjs` | 包含 mock-gateway 的 JUDEX_TEST_IMAGE，四存储组合及组件故障；真实模型使用 live.mjs |
+| Skill 发现 | `node tests/skill-hosts.mjs` | 原生安装卸载、实际 Codex app-server 发现；无模型调用 |
+| AI 宿主 | `node tests/skill-agent-hosts.mjs` | 需明确授权及 JUDEX_RUN_AGENT_HOST_TESTS=1；限定隔离目录会话，尚未运行 |
+| 发行 | `node tests/release.mjs dist/release/VERSION` | 全包校验和、本机包解压/版本、附带 Skill 安装卸载 |
 
-浏览器测试默认使用 Microsoft Edge。也可以 `npx playwright install chromium`，把 `PLAYWRIGHT_CHANNEL` 设为 `chromium` 后运行。测试管理 18080 / 5174 两个独立端口，不复用开发进程。报告在 `tests/reports/e2e`，失败截图 / trace 在 `tests/results/e2e`。
+桌面 demo 浏览器默认 Microsoft Edge，可用 PLAYWRIGHT_CHANNEL=chromium；生产浏览器使用 Chromium。生产测试默认启动受控模型网关，验证真实 PG/S3、CLI 和业务调用，不把受控模型结果作为真实模型验收。设置 JUDEX_E2E_COLLABORATION_GATEWAY=0 可禁用网关，需只运行不依赖模型建议的场景；真实模型测试仍需显式配置和启用。
 
-Helm 缺失时 Go 测试会显式跳过，不能把此时的 Go 成功视为 Helm 验证。K8s 测试需要已有兼容 OpenSandbox Operator / CRD，使用独立 namespace，不部署第二个集群 Controller，不停止正常业务服务。容器启动与沙箱执行须在可用集群继续验收，浏览器预览测试不能替代服务端业务事务测试。
+像素检查依赖 Python 3 和 Pillow，测试前在所用 Python 环境执行 `python -m pip install -r tests/e2e/requirements.txt`；可用 JUDEX_PYTHON 指定解释器。CI 使用同一份依赖清单。桌面测试显式启用正常动效；嵌套选择器选择完成后等待退出动画、DOM 移除及焦点恢复，再操作外层弹层。像素采样先核对所有目标边框颜色稳定，避免与截图结束过渡动画后的状态不一致。
+
+测试使用独立端口、容器和带所有权标签的 namespace，日志/trace/备份放在忽略的 .cache 或 tests/results。不得将依赖缺失导致的 skip 算作实测通过。
+
+生产浏览器入口默认构建并启动独立 Office 转换容器，按源文件摘要复用构建镜像；可用 JUDEX_TEST_CONVERTER_IMAGE 指定已有镜像，或用 JUDEX_MATERIAL_CONVERTER_URL 指定测试转换服务。数据库 SQL 夹具在 Docker 和 Kubernetes 两种入口都先校验本次运行的所有权，测试结束只清理所属容器／namespace。
+
+生产浏览器使用固定 `chrislusf/seaweedfs:4.47`，与 Helm 默认对象存储一致；每次运行生成独立 S3 凭据，认证接口就绪后再初始化 bucket，并完成真实上传、Range、分片和对象恢复核对。GitHub CI 分别运行 `backend`、`web`、`business`，三项均通过才允许汇总检查通过；本地 `npm run test:e2e` 仍顺序执行界面和业务两套测试。
+
+K8s 测试需要已存在的兼容 Operator/CRD，不部署第二个 Controller，不停止业务服务；finally 按所有权清理。当前证据及剩余边界见 [验收报告](../docs/plans/v1/FINAL-REPORT.md)。

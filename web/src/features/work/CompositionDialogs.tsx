@@ -6,9 +6,11 @@ import {
 } from "../../components/ui/FormControls";
 import { useState } from "react";
 import { useWork } from "./store";
+import { dataMode } from "../../lib/api/client";
 import { Btn, Dialog, Field } from "./ui";
-import { createDiscussion, proposeHandoff } from "./composition";
 import type { Task, Handoff } from "./types";
+import {ResponsibilityPicker} from "./ResponsibilityPicker";
+import {handoffResponsibilities,defaultHandoffSender} from "./handoffResponsibilities";
 export function HandoffDialog({
   task,
   onClose,
@@ -17,6 +19,7 @@ export function HandoffDialog({
   onClose: () => void;
 }) {
   const { state, project, t, text, act, go } = useWork();
+  const [senders,setSenders]=useState<Record<string,string>>({}),[busy,setBusy]=useState(false);
   const [kind, setKind] = useState<Handoff["kind"]>("stage"),
     [target, setTarget] = useState(task.id),
     [receiver, setReceiver] = useState(task.reviewerSeatId),
@@ -35,9 +38,12 @@ export function HandoffDialog({
     (v) =>
       v.projectId === project.id &&
       ["delivered", "accepted"].includes(v.status) &&
-      v.files.length &&
+      (v.files.length > 0 || dataMode === "api") &&
       (kind === "stage" ? v.id === task.id : v.id !== target),
   );
+  const responsibilities=handoffResponsibilities(state,project.id),selected=ids.map(id=>state.tasks.find(v=>v.id===id)).filter((v):v is Task=>!!v);
+  const senderIds=Object.fromEntries(selected.map(item=>[item.id,senders[item.id]??defaultHandoffSender(state,item)]));
+  const valid=!!selected.length&&selected.length===ids.length&&selected.every(item=>eligible.some(v=>v.id===item.id)&&responsibilities.includes(senderIds[item.id]))&&responsibilities.includes(receiver);
   return (
     <Dialog title={t("workProposeHandoff")} onClose={onClose} wide>
       <p className="judex-modal-description">{t("workProposeHandoffHint")}</p>
@@ -105,7 +111,7 @@ export function HandoffDialog({
       </Field>
       <div className="judex-position-options">
         {eligible.map((v) => (
-          <UICheckbox
+          <UICheckbox appearance="card"
             key={v.id}
             data-testid={"handoff-source-" + v.id}
             checked={ids.includes(v.id)}
@@ -121,34 +127,35 @@ export function HandoffDialog({
           </UICheckbox>
         ))}
       </div>
+      {selected.map(item=><Field key={item.id} label={t("coHandoffSenderFor",{task:text(item.title)})}><ResponsibilityPicker ids={responsibilities} value={senderIds[item.id]} onChange={id=>setSenders(v=>({...v,[item.id]:id}))} testId={"handoff-sender-"+item.id} label={t("coChooseHandoffSender")} showPerson/></Field>)}
+      <p className="judex-modal-description">{t("coHandoffSenderHint")}</p>
       <div className="judex-modal-actions">
         <Btn secondary onClick={onClose}>
           {t("cancel")}
         </Btn>
         <Btn
           testId="create-handoff-draft"
-          onClick={() => {
-            let id = "";
-            if (
-              act((s) => {
-                const r = proposeHandoff(
-                  s,
-                  project.id,
-                  target,
-                  receiver,
-                  ids,
-                  kind,
-                );
-                if (r.state) id = r.state.handoffs.at(-1)!.id;
-                return r;
-              })
-            ) {
+          disabled={!valid||busy}
+          onClick={async () => {
+            if(!valid||busy)return;setBusy(true);
+            try{
+            const r = await act("proposeHandoff", {
+              projectId: project.id,
+              target,
+              receiver,
+              ids,
+              kind,
+              senderIdentityIds:senderIds,
+            });
+            if (r.ok) {
               onClose();
               go({
+                page:"hub",hubTab:"deliveries",scopePlanId:undefined,scopeTaskId:undefined,
                 view: "handoff",
-                id,
+                id: r.id,
               });
             }
+            }finally{setBusy(false);}
           }}
         >
           {t("workCreateDraft")}
@@ -178,7 +185,7 @@ export function DiscussionDialog({ onClose }: { onClose: () => void }) {
         {state.plans
           .filter((p) => p.projectId === project.id)
           .map((p) => (
-            <UICheckbox
+            <UICheckbox appearance="card"
               key={p.id}
               checked={planIds.includes(p.id)}
               data-testid={"topic-plan-" + p.id}
@@ -199,7 +206,7 @@ export function DiscussionDialog({ onClose }: { onClose: () => void }) {
         {state.tasks
           .filter((p) => p.projectId === project.id)
           .map((p) => (
-            <UICheckbox
+            <UICheckbox appearance="card"
               key={p.id}
               checked={taskIds.includes(p.id)}
               data-testid={"topic-task-" + p.id}
@@ -221,25 +228,18 @@ export function DiscussionDialog({ onClose }: { onClose: () => void }) {
         </Btn>
         <Btn
           testId="create-discussion"
-          onClick={() => {
-            let id = "";
-            if (
-              act((s) => {
-                const r = createDiscussion(
-                  s,
-                  project.id,
-                  title,
-                  planIds,
-                  taskIds,
-                );
-                if (r.state) id = r.state.topics.at(-1)!.id;
-                return r;
-              })
-            ) {
+          onClick={async () => {
+            const r = await act("createDiscussion", {
+              projectId: project.id,
+              title,
+              planIds,
+              taskIds,
+            });
+            if (r.ok) {
               onClose();
               go({
                 view: "topic",
-                id,
+                id: r.id,
               });
             }
           }}

@@ -1,0 +1,16 @@
+{
+  "name": "judex",
+  "version": "0.1.0-dev",
+  "protocolRange": "1",
+  "cli": "judex",
+  "entry": "SKILL.md",
+  "references": [
+    "references/commands.md",
+    "references/reporting.md",
+    "references/human-decisions.md"
+  ],
+  "install": {
+    "codex": "~/.agents/skills/judex",
+    "claude-code": "~/.claude/skills/judex"
+  }
+}

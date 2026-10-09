@@ -1,3 +1,5 @@
+import {openTaskAction,selectRouteTask} from './workspace-helpers';
+import {deliver,propose} from "./cooperation-helpers";
 import {chooseValue} from "./workspace-helpers";
 import {openTool,openSettings,selectPerson,toggleTheme,toggleLanguage} from './workspace-helpers';
 import { test, expect, type Page } from "@playwright/test";
@@ -14,22 +16,38 @@ test("an open acceptance dialog cannot approve evidence changed by a later local
   await open(other);
   await person(other, "夏禾");
   await open(other, "task", "guide");
-  await other.getByTestId("report-task").click();
+  // External agreement revision is followed by a report in the legal rework state.
+  await other.evaluate(()=>{const s=JSON.parse(localStorage.getItem("judex.web.preview.v1")!);const task=s.tasks.find((v:any)=>v.id==="guide");task.status="rework";task.revision++;localStorage.setItem("judex.web.preview.v1",JSON.stringify(s));});
+  await other.reload();
+  await openTaskAction(other,"提交交付");
   await other
-    .getByTestId("report-body")
+    .getByTestId("collaboration-report-body")
     .fill("这是在审阅开始后提交的新版本，需要重新核对。");
-  await other.getByTestId("submit-report").click();
+  await other.getByTestId("collaboration-submit-record").click();
   await person(other, "林然");
   await expect(page.getByTestId("confirm-final-acceptance")).toBeDisabled();
-  await expect(page.getByRole("dialog")).toContainText("内容或状态已经变化");
+  await expect(page.getByRole("dialog",{name:"确认任务最终验收",exact:true})).toContainText("内容或状态已经变化");
   expect(
     (await state(page)).tasks.find((t: any) => t.id === "guide").status,
   ).toBe("delivered");
   await other.close();
 });
 const key = "judex.web.preview.v1";
-const state = (page: Page) =>
-  page.evaluate((k) => JSON.parse(localStorage.getItem(k)!), key);
+const state = async (page: Page) => {
+  // 演示工作区为懒加载分块：seed 在挂载后写入，直接等其就绪
+  //（team/flows 视图重定向到全屏设置页，账户按钮保持隐藏）。
+  await expect
+    .poll(
+      async () =>
+        (await page.evaluate(() => localStorage.getItem("judex.web.preview.v1"))) !==
+        null,
+      { timeout: 10000 },
+    )
+    .toBe(true);
+  return page.evaluate(() =>
+    JSON.parse(localStorage.getItem("judex.web.preview.v1")!),
+  );
+};
 const open = (page: Page, view = "home", id = "", design = "studio") =>
   page.goto(
     "/?design=" +
@@ -39,15 +57,16 @@ const open = (page: Page, view = "home", id = "", design = "studio") =>
       (id ? "&item=" + id : ""),
   );
 async function person(page: Page, name: string) {
+  await page.goto("/projects/leaf");
   await selectPerson(page,name);
   await expect.poll(async () => (await state(page)).currentUser).toBe(name);
 }
 async function report(page: Page, taskId: string, actor: string) {
   await person(page, actor);
   await open(page, "task", taskId);
-  await page.getByTestId("report-task").click();
-  await page.getByTestId("report-body").fill("已在本地完成并记录验证结果。");
-  await page.getByTestId("submit-report").click();
+  await openTaskAction(page,"提交交付");
+  await page.getByTestId("collaboration-report-body").fill("已在本地完成并记录验证结果。");
+  await page.getByTestId("collaboration-submit-record").click();
 }
 async function acceptTask(page: Page, taskId: string) {
   await open(page, "task", taskId);
@@ -111,6 +130,9 @@ for (const design of ["studio"]) {
 test("hard prerequisites, task acceptance, plan owner acceptance and reopening form a complete path", async ({
   page,
 }) => {
+  // Four task acceptances, a plan acceptance and reopening share this journey.
+  // Keep each state check bounded while allowing the full route on CI runners.
+  test.setTimeout(120000);
   await open(page, "task", "package");
   await expect(page.getByTestId("start-task")).toBeDisabled();
   await open(page, "handoff", "first-review");
@@ -127,15 +149,14 @@ test("hard prerequisites, task acceptance, plan owner acceptance and reopening f
   await person(page, "林然");
   for (const id of ["build", "guide", "empty-state", "package"])
     await acceptTask(page, id);
-  await open(page);
-  await openTool(page,'overview');
-  await expect(page.getByTestId('today-plan-review-leaf-first')).toBeVisible();
+  await page.goto("/projects/leaf?tab=decisions");
+  await expect(page.getByTestId("decision-open-leaf-first")).toBeVisible();
   await open(page, "plan", "leaf-first");
   await page.getByTestId("accept-plan").click();
   await page.getByTestId("confirm-final-acceptance").click();
   expect((await state(page)).plans[0].status).toBe("accepted");
   await open(page, "task", "build");
-  await page.getByTestId("reopen-task").click();
+  await openTaskAction(page,"重新打开任务");
   await page.getByTestId("work-reason").fill("发现分页边界需要复核");
   await page.getByTestId("confirm-work-reason").click();
   await open(page, "plan", "leaf-first");
@@ -160,16 +181,17 @@ test("new plan and direct task start as drafts; references do not duplicate owne
   await open(page, "plan", id);
   await page.getByTestId("activate-plan").click();
   await open(page, "tasks");
-  await page.getByRole("button", { name: "提出一项任务", exact: true }).click();
+  await page.getByRole("button", { name: "开启一个计划", exact: true }).first().click();await page.keyboard.press("Escape");await page.goto("/projects/leaf/plans/leaf-first/route");await page.getByTestId("new-plan-task").click();
   await page.getByTestId("new-work-title").fill("确认一个临时问题");
   await page.getByTestId("new-work-description").fill("附上出处的结论");
   await page.getByTestId("new-work-criteria").fill("资料可追溯");
   await chooseValue(page,"new-work-plan","");
   await page.getByTestId("create-work-draft").click();
-  await page.getByTestId("approve-task-draft").click();
+  await openTaskAction(page,"确认任务安排");
   expect((await state(page)).tasks.at(-1).planId).toBeNull();
   await open(page, "plan", "leaf-next");
-  await expect(page.getByText("引用成果 · 不重复计入所属任务")).toBeVisible();
+  await expect(page.getByTestId("execution-task-build")).toBeVisible();
+  expect((await state(page)).tasks.find((t:any)=>t.id==="build").planId).toBe("leaf-first");
   expect(
     (await state(page)).tasks.filter((t: any) => t.planId === "leaf-next"),
   ).toHaveLength(0);
@@ -178,7 +200,7 @@ test("new plan and direct task start as drafts; references do not duplicate owne
 test("pure discussions link multiple plans and tasks without changing their progress", async ({
   page,
 }) => {
-  await open(page, "topics");
+  await page.goto("/projects/leaf/chat");
   const before = await state(page);
   await page.getByTestId("new-discussion").click();
   await page.getByTestId("discussion-title").fill("讨论下一阶段投入");
@@ -201,7 +223,7 @@ test("a same-task handoff draft requires its sender and does not silently comple
   await open(page);
   await person(page, "顾言");
   await open(page, "task", "build");
-  await page.getByTestId("propose-handoff").click();
+  await openTaskAction(page,"整理交接草稿");
   await chooseValue(page,"handoff-kind","stage");
   await page.getByTestId("create-handoff-draft").click();
   const handoff = (await state(page)).handoffs.at(-1);
@@ -268,8 +290,9 @@ test("position templates, invitation, personal preferences and replacement keep 
   await page.getByTestId("invite-position-content-role").check();
   await page.getByTestId("next-create-invite").click();
   await person(page, "陆青");
+  await page.goto("/projects/leaf/settings/team");
   await expect(page.getByTestId("work-nav-plans")).toHaveCount(0);
-  await page.getByTestId("next-accept-invite").click();
+  await page.getByTestId("next-accept-invite").click();await openSettings(page,"preferences");
   await page.getByTestId("next-personal-prompt").fill("陆青私有偏好");
   await page.getByTestId("next-save-preference").click();
   let data = await state(page);
@@ -302,4 +325,3 @@ test("position templates, invitation, personal preferences and replacement keep 
   );
   expect(data.seats.find((s: any) => s.id === seat.id).person).toBe("周宁");
 });
-

@@ -1,6 +1,8 @@
 import { words as W, type WorkState, type Result } from "../work/types.ts";
 import { member } from "../work/selectors.ts";
 import { uid } from "../work/seed.ts";
+import {demoHistory} from "./demoCollaboration.ts";
+import {applyDemoWorkFields} from '../work/demoRuntime.ts';
 export type ProposedTask = {
   title: string;
   seatId: string;
@@ -17,9 +19,11 @@ export type ProposalInput = {
   tasks: ProposedTask[];
 };
 export type WorkProposal = ProposalInput & {
+  workChange?:{kind:'task'|'plan';id:string;expectedVersion:number;fields:Record<string,unknown>};
   id: string;
   projectId: string;
   topicId: string;
+  sourceAfterSeq?:number;
   revision: number;
   status: "pending" | "approved" | "rejected";
   sender: string;
@@ -33,6 +37,7 @@ export type WorkProposal = ProposalInput & {
   createdAt: number;
 };
 export function proposalIsCurrent(s: WorkState, p: WorkProposal) {
+  if(p.workChange){const c=p.workChange,target=(c.kind==='task'?s.tasks:s.plans).find(v=>v.id===c.id);return !!target&&(target.revision??1)===c.expectedVersion&&p.bindings.every(b=>s.seats.find(v=>v.id===b.seatId)?.person===b.person)&&(!p.flowId||s.flows.find(v=>v.id===p.flowId)?.version===p.flowVersion);}
   return (
     s.flows.find((f) => f.id === p.flowId)?.version === p.flowVersion &&
     p.bindings.every(
@@ -63,7 +68,7 @@ export function submitProposal(
   const topic = s.topics.find((t) => t.id === topicId),
     flow = s.flows.find((f) => f.id === input.flowId);
   if (!topic || !member(s, topic.projectId)) return { error: "permission" };
-  if (!flow || flow.projectId !== topic.projectId) return { error: "scope" };
+  if (!flow || flow.status === 'draft' || flow.projectId !== topic.projectId) return { error: "scope" };
   if (
     !input.title.trim() ||
     !input.goal.trim() ||
@@ -127,6 +132,7 @@ export function submitProposal(
     id: uid(),
     projectId: topic.projectId,
     topicId,
+    sourceAfterSeq:demoHistory(s,topic).at(-1)?.seq??0,
     revision: (old?.revision ?? 0) + 1,
     status: "pending",
     sender: s.currentUser,
@@ -178,11 +184,13 @@ export function decideProposal(
   } else {
     draft.votes[s.currentUser] = true;
     if (draft.approvers.every((person) => draft.votes[person])) {
+      if(draft.workChange){const c=draft.workChange;applyDemoWorkFields(next,c.kind,c.id,c.fields);draft.status='approved';next.events.push({id:uid(),projectId:p.projectId,targetId:c.id,actor:s.currentUser,text:W('安排变更已按职责确认','Arrangement changes confirmed'),at:Date.now()});return {state:next};}
       draft.status = "approved";
       draft.planId = uid();
       const taskIds = draft.tasks.map(() => uid());
       next.plans.push({
         id: draft.planId,
+        mainTopicId:"main:"+draft.planId,
         projectId: p.projectId,
         title: W(p.title),
         goal: W(p.goal),
@@ -227,6 +235,7 @@ export function decideProposal(
         }),
       );
       const topic = next.topics.find((t) => t.id === p.topicId)!;
+      next.topics.push({id:"main:"+draft.planId,projectId:p.projectId,title:W(p.title),kind:"discussion",mainPlanId:draft.planId,parentTopicId:p.topicId,forkAfterSeq:p.sourceAfterSeq??demoHistory(s,topic).at(-1)?.seq??0,planIds:[draft.planId],taskIds:[],messages:[]});
       topic.planIds.push(draft.planId);
       topic.taskIds.push(...taskIds);
     }

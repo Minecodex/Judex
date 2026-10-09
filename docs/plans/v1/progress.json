@@ -1,0 +1,1036 @@
+{
+  "planVersion": "1.0",
+  "baselineCommit": "8edd258",
+  "generatedAt": "2026-09-27",
+  "status": "2026-09-29 continuation implemented and verified; remaining acceptance gates listed in continuation and CONTINUATION.md",
+  "decisions": {
+    "registration": "confirmed: intranet email+password, no email verification",
+    "cliName": "confirmed: judex CLI, not ctl",
+    "humanConfirmation": "confirmed: browser reviews once; CLI retrieves the same result",
+    "stashedBackendWork": "user decision 2026-09-27: stash@{0} (glm) ignored entirely; fresh implementation from plans/v1; stash preserved untouched",
+    "modelConfig": "operator model catalog/Secret refs remain the configuration contract; real glm-5.3 temporary K8s smoke and material/sandbox checks now available; larger sample timeout retained as failed evidence",
+    "k8sAcceptance": "user decision 2026-09-27: local Docker Desktop cluster; K8s E2E may be deferred when resources are insufficient - implement all code first and report undone items",
+    "implementationStart": {
+      "head": "fc44a3e",
+      "worktree": "clean after baseline docs commit (plan docs committed as fc44a3e on top of 8edd258)",
+      "verifiedState": "backend is scaffold only (router 501 placeholders, no PG/S3/worker, cmd/judex status-only); frontend chat UI complete on local WorkState demo store; local tooling: go1.25.3, node24, docker+k8s v1.36.1, helm 3.16.4"
+    }
+  },
+  "tasks": [
+    {
+      "id": "P0-01",
+      "stage": "P0",
+      "title": "复核基线并清理过期架构表述",
+      "dependsOn": [],
+      "status": "completed",
+      "evidence": [
+        "commit fc44a3e: plans/v1 + docs baseline protected before any code change",
+        "internal/README.md + deploy/README.md: removed SQLite/Runner stale wording; aligned with PG-only context + server-side harness + OpenSandbox client",
+        "progress.json decisions: recorded stash-ignore, model-config, k8s-deferral user decisions and verified scaffold state"
+      ],
+      "notes": "dependency lock list lands with P0-02/P0-03 when go.mod tools (oapi-codegen, goose, sqlc, pgx) are added and pinned"
+    },
+    {
+      "id": "P0-02",
+      "stage": "P0",
+      "title": "OpenAPI、错误、权限主体与生成链路",
+      "dependsOn": [
+        "P0-01"
+      ],
+      "status": "completed",
+      "evidence": [
+        "api/{openapi.header.yaml,components/*.yaml,paths/*.yaml} authored; api/generate.mjs assembles single-file api/openapi.yaml: 103 paths / 119 operations per 06 §2-§6",
+        "generated: internal/gen/api (embedded spec + oapi-codegen types 4436 lines) and web/src/lib/api/schema.d.ts (openapi-typescript); `npm run gen:api` / Makefile `generate`",
+        "tools locked: oapi-codegen v2.8.0 via go.mod tool directive, openapi-typescript 7.13.0, js-yaml 4.1.1, kin-openapi v0.149.0",
+        "internal/platform/errors: canonical code->status map + envelope helpers; internal/platform/auth: Principal model (web/cli/operator), scopes, human-confirm gate",
+        "transport: SpecRouter mounts all contract operations with 501 NOT_IMPLEMENTED defaults; router rewritten on top",
+        "tests/contract: spec load+validate, spec<->router parity (both directions), embedded-copy sync check, 501 envelope check - all passing",
+        "2026-09-29 continuation: 125 操作注册；59 成功请求/响应 schema、117 匿名错误 schema 实测。其余成功路径断言待补，不将注册完整性当成全覆盖。 Evidence: evidence/v1-closure/manifest.json"
+      ],
+      "notes": "make unavailable on this Windows host; generation invoked via npm run gen:api + direct go tool calls",
+      "reviewNote": "125 操作注册；59 成功请求/响应 schema、117 匿名错误 schema 实测。其余成功路径断言待补，不将注册完整性当成全覆盖。"
+    },
+    {
+      "id": "P0-03",
+      "stage": "P0",
+      "title": "PG连接、迁移与短事务基础",
+      "dependsOn": [
+        "P0-02"
+      ],
+      "status": "completed",
+      "evidence": [
+        "deps locked: pgx/v5 v5.11.0, goose v3.28.0 (go tool), google/uuid",
+        "internal/infrastructure/postgres: pool + goose Provider migrations (advisory-locked, up-only embedded) + Tx with user-FOR-SHARE/project-FOR-UPDATE lock helpers + serialization-retry Transact",
+        "M001 migration: users/password_credentials/user_sessions/client_grants/client_tokens/device_authorizations/recovery_tokens/idempotency_records/background_jobs/audit_events per 01 §3",
+        "internal/platform/{clock,idempotency,keys}: injectable clock; advisory-lock-serialized idempotent Begin/Complete/Fail (same-key same-payload replay / different-payload 409); constant-time secret hashing",
+        "internal/audit: in-transaction immutable audit append",
+        "tests/integration (real Docker postgres:17-alpine per test): migrations repeatable; idempotency single-effect + 8-racer concurrency (exactly one Proceed); audit atomic with business rollback; FOR UPDATE guard serializes concurrent holders"
+      ],
+      "notes": "sqlc deferred until repository volume justifies it (P1); goose provider embeds up migrations only, down SQL kept for CLI use"
+    },
+    {
+      "id": "P0-04",
+      "stage": "P0",
+      "title": "持久jobs、outbox、租约和事件序列",
+      "dependsOn": [
+        "P0-03"
+      ],
+      "status": "completed",
+      "evidence": [
+        "migration 00002: projects (M002 合同列) + project_events (project_id,seq PK) + outbox_events（projects 表提前于 P1-04 落地以承载 event_seq，其余 M002 表按计划在 P1-05）",
+        "internal/job: SKIP LOCKED 领取+租约+fencing_token、心跳、指数退避+抖动、dead/failed 分类、同事务 Enqueue",
+        "internal/platform/events: 项目锁下 event_seq 分配 + project_events/outbox 同事务写入；outbox 只作唤醒，按 delivered_at 一次领取",
+        "integration tests (real PG): 4 连接并发 40 事件序列稠密无重复；双引擎领取不重叠；租约过期后接管者 fencing 更高且旧 worker Finish 写 0 行不生效；重试退避到 dead、不可重试立即 failed；job+event+幂等同事务回滚无孤儿"
+      ],
+      "notes": "worker 进程装配与 outbox 递送循环在 P0-05 接入 app"
+    },
+    {
+      "id": "P0-05",
+      "stage": "P0",
+      "title": "应用装配、配置校验和集成测试基座",
+      "dependsOn": [
+        "P0-03",
+        "P0-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "config: JUDEX_MODE (all/api/worker/migrate) + JUDEX_DATABASE_URL + worker count + log level; strict validation (persistence modes require DB; production always requires DB)",
+        "internal/app: pool+HTTP+worker 装配、分模式生命周期、draining→readyz 分级（http / http+db）、graceful Close",
+        "cmd/judex-server: --mode/--version flags, signal-driven shutdown, migrate 模式独立退出码",
+        "tests/integration/application_test.go: 真实 PG 上启动完整应用 -> /readyz(/healthz/api 501) 验证 -> 优雅关闭",
+        "Makefile: test-integration/test-contract 分层命令; .env.example 更新"
+      ],
+      "notes": "P0 阶段完成。contract/router/integration/backend 测试全绿"
+    },
+    {
+      "id": "P1-01",
+      "stage": "P1",
+      "title": "账号、密码与自由注册",
+      "dependsOn": [
+        "P0-05"
+      ],
+      "status": "completed",
+      "evidence": [
+        "internal/identity: Argon2id PHC 编码（64MiB/t=3/p=1）+ 渐进 rehash 检测 + 常量时间比较；未知账号燃烧等价 CPU 防时序枚举",
+        "邮箱规范化 trim+小写折叠（保留点/加号），唯一性完全由 DB 索引裁决；登录错误统一 UNAUTHENTICATED（不区分未知/错密/停用）",
+        "Register 单事务：users+password_credentials+session+audit；Login：限流（IP/账号双窗口）+凭据验证+同事务 rehash+新会话+audit",
+        "migration 00003 rate_limit_windows：PG 共享固定窗口限流（注册/登录分维度）",
+        "integration: 注册-登录-错误路径全流程；账号维度限流第3次即拒绝（正确密码也不放行）且跨 IP 生效；8 并发同邮箱注册恰好 1 成功 7 冲突且仅 1 行",
+        "users 表补 version 列（可变对象共有字段，01 §2）"
+      ],
+      "notes": "HTTP register/login handler 在 P1-02 与 cookie/CSRF 一并接入"
+    },
+    {
+      "id": "P1-02",
+      "stage": "P1",
+      "title": "Cookie会话、CSRF与撤销",
+      "dependsOn": [
+        "P1-01"
+      ],
+      "status": "completed",
+      "evidence": [
+        "identity/sessions.go: ResolveSession（hash 校验+revoked/expiry/status/auth_version 五重检查）、节流 TouchSession、Logout、LogoutAll（锁 user 行+auth_version 校验+撤销其他会话与 grants）",
+        "middleware/auth.go: SessionMiddleware（无感解析）/RequireAuth/RequireCSRF（写方法+Web principal：X-CSRF-Token+Origin 白名单）/CheckOriginOnly（匿名写 Origin 检查）",
+        "cookie: __Host-judex_session（prod，Secure/HttpOnly/Lax/Path=/无 Domain）与 judex_dev_session（dev）；csrf_token 明文列（非 bearer 凭据，GET session 可回显）",
+        "handlers: register/login/getSession/logout/logoutAll 接入 SpecRouter；严格 JSON（拒绝未知字段+1MiB 上限）；Retry-After 头",
+        "config: JUDEX_ALLOWED_ORIGINS（生产必填）",
+        "HTTP 集成测试: 注册得 cookie+CSRF、无 CSRF 写 403、恶意 Origin 403、合法 Origin+CSRF 通过、logout 后 401；错误密码与未知账号 error envelope 完全一致（防枚举）；重复邮箱 409 EMAIL_IN_USE"
+      ],
+      "notes": "full go test ./... 全绿（backend/contract/deploy/integration）"
+    },
+    {
+      "id": "P1-03",
+      "stage": "P1",
+      "title": "账户恢复、停用和受审计运维",
+      "dependsOn": [
+        "P1-02"
+      ],
+      "status": "completed",
+      "evidence": [
+        "identity/recovery.go: IssueRecoveryCode（15min 一次性码，hash 存储，operator+reason 审计）、RecoverPassword（咨询锁串行消费+新凭据+auth_version 递增+撤销全部会话/授权+不自动登录）、Disable/Enable（停用即拒登+杀会话，历史保留）",
+        "cmd/judex-server account recovery-code|disable|enable: 运维子命令（部署凭据即授权，operator 记入审计，无业务超级管理员）",
+        "POST /auth/recover handler 接入契约",
+        "integration: 恢复码一次性、旧会话失效、新密码可登录、二次消费拒绝；停用后统一 UNAUTHENTICATED；审计链包含 register/issued/completed/disabled"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P1-04",
+      "stage": "P1",
+      "title": "项目创建、可见性和归档",
+      "dependsOn": [
+        "P1-02",
+        "P0-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "migration 00004: M002 全表（project_members 单 owner 部分唯一索引/ownership_transfers/position_templates+versions/invitations+invitation_positions/agent_identities 单 coordinator/identity_bindings/preferences+revisions/workflow_definitions+versions/position_node_bindings/repository_links/model_catalog）+ topics/topic_work_links 骨架（项目创建需主会场）",
+        "project.Service: Create 单事务（项目+owner 成员+主会场+coordinator+事件+审计；owner 不自动绑定职位）；MembershipFor 非成员统一 404 隐藏存在性；ListForUser keyset 分页；Archive/Restore（owner+expectedVersion+理由，保留全部历史）",
+        "handlers: listProjects/createProject/getProject/getProjectBootstrap/archiveProject/restoreProject 接入契约",
+        "integration: 原子集合断言（成员/主会场/coordinator/事件各 1）；B 看不到 A 项目（列表空+get 404）；非成员 archive 404；版本冲突拒绝；归档保留历史并追加事件；恢复成功；并发创建独立项目"
+      ],
+      "notes": "model_catalog 表已建，配置同步在 P2-03 实现"
+    },
+    {
+      "id": "P1-05",
+      "stage": "P1",
+      "title": "成员管理与负责人转移",
+      "dependsOn": [
+        "P1-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "project/members.go: ListMembers（成员公开字段）、UpdateMemberRole（owner 专属，owner 角色只能走转移）、RemoveMember（manager+，owner 不可移除，活动任职阻塞 REQUIREMENT_UNMET）、LeaveProject（唯一 owner 必须先转移）",
+        "双人 owner 转移：pending 48h、仅目标方决定、接受时锁项目重验双方资格、单 owner 部分唯一索引兜底并发；OperatorTransferOwner 受审计运维命令（cmd 接入待 P1-05 收尾说明）",
+        "handlers: listMembers/updateMemberRole/removeMember/leaveProject/requestOwnerTransfer/getOwnerTransfer/decideOwnerTransfer",
+        "integration: 成员不能授权、owner 授 manager、owner 角色路由不可降级、manager 不能移除 owner、唯一 owner 不能离开、外人 404、转移后恰好 1 个 owner、原 owner 可离开、运维转移生效"
+      ],
+      "notes": "operator transfer-owner 子命令入口在 account.go 同模式实现（cmd 层一行接线）"
+    },
+    {
+      "id": "P1-06",
+      "stage": "P1",
+      "title": "注册、登录与应用认证路由",
+      "dependsOn": [
+        "P1-02",
+        "P1-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "web: react-router@7.5.0 锁定；/login /register /recover + / 工作区壳路由；AuthProvider 状态机（bootstrapping→anonymous/authenticated/unavailable，401 与 5xx 区分，无假登录态）",
+        "页面：注册（确认密码/aria-live/autocomplete/仅内存口令）、登录（统一错误映射/限流文案/returnTo 安全跳转拒绝双斜杠与协议）、恢复（如实展示运维获取方式，成功不自动登录）",
+        "client.ts: envelope 解包、CSRF token 内存管理、Idempotency-Key 透传；features/auth/api.ts 使用生成 schema 类型",
+        "WorkspaceShell: 真实项目列表/新建（真实 API+幂等键）/空项目引导/退出登录清缓存；工作区完整业务界面按计划在 P2-08/P6 接入",
+        "demo 模式完整保留为测试 fixture（VITE_DATA_MODE=demo）",
+        "真实垂直冒烟：Docker PG + go server 托管 web/dist → register/session/CSRF/createProject 全通，SPA HTML 正常；修复创建后默认配置未回填的投影 bug",
+        "npm run build + test:web 全绿"
+      ],
+      "notes": "浏览器级双用户 E2E 在 P6-03 business.config.ts 统一建设"
+    },
+    {
+      "id": "P1-07",
+      "stage": "P1",
+      "title": "账户安全与切用户隔离",
+      "dependsOn": [
+        "P1-03",
+        "P1-05",
+        "P1-06"
+      ],
+      "status": "completed",
+      "evidence": [
+        "identity: ListSessions（仅本人活跃会话+当前标记）/RevokeSession（仅本人、幂等）+ handlers（withAuth）",
+        "web AccountSecurity：会话列表/最近活跃/有效期/撤销其他会话；无假邮件按钮（文案如实说明设备授权在 P4 提供）",
+        "WorkspaceShell 增加项目/账户安全双 tab；退出登录走 AuthProvider signOut（cancelQueries+clear，切用户无前账号缓存）",
+        "HTTP 集成测试：双会话列表 2 条→撤销非当前→仅剩当前；DELETE 无 CSRF 被中间件拒绝（既有覆盖）",
+        "npm build + test:web（31 项）全绿"
+      ],
+      "notes": "P1 阶段完成。设备授权页/邀请深链接按计划在 P4/P2"
+    },
+    {
+      "id": "P2-01",
+      "stage": "P2",
+      "title": "职位、任职、邀请与私人偏好",
+      "dependsOn": [
+        "P1-05",
+        "P2-02"
+      ],
+      "status": "completed",
+      "evidence": [
+        "positions: Create/Update 版本化（revision 递增+版本冲突）、节点绑定必须指向已发布 workflow 的真实节点（InvalidReference）",
+        "identities: 稳定身份+binding 历史；CreateIdentity 显式新席位（目标须 active 成员）；ReplaceIdentityBinding 保留 identity、闭合旧 binding、version+1、审计含理由",
+        "invitations: 一次性 token（hash 存储）、7 天过期、精确邮箱匹配（错人 403）、接受事务（user 锁→invite 锁→project 锁）复用同模板 active 身份防重试复制；撤销/拒绝/过期状态机；ListMyInvitations 按登录邮箱",
+        "personal preferences: 空态 revision 0、首写 expected 0→1、版本冲突、revision 留档（运行 manifest 固定引用用）",
+        "handlers: 15 个 operation 接入（positions/identities/replace/invitations×5/preferences×2）",
+        "integration: 职位版本化+非法绑定拒绝+同岗多人（邀请2席+显式第3席）+替换闭合旧绑定+偏好隔离与版本化+错邮箱/过期 token 拒绝"
+      ],
+      "notes": "旧绑定 run 撤销事件在 P5 有 run 后补"
+    },
+    {
+      "id": "P2-02",
+      "stage": "P2",
+      "title": "流程结构、规则草稿与发布版本",
+      "dependsOn": [
+        "P1-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "workflow.Service: 结构化 nodes/edges/hardRules/policies 为权威（Mermaid 由 GenerateMermaid 从结构生成，绝不反向解析）；Validate 拒绝重复 nodeId/未知边/自环/环/非白名单硬规则/未知节点策略；draft→publish 版本不可变；ConstraintHash 规范化约束指纹（P3 审阅影响用）；发布校验 draftHash（REVIEW_STALE）",
+        "handlers: listWorkflows/createWorkflow/listWorkflowVersions/updateWorkflowDraft/publishWorkflow（withAuth，manager 写）",
+        "integration: 四类非法结构拒绝、发布 stale hash 拒绝、发布后旧版本不可变、新草稿 revision 递增、Mermaid 随结构变化",
+        "测试基建重构: 集成 fixture 改为单容器+每测试独立数据库（26 测试 20.9s，原 97s），解决 Docker daemon 反复卡死"
+      ],
+      "notes": "职位节点绑定在 P2-01（执行顺序按 09 共同规则调整：本任务先行）"
+    },
+    {
+      "id": "P2-03",
+      "stage": "P2",
+      "title": "模型目录与项目运行配置",
+      "dependsOn": [
+        "P1-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "agent/catalog: 部署方 YAML（baseUrl/apiKeyEnv Secret 引用/model/maxInputTokens/maxOutputTokens/能力）→ model_catalog 幂等同步（按稳定 ID upsert、缺失停用、保留历史）；DB 不存密钥，API 只返回 ID/能力/limits",
+        "config: JUDEX_MODEL_CATALOG_FILE（启动校验可读）；app 启动同步并记录条数",
+        "project.Update（PATCH）：title/description/rounds(1-100)/approvalTimeout(≥60)/defaultModel（须存在且启用 InvalidReference）；handlers updateProject+listModels",
+        "integration: 同步幂等+重同步停用旧项；未知/禁用模型拒绝；轮次>100 拒绝；合法模型设置生效"
+      ],
+      "notes": "预算/沙箱上限随 P5/P7 配置补全"
+    },
+    {
+      "id": "P2-04",
+      "stage": "P2",
+      "title": "S3上传会话与不可变材料版本",
+      "dependsOn": [
+        "P1-04",
+        "P0-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "migration 00005（M003 材料：upload_sessions/upload_parts/materials/material_versions/material_entries/submission_materials/material_links）",
+        "infrastructure/objectstore: aws-sdk-go-v2 S3（自定义 endpoint+path-style 兼容 SeaweedFS/外部）、流式 Put/Get/Delete/Head、服务端分配对象键（用户文件名不进路径）",
+        "material.Service: CreateUpload（分片方案+大小/摘要/entrypoint 路径校验）、UploadPart（TeeReader 流式校验摘要、同号不同内容 IDEMPOTENCY_CONFLICT、同内容幂等重传）、Complete（咨询锁+全片在场+尺寸吻合+整文件 SHA 复算→exactly-once 版本登记；重试返回同版本；派生发布落后 SOURCE_VERSION_CONFLICT）、Cancel/List/Versions/授权下载代理",
+        "handlers: 8 个 operation（上传会话/分片 PUT 二进制流/complete/取消/列表/版本/内容下载）",
+        "config: JUDEX_S3_* 环境变量（11 §2 Object 合同）",
+        "integration（真实 PG + 内存对象 fake）: 分片上传+重传幂等+篡改冲突、complete 幂等同版本、派生发布 v2 与旧版本冲突、旧版本内容不变可下载、缺片/整文件摘要不符 REQUIREMENT_UNMET"
+      ],
+      "notes": "HTML 包 entry 校验/预览隔离在 P2-05；真实 S3（MinIO/SeaweedFS）联调在部署验收"
+    },
+    {
+      "id": "P2-05",
+      "stage": "P2",
+      "title": "HTML包、预览隔离与来源发布",
+      "dependsOn": [
+        "P2-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "material/preview.go: ValidateBundleEntries（拒绝绝对路径/../drive/UNC/NUL/大小写冲突/数量上限）；CreatePreviewSession 一次性 token（hash 存储、绑定单一版本、60s TTL、无 preview origin 时诚实返回空 URL 不假装可交互）；PreviewOpen 只开清单条目且拒绝越界路径",
+        "migration 00007 preview_tokens；config JUDEX_PREVIEW_ORIGIN（独立 origin 部署在 P7 Helm）",
+        "handler: createPreviewSession 接入契约",
+        "integration: 越界/大小写冲突条目拒绝、空 origin 不产 URL、token 只开本版本清单、traversal/manifest 外 404、内容正确"
+      ],
+      "notes": "独立 preview origin 的 K8s ingress/CSP 部署配置在 P7-01；压缩炸弹解压限制随真实对象存储部署验收"
+    },
+    {
+      "id": "P2-06",
+      "stage": "P2",
+      "title": "议题、消息与统一提交入口",
+      "dependsOn": [
+        "P2-04",
+        "P1-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "migration 00006（submissions 唯一约束(project,actor,client_submission_id)/messages UNIQUE(topic_id,seq)/notifications 按(user,event,type)去重）",
+        "discussion.Service: CreateTopic（显式人动作+首条消息同事务）、ListTopics/ListMessages(beforeSeq 倒序取再翻正)、LinkTopic(幂等)、CreateSubmission 统一入口（作者/来源服务端推导；重放返回原记录；材料须本项目 ready 否则 InvalidReference/REQUIREMENT_UNMET；material 用途无 topic 不生成消息→收件区）",
+        "handlers: listTopics/createTopic/getTopic/listMessages/linkTopic/createSubmission",
+        "integration: 首条消息作者服务端推导、同 clientSubmissionId 重试只 1 条消息且 seq 稠密、未知材料拒绝、material 用途不生成消息"
+      ],
+      "notes": "progress/delivery 目的与 work.Report 同用例合并在 P3-06 落地"
+    },
+    {
+      "id": "P2-07",
+      "stage": "P2",
+      "title": "项目SSE、运行事件基础与站内通知",
+      "dependsOn": [
+        "P2-06",
+        "P0-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "SSEHandlers: 订阅时成员校验+seq 回放+15s 心跳+1s DB 轮询兜底（跨进程写入者）+60s 成员复核（撤销即断开）+过期游标 409 EVENT_CURSOR_EXPIRED；事件 payload 最小化（eventId/seq/type/object/occurredAt）",
+        "notifications: 列表+已读标记（无业务状态变化）；表按(user,event,type)去重",
+        "integration: 实时事件在流上到达（含 seq）、非成员连接 404；outbox 递送器常驻循环随 worker 进程装配在 P0-05 基础上于后续阶段按需开启",
+        "全套集成/backend/contract 测试绿"
+      ],
+      "notes": "run.* 事件流（/runs/{id}/events）在 P5-04 接入"
+    },
+    {
+      "id": "P2-08",
+      "stage": "P2",
+      "title": "真实项目设置、团队、流程与资料UI",
+      "dependsOn": [
+        "P2-01",
+        "P2-02",
+        "P2-03",
+        "P2-05",
+        "P2-06",
+        "P2-07",
+        "P1-07"
+      ],
+      "status": "completed",
+      "evidence": [
+        "ProjectWorkspace：议题面板（创建+选定）、消息线程（统一提交幂等+3s 轮询刷新）、共享资料列表、团队成员（404 项目缺失态）",
+        "WorkspaceShell：项目列表可点击进入项目内页面；错误文案按 code 映射中英文",
+        "npm build + test:web（31 项）全绿",
+        "P2 阶段出口：两个账号可见同一份真实资料与讨论（服务端已具备：邀请/议题/资料版本隔离+可见性测试）"
+      ],
+      "notes": "完整 Chatbox 工作区（三栏/多标签/拖拽）与真实 API 的整合在 P3-10/P5-09/P6 分阶段迁移；设置/流程编辑深度 UI 随 P3 演进"
+    },
+    {
+      "id": "P3-01",
+      "stage": "P3",
+      "title": "计划任务聚合与草稿模型",
+      "dependsOn": [
+        "P2-01",
+        "P2-02"
+      ],
+      "status": "completed",
+      "evidence": [
+        "migration 00008（M004 全 24 表：plans/tasks/participants/requirements/plan_task_references/work_reports/proposals+versions+slots+decisions+decision_slots/confirmation_intents/handoffs+sources/source_versions+decisions/task+plan_acceptances/reopens/bug_details/release_reports/fix_propagations）",
+        "work.Service: 计划/任务草稿 CRUD；父子同项目同 owning plan 校验；跨项目 plan 引用拒绝；requirements kind/phase 白名单；task_acceptance 依赖环检测（项目锁下）；draft 聚合统计",
+        "handlers: listPlans/createPlan/listTasks/createTask/getTask/getPlan（discard 待 P3-03 提案上下文）",
+        "integration: 草稿不自动正式化、父子同 plan 规则、越权引用拒绝、白名单前置校验、统计正确"
+      ],
+      "notes": "提案激活/状态机在 P3-03"
+    },
+    {
+      "id": "P3-02",
+      "stage": "P3",
+      "title": "硬前置、图读模型与并发环检测",
+      "dependsOn": [
+        "P3-01"
+      ],
+      "status": "completed",
+      "evidence": [
+        "work/execution.go: evaluateBlockers（task_acceptance 须 accepted/handoff_receipt 须来源已接收/material_ready 须 ready）；Start 状态门（ready/rework→working，仅参与者，start 硬前置 REQUIREMENT_UNMET+blockers，版本冲突）；ExecutionMap（列=硬前置最长路径深度，父子为归属边不排序，blockers 附节点）",
+        "handlers: startTask/getExecutionMap",
+        "integration: 未验收前置阻塞开始、验收后开始成功、执行图列序与硬边正确"
+      ],
+      "notes": "并发 A→B/B→A 双连接写的竞态由 project 锁+环检测覆盖（P3-01）；真实双连接并发用例在 P3-03 提案应用处统一验证"
+    },
+    {
+      "id": "P3-03",
+      "stage": "P3",
+      "title": "提案草稿、固定审阅与原子变更应用",
+      "dependsOn": [
+        "P3-01",
+        "P3-02",
+        "P2-06"
+      ],
+      "status": "completed",
+      "evidence": [
+        "decision.Service: CreateDraft（operation 白名单）、Submit（固定 slots+manifest+SHA256 review hash+超时快照；reviewID=版本行 id）、Decide（真人按当前绑定覆盖多席、REVIEW_STALE 哈希校验、首票起计时+持久 timeout job、ALL 满足同事务 applyChanges：create_plan/create_task/cancel_*/clientRef→真实 ID 映射、任一退回取消整案并清 deadline）",
+        "关键修复: PostgreSQL FOR UPDATE 与 LEFT JOIN 组合静默返回 0 行——拆分为先锁行（无 join）再无锁投影查询（项目锁已串行化决定）",
+        "integration: 同真人双席一次覆盖+worker 席位、外人 FORBIDDEN、全部同意原子建 plan(active)+task(ready)+参与者+createdIds、迟到决定 INVALID_TRANSITION、退回取消且零部分应用、无首票不超时通过、首票后超时 settle 以 timeout actor 记录并通过"
+      ],
+      "notes": "P3-04（代批/修订/换人接续）与 P3-05（worker 挂载）随后"
+    },
+    {
+      "id": "P3-04",
+      "stage": "P3",
+      "title": "会签、退回、修订和授权代批",
+      "dependsOn": [
+        "P3-03"
+      ],
+      "status": "completed",
+      "evidence": [
+        "Delegate: 仅 owner/manager；只覆盖 pending 席位（不碰已成立 reject）；decision_source=delegate 且记录真实 actor；完成即同事务应用",
+        "CreateRevision: 终态提案→新 draft revision（旧票不继承，重新 Submit 生成全新 slots+hash）；仅发起人；pending 不可修订",
+        "GetReview/ListProposals 读模型（席位状态+当前绑定人名+职位名）",
+        "proposal.timeout job handler 挂载 app（worker 进程自动结算）",
+        "handlers: 8 个提案 operation 接入契约",
+        "integration: 普通成员代批 403、manager 代批通过并记录 delegate 来源与真实 actor、修订 revision=2 重置 draft、重新提交新 slots、换绑后旧人 403 新人接续 pending、已同意席位不被重开（2 approved 收官）"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P3-05",
+      "stage": "P3",
+      "title": "首票倒计时与到期竞争",
+      "dependsOn": [
+        "P3-04",
+        "P0-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "首票设 first_approval_at+deadline_at 并同事务入队持久 job（P3-03 Submit/Decide）；退回清 deadline；无首票永不超时通过（SettleTimeout 显式检查）；SettleTimeout 幂等（非 pending/未到期 no-op）；deadline 结算记录 timeout actor",
+        "job engine 基础（租约/心跳/fencing/重启接管）已在 P0-04 真实 PG 证明；proposal.timeout handler 已挂载 worker",
+        "integration: TestProposalTimeoutSettle（无首票不通过/首票后超时结算+timeout 决定记录）+ TestFencingBlocksStaleWorker + TestJobsSkipLockedDisjointClaims"
+      ],
+      "notes": "人工决定 vs 到期的串行化由 project 锁+状态复核保证（同一命令函数结算）"
+    },
+    {
+      "id": "P3-06",
+      "stage": "P3",
+      "title": "职责报告与来源级交接补交",
+      "dependsOn": [
+        "P3-04",
+        "P2-06"
+      ],
+      "status": "completed",
+      "evidence": [
+        "work.ReportInTx/Report：progress 保持状态、delivery→delivered、accepted/cancelled/draft 拒绝、身份须当前绑定人、同 submission 幂等返回原报告（修复 uuid_nil() 非 PG 函数）、latest_report+version+事件+审计",
+        "handoff.Service：Create（多来源/跨任务/同项目校验）、SendSource（仅当前发送身份、版本冻结、revision 递增补交）、DecideSource（仅当前接收人；拒收未验收来源任务→rework、已验收来源仅记录不越权撤销；聚合 waiting/needs_revision/accepted）",
+        "handlers: 8 个交接 operation + reports 入口（与统一提交共用 Report 用例）",
+        "integration: 非绑定人 403、progress/delivery 状态机、同 submission 同报告、accepted 拒报；分来源发送/拒收/补交 v2 重确认、旧决定保留、B13 已验收来源不被撤销"
+      ],
+      "notes": "submission purpose=progress/delivery 与 /tasks/{id}/reports 两入口已共用 Report 用例；前端接线在 P3-10"
+    },
+    {
+      "id": "P3-07",
+      "stage": "P3",
+      "title": "任务验收、计划整体验收及重开",
+      "dependsOn": [
+        "P3-06",
+        "P3-02"
+      ],
+      "status": "completed",
+      "evidence": [
+        "work/acceptances.go: TaskAcceptanceReview（快照=版本+最新报告+前置，SHA256 reviewHash）、DecideTaskAcceptance（仅当前验收身份；REVIEW_STALE 新报告失效；退回须理由→rework；验收须 accept 前置满足→accepted+不可变 task_acceptances）、ReopenTask（引用原 acceptance+reopen_records 历史保留）",
+        "PlanAcceptanceReview（引用各任务 acceptanceId 集合；未全验收暴露 blockers）、DecidePlanAcceptance（仅计划负责人当前绑定人；REQUIREMENT_UNMET 未全验收；快照引用入 plan_acceptances）、ReopenPlan",
+        "handlers: 8 个验收 operation 接入",
+        "integration: 非验收人 403、REVIEW_STALE 新报告、退回→rework→补交→验收+不可变记录、任务全验收后 owner 验收计划、重开保留历史、B12 部分验收拒绝"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P3-08",
+      "stage": "P3",
+      "title": "Bug、仓库引用、环境与修复传播",
+      "dependsOn": [
+        "P3-07"
+      ],
+      "status": "completed",
+      "evidence": [
+        "work/bugrelease.go: CreateBug（bug_details+严重度白名单，草稿不越权重开已验收）、ReportRelease（事实记录非部署命令）、CreateFixPropagation（用户选目标→独立草稿任务，非 bug 拒绝）",
+        "work/repositories.go: 仓库元数据 CRUD（member 读/manager 写、版本冲突），ListAudit 可见审计分页（无私人 prompt）",
+        "handlers: 仓库×3/发布×2/修复传播/审计 接入",
+        "integration: 成员写仓库 403、版本冲突、bug 草稿、发布事实记录、双目标传播独立任务、非 bug 拒绝"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P3-09",
+      "stage": "P3",
+      "title": "统一待办、审计和治理读模型",
+      "dependsOn": [
+        "P3-05",
+        "P3-06",
+        "P3-07"
+      ],
+      "status": "completed",
+      "evidence": [
+        "work/actions.go: MyActions 按当前绑定计算统一待办——pending 提案（当前绑定持有/user 席位，含 deadline）、待接收交接、待发送/补交来源、delivered 待验收任务、全验收计划待整体验收；projectFilter 过滤",
+        "handler: listMyActions 接入 GET /me/actions",
+        "integration: reviewer 见任务验收、全验收后见计划验收、worker 见交接接收而非他人验收位；绑定实时计算非缓存"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P3-10",
+      "stage": "P3",
+      "title": "正式提案/任务/交接/验收前端联调",
+      "dependsOn": [
+        "P3-08",
+        "P3-09",
+        "P2-08"
+      ],
+      "status": "completed",
+      "evidence": [
+        "web WorkPanel：计划列表/新建、任务列表+详情（开始/交付/验收，验收先取快照再决定，禁乐观更新）、提案列表/创建（typed create_plan）/提交审批/同意/退回（理由必填）、统一待办（me/actions 8s 轮询）；全部命令带 expectedVersion+幂等键",
+        "ProjectWorkspace 增加 工作/议题/资料/团队 四 tab；i18n 中英文",
+        "npm build + test:web（31 项）全绿；后端 API 已由集成测试覆盖全部操作路径",
+        "P3 阶段出口：真实多人从草稿→提案→会签→执行→交接→验收的后端全链路有集成测试证据；浏览器双用户 E2E 在 P6-03 统一执行"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P4-01",
+      "stage": "P4",
+      "title": "设备授权、受限grant与凭据轮换",
+      "dependsOn": [
+        "P1-02",
+        "P1-05"
+      ],
+      "status": "completed",
+      "evidence": [
+        "identity/device.go: StartDeviceAuthorization（scope 白名单/短码+设备码 hash 存储/15min TTL）、ConfirmDeviceAuthorization（浏览器同人决定；scope 只能收窄不能扩）、PollDeviceToken（pending/slow_down/denied/expired/token 对）、RotateRefreshToken（轮换+旧 token 重放撤销整族+grant）、ResolveGrant（每次核对 grant 撤销/过期/用户 active/auth_version → KindCLI Principal 带 scope+项目范围）、ListGrants/RevokeGrant",
+        "middleware: BearerMiddleware（Authorization: Bearer）+ RequireScope；设备确认/刷新/列表/撤销 7 个 handler 接入",
+        "integration: 批准前 pending、scope 扩张拒绝、收窄生效、双重确认拒绝、轮换后重放撤族（新 token 同死）、deny 路径、授权列表"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P4-02",
+      "stage": "P4",
+      "title": "CLI工程、profile和只读命令",
+      "dependsOn": [
+        "P4-01",
+        "P2-06",
+        "P3-09"
+      ],
+      "status": "completed",
+      "evidence": [
+        "pkg/client：envelope 解包/Bearer/幂等键/CLIError→exit code 映射（0/3/4/5/7/8）/DeviceLogin 完整轮询（pending/slow_down 退避）",
+        "internal/cli：cobra 命令树（auth/project/inbox/material/submit/report/proposal/decision/task/handoff/events）+0600 凭据文件（JUDEX_TOKEN 环境优先）+ .judex/project.json 非机密 profile + --json envelope（schemaVersion/ok/data）",
+        "修复：cobra 子命令空格冲突（改为父子组）；设备轮询成功态与 pending 撞号（新增 PollCompleted）；aws-sdk Go v2 明文 HTTP 不可寻流校验和（≤64MiB 缓冲为可寻流）",
+        "真实垂直验证：judex-server(真实PG+MinIO) → CLI status/project list→use→material upload（真实分片+SHA+complete）→material list 全通，exit code 正确"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P4-03",
+      "stage": "P4",
+      "title": "一次性人工意图与浏览器确认页",
+      "dependsOn": [
+        "P4-01",
+        "P3-07"
+      ],
+      "status": "completed",
+      "evidence": [
+        "decision/intents.go: CreateIntent（operation 白名单/nonce/10min TTL/payload_json 快照+canonical hash/grant 归属）、GetIntent（本人可见+过期标记）、ConfirmIntent（咨询锁+项目锁+同人/nonce/过期校验+同事务执行 Executor+恰好一次消费+重复点击幂等重放 resultRef）",
+        "work.DecideTaskAcceptanceTx：验收命令的参与事务变体（意图确认复用同一领域命令与全部复核）",
+        "handlers: create/get/confirm 三个 operation；confirm 仅浏览器会话（CanConfirmHumanDecision 门控）",
+        "migration 00009 payload_json",
+        "integration: 错人 404、坏 nonce stale、一次确认→恰好 1 条 acceptance、重复点击不双应用、CLI 读取同一 resultRef、拒绝路径"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P4-04",
+      "stage": "P4",
+      "title": "CLI上传、上报、Bug和环境报告",
+      "dependsOn": [
+        "P4-02",
+        "P3-08"
+      ],
+      "status": "completed",
+      "evidence": [
+        "CLI：material upload（真实分片+SHA，已在真实 PG+MinIO 垂直验证）、submit（--file+clientSubmissionId 幂等）、report（progress/delivery+expectedTaskVersion）、proposal draft/submit、decision review、task accept/handoff send/receive（全部经确认意图）",
+        "幂等：所有写命令自动生成并透传 Idempotency-Key（07 §4 本地 outbox 同键重试基础）",
+        "敏感边界：只上传显式指定文件路径；无 git push/kubectl 代执行快捷命令"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P4-05",
+      "stage": "P4",
+      "title": "CLI提案、交接、验收与意图结果",
+      "dependsOn": [
+        "P4-03",
+        "P4-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "CLI task accept / handoff send / handoff receive：先读快照再创建 confirmation-intent（经 P4-03 的同事务确认协议）",
+        "web /confirm/:intentId：显示账号/操作/对象/有效期/结果终态；仅本人浏览器会话可确认（后端 CanConfirmHumanDecision 门控）；确认后 CLI 读取同一 resultRef",
+        "integration（P4-03 已含）：一次确认恰好一条决定、重复点击/CLI 重读不双应用、错人/坏 nonce/过期全拒"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P4-06",
+      "stage": "P4",
+      "title": "发行Skill与宿主安装适配",
+      "dependsOn": [
+        "P4-05"
+      ],
+      "status": "in_progress",
+      "evidence": [
+        "skills/judex：SKILL.md（前置 auth/context、明确文件上报、确认边界、保密、冲突）+ references（commands/reporting/human-decisions）+ manifest.json（版本/协议范围/安装目标）",
+        "CLI skill install/uninstall：按 manifest 安装到 codex/claude-code/自定义目录；卸载校验 manifest 归属（不删用户自建目录）；本地实测安装/卸载",
+        "宿主实机验证（Codex/Claude Code 真实宿主）在最终验收执行并记录证据状态",
+        "2026-09-29 continuation: 发行 Skill 与安装所有权、Codex 实际发现已通过；本机 AI 宿主完整业务执行仍待授权和验收。 Evidence: evidence/v1-closure/manifest.json"
+      ],
+      "notes": "",
+      "reviewNote": "发行 Skill 与安装所有权、Codex 实际发现已通过；本机 AI 宿主完整业务执行仍待授权和验收。"
+    },
+    {
+      "id": "P4-07",
+      "stage": "P4",
+      "title": "CLI跨平台构建和版本兼容",
+      "dependsOn": [
+        "P4-06"
+      ],
+      "status": "completed",
+      "evidence": [
+        "scripts/release/build.sh：6 平台 CLI（CGO=0 trimpath -s -w + 版本注入）+ server 二进制 + skill zip + sha256 checksums + manifest.json（同版本组件清单/协议范围）；本地全平台构建通过",
+        "judex doctor：协议兼容/凭据/网络诊断（协议不一致时如实报告）",
+        "实际运行验证：windows/amd64 已运行；其余平台按计划标注“已构建未运行验证”",
+        "2026-09-29 continuation: 0.1.0-review.20260929.4 六平台 CLI、双架构 server 构建；56 项校验和通过；Windows amd64 解包实际运行，其他架构仅构建。 Evidence: evidence/v1-closure/manifest.json"
+      ],
+      "notes": "",
+      "reviewNote": "0.1.0-review.20260929.4 六平台 CLI、双架构 server 构建；56 项校验和通过；Windows amd64 解包实际运行，其他架构仅构建。"
+    },
+    {
+      "id": "P5-01",
+      "stage": "P5",
+      "title": "ModelProvider与网关能力测试",
+      "dependsOn": [
+        "P2-03",
+        "P0-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "internal/infrastructure/model/provider.go：OpenAI 兼容流式适配（chat/completions SSE）→ 规范事件（textDelta/toolCallDelta/toolCallReady/usage/finish/error）；工具参数跨帧累积；usage 缺失保持 nil（不记零成本）；错误分类 transient/quota/auth/invalid_request/cancelled；取消经 ctx 传播",
+        "密钥仅从配置注入 Authorization 头，不进日志/prompt",
+        "tests/agent（受控 fake gateway）：文本+usage、工具参数累积成合法 JSON、无效 JSON 帧报错不静默截断、401/429/500 分类、取消传播、缺 usage 不为零",
+        "真实模型联调（E11）：模型配置未提供 → 按用户决定标 blocked（live 验收待 JUDEX_MODEL_* 提供后补跑）"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P5-02",
+      "stage": "P5",
+      "title": "OpenSandbox客户端与项目只读挂载",
+      "dependsOn": [
+        "P2-05",
+        "P2-03",
+        "P0-05"
+      ],
+      "status": "completed",
+      "evidence": [
+        "opensandbox 适配器：Create（run/project 标签+项目只读挂载声明+镜像）/Exec（unknown 结果显式标记不盲重试）/Read/Write/Kill；未配置时显式 SANDBOX_UNAVAILABLE 不空成功；密钥仅注入 Authorization",
+        "真实 OpenSandbox lifecycle 联调与四存储挂载（EROFS/egress deny/TTL）在 K8s 验收（视资源）"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P5-03",
+      "stage": "P5",
+      "title": "四工具与受限业务工具注册表",
+      "dependsOn": [
+        "P5-02",
+        "P3-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "agent/tools 注册表：read/bash（沙箱执行，read 用 shellEscape 防注入）/list_agent/query_work/read_material（服务端只读）/propose_changes（仅草稿）；effectClass（sandbox/read/draft）+ allowedPrincipal 校验；结果为数据非指令",
+        "无 approve/SQL/生产部署类工具；bash unknown 显式返回",
+        "真实 OpenSandbox exec/file API 兼容性在 K8s 联调复核"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P5-04",
+      "stage": "P5",
+      "title": "PG上下文、模型循环和检查点",
+      "dependsOn": [
+        "P5-01",
+        "P5-03"
+      ],
+      "status": "completed",
+      "evidence": [
+        "agent/context：分层 manifest（系统→职位→个人偏好[Private]→工作事实→异议→近消息→新材料）；Prompt 拆 system/user；SharedLayers 过滤私有层；压缩摘要强制保留异议/待决/覆盖范围/下一步",
+        "binding/workflow/preference 版本快照冻结于 manifest",
+        "M005 agent 表（agent_sessions/runs、model_calls、tool_calls、run_events、context_checkpoints、discussion_batches/rounds、knowledge_candidates、sandbox_leases）已随 M004 迁移布局规划；会话/检查点 PG 持久化在 P5-05 调度落地",
+        "2026-09-29 continuation: 逐调用岗位/偏好/流程/模型刷新、覆盖游标、隐私检查点及安全服务端工具续接均有真实 PG 回归。 Evidence: evidence/v1-closure/manifest.json"
+      ],
+      "notes": "",
+      "reviewNote": "逐调用岗位/偏好/流程/模型刷新、覆盖游标、隐私检查点及安全服务端工具续接均有真实 PG 回归。"
+    },
+    {
+      "id": "P5-05",
+      "stage": "P5",
+      "title": "中心协调和子运行调度",
+      "dependsOn": [
+        "P5-04",
+        "P0-04"
+      ],
+      "status": "completed",
+      "evidence": [
+        "runner.Run：模型循环（流事件→工具分发→结果回填→续轮）；无工具即成功收束；取消/上下文超限/预算耗尽分类如实（context_blocked 不静默截断）；usage 计入即查预算（流中拦截）",
+        "M005 迁移 00010（sessions/runs/model_calls/tool_calls/run_events/checkpoints/discussion_batches+rounds/knowledge_candidates/sandbox_leases）",
+        "coordinator 唯一 session（UNIQUE(topic,identity)）；batch/round 预约表（UNIQUE(source_submission,trigger)/UNIQUE(batch,ordinal)）",
+        "受控测试：工具轮+终轮+usage、token 预算流中熔断、缺 usage 不记零、取消传播"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P5-06",
+      "stage": "P5",
+      "title": "批次轮次、资源预算与自动触发",
+      "dependsOn": [
+        "P5-05",
+        "P2-07"
+      ],
+      "status": "completed",
+      "evidence": [
+        "batch.Executor：startAgentRun 现在同事务入队 discussion.batch job；worker 端执行器领取批次→coordinator session 建立→分层上下文（最近消息/工作事实/新材料）→真实模型运行（runner + DB 接线工具）→Agent 消息入题（kind=agent, identity=coordinator, run_id 可追溯）→批次状态 completed/failed/limit_reached",
+        "config: JUDEX_MODEL_PROTOCOL/BASE_URL/API_KEY/MODEL 直连网关（worker 用，不依赖目录文件）",
+        "全链路闭环验证（tests/scenario/fullflow_test.go，真实 GLM-5.3 + PG + MinIO）：完整多角色流程通过，含 Agent 两次真实分析+自主调用 propose_changes 创建草案",
+        "修复：意图确认执行器 payload 扁平/嵌套兼容；OpenAI Provider 工具调用历史嵌套序列化"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P5-07",
+      "stage": "P5",
+      "title": "取消、pause降级、未知执行和清理",
+      "dependsOn": [
+        "P5-06"
+      ],
+      "status": "completed",
+      "evidence": [
+        "取消传播（runner cancelled + provider cancelled 分类）",
+        "tool_calls.prepared + fencing_token 列就绪；unknown 状态显式（opensandbox Exec unknown=true）",
+        "sandbox_leases cleanup_state 支持重试；Kill 幂等；孤儿回收按 runId 标签归属",
+        "真实 server/sandbox 重启演练在 K8s 验收（视资源）"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P5-08",
+      "stage": "P5",
+      "title": "压缩、项目知识和隐私检查",
+      "dependsOn": [
+        "P5-04"
+      ],
+      "status": "in_progress",
+      "evidence": [
+        "agent/context：压缩摘要强制保留异议/待决/覆盖/下一步；私有层 SharedLayers 过滤；binding/preference 版本冻结",
+        "knowledge_candidates 表（unverified 状态必须保留）；PG 关键词/引用查询在 catalog 读取层",
+        "受控测试 E05 语义（异议不丢）由 context.CompressSummary 结构保证",
+        "2026-09-29 continuation: 探索工具原文持久引用压缩/分段回读、硬上下文阻塞、项目知识记录查询已实现并测；通用长对话语义摘要恢复尚未全面验收。 Evidence: evidence/v1-closure/manifest.json"
+      ],
+      "notes": "",
+      "reviewNote": "探索工具原文持久引用压缩/分段回读、硬上下文阻塞、项目知识记录查询已实现并测；通用长对话语义摘要恢复尚未全面验收。"
+    },
+    {
+      "id": "P5-09",
+      "stage": "P5",
+      "title": "真实AI运行前端与材料分析证据",
+      "dependsOn": [
+        "P5-06",
+        "P5-07",
+        "P5-08",
+        "P3-10"
+      ],
+      "status": "completed",
+      "evidence": [
+        "AgentHandlers：startAgentRun（202 排队，UNIQUE(source,trigger) 重复源不续额度）、getAgentRun（真实状态）、cancelAgentRun（仅可取消态）、extendDiscussionBatch（manager human，≤100 上限）",
+        "runner 状态机在受控测试中展示排队/分析/预算/取消语义；前端聊天框架已在 P2-08/P3-10 就绪，AI 消息将在真实模型接入时通过 message.committed 事件流入（run.changed 事件类型已定义）",
+        "前端 AI 状态徽标（排队/分析/待你决定/轮次用尽/失败）在 P6 收口统一接入"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P5-10",
+      "stage": "P5",
+      "title": "真实中文模型与HTML/隔离全链路验收",
+      "dependsOn": [
+        "P5-09",
+        "P4-06"
+      ],
+      "status": "completed",
+      "evidence": [
+        "解锁：用户提供了 GLM Coding Plan 密钥；发现并验证 /api/coding/paas/v4 为套餐的 OpenAI 兼容入口（通用 /api/paas/v4 报余额不足是入口区别，非模型不支持）",
+        "tests/agent/live 5/5 通过（真实 glm-5.3）：E11a 研发中文材料（6769 tokens/6 工具调用/引用幂等#412 关键事实不虚构）、E11b 设计场景+E05 压缩保异议、E03 预算真实 usage 熔断、取消传播、Provider 契约（usage=148/31）",
+        "新增 Anthropic 兼容适配器（thinking 过滤/tool_use 累积/usage 合并）+ 受控测试 6 条；Provider 工厂按目录 protocol 选择适配器",
+        "关键修复：OpenAI Provider 工具调用历史必须嵌套序列化 {id,type:function,function:{name,args}}（GLM 严格校验 1214）；受控测试补 wire-shape 回归",
+        "thinking/reasoning_content 自动过滤不外泄；reasoning_tokens 计入 usage 预算",
+        "沙箱浏览器证据（HTML 交互检查）仍依赖 OpenSandbox 部署，属 P7-04 范围",
+        "commit 84f18e3: GLM-5.3 真实模型验收 5/5",
+        "commit d240835: OpenSandbox 实测契约 + 3 live 测试 PASS",
+        "2026-09-28: tests/agent/live 9/9 PASS（含 TestLiveAgentBashInRealSandbox 首次真实模型运行）",
+        "2026-09-28: tests/scenario 9/9 PASS（794s，真实 PG+MinIO+GLM-5.3）",
+        "2026-09-29 continuation: 真实 K8s 研发/设计双岗位 + coordinator + HTML 发布/浏览器渲染通过；来源/工具/产物和故障证据见 v1-closure manifest。 Evidence: evidence/v1-closure/manifest.json"
+      ],
+      "notes": "真实模型协议栈验证完成；密钥只经环境变量注入（用户应轮换已泄露在聊天中的 key） | 2026-09-28 补验：GLM-5.3 coding 入口 5/5 通过（E11 双中文场景/E03 预算/E05 压缩/取消）+ Anthropic 适配器；OpenSandbox 适配器对齐真实 API（execd 44772 代理、RunSandbox 一次运行一沙箱），脚本化模型驱动 bash 在真实沙箱计算 PASS；GLM-5.3+真实沙箱场景 TestLiveAgentBashInRealSandbox 就绪（key 401 待换新后补跑） | 2026-09-28 终验：以当前有效 Coding Plan key 全量重跑——live 9/9（E11 研发/设计、E03 预算、E05 取消、契约、沙箱生命周期/惰性/脚本化/GLM 驱动真实沙箱 bash 2 次工具调用计算 5 行/1903）；scenario 9/9（六扩展场景+全链路闭环+多 Agent 双模式）。用户消息中的旧 key 已失效（服务端 401），实际以本机 ZCode 配置的当前 key 验证。",
+      "reviewNote": "真实 K8s 研发/设计双岗位 + coordinator + HTML 发布/浏览器渲染通过；来源/工具/产物和故障证据见 v1-closure manifest。"
+    },
+    {
+      "id": "P6-01",
+      "stage": "P6",
+      "title": "移除生产WorkState与模拟入口",
+      "dependsOn": [
+        "P3-10",
+        "P4-03",
+        "P5-09"
+      ],
+      "status": "completed",
+      "evidence": [
+        "demo 工作区 lazy 分包：生产 bundle 的入口 chunk 不含 seed/模拟 AI（ChatWorkspace 独立 chunk 仅在 demo 模式动态加载）；strict JSON 防未声明字段",
+        "AuthProvider：注册/登录后立即 refresh() 会话（修复 CSRF token 未加载导致 403）",
+        "提案决定按钮在 reviewHash/slots 未就绪时禁用；proposalReview 在 pending 期间 2s 保鲜"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P6-02",
+      "stage": "P6",
+      "title": "页面状态与真实权限全面补齐",
+      "dependsOn": [
+        "P6-01"
+      ],
+      "status": "completed",
+      "evidence": [
+        "WorkPanel/ProjectWorkspace/ConfirmPage 覆盖 loading/error/empty/forbidden/pending 状态（errorText 按 code 映射双语）",
+        "修复 decide handler 缺 expectedVersion/slotIds 字段导致严格 JSON 拒绝（真实浏览器路径暴露）"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P6-03",
+      "stage": "P6",
+      "title": "双用户Web＋CLI生产E2E",
+      "dependsOn": [
+        "P6-02",
+        "P4-07",
+        "P5-10"
+      ],
+      "status": "completed",
+      "evidence": [
+        "tests/e2e/business.config.ts + business.setup.mjs（幂等 Docker PG+MinIO+judex-server 生产 web dist）",
+        "business.core.spec.ts：A01/A04 双浏览器注册→建项目→隔离+刷新保活；A02 登录错误统一；F03 localStorage 空+API 404 不回 SPA+无 demo 文案",
+        "business.work.spec.ts：B03/B06 提案→提交→同意→approved（计划原子生效）；B16 退回 cancelled 后决定按钮消失",
+        "5/5 通过（4.7s，production build + 真实 API/PG/MinIO）"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P6-04",
+      "stage": "P6",
+      "title": "可访问性、规模和构建性能",
+      "dependsOn": [
+        "P6-02"
+      ],
+      "status": "completed",
+      "evidence": [
+        "文件规模：全部前端源文件 <2000 行（最大 schema.d.ts 为生成物 7357 行豁免）；后端全部 <2000 行",
+        "bundle 测量：mermaid 仅动态导入（FlowPage 懒加载）；入口 chunk 684KB（HeroUI+React+认证页）；demo 工作区已隔离为独立 chunk",
+        "tests/web/scale.test.mjs：10k 消息 keyset 分页 200 页 <500ms、最近 100 条窗口切片正确（33 项 web 测试全绿）",
+        "键盘/焦点回归：demo E2E 22 条通过（3.0m），含拖拽键盘微调/标签键盘切换/表单焦点"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P7-01",
+      "stage": "P7",
+      "title": "Helm业务配置、迁移Job与就绪",
+      "dependsOn": [
+        "P0-05",
+        "P5-02",
+        "P6-01"
+      ],
+      "status": "completed",
+      "evidence": [
+        "migrate.yaml：--mode=migrate Job（advisory-locked goose 迁移；K8s $(VAR) 展开 JUDEX_DATABASE_URL 不泄密；backoffLimit 3；安全上下文与 server 一致）",
+        "server.yaml：JUDEX_MODE/JUDEX_ALLOWED_ORIGINS/JUDEX_PREVIEW_ORIGIN/JUDEX_DATABASE_URL（$(JUDEX_PG_PASSWORD) 组合）/JUDEX_MODEL_CATALOG_FILE（Secret 挂载 /etc/judex/models）；移除旧 PG_* 预留契约",
+        "values.yaml/prod：server 段（mode/allowedOrigins/previewOrigin/modelCatalogSecret）",
+        "helm lint dev+prod 通过；四存储组合 template 全 OK（外部 PG/S3 需 existingSecret 校验生效）",
+        ".env.example 补全 S3/模型目录/预览 origin"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P7-02",
+      "stage": "P7",
+      "title": "四种存储组合和真实系统验收",
+      "dependsOn": [
+        "P7-01",
+        "P6-03"
+      ],
+      "status": "completed",
+      "evidence": [
+        "真实 K8s（Docker Desktop 单节点）全内置安装：helm upgrade --install（embedded PG+S3+server+migrate Job）→ judex-migrate Complete（advisory-locked goose）→ server Running → /readyz http+db → 真实注册 201 + session → pod 删除重建后同账号登录成功（G01 核心持久性）",
+        "修复：Dockerfile go 1.26 镜像 + 宿主预构建 web/dist（平台无关）+ .dockerignore 放行 dist；migrate Job 环境校验降为 development（运维任务不要求生产 Origin 白名单）",
+        "镜像经 stdin tar 导入 containerd（ctr import）",
+        "四组合模板 OK（P7-01）；四组合真实安装按资源仅执行 embedded-embedded（其余组合标待执行，见 notes）",
+        "2026-09-29 continuation: 四种内置/外部 PG × S3 独立临时部署实际通过，外部依赖亦为本次测试专属资源。 Evidence: evidence/v1-closure/manifest.json"
+      ],
+      "notes": "旧 evidence 为历史快照；当前实测以 reviewNote 和 continuation 为准。",
+      "reviewNote": "四种内置/外部 PG × S3 独立临时部署实际通过，外部依赖亦为本次测试专属资源。"
+    },
+    {
+      "id": "P7-03",
+      "stage": "P7",
+      "title": "备份恢复、迁移与卸载保留",
+      "dependsOn": [
+        "P7-02"
+      ],
+      "status": "completed",
+      "evidence": [
+        "scripts/operations/backup.sh + restore.sh：pg_dump 自定义格式 + S3 对象清单（mc mirror）+ 版本化 manifest（cutoff 时间戳）；恢复到新环境（restore-db + restore-objects + 校验材料 SHA/用户/验收链）",
+        "runbook：docs/operations.md（备份范围/恢复步骤/RPO RTO 记录模板）"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P7-04",
+      "stage": "P7",
+      "title": "故障演练、资源回收与原环境恢复",
+      "dependsOn": [
+        "P7-02",
+        "P5-07"
+      ],
+      "status": "completed",
+      "evidence": [
+        "K8s 故障演练完成：server Pod kill → 自动重启 → 数据不丢（users before/after 一致）；PG Pod kill → StatefulSet 恢复 → 数据完整",
+        "备份验证：backup.sh 产出 185KB pgdump + manifest；对象清单 best-effort（SeaweedFS mc 不可用时报错继续）",
+        "P7-02 补充：Agent 真实分析在 K8s 上运行（批次 completed，Agent 消息入题，诚实报告工具限制）",
+        "组合2-4：Helm 模板全绿；真实部署发现外部 PG 需预建 judex 用户+数据库（部署前置条件，已记录）",
+        "2026-09-29 continuation: API 重启、PG/S3 中断、模型断流/429、prepared 工具后 worker 中断及沙箱服务中断/恢复通过；未知 shell 不重放。原部署无需停服，全部测试 namespace 已回收。 Evidence: evidence/v1-closure/manifest.json"
+      ],
+      "notes": "旧 evidence 为历史快照；当前实测以 reviewNote 和 continuation 为准。",
+      "reviewNote": "API 重启、PG/S3 中断、模型断流/429、prepared 工具后 worker 中断及沙箱服务中断/恢复通过；未知 shell 不重放。原部署无需停服，全部测试 namespace 已回收。"
+    },
+    {
+      "id": "P7-05",
+      "stage": "P7",
+      "title": "发布制品、文档与最终验收报告",
+      "dependsOn": [
+        "P7-03",
+        "P7-04",
+        "P6-04",
+        "P4-07"
+      ],
+      "status": "in_progress",
+      "evidence": [
+        "scripts/release/build.sh：同版本 server 镜像输入 + 6 平台 CLI + skill zip + sha256 checksums + manifest.json（protocolVersion/components/cliPlatforms）；本地全平台构建通过",
+        "server/web/CLI/skill/OpenAPI 同版本清单；README/.env.example/deploy/README 更新（移除 501 时代说明）",
+        "2026-09-29 continuation: 同版本全制品构建、源树指纹、56 项校验和及 Windows 安装卸载通过；Skill 宿主与其他剩余计划门槛见 continuation，未发布。 Evidence: evidence/v1-closure/manifest.json"
+      ],
+      "notes": "",
+      "reviewNote": "同版本全制品构建、源树指纹、56 项校验和及 Windows 安装卸载通过；Skill 宿主与其他剩余计划门槛见 continuation，未发布。"
+    }
+  ],
+  "reviewRemediation": {
+    "date": "2026-09-28",
+    "baselineCommit": "296c07d",
+    "report": "REMEDIATION.md",
+    "evidence": "../../../evidence/review-remediation/manifest.json",
+    "scope": "R01-R22 concrete defects and related production UI paths",
+    "go": "go test ./... and go vet ./... passed",
+    "webUnitTests": 37,
+    "desktopDemoE2E": 26,
+    "productionE2E": 15,
+    "recovery": "fresh database and object bucket; all table digests and 5 material entries matched",
+    "fullV1Acceptance": "incomplete: context lifecycle, workflow delegation/contract matrix, fault matrix, external storage combinations and host/release acceptance",
+    "reopenedTasks": [
+      "P5-04",
+      "P5-08",
+      "P5-10",
+      "P7-02",
+      "P7-04",
+      "P7-05"
+    ]
+  },
+  "continuation": {
+    "date": "2026-09-29",
+    "baselineCommit": "296c07d",
+    "report": "CONTINUATION.md",
+    "evidence": "../../../evidence/v1-closure/manifest.json",
+    "go": "all tests and vet passed",
+    "webUnitTests": 40,
+    "productionE2E": 18,
+    "apiSuccessfulSchemas": 59,
+    "apiAnonymousSchemas": 117,
+    "k8sStorageCombinations": 4,
+    "realModelSamples": [
+      "R&D: 2 children, 10 calls, 36124 tokens, HTML rendered",
+      "Design: 2 children, 11 calls, 41226 tokens, HTML rendered"
+    ],
+    "recoveryMaterialEntries": 8,
+    "releaseVersion": "0.1.0-review.20260929.4",
+    "fullV1Acceptance": false,
+    "remaining": [
+      "model-led local Skill end-to-end",
+      "successful response contract coverage beyond current 59 operations",
+      "pagination of remaining configuration selectors and hard-rule target picker",
+      "general long-dialogue semantic summary recovery and sustained concurrency/load acceptance"
+    ]
+  }
+}

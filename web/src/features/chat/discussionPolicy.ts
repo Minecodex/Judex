@@ -1,3 +1,4 @@
+import {ensureDemoMainTopics} from "./demoCollaboration.ts";
 import {
   words as W,
   type WorkState,
@@ -141,39 +142,15 @@ export function discussTopic(s: WorkState, id: string): Result {
   });
   return { state: next };
 }
-export function discussWorkSubmission(
-  s: WorkState,
-  taskId: string,
-  sourceId: string,
-  summary: string,
-  files: Evidence[],
-): Result {
-  const task = s.tasks.find((t) => t.id === taskId);
-  if (!task || !member(s, task.projectId)) return { error: "permission" };
-  const next = structuredClone(s);
-  let topic = next.topics.find(
-    (t) => t.projectId === task.projectId && t.taskIds.includes(taskId),
-  );
-  if (!topic) {
-    topic = {
-      id: uid(),
-      projectId: task.projectId,
-      title: W("工作上报：" + task.title.zh, "Work report: " + task.title.en),
-      planIds: task.planId ? [task.planId] : [],
-      taskIds: [taskId],
-      messages: [],
-    };
-    next.topics.push(topic);
-  }
-  if (topic.messages.some((m) => m.id === sourceId)) return { state: s };
-  topic.messages.push({
-    id: sourceId,
-    actor: s.currentUser,
-    kind: "person",
-    submissionType: "work_report",
-    text: W(summary),
-    files,
-    at: Date.now(),
-  });
-  return discussTopic(next, topic.id);
+export function discussWorkSubmission(s:WorkState,taskId:string,sourceId:string,summary:string,files:Evidence[]):Result {
+ const task=s.tasks.find(t=>t.id===taskId);
+ if(!task||!member(s,task.projectId))return {error:"permission"};
+ if(s.taskActivities?.some(a=>a.id===sourceId))return {state:s};
+ const next=ensureDemoMainTopics(s),now=new Date().toISOString();
+ next.taskActivities!.push({
+  id:sourceId,taskId,kind:"delivery",sourceType:"report",source:"web",text:summary,actorUserId:null,actorName:s.currentUser,identityId:null,createdAt:now,
+  materialVersionIds:files.map(f=>f.id),materials:files.map(f=>({versionId:f.id,name:f.name})),topicIds:[],
+  analysis:{id:uid(),taskId,batchId:null,sourceType:"report",sourceId,state:"completed",summary:"交付已登记，最终验收仍待确认。",basis:[],disagreements:[],errorCode:null,updatedAt:now}
+ });
+ return {state:next};
 }

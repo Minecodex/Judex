@@ -1,0 +1,33 @@
+import {Dropdown,Label} from '@heroui/react';
+import {Ellipsis,FileText,GitBranch,MessageCircle,Pencil,RotateCcw,SkipForward,Trash2,Upload,ArrowUpRight} from 'lucide-react';
+import type {ReactNode} from 'react';
+import {Button} from '../../components/ui/Button';
+import {useActionSize} from '../../components/ui/ActionGroup';
+import {useWork} from '../work/store';
+import {canWork,canAcceptTask,blockers} from '../work/selectors';
+import {workCapabilities} from '../work/runtime';
+import type {Task,Plan} from '../work/types';
+import type {WorkMutation} from '../work/WorkMutationDialog';
+export type TaskOperation='start'|'accept'|'reopen'|'handoff'|'brief'|'approve'|'progress'|'delivery'|'question'|'local';
+type Item={id:string;label:string;icon:ReactNode;disabled?:boolean;danger?:boolean;run:()=>void};
+function More({items,label,testId}:{items:Item[];label:string;testId:string}){
+ const size=useActionSize();
+ return <Dropdown>
+  <Button size={size??'sm'} isIconOnly aria-label={label} data-testid={testId}><Ellipsis/></Button>
+  <Dropdown.Popover>
+   <Dropdown.Menu aria-label={label} disabledKeys={items.filter(v=>v.disabled).map(v=>v.id)} onAction={key=>items.find(v=>v.id===key)?.run()}>
+    {items.map(v=><Dropdown.Item key={v.id} id={v.id} textValue={v.label} aria-label={v.label} variant={v.danger?'danger':undefined}>
+     {v.icon}<Label>{v.label}</Label>
+    </Dropdown.Item>)}
+   </Dropdown.Menu>
+  </Dropdown.Popover>
+ </Dropdown>;
+}
+export function TaskMore({task,onMutation,onOperation,onSection,readOnly=false}:{task:Task;onMutation:(m:WorkMutation)=>void;onOperation?:(op:TaskOperation)=>void;onSection?:(s:'overview'|'records'|'flow')=>void;readOnly?:boolean}){
+ const p=useWork(),caps=workCapabilities(p.state,task),status=task.businessStatus??task.status,authorized=canWork(p.state,task)&&!task.executionException&&!task.discardedAt,items:Item[]=[];
+ if(onSection){items.push({id:'records',label:p.t('taskDetailsRecords'),icon:<FileText/>,run:()=>onSection('records')},{id:'flow',label:p.t('taskDetailsFlow'),icon:<GitBranch/>,run:()=>onSection('flow')});}
+ if(!readOnly){if(caps.editDraft)items.push({id:'edit',label:p.t('taskDetailsDraftEdit'),icon:<Pencil/>,run:()=>onMutation({action:'edit',kind:'task',id:task.id})});else if(caps.proposeChange)items.push({id:'change',label:p.t('taskDetailsChange'),icon:<Pencil/>,run:()=>onMutation({action:'edit',kind:'task',id:task.id})});if(caps.skip)items.push({id:'skip',label:p.t('taskDetailsSkip'),icon:<SkipForward/>,run:()=>onMutation({action:'skip',kind:'task',id:task.id})});if(caps.restore)items.push({id:'restore',label:p.t('taskDetailsRestore'),icon:<RotateCcw/>,run:()=>onMutation({action:'restore',kind:'task',id:task.id})});if(caps.discardDraft)items.push({id:'delete',label:p.t('taskDetailsDelete'),icon:<Trash2/>,danger:true,run:()=>onMutation({action:'delete',kind:'task',id:task.id})});
+ if(onOperation){if(authorized&&['ready','working','rework'].includes(status))items.push({id:'delivery',label:p.t('coDelivery'),icon:<FileText/>,disabled:!!blockers(p.state,task,'start').length,run:()=>onOperation('delivery')});if(!task.discardedAt)items.push({id:'question',label:p.t('coQuestion'),icon:<MessageCircle/>,run:()=>onOperation('question')});if(authorized&&!['draft','cancelled'].includes(status))items.push({id:'handoff',label:p.t('workProposeHandoff'),icon:<ArrowUpRight/>,run:()=>onOperation('handoff')});if(status==='accepted'&&canAcceptTask(p.state,task))items.push({id:'reopen',label:p.t('workTaskReopen'),icon:<RotateCcw/>,run:()=>onOperation('reopen')});if(status==='draft'&&(p.management||canWork(p.state,task)))items.push({id:'approve',label:p.t('workTaskDraftApprove'),icon:<Pencil/>,run:()=>onOperation('approve')});if(p.mode==='demo'&&!task.discardedAt)items.push({id:'local',label:p.t('coLocalPush'),icon:<Upload/>,run:()=>onOperation('local')});}}
+ if(!items.length)return null;return <More items={items} label={p.t('taskDetailsMore')+' · '+p.text(task.title)} testId={'task-more-'+task.id}/>;
+}
+export function PlanMore({plan,onMutation}:{plan:Plan;onMutation:(m:WorkMutation)=>void}){const p=useWork(),caps=workCapabilities(p.state,plan),items:Item[]=[];if(caps.editDraft||caps.proposeChange)items.push({id:'edit',label:p.t(caps.editDraft?'taskDetailsPlanDraftEdit':'taskDetailsPlanChange'),icon:<Pencil/>,run:()=>onMutation({action:'edit',kind:'plan',id:plan.id})});if(caps.discardDraft)items.push({id:'delete',label:p.t('taskDetailsPlanDelete'),icon:<Trash2/>,danger:true,run:()=>onMutation({action:'delete',kind:'plan',id:plan.id})});return items.length?<More items={items} label={p.t('taskDetailsMore')+' · '+p.text(plan.title)} testId={'plan-more-'+plan.id}/>:null;}

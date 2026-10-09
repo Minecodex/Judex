@@ -1,0 +1,107 @@
+components:
+  schemas:
+    WorkflowPresetNode:
+      type: object
+      required: [id, name, responsibility]
+      properties:
+        kind: {type: string, enum: [activity, decision]}
+        phase: {$ref: '../components/presets.yaml#/components/schemas/PresetText'}
+        id: {type: string}
+        name: {$ref: '../components/presets.yaml#/components/schemas/PresetText'}
+        responsibility: {$ref: '../components/presets.yaml#/components/schemas/PresetText'}
+    WorkflowPreset:
+      type: object
+      required: [id, name, summary, instructions, nodes, edges, roleIds, scenarioIds]
+      properties:
+        complexity: {type: string, enum: [basic, advanced]}
+        sources:
+          type: array
+          items:
+            type: object
+            required: [title, url]
+            properties:
+              title: {$ref: '../components/presets.yaml#/components/schemas/PresetText'}
+              url: {type: string, format: uri, pattern: '^https://'}
+        id: {type: string}
+        name: {$ref: '../components/presets.yaml#/components/schemas/PresetText'}
+        summary: {$ref: '../components/presets.yaml#/components/schemas/PresetText'}
+        instructions: {$ref: '../components/presets.yaml#/components/schemas/PresetText'}
+        nodes:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/WorkflowPresetNode'}
+        edges:
+          type: array
+          items:
+            type: object
+            required: [from, to]
+            properties:
+              from: {type: string}
+              to: {type: string}
+              kind: {type: string, enum: [sequence, feedback]}
+              label: {$ref: '../components/presets.yaml#/components/schemas/PresetText'}
+        roleIds:
+          type: array
+          items: {type: string}
+        scenarioIds:
+          type: array
+          items: {type: string}
+    WorkflowScenario:
+      type: object
+      required: [id, name, description, workflowIds]
+      properties:
+        id: {type: string}
+        name: {$ref: '../components/presets.yaml#/components/schemas/PresetText'}
+        description: {$ref: '../components/presets.yaml#/components/schemas/PresetText'}
+        workflowIds:
+          type: array
+          items: {type: string}
+    WorkflowPresetCatalog:
+      type: object
+      required: [version, workflows, scenarios, roles]
+      properties:
+        version: {type: string}
+        workflows:
+          type: array
+          items: {$ref: '#/components/schemas/WorkflowPreset'}
+        scenarios:
+          type: array
+          items: {$ref: '#/components/schemas/WorkflowScenario'}
+        roles:
+          type: array
+          items:
+            type: object
+            required: [id, name]
+            properties:
+              id: {type: string}
+              name: {$ref: '../components/presets.yaml#/components/schemas/PresetText'}
+    ImportWorkflowPresetsRequest:
+      type: object
+      additionalProperties: false
+      required: [catalogVersion, scenarioId, workflowIds, locale]
+      properties:
+        catalogVersion: {type: string, minLength: 1, maxLength: 64}
+        scenarioId: {type: string, minLength: 1, maxLength: 64}
+        workflowIds:
+          type: array
+          minItems: 1
+          maxItems: 32
+          uniqueItems: true
+          items: {type: string, minLength: 1, maxLength: 64}
+        locale: {type: string, enum: [zh-CN, en]}
+    ImportedWorkflowPresets:
+      type: object
+      required: [items, skipped]
+      properties:
+        items:
+          type: array
+          items: {$ref: '../components/projects.yaml#/components/schemas/Workflow'}
+        skipped:
+          type: array
+          items:
+            type: object
+            required: [presetId, workflowId, name]
+            properties:
+              presetId: {type: string}
+              workflowId: {type: string, format: uuid}
+              name: {type: string}

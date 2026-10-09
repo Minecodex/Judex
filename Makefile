@@ -12,12 +12,16 @@ else
 EXE :=
 endif
 
-.PHONY: help deps dev api web build build-api build-web test test-go test-web test-e2e check fmt helm-lint helm-template-dev helm-template-prod image deploy-dev deploy-prod
+.PHONY: help deps dev api web build build-api build-web test test-go test-web test-integration test-contract test-e2e check fmt generate helm-lint helm-template-dev helm-template-prod image deploy-dev deploy-prod
 help:
-	@echo "Judex: deps | api | web | build | test | test-e2e | check | image | helm-lint | deploy-dev | deploy-prod"
+	@echo "Judex: deps | api | web | build | test | test-e2e | check | generate | image | helm-lint | deploy-dev | deploy-prod"
 deps:
 	$(GO) mod download
 	$(NPM) ci
+generate:
+	node api/generate.mjs
+	node api/generate-types.mjs
+	$(GO) build ./internal/gen/...
 dev: api
 api:
 	$(GO) run ./cmd/judex-server
@@ -34,9 +38,13 @@ test-go:
 	$(GO) test ./...
 test-web:
 	$(NPM) run test:web
+test-integration:
+	$(GO) test ./tests/integration/ -count=1 -timeout 20m
+test-contract:
+	$(GO) test ./tests/contract/ -count=1
 test-e2e: build-web
 	$(NPM) run test:e2e
-check: test build helm-lint test-e2e
+check: test test-contract test-integration build helm-lint test-e2e
 fmt:
 	$(GO) fmt ./...
 helm-lint:

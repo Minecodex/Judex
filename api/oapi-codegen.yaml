@@ -1,0 +1,7 @@
+# oapi-codegen configuration: types only. Routing is registered dynamically
+# from the embedded spec so spec<->router parity is enforced by tests, not by
+# generated interfaces.
+package: apigen
+generate:
+  models: true
+output: internal/gen/api/types.gen.go

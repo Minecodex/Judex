@@ -1,0 +1,358 @@
+paths:
+  /projects/{projectId}/topics/{topicId}/fork:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: topicId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: forkTopic
+      summary: 从固定消息位置分叉公开会话
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/IdempotencyKeyParam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/collaboration.yaml#/components/schemas/ForkTopicRequest
+      responses:
+        '201':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/discussion.yaml#/components/schemas/Topic
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/RequestMeta
+        '400':
+          $ref: ../components/common.yaml#/components/responses/BadRequest
+        '404':
+          $ref: ../components/common.yaml#/components/responses/NotFound
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict
+  /projects/{projectId}/tasks/{taskId}/activity:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listTaskActivity
+      summary: 任务统一活动时间线
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/LimitParam
+        - $ref: ../components/common.yaml#/components/parameters/CursorParam
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                      - nextCursor
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: ../components/collaboration.yaml#/components/schemas/TaskActivity
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/RequestMeta
+        '400':
+          $ref: ../components/common.yaml#/components/responses/BadRequest
+        '404':
+          $ref: ../components/common.yaml#/components/responses/NotFound
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict
+  /projects/{projectId}/plans/{planId}/discussion-summary:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getPlanDiscussionSummary
+      summary: 计划主讨论的任务摘要及待处理讨论建议
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/collaboration.yaml#/components/schemas/PlanDiscussionSummary
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/RequestMeta
+        '400':
+          $ref: ../components/common.yaml#/components/responses/BadRequest
+        '404':
+          $ref: ../components/common.yaml#/components/responses/NotFound
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict
+  /projects/{projectId}/discussion-suggestions:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+    get:
+      operationId: listDiscussionSuggestions
+      summary: 待处理讨论建议
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/LimitParam
+        - $ref: ../components/common.yaml#/components/parameters/CursorParam
+        - name: planId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: taskId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                      - nextCursor
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: ../components/collaboration.yaml#/components/schemas/DiscussionSuggestion
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/RequestMeta
+        '400':
+          $ref: ../components/common.yaml#/components/responses/BadRequest
+        '404':
+          $ref: ../components/common.yaml#/components/responses/NotFound
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict
+  /projects/{projectId}/discussion-suggestions/{suggestionId}:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: suggestionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getDiscussionSuggestion
+      summary: 取得讨论建议与冻结来源
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/collaboration.yaml#/components/schemas/DiscussionSuggestion
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/RequestMeta
+        '400':
+          $ref: ../components/common.yaml#/components/responses/BadRequest
+        '404':
+          $ref: ../components/common.yaml#/components/responses/NotFound
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict
+    post:
+      operationId: resolveDiscussionSuggestion
+      summary: 人选择讨论建议的承载位置
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/IdempotencyKeyParam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/collaboration.yaml#/components/schemas/ResolveDiscussionSuggestionRequest
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/collaboration.yaml#/components/schemas/DiscussionSuggestion
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/RequestMeta
+        '400':
+          $ref: ../components/common.yaml#/components/responses/BadRequest
+        '404':
+          $ref: ../components/common.yaml#/components/responses/NotFound
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict
+  /projects/{projectId}/task-analyses/{analysisId}:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: analysisId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getTaskAnalysis
+      summary: 读取真实任务分析状态
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/collaboration.yaml#/components/schemas/TaskAnalysis
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/RequestMeta
+        '400':
+          $ref: ../components/common.yaml#/components/responses/BadRequest
+        '404':
+          $ref: ../components/common.yaml#/components/responses/NotFound
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict
+  /projects/{projectId}/task-analyses/{analysisId}/retry:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: analysisId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: retryTaskAnalysis
+      summary: 保留来源与预算的任务分析重试
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/IdempotencyKeyParam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: []
+              properties: {}
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/collaboration.yaml#/components/schemas/TaskAnalysis
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/RequestMeta
+        '400':
+          $ref: ../components/common.yaml#/components/responses/BadRequest
+        '404':
+          $ref: ../components/common.yaml#/components/responses/NotFound
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict

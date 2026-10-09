@@ -11,29 +11,69 @@ spec:
     metadata:
       labels: {{ include "judex.labels" . | nindent 8 }}
     spec:
+      {{- if and .Values.sandbox.enabled .Values.server.materialProjection.enabled }}
+      serviceAccountName: {{ include "judex.name" . }}-materials
+      automountServiceAccountToken: true
+      {{- else }}
       automountServiceAccountToken: false
+      {{- end }}
       securityContext: {runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, seccompProfile: {type: RuntimeDefault}}
+      volumes:
+        - name: temporary
+          emptyDir: {sizeLimit: 2Gi}
+        {{- if .Values.server.modelCatalogSecret }}
+        - name: model-catalog
+          secret: {secretName: {{ .Values.server.modelCatalogSecret }}}
+        {{- end }}
+      initContainers:
+        {{- include "judex.waitForPostgres" . | nindent 8 }}
       containers:
         - name: server
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
           ports: [{name: http, containerPort: 8080}]
+          {{- with .Values.server.modelEnvSecret }}
+          # models.yaml apiKeyEnv 引用的密钥环境变量（envFrom 整包注入，
+          # Secret 键名须与 apiKeyEnv 一致，如 JUDEX_MODEL_KEY_GLM53）。
+          envFrom:
+            - secretRef: {name: {{ . }}}
+          {{- end }}
           env:
             - {name: JUDEX_ENV, value: {{ .Values.environment | quote }}}
+            - {name: JUDEX_MODE, value: {{ .Values.server.mode | default "all" | quote }}}
             - {name: JUDEX_HTTP_ADDR, value: "0.0.0.0:8080"}
             - {name: JUDEX_WEB_DIR, value: /app/web}
-            # Reserved connection contract; the scaffold reports persistence=false.
-            - {name: JUDEX_POSTGRES_HOST, value: {{ include "judex.pgHost" . | quote }}}
-            - {name: JUDEX_POSTGRES_DATABASE, value: {{ .Values.postgresql.database | quote }}}
-            - {name: JUDEX_POSTGRES_USER, value: {{ .Values.postgresql.username | quote }}}
-            - {name: JUDEX_POSTGRES_PORT, value: {{ .Values.postgresql.embedded.enabled | ternary "5432" (.Values.postgresql.external.port | toString) | quote }}}
-            - {name: JUDEX_POSTGRES_SSLMODE, value: {{ .Values.postgresql.embedded.enabled | ternary "disable" .Values.postgresql.external.sslMode | quote }}}
-            - name: JUDEX_POSTGRES_PASSWORD
+            - {name: JUDEX_ALLOWED_ORIGINS, value: {{ .Values.server.allowedOrigins | join "," | quote }}}
+            {{- if .Values.server.previewOrigin }}
+            - {name: JUDEX_PREVIEW_ORIGIN, value: {{ .Values.server.previewOrigin | quote }}}
+            {{- end }}
+            {{- if .Values.server.modelCatalogSecret }}
+            - name: JUDEX_MODEL_CATALOG_FILE
+              value: /etc/judex/models/models.yaml
+            {{- end }}
+            {{- with .Values.server.modelGateway }}
+            {{- if .protocol }}
+            - {name: JUDEX_MODEL_PROTOCOL, value: {{ .protocol | quote }}}
+            - {name: JUDEX_MODEL_BASE_URL, value: {{ required "modelGateway.baseUrl is required" .baseUrl | quote }}}
+            - {name: JUDEX_MODEL_NAME, value: {{ required "modelGateway.model is required" .model | quote }}}
+            - name: JUDEX_MODEL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "modelEnvSecret is required when modelGateway is set" $.Values.server.modelEnvSecret }}
+                  key: {{ required "modelGateway.apiKeyKey is required" .apiKeyKey }}
+            {{- end }}
+            {{- end }}
+            - name: JUDEX_PG_PASSWORD
               valueFrom:
                 secretKeyRef: {name: {{ include "judex.pgSecret" . }}, key: password}
+            # K8s $(VAR) expansion composes the URL without leaking the secret.
+            - {name: JUDEX_DATABASE_URL, value: {{ include "judex.databaseURL" . | quote }}}
+            {{- if .Values.server.materialPreview.enabled }}
+            - {name: JUDEX_MATERIAL_CONVERTER_URL, value: {{ printf "http://%s-material-converter:9081" .Release.Name | quote }}}
+            {{- end }}
             - name: JUDEX_S3_ENDPOINT
-              value: {{ if .Values.objectStorage.embedded.enabled }}"http://{{ .Release.Name }}-seaweedfs:8333"{{ else }}{{ .Values.objectStorage.external.endpoint | quote }}{{ end }}
+              value: {{ if .Values.objectStorage.embedded.enabled }}"http://{{ .Release.Name }}-seaweedfs.{{ .Release.Namespace }}.svc.cluster.local:8333"{{ else }}{{ .Values.objectStorage.external.endpoint | quote }}{{ end }}
             - name: JUDEX_S3_ACCESS_KEY
               valueFrom:
                 secretKeyRef: {name: {{ include "judex.storageSecret" . }}, key: access-key}
@@ -42,13 +82,32 @@ spec:
                 secretKeyRef: {name: {{ include "judex.storageSecret" . }}, key: secret-key}
             - {name: JUDEX_S3_REGION, value: {{ .Values.objectStorage.external.region | quote }}}
             - {name: JUDEX_S3_BUCKET, value: {{ .Values.objectStorage.embedded.enabled | ternary "judex" .Values.objectStorage.external.bucket | quote }}}
+            {{- if and .Values.sandbox.enabled .Values.server.materialProjection.enabled }}
+            - {name: JUDEX_MATERIAL_NAMESPACE, value: {{ printf "%s-sandboxes" .Release.Namespace | quote }}}
+            - {name: JUDEX_MATERIAL_IMAGE, value: {{ default (printf "%s:%s" .Values.image.repository .Values.image.tag) .Values.server.materialProjection.image | quote }}}
+            - {name: JUDEX_MATERIAL_STORAGE_CLASS, value: {{ .Values.server.materialProjection.storageClass | quote }}}
+            {{- end }}
             {{- if .Values.sandbox.enabled }}
             - {name: JUDEX_OPENSANDBOX_ENDPOINT, value: "http://{{ printf "%s-%s-opensandbox-server" .Release.Namespace .Release.Name | trunc 63 | trimSuffix "-" }}:80"}
             - name: JUDEX_OPENSANDBOX_API_KEY
               valueFrom:
                 secretKeyRef: {name: {{ .Values.global.sandboxAPIKeySecret }}, key: api-key}
+            {{- with .Values.server.sandboxImage }}
+            - {name: JUDEX_OPENSANDBOX_IMAGE, value: {{ . | quote }}}
+            {{- end }}
+            {{- with .Values.server.sandboxCPU }}
+            - {name: JUDEX_OPENSANDBOX_CPU, value: {{ . | quote }}}
+            {{- end }}
+            {{- with .Values.server.sandboxMemory }}
+            - {name: JUDEX_OPENSANDBOX_MEMORY, value: {{ . | quote }}}
+            {{- end }}
             {{- end }}
           resources: {{ toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - {name: temporary, mountPath: /tmp}
+            {{- if .Values.server.modelCatalogSecret }}
+            - {name: model-catalog, mountPath: /etc/judex/models, readOnly: true}
+            {{- end }}
           startupProbe: {httpGet: {path: /healthz, port: http}, failureThreshold: 30, periodSeconds: 2}
           readinessProbe: {httpGet: {path: /readyz, port: http}, periodSeconds: 5}
           livenessProbe: {httpGet: {path: /healthz, port: http}, periodSeconds: 15}

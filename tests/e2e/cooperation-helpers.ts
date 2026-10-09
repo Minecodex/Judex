@@ -1,0 +1,10 @@
+import {expect,type Page} from "@playwright/test";
+export const demoState=(page:Page)=>page.evaluate(()=>JSON.parse(localStorage.getItem("judex.web.preview.v1")!));
+export async function openTask(page:Page,id:string){await page.goto(`/projects/leaf?tab=deliveries&view=task&item=${id}`);await expect(page.getByRole("dialog")).toBeVisible();}
+export async function openPlan(page:Page,id="leaf-first"){await page.goto(`/projects/leaf/plans/${id}/route`);await expect(page.getByTestId("execution-map")).toBeVisible();}
+export async function openChat(page:Page,id="labels",project="leaf",plan?:string){await page.goto(`/projects/${project}${plan?"/plans/"+plan:""}/chat/${encodeURIComponent(id)}`);await expect(page.getByTestId("work-discussion-input")).toBeVisible();}
+export async function switchProject(page:Page,id:string){await page.getByTestId("account-projects").isVisible().then(async visible=>{if(visible)await page.getByTestId("account-projects").click();else await page.locator(".judex-co-brand").click();});await page.getByTestId("project-enter-"+id).click();}
+export async function openHandoff(page:Page,id="first-review"){await page.goto(`/projects/leaf?tab=deliveries&view=handoff&item=${id}`);await expect(page.getByRole("dialog")).toBeVisible();}
+export async function deliver(page:Page,id:string,body="已在本地完成并记录验证结果。"){await openTask(page,id);await page.getByRole("dialog").getByRole("button",{name:"提交交付",exact:true}).click();await page.getByTestId("collaboration-report-body").fill(body);await page.getByTestId("collaboration-submit-record").click();await expect(page.getByTestId("collaboration-report-body")).toHaveCount(0);}
+export async function propose(page:Page){await page.getByTestId("conversation-menu").click();await page.getByTestId("chat-propose").click();}
+export async function forkAt(page:Page,seq:number){await page.locator(`[data-message-seq="${seq}"]`).getByRole("button",{name:/分叉/}).click();await page.getByRole("menuitem",{name:"从此处分叉",exact:true}).click();await page.getByTestId("collaboration-create-fork").click();}

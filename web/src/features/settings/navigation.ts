@@ -1,7 +1,8 @@
 import type { View } from "../work/types.ts";
 export type SettingsSection =
-  "general" | "preferences" | "project" | "team" | "flows" | "local";
+  "security" | "general" | "preferences" | "project" | "team" | "flows" | "local";
 export const settingsSections: SettingsSection[] = [
+ "security",
   "general",
   "preferences",
   "project",

@@ -1,0 +1,193 @@
+# Agent 运行与人工意图对象（docs/plans/v1/05、06 §6）
+components:
+  schemas:
+    StartRunRequest:
+      type: object
+      required: [sourceSubmissionId]
+      properties:
+        sourceSubmissionId:
+          type: string
+          format: uuid
+        expectedContextVersion:
+          type: integer
+        reason:
+          type: string
+          maxLength: 2000
+    AgentRun:
+      type: object
+      required: [id, identityId, state, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        batchId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        roundId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        parentRunId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        identityId:
+          type: string
+          format: uuid
+        identityName:
+          type: string
+        bindingVersion:
+          type:
+            - integer
+            - 'null'
+        state:
+          type: string
+          enum:
+            - queued
+            - provisioning
+            - running
+            - waiting_children
+            - waiting_human
+            - waiting_material
+            - succeeded
+            - failed
+            - cancelled
+        budget:
+          type: object
+          additionalProperties: true
+        waitingFor:
+          type: array
+          items:
+            type: string
+        artifactRefs:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+    RunEvent:
+      type: object
+      required: [seq, type, occurredAt]
+      properties:
+        seq:
+          type: integer
+        runId:
+          type: string
+          format: uuid
+        type:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        occurredAt:
+          type: string
+          format: date-time
+    CancelRunRequest:
+      type: object
+      required: [expectedVersion, reason]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          maxLength: 2000
+    BatchExtensionRequest:
+      type: object
+      required: [extraRounds, expectedVersion, reason]
+      properties:
+        extraRounds:
+          type: integer
+          minimum: 1
+          maximum: 100
+        expectedVersion:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+    ConfirmationIntentRequest:
+      type: object
+      required: [operation, objectId, reviewHash]
+      properties:
+        operation:
+          type: string
+          enum:
+            - proposal.decision
+            - topic.fork
+            - discussion_suggestion.resolve
+            - task.acceptance
+            - task.reopen
+            - task.skip
+            - task.restore
+            - plan.acceptance
+            - plan.reopen
+            - handoff.send
+            - handoff.decision
+            - project.create
+            - workflow.publish
+        objectId:
+          type: string
+          format: uuid
+        reviewHash:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+          description: 该 operation 的命令载荷快照；服务端计算规范化哈希。
+    ConfirmationIntent:
+      type: object
+      required: [id, state, operation, objectId, expiresAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [pending, committed, rejected, expired, stale]
+        operation:
+          type: string
+        objectId:
+          type: string
+          format: uuid
+        requestedBy:
+          type: object
+          required: [userId, deviceName]
+          properties:
+            userId:
+              type: string
+              format: uuid
+            deviceName:
+              type:
+                - string
+                - 'null'
+        confirmUrl:
+          type:
+            - string
+            - 'null'
+          format: uri
+        resultRef:
+          type:
+            - string
+            - 'null'
+        expiresAt:
+          type: string
+          format: date-time
+    ConfirmIntentRequest:
+      type: object
+      required: [intentHash, decision]
+      properties:
+        intentHash:
+          type: string
+        decision:
+          type: string
+          enum: [approve, reject]
+        csrfToken:
+          type: string

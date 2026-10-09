@@ -83,11 +83,12 @@
   font-size: var(--text-xs);
   margin-top: var(--s1);
 }
-.judex-position-options .judex-checkbox-field {
-  padding: var(--s3);
-  border: var(--stroke) solid var(--line);
-  border-radius: var(--r-md);
-}
+.judex-checkbox-card { width:100%;align-items:stretch;border-radius:var(--r-md); }
+.judex-checkbox-card .checkbox__content { flex:1;padding:var(--choice-card-padding,var(--s3));border:var(--stroke) solid var(--line);border-radius:inherit;background:var(--surface);transition:background var(--transition-fast),border-color var(--transition-fast); }
+.judex-checkbox-card:hover:not([data-disabled="true"]) .checkbox__content,
+.judex-checkbox-card[data-selected="true"] .checkbox__content { border-color:var(--accent);background:var(--green-bg); }
+.judex-checkbox-card .checkbox__content[data-focus-visible="true"] { outline:var(--stroke-bold) solid var(--focus-ring);outline-offset:var(--stroke); }
+.judex-checkbox-card .checkbox__control { box-shadow:none;outline:none; }
 .judex-ui-card {
   display: block;
   color: var(--ink);

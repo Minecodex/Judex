@@ -39,11 +39,14 @@ try {
   for (const path of ['/healthz', '/readyz', '/api/v1/system']) {
     const result = JSON.parse(kubectl('-n', namespace, 'exec', pod.metadata.name,
       '--', 'wget', '-qO-', 'http://127.0.0.1:8080' + path));
-    if (path === '/api/v1/system' ? result.stage !== 'scaffold' : !['ok', 'ready'].includes(result.status)) {
+    const healthy = path === '/api/v1/system'
+      ? result.data?.protocolVersion === '1' && ['identity', 'projects', 'persistence'].every(key => result.data.capabilities?.[key] === true)
+      : ['ok', 'ready'].includes(result.status);
+    if (!healthy) {
       throw new Error('Unexpected HTTP result: ' + path);
     }
   }
-  console.log('Kubernetes scaffold smoke passed:', namespace);
+  console.log('Kubernetes production capability smoke passed:', namespace);
 } finally {
   const cleanupErrors = [];
   if (installAttempted) {

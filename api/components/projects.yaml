@@ -1,0 +1,775 @@
+# 项目、成员、职位、身份、流程与仓库对象（docs/plans/v1/02 §4-§8、06 §3）
+components:
+  schemas:
+    Project:
+      type: object
+      required: [id, title, kind, status, role, version, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 20000
+        kind:
+          type: string
+          enum: [software, design]
+        status:
+          type: string
+          enum: [active, archived]
+        role:
+          type: string
+          description: 当前用户在该项目中的角色（owner/manager/member）；非成员为 null。
+          enum: [owner, manager, member]
+        roleVersion:
+          type: integer
+          minimum: 1
+        maxDiscussionRounds:
+          type: integer
+          minimum: 1
+          maximum: 100
+        approvalTimeoutSeconds:
+          type: integer
+          minimum: 60
+        defaultModelId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        sandboxProfileId:
+          type:
+            - string
+            - 'null'
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        summary:
+          $ref: '#/components/schemas/ProjectSummary'
+    ProjectSummary:
+      type: object
+      required: [memberCount, topicCount, memberPreview]
+      properties:
+        memberCount: {type: integer, minimum: 0}
+        topicCount: {type: integer, minimum: 0}
+        memberPreview:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            required: [userId, displayName]
+            properties:
+              userId: {type: string, format: uuid}
+              displayName: {type: string}
+    RecentTopic:
+      type: object
+      required: [topicId, title, projectId, projectTitle, lastActivityAt]
+      properties:
+        topicId: {type: string, format: uuid}
+        title: {type: string}
+        projectId: {type: string, format: uuid}
+        projectTitle: {type: string}
+        lastActivityAt: {type: string, format: date-time}
+    CreateProjectRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 20000
+        kind:
+          type: string
+          enum: [software, design]
+          default: software
+        maxDiscussionRounds:
+          type: integer
+          minimum: 1
+          maximum: 100
+        approvalTimeoutSeconds:
+          type: integer
+          minimum: 60
+        defaultModelId:
+          type: string
+          format: uuid
+    UpdateProjectRequest:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 20000
+        maxDiscussionRounds:
+          type: integer
+          minimum: 1
+          maximum: 100
+        approvalTimeoutSeconds:
+          type: integer
+          minimum: 60
+        defaultModelId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+    ProjectBootstrap:
+      type: object
+      required: [project, identities, eventCursor]
+      properties:
+        project:
+          $ref: '#/components/schemas/Project'
+        identities:
+          type: array
+          description: 当前用户在本项目的身份与当前绑定。
+          items:
+            $ref: '#/components/schemas/Identity'
+        pendingActionsCount:
+          type: integer
+        eventCursor:
+          type: integer
+          format: int64
+        summary:
+          type: object
+          additionalProperties: true
+    ArchiveRequest:
+      type: object
+      required: [expectedVersion, reason]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+    ProjectMember:
+      type: object
+      required: [userId, displayName, email, role, state, joinedAt]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [owner, manager, member]
+        state:
+          type: string
+          enum: [active, left, removed]
+        joinedAt:
+          type: string
+          format: date-time
+        identities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Identity'
+    UpdateMemberRequest:
+      type: object
+      required: [expectedVersion, role]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        role:
+          type: string
+          enum: [manager, member]
+    RemoveMemberRequest:
+      type: object
+      required: [expectedVersion, reason]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+    RemoveMemberResult:
+      type: object
+      required: [affectedResponsibilities]
+      properties:
+        affectedResponsibilities:
+          type: array
+          items:
+            type: object
+            required: [identityId, resolution]
+            properties:
+              identityId:
+                type: string
+                format: uuid
+              resolution:
+                type: string
+                enum: [transferred, disabled, pending]
+    OwnerTransferRequest:
+      type: object
+      required: [targetUserId, expectedVersion]
+      properties:
+        targetUserId:
+          type: string
+          format: uuid
+        expectedVersion:
+          type: integer
+          minimum: 1
+    OwnerTransfer:
+      type: object
+      required: [id, fromUserId, toUserId, state, expiresAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fromUserId:
+          type: string
+          format: uuid
+        toUserId:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [pending, accepted, declined, cancelled, expired]
+        projectVersion:
+          type: integer
+        expiresAt:
+          type: string
+          format: date-time
+        confirmedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+    OwnerTransferDecisionRequest:
+      type: object
+      required: [expectedVersion, decision]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        decision:
+          type: string
+          enum: [accept, decline]
+    Invitation:
+      type: object
+      required: [id, targetEmail, state, inviterUserId, expiresAt, positions]
+      properties:
+        id:
+          type: string
+          format: uuid
+        targetEmail:
+          type: string
+        targetUserId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        state:
+          type: string
+          enum: [pending, accepted, declined, revoked, expired]
+        inviterUserId:
+          type: string
+          format: uuid
+        positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PositionSummary'
+        expiresAt:
+          type: string
+          format: date-time
+        acceptedUserId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+    CreateInvitationRequest:
+      type: object
+      required: [targetEmail, positionIds]
+      properties:
+        targetEmail:
+          type: string
+          maxLength: 254
+        positionIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
+    RevokeInvitationRequest:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+    InvitationResolve:
+      type: object
+      required: [id, projectId, projectTitle, positions, inviterDisplayName, expiresAt, emailMatches]
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        projectTitle:
+          type: string
+        positions:
+          type: array
+          items:
+            type: string
+        inviterDisplayName:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        emailMatches:
+          type: boolean
+          description: 当前登录邮箱是否与受邀邮箱一致。
+    InvitationDecisionRequest:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        token:
+          type: string
+    PositionSummary:
+      type: object
+      required: [id, name, status, currentVersion]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, archived]
+        currentVersion:
+          type: integer
+          minimum: 1
+        publicSummary:
+          type: string
+    Position:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/PositionSummary'
+        - type: object
+          required: [prompt, nodeBindings, revision]
+          properties:
+            presetId:
+              type: string
+              description: 创建时复制的内置模板 ID；内容独立编辑，来源保持。
+            prompt:
+              type: string
+              description: 公开职责提示词（所有人可见）。
+            modelId:
+              type:
+                - string
+                - 'null'
+              format: uuid
+            revision:
+              type: integer
+              minimum: 1
+            nodeBindings:
+              type: array
+              items:
+                type: object
+                required: [workflowId, nodeId]
+                properties:
+                  workflowId:
+                    type: string
+                    format: uuid
+                  nodeId:
+                    type: string
+    PositionDraftRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        prompt:
+          type: string
+          maxLength: 20000
+        publicSummary:
+          type: string
+          maxLength: 2000
+        modelId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        nodeBindings:
+          type: array
+          items:
+            type: object
+            required: [workflowId, nodeId]
+            properties:
+              workflowId:
+                type: string
+                format: uuid
+              nodeId:
+                type: string
+    UpdatePositionRequest:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        prompt:
+          type: string
+          maxLength: 20000
+        publicSummary:
+          type: string
+          maxLength: 2000
+        modelId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        nodeBindings:
+          type: array
+          items:
+            type: object
+            required: [workflowId, nodeId]
+            properties:
+              workflowId:
+                type: string
+                format: uuid
+              nodeId:
+                type: string
+    Identity:
+      type: object
+      required: [id, kind, status, currentBindingVersion]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [coordinator, position]
+        status:
+          type: string
+          enum: [active, suspended]
+        templateId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        currentBinding:
+          type: [object, 'null']
+          description: 当前有效绑定；coordinator 或未绑定为 null。
+          required: [bindingVersion, userId, displayName, validFrom]
+          properties:
+            bindingVersion:
+              type: integer
+              minimum: 1
+            userId:
+              type: string
+              format: uuid
+            displayName:
+              type: string
+            validFrom:
+              type: string
+              format: date-time
+        currentBindingVersion:
+          type: integer
+          minimum: 0
+        positionName:
+          type:
+            - string
+            - 'null'
+    CreateIdentityRequest:
+      type: object
+      required: [positionId, userId]
+      properties:
+        positionId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+    ReplaceIdentityRequest:
+      type: object
+      required: [expectedBindingVersion, newUserId, reason]
+      properties:
+        expectedBindingVersion:
+          type: integer
+          minimum: 1
+        newUserId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+    PersonalPreferences:
+      type: object
+      required: [positionId, revision, prompt]
+      properties:
+        positionId:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          minimum: 0
+        prompt:
+          type: string
+          maxLength: 20000
+    UpdatePersonalPreferencesRequest:
+      type: object
+      required: [positionId, expectedRevision, prompt]
+      properties:
+        positionId:
+          type: string
+          format: uuid
+        expectedRevision:
+          type: integer
+          minimum: 0
+        prompt:
+          type: string
+          maxLength: 20000
+    ModelSummary:
+      type: object
+      required: [id, displayName, provider, enabled, capabilities, limits]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        provider:
+          type: string
+        enabled:
+          type: boolean
+        capabilities:
+          type: object
+          required: [toolCalling, streaming]
+          properties:
+            toolCalling:
+              type: boolean
+            vision:
+              type: boolean
+            streaming:
+              type: boolean
+        limits:
+          type: object
+          required: [maxInputTokens, maxOutputTokens]
+          properties:
+            maxInputTokens:
+              type: integer
+            maxOutputTokens:
+              type: integer
+    WorkflowNode:
+      type: object
+      required: [id, name, responsibility, allowedPositionIds, defaultApprovalPolicy]
+      properties:
+        kind:
+          type: string
+          enum: [activity, decision]
+          description: 图中的活动或评审形状，不构成审批授权。
+        phase: {type: string, maxLength: 120, description: 只读图的阶段分组说明。}
+        id:
+          type: string
+          description: 稳定节点 ID，发布后不可复用为不同含义。
+          maxLength: 120
+        name:
+          type: string
+        responsibility:
+          type: string
+        delegationUserIds:
+          type: array
+          items: {type: string, format: uuid}
+          description: 项目 owner 发布的节点代批授权；不扩大其他节点权限。
+        allowedPositionIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        defaultApprovalPolicy:
+          type: string
+          enum: [all, none]
+    WorkflowHardRule:
+      type: object
+      required: [kind]
+      properties:
+        nodeId: {type: string, description: 缺省适用于整个流程；指定时仅约束该节点。}
+        kind:
+          type: string
+          enum: [task_acceptance, handoff_receipt, material_ready]
+        phase:
+          type: string
+          enum: [start, accept, both]
+        targetId:
+          type: string
+    WorkflowDraftBody:
+      type: object
+      required: [name, nodes]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        instructions:
+          type: string
+          maxLength: 50000
+        nodes:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/WorkflowNode'
+        advisoryEdges:
+          type: array
+          items:
+            type: object
+            required: [from, to]
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+              kind:
+                type: string
+                enum: [sequence, feedback]
+                description: sequence 保持无环；feedback 为评审节点返回前序节点的协作参考。
+              label: {type: string, maxLength: 200, description: 人工阅读的条件说明，不是可执行表达式。}
+        hardRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowHardRule'
+        approvalPolicies:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [all, none]
+    Workflow:
+      type: object
+      required: [id, name, publishedVersionId]
+      properties:
+        presetId:
+          type: string
+          description: 内置流程模板的稳定来源 ID，项目独立编辑后仍保留。
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        publishedVersionId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        hasDraft:
+          type: boolean
+        version:
+          type: integer
+    WorkflowVersion:
+      type: object
+      required: [id, revision, state, publishedAt]
+      properties:
+        draftHash: {type: string}
+        id:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          minimum: 1
+        state:
+          type: string
+          enum: [draft, published]
+        body:
+          $ref: '#/components/schemas/WorkflowDraftBody'
+        mermaid:
+          type: string
+        publishedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+    PublishWorkflowRequest:
+      type: object
+      required: [expectedVersion, draftHash]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        draftHash:
+          type: string
+          description: SHA256 十六进制；服务端重新计算校验。
+    RepositoryLink:
+      type: object
+      required: [id, displayName, url, provider, defaultBranch, archivedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        url:
+          type: string
+        provider:
+          type: string
+        defaultBranch:
+          type: string
+        archivedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        version:
+          type: integer
+    RepositoryDraftRequest:
+      type: object
+      required: [displayName, url]
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        url:
+          type: string
+        provider:
+          type: string
+        defaultBranch:
+          type: string
+          default: main
+    RepositoryUpdateRequest:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        displayName:
+          type: string
+        url:
+          type: string
+        provider:
+          type: string
+        defaultBranch:
+          type: string

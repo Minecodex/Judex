@@ -3,6 +3,7 @@ import { FolderOpen, Plus } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { useWork } from "../work/store";
 import { member } from "../work/selectors";
+import { dataMode } from "../../lib/api/client";
 export function ProjectSwitcher({
   onCreate,
   onSwitch,
@@ -21,18 +22,24 @@ export function ProjectSwitcher({
   return (
     <header className="judex-project-switcher">
       <Button
+        isIconOnly
+        size="sm"
         className="judex-new-project-top"
         aria-label={t("chatNewProject")}
         onClick={onCreate}
       >
         <Plus size={17} />
-        <span>{t("chatNewProject")}</span>
+
       </Button>
       <Select
         aria-label={t("chatSwitchProject")}
         value={project.id}
         onChange={(key) => {
           if (!key) return;
+          if (dataMode === "api") {
+            location.assign("/?project=" + key);
+            return;
+          }
           go({
             projectId: String(key),
             view: "home",
@@ -48,7 +55,7 @@ export function ProjectSwitcher({
         </Label>
         <Select.Trigger data-testid="project-switcher">
           <FolderOpen size={18} />
-          <Select.Value />
+          <span className="judex-project-select-summary"><Select.Value /><small>{t("portalMembers",{count:project.members.length})}</small></span>
           <Select.Indicator />
         </Select.Trigger>
         <Select.Popover className="judex-project-select-popover">

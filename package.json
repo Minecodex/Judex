@@ -4,12 +4,23 @@
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
-  "workspaces": ["web"],
+  "workspaces": [
+    "web"
+  ],
   "scripts": {
     "dev": "npm run dev --workspace @judex/web",
     "build": "npm run build --workspace @judex/web",
     "test:web": "npm test --workspace @judex/web",
-    "test:e2e": "playwright test --config tests/e2e/playwright.config.ts"
+    "test:e2e": "playwright test --config tests/e2e/chat.config.ts && node tests/e2e/business.setup.mjs",
+    "gen:api": "node api/generate.mjs && node api/generate-types.mjs",
+    "release:build": "node scripts/release/build.mjs"
   },
-  "devDependencies": {"@playwright/test":"1.63.0"}
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "js-yaml": "4.1.1",
+    "openapi-typescript": "7.13.0"
+  },
+  "dependencies": {
+    "react-router": "7.5.0"
+  }
 }

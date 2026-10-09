@@ -1,0 +1,26 @@
+import {test, expect} from '@playwright/test';
+import fs from 'node:fs';
+const output = '.cache/demo4-review2/prototype';
+fs.mkdirSync(output, {recursive: true});
+for (const width of [1120, 1440, 1920]) for (const locale of ['zh-CN', 'en']) for (const theme of ['light', 'dark']) test(`actual demo comparison ${width} ${locale} ${theme}`, async ({page}) => {
+  await page.setViewportSize({width, height: 1000});
+  await page.addInitScript(({locale, theme}) => {localStorage.setItem('argus.locale', locale); localStorage.setItem('judex.theme', theme);}, {locale, theme});
+  const suffix = width + '-' + locale + '-' + theme;
+  await page.goto('/demo4.html#projects'); await expect(page.getByTestId('d4-project-product')).toBeVisible(); await page.screenshot({path: output + '/projects-' + suffix + '.png', fullPage: true});
+  await page.goto('/demo4.html#plans/product'); await expect(page.getByTestId('d4-plan-launch')).toBeVisible(); await page.screenshot({path: output + '/plans-' + suffix + '.png', fullPage: true});
+  await page.goto('/demo4.html#route/launch'); await expect(page.getByTestId('d4-task-review')).toBeVisible(); await page.screenshot({path: output + '/route-' + suffix + '.png', fullPage: true});
+  await page.getByRole('button', {name: locale === 'en' ? 'View task · Review interactions' : '查看任务 · 交互评审', exact: true}).click();
+  await page.screenshot({path: output + '/drawer-' + suffix + '.png', fullPage: true});
+  await page.getByRole('tab', {name: locale === 'en' ? 'Workflow reference' : '流程参考', exact: true}).click();
+  await expect(page.getByTestId('d4-section-flow')).toBeVisible(); await page.screenshot({path: output + '/flow-' + suffix + '.png', fullPage: true, animations: 'disabled'});
+  await page.getByRole('tab', {name: locale === 'en' ? 'Task records' : '任务记录', exact: true}).click();
+  await expect(page.getByTestId('d4-section-records')).toBeVisible(); await page.screenshot({path: output + '/records-' + suffix + '.png', fullPage: true, animations: 'disabled'});
+  await page.getByRole('button', {name: locale === 'en' ? 'View fullscreen' : '全屏查看', exact: true}).click();
+  await expect(page.getByTestId('d4-fullscreen-view')).toBeVisible(); await page.screenshot({path: output + '/fullscreen-' + suffix + '.png', fullPage: true, animations: 'disabled'});
+  await page.getByTestId('d4-exit-fullscreen').click();
+  await page.getByTestId('d4-task-menu-draft-check').click();
+  await page.getByRole('menuitem', {name: locale === 'en' ? 'Edit draft task' : '编辑草稿任务', exact: true}).click();
+  await expect(page.getByTestId('d4-edit-title')).toBeVisible(); await page.screenshot({path: output + '/form-' + suffix + '.png', fullPage: true, animations: 'disabled'});
+  await page.keyboard.press('Escape');
+  await page.goto('/demo4.html#chat/launch'); await expect(page.getByTestId('d4-workspace')).toBeVisible(); await page.screenshot({path: output + '/plan-context-' + suffix + '.png', fullPage: true});
+});

@@ -1,0 +1,65 @@
+paths:
+  /position-presets:
+    get:
+      operationId: getPositionPresetCatalog
+      summary: 全局内置场景与职位模板（只读）
+      tags: [positions]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 版本化的双语内置模板目录。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/presets.yaml#/components/schemas/PositionPresetCatalog'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '401':
+          $ref: '../components/common.yaml#/components/responses/Unauthorized'
+  /projects/{projectId}/positions/import-presets:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    post:
+      operationId: importPositionPresets
+      summary: 批量复制选定场景的职位到项目（owner/manager）
+      description: 同一事务创建独立职位，按模板来源或中英文同名职位跳过重复项；不分配成员、流程节点、模型或审批权限。
+      tags: [positions]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/presets.yaml#/components/schemas/ImportPositionPresetsRequest'
+      responses:
+        '201':
+          description: 新增职位及已存在的跳过项。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/presets.yaml#/components/schemas/ImportedPositionPresets'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '400':
+          $ref: '../components/common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: '../components/common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'

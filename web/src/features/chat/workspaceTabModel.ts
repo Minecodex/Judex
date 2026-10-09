@@ -1,26 +1,23 @@
 import type { Route, View, WorkState } from "../work/types.ts";
-export type WorkspaceTab = { view: View; id?: string };
+export type WorkspaceTab = { view: View; id?: string;section?:import('../work/runtimeTypes').TaskSection };
 const views: View[] = [
-  "overview",
   "plans",
-  "tasks",
   "plan",
   "task",
   "resources",
-  "decisions",
-  "handoffs",
 ];
 export function workspaceRoute(
-  route: Pick<Route, "view" | "id">,
+  route: Pick<Route, "view" | "id"> & {taskSection?:import('../work/runtimeTypes').TaskSection;section?:import('../work/runtimeTypes').TaskSection;activityId?:string},
 ): WorkspaceTab | null {
-  return views.includes(route.view)
-    ? { view: route.view === "tasks" ? "plans" : route.view, id: route.id }
+  const view=route.view==="tasks"||route.view==="overview"?"plans":route.view;
+  return views.includes(view)
+    ? {view,id:["plan","task"].includes(view)?route.id:undefined,...(view==='task'?{section:route.activityId?'records' as const:route.taskSection??route.section??'overview' as const}:{})}
     : null;
 }
 export const workspaceKey = (tab: WorkspaceTab) =>
   tab.view === "settings"
     ? "settings:" + (tab.id ?? "preferences")
-    : ["task", "plan"].includes(tab.view)
+    : tab.view==='task'? 'task:'+tab.id+':'+(tab.section??'overview'):["plan"].includes(tab.view)
       ? tab.view + ":" + tab.id
       : tab.view;
 export function workspaceTabValid(
@@ -30,9 +27,9 @@ export function workspaceTabValid(
 ) {
   if (!tab || !views.includes(tab.view)) return false;
   if (tab.view === "task")
-    return s.tasks.some((v) => v.projectId === projectId && v.id === tab.id);
+    return s.tasks.some((v) => v.projectId === projectId && v.id === tab.id)||!!s.currentUserId&&/^[0-9a-f-]{36}$/i.test(tab.id??"");
   if (tab.view === "plan")
-    return s.plans.some((v) => v.projectId === projectId && v.id === tab.id);
+    return s.plans.some((v) => v.projectId === projectId && v.id === tab.id)||!!s.currentUserId&&/^[0-9a-f-]{36}$/i.test(tab.id??"");
   if (tab.view === "settings")
     return !tab.id || ["project", "local"].includes(tab.id);
   return true;

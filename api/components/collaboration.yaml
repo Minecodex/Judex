@@ -1,0 +1,332 @@
+components:
+  schemas:
+    ConversationSourceRef:
+      type: object
+      required:
+        - type
+        - id
+      properties:
+        type:
+          type: string
+          enum:
+            - report
+            - submission
+            - message
+        id:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+          description: 查询返回的任务来源定位；写入时始终按源记录重新校验。
+    ForkTopicRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        forkAfterSeq:
+          type: integer
+          minimum: 0
+        links:
+          type: array
+          items:
+            type: object
+            required:
+              - objectType
+              - objectId
+            properties:
+              objectType:
+                type: string
+                enum:
+                  - plan
+                  - task
+              objectId:
+                type: string
+                format: uuid
+        sourceRefs:
+          type: array
+          items:
+            $ref: ../components/collaboration.yaml#/components/schemas/ConversationSourceRef
+    TaskAnalysis:
+      type: object
+      required:
+        - id
+        - taskId
+        - batchId
+        - sourceType
+        - sourceId
+        - state
+        - summary
+        - disagreements
+        - basis
+        - errorCode
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+        batchId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        sourceType:
+          type: string
+          enum:
+            - report
+            - submission
+        sourceId:
+          type: string
+          format: uuid
+        state:
+          type: string
+        summary:
+          type: string
+        disagreements:
+          type: array
+          items:
+            type: string
+        basis:
+          type: array
+          items:
+            type: string
+        errorCode:
+          type:
+            - string
+            - 'null'
+        updatedAt:
+          type: string
+          format: date-time
+    TaskActivity:
+      type: object
+      required:
+        - id
+        - taskId
+        - kind
+        - sourceType
+        - source
+        - text
+        - actorUserId
+        - actorName
+        - identityId
+        - createdAt
+        - materialVersionIds
+        - materials
+        - topicIds
+        - analysis
+      properties:
+        id:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - progress
+            - delivery
+            - question
+            - reply
+            - message
+            - decision
+        sourceType:
+          type: string
+        source:
+          type: string
+        text:
+          type: string
+        actorUserId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        actorName:
+          type: string
+        identityId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        materialVersionIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        materials:
+          type: array
+          items:
+            type: object
+            required:
+              - versionId
+              - name
+            properties:
+              versionId:
+                type: string
+                format: uuid
+              name:
+                type: string
+        topicIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        analysis:
+          anyOf:
+            - $ref: ../components/collaboration.yaml#/components/schemas/TaskAnalysis
+            - type: 'null'
+    DiscussionSuggestion:
+      type: object
+      required:
+        - id
+        - analysisId
+        - taskId
+        - planId
+        - title
+        - reason
+        - parentTopicId
+        - forkAfterSeq
+        - suggestedTopicId
+        - state
+        - version
+        - resultTopicId
+        - sourceRef
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        analysisId:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+        planId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        title:
+          type: string
+        reason:
+          type: string
+        parentTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        forkAfterSeq:
+          type: integer
+          minimum: 0
+        suggestedTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        state:
+          type: string
+          enum:
+            - pending
+            - handled
+            - dismissed
+        version:
+          type: integer
+          minimum: 1
+        resultTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        sourceRef:
+          $ref: ../components/collaboration.yaml#/components/schemas/ConversationSourceRef
+        createdAt:
+          type: string
+          format: date-time
+    ResolveDiscussionSuggestionRequest:
+      type: object
+      required:
+        - expectedVersion
+        - mode
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        mode:
+          type: string
+          enum:
+            - create
+            - main
+            - link
+            - dismiss
+        title:
+          type: string
+          maxLength: 200
+        topicId:
+          type: string
+          format: uuid
+        links:
+          type: array
+          items:
+            type: object
+            required:
+              - objectType
+              - objectId
+            properties:
+              objectType:
+                type: string
+                enum:
+                  - plan
+                  - task
+              objectId:
+                type: string
+                format: uuid
+    PlanDiscussionSummary:
+      type: object
+      required:
+        - planId
+        - mainTopicId
+        - tasks
+        - suggestions
+      properties:
+        planId:
+          type: string
+          format: uuid
+        mainTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        tasks:
+          type: array
+          items:
+            type: object
+            required:
+              - taskId
+              - activityCount
+              - latestActivity
+            properties:
+              taskId:
+                type: string
+                format: uuid
+              activityCount:
+                type: integer
+                minimum: 0
+              latestActivity:
+                anyOf:
+                  - $ref: ../components/collaboration.yaml#/components/schemas/TaskActivity
+                  - type: 'null'
+        suggestions:
+          type: array
+          items:
+            $ref: ../components/collaboration.yaml#/components/schemas/DiscussionSuggestion

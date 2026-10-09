@@ -1,0 +1,332 @@
+# 认证与设备授权（docs/plans/v1/02、06 §2）
+paths:
+  /auth/register:
+    post:
+      operationId: register
+      summary: 自由注册（邮箱+密码，无邮件验证）
+      tags: [auth]
+      security: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/auth.yaml#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: 注册成功并建立会话（Set-Cookie）。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/auth.yaml#/components/schemas/AuthResult'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '400':
+          $ref: '../components/common.yaml#/components/responses/BadRequest'
+        '409':
+          description: 邮箱已占用（EMAIL_IN_USE）或幂等冲突。
+          content:
+            application/json:
+              schema:
+                $ref: '../components/common.yaml#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '../components/common.yaml#/components/responses/RateLimited'
+  /auth/login:
+    post:
+      operationId: login
+      summary: 登录（错误统一 INVALID_CREDENTIALS）
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/auth.yaml#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 登录成功（Set-Cookie）。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/auth.yaml#/components/schemas/AuthResult'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '401':
+          $ref: '../components/common.yaml#/components/responses/Unauthorized'
+        '429':
+          $ref: '../components/common.yaml#/components/responses/RateLimited'
+  /auth/session:
+    get:
+      operationId: getSession
+      summary: 当前会话信息（含 CSRF token）
+      tags: [auth]
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 会话有效。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/auth.yaml#/components/schemas/SessionInfo'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '401':
+          $ref: '../components/common.yaml#/components/responses/Unauthorized'
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: 撤销当前会话并清 Cookie
+      tags: [auth]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 已撤销；会话已过期也允许清本地 Cookie。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [revoked]
+                    properties:
+                      revoked:
+                        type: boolean
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+  /auth/logout-all:
+    post:
+      operationId: logoutAll
+      summary: 撤销其他会话与授权
+      tags: [auth]
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedAuthVersion]
+              properties:
+                expectedAuthVersion:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: 撤销数量。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [revokedSessions, revokedGrants]
+                    properties:
+                      revokedSessions:
+                        type: integer
+                      revokedGrants:
+                        type: integer
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /auth/recover:
+    post:
+      operationId: recoverPassword
+      summary: 使用一次性恢复码设置新密码（不自动登录）
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/auth.yaml#/components/schemas/RecoverRequest'
+      responses:
+        '200':
+          description: 完成；旧会话与授权已撤销。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [completed]
+                    properties:
+                      completed:
+                        type: boolean
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '401':
+          $ref: '../components/common.yaml#/components/responses/Unauthorized'
+        '429':
+          $ref: '../components/common.yaml#/components/responses/RateLimited'
+  /auth/device/authorizations:
+    post:
+      operationId: createDeviceAuthorization
+      summary: CLI 发起设备授权（返回 deviceCode/userCode）
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/auth.yaml#/components/schemas/DeviceAuthorizationRequest'
+      responses:
+        '201':
+          description: 已创建。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/auth.yaml#/components/schemas/DeviceAuthorization'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '429':
+          $ref: '../components/common.yaml#/components/responses/RateLimited'
+  /auth/device/token:
+    post:
+      operationId: pollDeviceToken
+      summary: CLI 轮询设备授权结果（pending/slow_down/denied/expired/token）
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/auth.yaml#/components/schemas/DeviceTokenRequest'
+      responses:
+        '200':
+          description: pending/slow_down 状态。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/auth.yaml#/components/schemas/DeviceTokenPending'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '201':
+          description: 授权完成，返回 token 对。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/auth.yaml#/components/schemas/TokenPair'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '401':
+          description: denied 或 expired。
+          content:
+            application/json:
+              schema:
+                $ref: '../components/common.yaml#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '../components/common.yaml#/components/responses/RateLimited'
+  /auth/device/confirm:
+    post:
+      operationId: confirmDeviceAuthorization
+      summary: 浏览器确认/拒绝设备授权（本人+CSRF）
+      tags: [auth]
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/auth.yaml#/components/schemas/DeviceConfirmRequest'
+      responses:
+        '200':
+          description: 确认结果。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/auth.yaml#/components/schemas/DeviceConfirmResult'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /auth/token/refresh:
+    post:
+      operationId: refreshToken
+      summary: 轮换 token 对（旧 refresh 重放撤销整族）
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/auth.yaml#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: 新 token 对。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/auth.yaml#/components/schemas/TokenPair'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '401':
+          $ref: '../components/common.yaml#/components/responses/Unauthorized'
+
+  /auth/device/review:
+    get:
+      operationId: getDeviceAuthorization
+      tags: [auth]
+      summary: Review a pending device authorization
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: userCode, in: query, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Device name, requested scopes and expiry for human review.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {type: object, additionalProperties: true}

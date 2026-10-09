@@ -1,0 +1,92 @@
+.judex-chat-app { --layout-left-default:var(--collab-sidebar-width);--layout-right-default:var(--collab-inspector-width);--split-right-min:260px;font-size:var(--text-base);line-height:var(--collab-line-height); }
+.judex-chat-sidebar { padding:var(--s3); }
+.judex-collab-search { margin-top:var(--s3);padding:0; }
+.judex-collab-scope { width:100%;margin:var(--s2) 0 var(--s3);font-size:var(--text-sm); }
+.judex-collab-nav { gap:var(--s1);padding:0; }
+.judex-collab-nav-row.judex-control { min-height:var(--collab-row-height);height:auto;padding:var(--s2);font-size:var(--text-sm);gap:var(--s2);justify-content:flex-start;border-radius:var(--r-sm);background:transparent;border-color:transparent;text-align:left;width:100%; }
+.judex-collab-nav-row>span { flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis; }
+.judex-collab-nav-row>small { flex:none;color:var(--muted);font-size:var(--text-xs); }
+.judex-collab-nav-row:hover { background:var(--hover); }
+.judex-collab-plan-heading { display:flex;align-items:stretch;min-width:0; }
+.judex-collab-fold.judex-control { width:var(--collab-fold-width);min-width:var(--collab-fold-width);height:auto;padding:0;flex:none;background:transparent;border-color:transparent; }
+.judex-collab-plan-heading .judex-collab-nav-row { flex:1;min-width:0;padding-left:var(--s1); }
+.judex-collab-children { margin-left:var(--collab-record-indent);border-left:var(--stroke) solid var(--line);padding-left:var(--s2); }
+.judex-collab-section-label { color:var(--muted);font-size:var(--text-xs);margin:var(--s3) var(--s2) var(--s1); }
+.judex-collab-meta { font-size:var(--text-xs);color:var(--muted);line-height:var(--collab-line-height); }
+.judex-collab-empty { font-size:var(--text-sm);color:var(--muted);padding:var(--s4) var(--s1); }
+.judex-collab-card { border:var(--stroke) solid var(--line);border-radius:var(--r-md);padding:var(--collab-card-padding);background:var(--surface);min-width:0; }
+.judex-collab-card h3,.judex-collab-inspector h3 { font-size:var(--text-md);font-weight:var(--weight-medium);margin:0; }
+.judex-collab-card h4,.judex-collab-inspector h4 { font-size:var(--text-base);font-weight:var(--weight-medium);margin:0; }
+.judex-collab-card p { margin:var(--s2) 0;overflow-wrap:anywhere; }
+.judex-collab-card-top,.judex-collab-record-heading { display:flex;align-items:flex-start;gap:var(--s2);justify-content:space-between;flex-wrap:wrap;margin-bottom:var(--s2); }
+.judex-collab-summary { background:var(--bg); }
+.judex-collab-summary-preview { display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden; }
+.judex-collab-delivery { border-color:var(--warning); }
+.judex-collab-plan-cards { display:flex;flex-direction:column;gap:var(--s3);margin-top:var(--s4); }
+.judex-collab-conversation .judex-chat-thread > * { width:100%;max-width:none;margin-left:0;margin-right:0; }
+.judex-collab-conversation .judex-chat-message { max-width:none;width:100%; }
+.judex-collab-conversation .judex-chat-message-ai .judex-chat-message-body { border:0;padding:var(--s3);margin-top:var(--s2);border-radius:var(--r-sm); }
+.judex-collab-conversation .judex-chat-message-by strong { font-weight:var(--weight-medium); }
+.judex-collab-conversation .judex-chat-message-person .judex-chat-message-content { text-align:left; }
+.judex-collab-conversation .judex-chat-message-person { justify-content:flex-start; }
+.judex-collab-compose-scope .judex-select { flex:0 1 auto;max-width:var(--entry-form-width); }
+.judex-collab-actions { display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;margin-top:var(--s3); }
+.judex-collab-actions .button--outline,.judex-collab-dialog-actions .button--outline { background:var(--surface);color:var(--ink); }
+.judex-collab-actions .button--outline:hover,.judex-collab-dialog-actions .button--outline:hover { background:var(--hover); }
+.judex-collab-tag { display:inline-flex;align-items:center;gap:var(--s1);background:var(--green-bg);color:var(--green-ink);padding:var(--s1) var(--s2);border-radius:var(--r-xs);font-size:var(--text-xs);line-height:var(--leading-tight); }
+.judex-collab-tag-warn { background:var(--warning-soft);color:var(--warning); }
+.judex-collab-suggestion { border-color:var(--warning); }
+.judex-collab-suggestion-label { display:flex;align-items:center;gap:var(--s2);color:var(--warning);font-size:var(--text-xs);margin-bottom:var(--s2); }
+.judex-collab-source-link.judex-control { color:var(--accent);font-size:var(--text-xs);text-decoration:underline;text-underline-offset:var(--s1);justify-content:flex-start;padding-left:0;margin-top:var(--s2); }
+.judex-collab-conversation-heading { padding:var(--s4) var(--collab-pane-padding) var(--s3);border-bottom:var(--stroke) solid var(--line);flex:none; }
+.judex-collab-conversation-heading h2 { font-size:var(--collab-heading-size);font-weight:var(--weight-medium);margin:0;line-height:var(--collab-line-height); }
+.judex-collab-conversation-heading p { color:var(--muted);font-size:var(--text-sm);margin:var(--s1) 0 0; }
+.judex-collab-conversation-heading .judex-collab-card-top { margin-bottom:var(--s1); }
+.judex-collab-heading-tools { display:flex;align-items:center;gap:var(--s1); }
+.judex-collab-heading-tools .judex-control { width:var(--control-sm);height:var(--control-sm);min-height:var(--control-sm);padding:var(--s1); }
+.judex-collab-lineage { display:flex;align-items:center;gap:var(--s1);flex-wrap:wrap;color:var(--muted);font-size:var(--text-xs);margin-top:var(--s2); }
+.judex-collab-lineage .judex-control { max-width:100%;white-space:normal;color:var(--accent);font-size:var(--text-xs);padding:0 var(--s1); }
+.judex-collab-conversation .judex-chat-thread { padding:var(--s4) var(--collab-pane-padding); }
+.judex-collab-conversation .judex-chat-date { display:none; }
+.judex-collab-conversation .judex-chat-message { margin-bottom:var(--s4);gap:var(--s2); }
+.judex-collab-message-actions { display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;margin-top:var(--s1); }
+.judex-collab-message-actions .judex-control { color:var(--muted);font-size:var(--text-xs);height:var(--control-sm);padding:var(--s1); }
+.judex-collab-inherited { border-left:var(--stroke) solid var(--line);padding-left:var(--s2); }
+.judex-collab-message-focus { outline:var(--stroke-bold) solid var(--accent);outline-offset:var(--s2);border-radius:var(--r-sm); }
+.judex-collab-branch-start { display:flex;align-items:center;justify-content:center;font-size:var(--text-xs);color:var(--muted);padding:var(--s3) 0;border-top:var(--stroke) solid var(--line);margin-bottom:var(--s4); }
+.judex-collab-compose-scope { display:flex;gap:var(--s2);align-items:center;flex-wrap:wrap;font-size:var(--text-xs);color:var(--muted);padding-bottom:var(--s2); }
+.judex-collab-compose-scope .judex-select { width:auto;max-width:100%;font-size:var(--text-xs); }
+.judex-collab-conversation .judex-chat-compose { padding:var(--s3) var(--collab-pane-padding) var(--s4); }
+.judex-collab-conversation .judex-chat-input-wrap { border-radius:var(--r-md);box-shadow:none;padding:var(--s3); }
+.judex-collab-inspector { min-width:0; }
+.judex-collab-inspector-tabs { display:flex;gap:var(--s1);padding:var(--s2) var(--s3);border-bottom:var(--stroke) solid var(--line);background:var(--bg); }
+.judex-collab-inspector-tabs .judex-control { font-size:var(--text-sm);background:transparent;border-color:transparent; }
+.judex-collab-inner-active.judex-control { background:var(--green-bg);color:var(--green-ink); }
+.judex-collab-inspector-content { display:flex;flex-direction:column;gap:var(--collab-content-gap);padding:var(--s4) var(--collab-inspector-padding);min-width:0; }
+.judex-collab-conversation .judex-chat-compose { max-width:none; }
+.judex-collab-inspector .judex-ui-select .select__trigger,.judex-collab-scope.select__trigger { min-height:var(--control-sm);padding:var(--s1) var(--s2);border-radius:var(--r-sm); }
+.judex-collab-inspector .judex-ui-select .select__trigger { background:var(--surface);padding:var(--collab-input-padding-y) var(--collab-button-padding-x);line-height:normal; }
+.judex-collab-compose-scope .judex-ui-select { width:auto;max-width:var(--collab-compose-scope-width); }
+.judex-collab-compose-scope .judex-ui-select .select__trigger { min-height:var(--s7);padding:var(--s1) var(--s2);font-size:var(--text-xs);border-radius:var(--r-xs);background:var(--bg); }
+.judex-chat-input-wrap > .judex-collab-compose-scope { justify-content:flex-start; }
+.judex-collab-field-label { display:block;font-size:var(--text-sm);margin-bottom:var(--s2); }
+.judex-collab-description { font-size:var(--text-sm);color:var(--muted);margin:var(--s2) 0 0; }
+.judex-collab-local-push { width:100%; }
+.judex-collab-criteria { font-size:var(--text-xs);color:var(--muted); }
+.judex-collab-criteria p { margin:var(--s1) 0; }
+.judex-collab-dialog-topics { display:flex;flex-direction:column;gap:var(--s2); }
+.judex-collab-timeline { display:flex;flex-direction:column;gap:var(--collab-timeline-gap); }
+.judex-collab-record { min-width:0;padding-left:var(--collab-record-indent);border-left:var(--stroke-bold) solid var(--line); }
+.judex-collab-record-focus { border-left-color:var(--accent); }
+.judex-collab-record p { font-size:var(--text-sm);margin:var(--s2) 0;overflow-wrap:anywhere;white-space:pre-wrap; }
+.judex-collab-analysis { background:var(--ai-surface);padding:var(--s2);border-radius:var(--r-sm);font-size:var(--text-xs);margin-top:var(--s2);color:var(--muted); }
+.judex-collab-analysis p { font-size:var(--text-xs);margin:var(--s1) 0;color:var(--ink); }
+.judex-collab-files { display:flex;flex-wrap:wrap;gap:var(--s2);margin:var(--s2) 0; }
+.judex-collab-rule { display:flex;align-items:flex-start;gap:var(--s3); }
+.judex-collab-rule-mark { width:var(--s6);height:var(--s6);flex:none;border-radius:var(--r-xs);background:var(--green-bg);color:var(--green-ink);display:grid;place-items:center;font-size:var(--text-xs); }
+.judex-collab-rule p { margin:var(--s1) 0;font-size:var(--text-sm);color:var(--muted); }
+.judex-collab-context-line { display:flex;align-items:center;flex-wrap:wrap;gap:var(--s2);padding:var(--s2) var(--s3);border:var(--stroke) solid var(--line);background:var(--bg);border-radius:var(--r-sm);font-size:var(--text-sm);margin-bottom:var(--s3); }
+.judex-collab-dialog-actions { display:flex;justify-content:flex-end;gap:var(--s2);margin-top:var(--s5); }
+.judex-collab-overview { display:flex;flex-direction:column;min-height:0;flex:1; }
+.judex-collab-overview-body { padding:var(--s4) var(--collab-pane-padding);display:flex;flex-direction:column;gap:var(--s3);overflow:auto; }
+.judex-chat-panel-body:has(.judex-collab-inspector) { padding:0; }

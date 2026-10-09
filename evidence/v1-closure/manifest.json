@@ -1,0 +1,296 @@
+{
+  "date": "2026-09-29",
+  "baselineCommit": "296c07d",
+  "workingTree": "uncommitted",
+  "fullV1Acceptance": false,
+  "checks": {
+    "goTestAll": "passed; live suites requiring credentials are separate from this command",
+    "goVet": "passed",
+    "webUnit": 40,
+    "productionE2E": 18,
+    "desktopDemoE2E": {
+      "passed": 26,
+      "scope": "earlier desktop regression; not rerun after production-only continuation"
+    },
+    "api": {
+      "paths": 109,
+      "operations": 125,
+      "successfulOperationsSchemaValidated": 59,
+      "protectedOperationsAnonymous401Validated": 117
+    },
+    "sourceLineLimit": {
+      "limit": 2000,
+      "maximum": 1805,
+      "file": "internal/gen/api/types_1.gen.go"
+    },
+    "helmLint": "passed",
+    "gitDiffCheck": "passed"
+  },
+  "recovery": {
+    "runId": "judex-e2e-34364-1790619977545",
+    "exitCode": 0,
+    "s3ArchiveRestoredAndVerified": true,
+    "postgresRestoredAndAllTablesMatched": true,
+    "verifiedMaterialEntries": 8
+  },
+  "performance": {
+    "tasks": 1000,
+    "messages": 10000,
+    "firstPageRows": 50,
+    "rowsAfterLoadMore": 100,
+    "firstPageMs": 165,
+    "messagePageMs": 11,
+    "usedJSHeapBytes": 16100000
+  },
+  "kubernetes": {
+    "runId": "judex-close-2b0e0630",
+    "image": "judex/test:closure-20260929-live",
+    "results": [
+      {
+        "combination": "ii",
+        "namespace": "judex-close-2b0e0630-ii",
+        "projectId": "3838a99c-f9e7-4e12-ab36-8a5693b17dbc",
+        "taskId": "9b01605d-d8f4-477e-a0fe-da7d7cc247af",
+        "acceptanceId": "2daf5ecf-fa48-4b6b-b8b3-b595ac9bb56a",
+        "materialVersionId": "82f176c1-f860-4929-b410-a7a7508b2bc0",
+        "sha256": "e9859b003f6b4a55a2f2be5aa2f381e683ddb8f1d07aba5285d152309f4179bb",
+        "initialReadVerified": true
+      },
+      {
+        "combination": "ie",
+        "namespace": "judex-close-2b0e0630-ie",
+        "projectId": "5d9023d8-d8b7-4bcc-aa99-db6e18d7ae9a",
+        "taskId": "dfef9875-9332-4eed-9c78-cabbc2159892",
+        "acceptanceId": "3a4fd498-db3e-4cc3-8f02-ce3109ee3aed",
+        "materialVersionId": "bcc33688-baa6-462a-b60e-b9352b618f67",
+        "sha256": "e9859b003f6b4a55a2f2be5aa2f381e683ddb8f1d07aba5285d152309f4179bb",
+        "initialReadVerified": true
+      },
+      {
+        "combination": "ei",
+        "namespace": "judex-close-2b0e0630-ei",
+        "projectId": "4bd602d8-b230-4d32-827f-152babb52803",
+        "taskId": "cbe4de78-9ff5-4082-ae3d-af7277e9ffe9",
+        "acceptanceId": "cd30427a-f5aa-400e-ae15-e613d262a353",
+        "materialVersionId": "6331d3c7-e4aa-4271-9341-6bffcc147154",
+        "sha256": "e9859b003f6b4a55a2f2be5aa2f381e683ddb8f1d07aba5285d152309f4179bb",
+        "initialReadVerified": true
+      },
+      {
+        "combination": "ee",
+        "namespace": "judex-close-2b0e0630-ee",
+        "projectId": "46435497-64ef-4a0b-a3e1-f8275367ffcb",
+        "taskId": "cd0eb8ac-8910-43c8-9869-4dda4e74531b",
+        "acceptanceId": "ac6ea06e-c841-4282-ba2e-37073602e947",
+        "materialVersionId": "9382a919-062f-46be-8eda-62a36c000eb6",
+        "sha256": "e9859b003f6b4a55a2f2be5aa2f381e683ddb8f1d07aba5285d152309f4179bb",
+        "initialReadVerified": true
+      },
+      {
+        "fault": "model-normal",
+        "runId": "7cb6f5bf-4e1f-4510-bc02-d2468e53ebb0",
+        "state": "succeeded"
+      },
+      {
+        "fault": "model-disconnect",
+        "runId": "005542a5-8974-4eb2-8e5d-842fc2809208",
+        "state": "failed"
+      },
+      {
+        "fault": "model-quota",
+        "runId": "f60ba8ae-b4b4-4741-aa47-c948268d47e5",
+        "state": "failed"
+      },
+      {
+        "scenario": "sandbox-publish-browser",
+        "runId": "16f6c1fd-d086-4d4b-90f9-e81b46005d4b",
+        "artifact": {
+          "materialId": "5dca928e-f035-4780-badf-204d770cf1d3",
+          "revision": 1,
+          "sha256": "708110b3639c5aabe5f51b27ba07327a987c524f6428abb7889a1ce08d451d76",
+          "title": "中文分析页面",
+          "versionId": "1d50c99d-a190-4044-90e4-6e59e6acec38"
+        },
+        "browserRendered": true
+      },
+      {
+        "fault": "api-restart",
+        "result": "accepted task and material unchanged"
+      },
+      {
+        "fault": "postgres-outage",
+        "result": "readiness failed then data verified"
+      },
+      {
+        "fault": "s3-outage",
+        "result": "503 then exact material SHA256 restored"
+      },
+      {
+        "fault": "worker-sandbox-interruption",
+        "runId": "44b1c21b-fc4c-4a61-9b7f-b0dcdba8f768",
+        "unknownTools": 1,
+        "result": "waiting_human; no shell replay"
+      },
+      {
+        "fault": "sandbox-service-outage",
+        "runId": "2551b6e1-40f0-4b18-afca-518db2010b8a",
+        "recovery": {
+          "egressProbeBlocked": true,
+          "filesVerified": 2,
+          "projectId": "3838a99c-f9e7-4e12-ab36-8a5693b17dbc",
+          "readOnly": true,
+          "sandboxId": "0acedcd3-d058-4500-a594-27d19211916c",
+          "serviceAccountTokenAbsent": true
+        }
+      },
+      {
+        "scenario": "real-model-研发",
+        "model": "glm-5.3",
+        "projectId": "39487f8d-1646-4108-bdd3-b628f317f005",
+        "sourceVersionId": "b28b15f1-1906-4126-b785-3f281b19d357",
+        "runId": "ccd44d0c-67c9-47a3-b0dd-fbd1116775e8",
+        "batchId": "97f52ac3-024c-4803-bc7a-aba2ecb5157b",
+        "artifact": {
+          "materialId": "adbd241f-04e2-447d-8c12-9d5223bb4470",
+          "revision": 1,
+          "sha256": "6a7a8ac52f1d156b6fd6c21917e20926e7cccf60af30182cc6f67fef05825191",
+          "title": "Judex 研发样本评审",
+          "versionId": "bb928903-f96b-4d5b-bc98-82cbb1cc07f5"
+        },
+        "proof": {
+          "successfulChildren": 2,
+          "modelCalls": 10,
+          "tokens": 36124,
+          "publishedVersions": 1
+        },
+        "browserRendered": true,
+        "businessWorkUnchanged": true
+      },
+      {
+        "scenario": "real-model-设计",
+        "model": "glm-5.3",
+        "projectId": "c8931115-b8bd-4fca-9de7-794e14f66dae",
+        "sourceVersionId": "35bc58ca-539b-4a55-9851-191a91fa0a09",
+        "runId": "2522edf1-297c-4948-a236-b5f191098dad",
+        "batchId": "c939788c-1f54-4577-a9b1-44d3a4995461",
+        "artifact": {
+          "materialId": "60e16d4f-68a7-4ab1-aa3a-59afb526f5ed",
+          "revision": 1,
+          "sha256": "b002b4eb49158db772144ec69f05cb4a20baf26e5dfef811bce8cd1bc5251921",
+          "title": "Judex 设计样本评审",
+          "versionId": "2aad4164-157c-4ea3-bc20-e9f988d196c3"
+        },
+        "proof": {
+          "successfulChildren": 2,
+          "modelCalls": 11,
+          "tokens": 41226,
+          "publishedVersions": 1
+        },
+        "browserRendered": true,
+        "businessWorkUnchanged": true
+      }
+    ],
+    "failures": [],
+    "cleanupRequested": [
+      "judex-close-2b0e0630-ii",
+      "judex-close-2b0e0630-ii-sandboxes",
+      "judex-close-2b0e0630-ie",
+      "judex-close-2b0e0630-ei",
+      "judex-close-2b0e0630-ee"
+    ]
+  },
+  "kubernetesScope": "matrix image contains repairs through migration 17; later global-intent/material/CLI refinements verified with final Go and production E2E, not the same image",
+  "smoke": {
+    "namespace": "judex-e2e-4a90164e",
+    "passed": true,
+    "cleaned": true
+  },
+  "cleanup": {
+    "ownedTestNamespacesRemaining": 0,
+    "existingJudexDeploymentsAndStatefulSets": "all 1/1; unchanged"
+  },
+  "release": {
+    "version": "0.1.0-review.20260929.4",
+    "commit": "296c07d-dirty",
+    "sourceTreeHash": "7376334b985d4ee7acb74b0cc4d9f2fb2a81cbd6b7fda841da6e497d22c61193",
+    "protocolVersion": "1",
+    "components": [
+      "server",
+      "web",
+      "cli",
+      "skill",
+      "chart",
+      "openapi"
+    ],
+    "artifacts": [
+      "judex-windows-amd64-0.1.0-review.20260929.4.zip",
+      "judex-windows-arm64-0.1.0-review.20260929.4.zip",
+      "judex-linux-amd64-0.1.0-review.20260929.4.zip",
+      "judex-linux-arm64-0.1.0-review.20260929.4.zip",
+      "judex-darwin-amd64-0.1.0-review.20260929.4.zip",
+      "judex-darwin-arm64-0.1.0-review.20260929.4.zip",
+      "judex-server-linux-amd64",
+      "judex-server-linux-arm64",
+      "web.zip",
+      "judex-skill.zip",
+      "judex-0.1.0-review.20260929.4.tgz",
+      "openapi.yaml"
+    ]
+  },
+  "releaseVerification": {
+    "version": "0.1.0-review.20260929.4",
+    "sourceTreeHash": "7376334b985d4ee7acb74b0cc4d9f2fb2a81cbd6b7fda841da6e497d22c61193",
+    "checksumsVerified": 56,
+    "nativePlatform": "windows-amd64",
+    "installedPackagedSkillVersionMatches": true,
+    "uninstallPreservesUserFiles": true
+  },
+  "skill": {
+    "codexVersion": "0.131.0",
+    "claudeVersion": "2.1.247",
+    "codexActualDiscovery": true,
+    "claudeLayoutValidated": true,
+    "uninstallPreservesUserFiles": true,
+    "modelLedHostExecution": "not run; explicit authorization pending"
+  },
+  "remaining": [
+    "model-led local Skill end-to-end",
+    "successful response contract coverage beyond current 59 operations",
+    "pagination of remaining configuration selectors and hard-rule target picker",
+    "general long-dialogue semantic summary recovery and sustained concurrency/load acceptance"
+  ],
+  "logDigests": {
+    ".cache/continue-closure-go.log": {
+      "sha256": "919c4b8a67c72a480f9d4297cf85f385a28244b3bf06088bba242f7282bd3430",
+      "bytes": 3155
+    },
+    ".cache/continue-closure-vet.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    ".cache/continue-final-web.log": {
+      "sha256": "2e32eec4f47be8ff6603c809019aeb3b59c80cc9281d20581688376c89b99eb3",
+      "bytes": 4091
+    },
+    ".cache/continue-final-business.log": {
+      "sha256": "7a44e3af17e45ba3515b5ebe292b3eb67902ccaa2d472e78c6b6519d5273276a",
+      "bytes": 3514
+    },
+    ".cache/continue-final-helm.log": {
+      "sha256": "147befe0987aaa5ea73496ed6ec4c2b1a6f98a572a06211033cc4c90450c163d",
+      "bytes": 111
+    },
+    ".cache/continue-release-v4.log": {
+      "sha256": "494604b8561d91d4de3c0da16d39780a5847533d8871e9251c1aa6e93212c2d5",
+      "bytes": 1325
+    },
+    ".cache/continue-release-verify.log": {
+      "sha256": "b790dc24bc3a64cea40ef08c08a2c8919e7fd7fc1ceb0bb3bf86efde778d1b39",
+      "bytes": 616
+    },
+    ".cache/continue-k8s-smoke.log": {
+      "sha256": "03f3ea16ae4fa339d505494e2049d2818b64bce8d9c7df12627870747720def5",
+      "bytes": 67
+    }
+  }
+}

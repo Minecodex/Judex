@@ -1,0 +1,40 @@
+# 模型目录（P2-03/P5-01）：部署方按此结构提供真实网关。
+# 密钥只写 env 引用（apiKeyEnv），绝不把 key 写进本文件或仓库。
+# 已实测验证的入口：
+#   GLM Coding Plan（OpenAI 兼容）→ https://open.bigmodel.cn/api/coding/paas/v4
+#   GLM 开放平台免费模型          → https://open.bigmodel.cn/api/paas/v4
+#   GLM Anthropic 兼容            → https://open.bigmodel.cn/api/anthropic
+models:
+  - id: "00000000-0000-0000-0000-000000000001"
+    displayName: "GLM-5.3（编程套餐·OpenAI 兼容入口）"
+    provider: "openai-compatible"
+    baseUrl: "https://open.bigmodel.cn/api/coding/paas/v4"
+    apiKeyEnv: "JUDEX_MODEL_KEY_GLM53"
+    model: "glm-5.3"
+    maxInputTokens: 128000
+    maxOutputTokens: 16384
+    toolCalling: true
+    vision: false
+    streaming: true
+  - id: "00000000-0000-0000-0000-000000000002"
+    displayName: "GLM-5.3（编程套餐·Anthropic 入口备选）"
+    provider: "anthropic-compatible"
+    baseUrl: "https://open.bigmodel.cn/api/anthropic"
+    apiKeyEnv: "JUDEX_MODEL_KEY_GLM53"
+    model: "glm-5.3"
+    maxInputTokens: 128000
+    maxOutputTokens: 16384
+    toolCalling: true
+    vision: false
+    streaming: true
+  - id: "00000000-0000-0000-0000-000000000003"
+    displayName: "GLM-4-Flash（开放平台免费）"
+    provider: "openai-compatible"
+    baseUrl: "https://open.bigmodel.cn/api/paas/v4"
+    apiKeyEnv: "JUDEX_MODEL_KEY_GLM4FLASH"
+    model: "glm-4-flash"
+    maxInputTokens: 128000
+    maxOutputTokens: 8192
+    toolCalling: true
+    vision: false
+    streaming: true

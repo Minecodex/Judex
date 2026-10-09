@@ -1,0 +1,492 @@
+# 项目生命周期、负责人转移与仓库（docs/plans/v1/02 §4、06 §3）
+paths:
+  /projects:
+    get:
+      operationId: listProjects
+      summary: 本人加入的项目分页
+      tags: [projects]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+        - in: query
+          name: q
+          schema: {type: string, maxLength: 200}
+          description: 项目名称和简介的字面搜索。
+        - in: query
+          name: ownership
+          schema: {type: string, enum: [all, owned, joined], default: all}
+        - in: query
+          name: include
+          schema: {type: string, enum: [summary]}
+          description: 整页批量返回活跃成员和讨论摘要。
+      responses:
+        '200':
+          description: 项目分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor, totalCount]
+                    properties:
+                      totalCount: {type: integer, minimum: 0}
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/projects.yaml#/components/schemas/Project'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    post:
+      operationId: createProject
+      summary: 创建项目（原子建立 owner 成员、主会场与 coordinator）
+      tags: [projects]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: 已创建。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/Project'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '400':
+          $ref: '../components/common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: '../components/common.yaml#/components/responses/Unauthorized'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: getProject
+      summary: 项目公开配置与本人能力
+      tags: [projects]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 项目详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/Project'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+    patch:
+      operationId: updateProject
+      summary: 更新项目配置（manager 及以上）
+      tags: [projects]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: 更新后的项目。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/Project'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/bootstrap:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: getProjectBootstrap
+      summary: 首屏概览、本人身份与事件游标
+      tags: [projects]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 引导数据。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/ProjectBootstrap'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/archive:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    post:
+      operationId: archiveProject
+      summary: 归档项目（owner；只读保留历史）
+      tags: [projects]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/ArchiveRequest'
+      responses:
+        '200':
+          description: 已归档。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/Project'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/restore:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    post:
+      operationId: restoreProject
+      summary: 恢复归档项目（owner）
+      tags: [projects]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/ArchiveRequest'
+      responses:
+        '200':
+          description: 已恢复。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/Project'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/owner-transfer:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    post:
+      operationId: requestOwnerTransfer
+      summary: 发起负责人转移（owner 发起，双方确认）
+      tags: [projects]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/OwnerTransferRequest'
+      responses:
+        '201':
+          description: 已创建转移请求。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/OwnerTransfer'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/owner-transfers/{transferId}:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: transferId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getOwnerTransfer
+      summary: 转移请求详情（转出或转入本人）
+      tags: [projects]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 转移详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/OwnerTransfer'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+  /projects/{projectId}/owner-transfers/{transferId}/decisions:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: transferId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: decideOwnerTransfer
+      summary: 转入方接受/拒绝负责人转移
+      tags: [projects]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/OwnerTransferDecisionRequest'
+      responses:
+        '200':
+          description: 决定结果。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/OwnerTransfer'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/leave:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    post:
+      operationId: leaveProject
+      summary: 本人退出项目（先处理活动职责）
+      tags: [members]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: 已退出。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [left]
+                    properties:
+                      left:
+                        type: boolean
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '409':
+          description: 存在活动职责需先处理（details 列明）。
+          content:
+            application/json:
+              schema:
+                $ref: '../components/common.yaml#/components/schemas/ErrorResponse'
+  /projects/{projectId}/repositories:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listRepositories
+      summary: 仓库元数据列表
+      tags: [repositories]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 仓库分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/projects.yaml#/components/schemas/RepositoryLink'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    post:
+      operationId: createRepository
+      summary: 登记仓库元数据（manager；不操纵 Git）
+      tags: [repositories]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/RepositoryDraftRequest'
+      responses:
+        '201':
+          description: 已登记。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/RepositoryLink'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+  /projects/{projectId}/repositories/{repositoryId}:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: repositoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateRepository
+      summary: 更新仓库元数据（manager）
+      tags: [repositories]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/projects.yaml#/components/schemas/RepositoryUpdateRequest'
+      responses:
+        '200':
+          description: 更新结果。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/RepositoryLink'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'

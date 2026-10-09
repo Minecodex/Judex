@@ -57,7 +57,7 @@ test("both dividers resize independently, save ratios, restore on refresh and ne
 test("keyboard resizing, cancellation and reset keep the layout usable", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/projects/leaf/plans/leaf-first/chat/labels");
   const initial = await sizes(page);
   const left = page.getByTestId("resize-left");
   await left.focus();
@@ -75,7 +75,7 @@ test("keyboard resizing, cancellation and reset keep the layout usable", async (
   expect((await sizes(page)).left).toBeCloseTo(initial.left, 0);
   await page.getByTestId("resize-right").focus();
   await page.keyboard.press("Home");
-  expect((await sizes(page)).right).toBeCloseTo(320, 0);
+  expect((await sizes(page)).right).toBeCloseTo(260, 0);
   await openTool(page,"resources");
   await expect(page.locator(".judex-chat-panel-body")).toBeVisible();
   await toggleTheme(page);
@@ -92,14 +92,7 @@ test("project dropdown replaces the brand and selection spans the whole conversa
   await page.goto("/");
   await expect(page.locator(".judex-chat-brand")).toHaveCount(0);
   await expect(page.locator(".judex-chat-projects")).toHaveCount(0);
-  await page.getByTestId("project-switcher").click();
-  await page.getByRole("option", { name: "野间咖啡", exact: true }).click();
-  await expect(page.getByTestId("project-switcher")).toContainText("野间咖啡");
-  await expect(page.locator(".judex-chat-conversation-list")).toContainText(
-    "怎样表达自然的松弛感",
-  );
-  await page.getByTestId("project-switcher").click();
-  await page.getByRole("option", { name: "轻笺", exact: true }).click();
+  await page.getByTestId("project-enter-wild").click();await page.getByRole("button",{name:"项目讨论记录",exact:true}).click();await expect(page.locator(".judex-chat-conversation-list")).toContainText("怎样表达自然的松弛感");await page.locator(".judex-co-brand").click();await page.getByTestId("project-enter-leaf").click();await page.getByTestId("plan-discuss-leaf-first").click();
   const list = page.locator(".judex-chat-conversation-list");
   const buttons = list.getByRole("button");
   for (let i = 0; i < (await buttons.count()); i++) {

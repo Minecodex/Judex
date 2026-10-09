@@ -6,6 +6,7 @@ import {
 } from "./types.ts";
 import { uid } from "./seed.ts";
 import { member } from "./selectors.ts";
+import {handoffResponsibilities,defaultHandoffSender} from "./handoffResponsibilities.ts";
 export function proposeHandoff(
   s: WorkState,
   projectId: string,
@@ -13,6 +14,7 @@ export function proposeHandoff(
   receiverSeatId: string,
   sources: string[],
   kind: Handoff["kind"],
+  senderIdentityIds?:Record<string,string>,
 ): Result {
   if (!member(s, projectId)) return { error: "permission" };
   const task = s.tasks.find(
@@ -47,6 +49,8 @@ export function proposeHandoff(
   )
     return { error: "blocked" };
   const flow = s.flows.find((f) => f.id === task.flowId)!;
+  const validSenders=handoffResponsibilities(s,projectId),senders=tasks.map(t=>senderIdentityIds?.[t!.id]??defaultHandoffSender(s,t!));
+  if(senders.some(id=>!validSenders.includes(id)))return {error:"required"};
   const next = structuredClone(s),
     id = uid();
   next.handoffs.push({
@@ -60,10 +64,10 @@ export function proposeHandoff(
     kind,
     title: W("交接：" + task.title.zh, "Handoff: " + task.title.en),
     history: [],
-    sources: tasks.map((t) => ({
+    sources: tasks.map((t,i) => ({
       id: uid(),
       taskId: t!.id,
-      senderSeatId: t!.seatIds[0],
+      senderSeatId: senders[i],
       revision: 1,
       summary: t!.expected,
       files: structuredClone(t!.files),

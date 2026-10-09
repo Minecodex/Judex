@@ -1,3 +1,4 @@
+import {PreferencesPage as RolePreferencesPage} from "./PreferencesPage";
 import {
   UICard,
   UIInput,
@@ -6,9 +7,12 @@ import {
   UIOption,
   UISelect,
 } from "../../components/ui/FormControls";
-import { useWorkspaceDraft } from "../chat/useWorkspaceDraft";
+import { isMySeat, myPreference } from "./preferences";
+export { PreferencesPage } from "./PreferencesPage";
 import { Button } from "../../components/ui/Button";
-import { ExistingAssignments } from "./ProjectPages";
+import {PositionAssignmentDialog, memberKey} from './PositionAssignmentDialog';
+import {PositionCard} from './PositionCard';
+import {CardActions} from '../../components/ui/ActionGroup';
 import { useState } from "react";
 import {
   ArrowUpRight,
@@ -16,20 +20,13 @@ import {
   Check,
   Plus,
   UserPlus,
-  LockKeyhole,
-  SlidersHorizontal,
+  Layers,
 } from "lucide-react";
 import { useWork } from "./store";
 import { Btn, Dialog, EmptyState, Field, Heading, Person } from "./ui";
-import {
-  invitePerson,
-  acceptInvite,
-  personalPrompt,
-  replaceSeat,
-  savePosition,
-  remindPending,
-} from "./actions";
+import { dataMode } from "../../lib/api/client";
 import type { Position, Seat } from "./types";
+import { PositionPresetsDialog } from "./PositionPresetsDialog";
 export function InvitePage() {
   const { state, project, t, text, act, go } = useWork();
   const invites = state.invites.filter(
@@ -65,8 +62,8 @@ export function InvitePage() {
           })}
           <Btn
             testId="next-accept-invite"
-            onClick={() => {
-              if (act((s) => acceptInvite(s, invite.id)))
+            onClick={async () => {
+              if ((await act("acceptInvite", { invitationId: invite.id })).ok)
                 go({
                   view: "settings",
                 });
@@ -82,14 +79,16 @@ export function InvitePage() {
 export function InviteDialog({ onClose }: { onClose: () => void }) {
   const { state, project, t, text, act } = useWork(),
     [name, setName] = useState(""),
-    [ids, setIds] = useState<string[]>([]);
+    [ids, setIds] = useState<string[]>([]),
+    [link, setLink] = useState("");
   return (
     <Dialog title={t("workInviteTitle")} onClose={onClose} wide>
       <p className="judex-modal-description">{t("workInviteHint")}</p>
-      <Field label={t("workInviteName")}>
+      <Field label={t(dataMode === "api" ? "workInviteEmail" : "workInviteName")}>
         <UIInput
           className="judex-input"
           data-testid="next-invite-name"
+          type={dataMode === "api" ? "email" : undefined}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -99,7 +98,7 @@ export function InviteDialog({ onClose }: { onClose: () => void }) {
         {state.positions
           .filter((p) => p.projectId === project.id)
           .map((p) => (
-            <UICheckbox
+            <UICheckbox appearance="card"
               key={p.id}
               data-testid={"invite-position-" + p.id}
               checked={ids.includes(p.id)}
@@ -123,18 +122,34 @@ export function InviteDialog({ onClose }: { onClose: () => void }) {
             </UICheckbox>
           ))}
       </div>
-      <p className="judex-muted">{t("workInviteLocal")}</p>
+      {dataMode === "demo" && (
+        <p className="judex-muted">{t("workInviteLocal")}</p>
+      )}
+      {link && (
+        <Field label={t("workInviteLink")}>
+          <UIInput className="judex-input" readOnly value={link} />
+        </Field>
+      )}
       <div className="judex-modal-actions">
         <Btn secondary onClick={onClose}>
           {t("cancel")}
         </Btn>
         <Btn
           testId="next-create-invite"
-          onClick={() => {
-            if (act((s) => invitePerson(s, project.id, name, ids))) onClose();
+          disabled={dataMode === "api" && !name.includes("@")}
+          onClick={async () => {
+            const r = await act("invitePerson", {
+              projectId: project.id,
+              name,
+              positionIds: ids,
+            });
+            if (r.ok) {
+              if (r.inviteUrl) setLink(r.inviteUrl);
+              else onClose();
+            }
           }}
         >
-          {t("workCreateInvite")}
+          {t(dataMode === "api" ? "workSendInvite" : "workCreateInvite")}
         </Btn>
       </div>
     </Dialog>
@@ -148,15 +163,16 @@ function PositionDialog({
   onClose: () => void;
 }) {
   const { state, project, t, text, act } = useWork(),
-    flows = state.flows.filter((f) => f.projectId === project.id);
+    flows = state.flows.filter((f) => f.projectId === project.id && f.status !== "draft");
   const [value, setValue] = useState({
     id: position?.id,
     name: position ? text(position.name) : "",
     prompt: position ? text(position.prompt) : "",
-    flowId: position?.bindings[0]?.flowId ?? flows[0].id,
-    nodeId: position?.bindings[0]?.nodeId ?? flows[0].nodes[0].id,
+    publicSummary: position?.publicSummary ? text(position.publicSummary) : "",
+    flowId: position?.bindings[0]?.flowId ?? (position ? "" : flows[0]?.id ?? ""),
+    nodeId: position?.bindings[0]?.nodeId ?? (position ? "" : flows[0]?.nodes[0]?.id ?? ""),
   });
-  const flow = flows.find((f) => f.id === value.flowId)!;
+  const flow = flows.find((f) => f.id === value.flowId);
   return (
     <Dialog
       title={t(position ? "workEditPosition" : "workCreatePosition")}
@@ -190,6 +206,11 @@ function PositionDialog({
           }
         />
       </Field>
+      <Field label={t("positionPresetSummary")}>
+        <UIInput className="judex-input" data-testid="position-summary" value={value.publicSummary}
+          onChange={e => setValue({...value, publicSummary: e.target.value})}/>
+      </Field>
+      {!flows.length && <p className="judex-muted">{t("positionPresetsNoFlow")}</p>}
       <div className="judex-work-form-grid">
         <Field label={t("workChooseFlow")}>
           <UISelect
@@ -200,11 +221,12 @@ function PositionDialog({
               const f = flows.find((f) => f.id === e.target.value)!;
               setValue({
                 ...value,
-                flowId: f.id,
-                nodeId: f.nodes[0].id,
+                flowId: f?.id ?? "",
+                nodeId: f?.nodes[0]?.id ?? "",
               });
             }}
           >
+            <UIOption value="">{t("positionPresetsNoBinding")}</UIOption>
             {flows.map((f) => (
               <UIOption key={f.id} value={f.id}>
                 {text(f.name)}
@@ -217,6 +239,7 @@ function PositionDialog({
             className="judex-input"
             data-testid="position-node"
             value={value.nodeId}
+            disabled={!flow}
             onChange={(e) =>
               setValue({
                 ...value,
@@ -224,7 +247,8 @@ function PositionDialog({
               })
             }
           >
-            {flow.nodes.map((n) => (
+            <UIOption value="">{t("positionPresetsNoBinding")}</UIOption>
+            {flow?.nodes.map((n) => (
               <UIOption value={n.id} key={n.id}>
                 {text(n.label)}
               </UIOption>
@@ -238,8 +262,9 @@ function PositionDialog({
         </Btn>
         <Btn
           testId="save-position"
-          onClick={() => {
-            if (act((s) => savePosition(s, project.id, value))) onClose();
+          onClick={async () => {
+            if ((await act("savePosition", { projectId: project.id, value })).ok)
+              onClose();
           }}
         >
           {t("workSavePosition")}
@@ -251,6 +276,7 @@ function PositionDialog({
 function ReplaceDialog({ seat, onClose }: { seat: Seat; onClose: () => void }) {
   const { project, t, act } = useWork(),
     [person, setPerson] = useState("");
+  const target = project.members.find(member => memberKey(member) === person);
   return (
     <Dialog title={t("workReplace")} onClose={onClose}>
       <p className="judex-modal-description">{t("workReplaceHint")}</p>
@@ -263,9 +289,9 @@ function ReplaceDialog({ seat, onClose }: { seat: Seat; onClose: () => void }) {
         >
           <UIOption value="">{t("assignmentTarget")}</UIOption>
           {project.members
-            .filter((m) => m.name !== seat.person)
+            .filter((m) => seat.userId && m.userId ? m.userId !== seat.userId : m.name !== seat.person)
             .map((m) => (
-              <UIOption key={m.name}>{m.name}</UIOption>
+              <UIOption key={memberKey(m)} value={memberKey(m)}>{m.name}{m.email ? ' · ' + m.email : ''}</UIOption>
             ))}
         </UISelect>
       </Field>
@@ -274,9 +300,19 @@ function ReplaceDialog({ seat, onClose }: { seat: Seat; onClose: () => void }) {
           {t("cancel")}
         </Btn>
         <Btn
+          disabled={!target}
           testId="confirm-seat-replace"
-          onClick={() => {
-            if (act((s) => replaceSeat(s, seat.id, seat.person, person)))
+          onClick={async () => {
+            if (
+              (
+                await act("replaceSeat", {
+                  seatId: seat.id,
+                  from: seat.person,
+                  to: target!.name,
+                  userId: target!.userId,
+                })
+              ).ok
+            )
               onClose();
           }}
         >
@@ -287,11 +323,13 @@ function ReplaceDialog({ seat, onClose }: { seat: Seat; onClose: () => void }) {
   );
 }
 export function TeamPage() {
-  const { state, project, t, text, management, go } = useWork(),
+  const { state, project, route,t, text, management, go } = useWork(),
     [inviting, setInviting] = useState(false),
+    [presetAdding, setPresetAdding] = useState(false),
+    [assigning, setAssigning] = useState<Position | null>(null),
     [editing, setEditing] = useState<Position | "new" | null>(null),
     [replacing, setReplacing] = useState<Seat | null>(null),
-    [viewing, setViewing] = useState<Seat | null>(null);
+    [viewing, setViewing] = useState<Seat | null>(null),[prefPosition,setPrefPosition]=useState<string>();
   const positions = state.positions.filter((p) => p.projectId === project.id),
     seats = state.seats.filter((s) =>
       positions.some((p) => p.id === s.positionId),
@@ -305,6 +343,9 @@ export function TeamPage() {
       >
         {management && (
           <>
+            <Btn secondary testId="open-position-presets" onClick={() => setPresetAdding(true)}>
+              <Layers/>{t("positionPresetsOpen")}
+            </Btn>
             <Btn
               secondary
               onClick={() =>
@@ -326,7 +367,17 @@ export function TeamPage() {
           </>
         )}
       </Heading>
-      <ExistingAssignments />
+      <section className="judex-work-section">
+        <div className="judex-work-section-title">
+          <h2>{t("workPositions")}</h2>
+          <small>{t("workPositionHint")}</small>
+        </div>
+        <div className="judex-position-grid">
+          {positions.map(position => <PositionCard key={position.id} position={position}
+            onEdit={() => setEditing(position)} onAssign={() => setAssigning(position)} onPreferences={()=>go({settingsItem:"preference:"+position.id})}/>)}
+        </div>
+      </section>
+      {!!seats.length && <section className="judex-work-section"><div className="judex-work-section-title"><h2>{t('teamAssignedIdentities')}</h2></div>
       <div className="judex-work-team-grid">
         {seats.map((seat) => {
           const position = positions.find((p) => p.id === seat.positionId)!;
@@ -348,7 +399,7 @@ export function TeamPage() {
                 {t("workTasks")}
                 <small>{text(position.name)}</small>
               </div>
-              <div className="judex-member-work-actions">
+              <CardActions className="judex-member-work-actions">
                 <Button onClick={() => setViewing(seat)}>
                   {t("promptPreview")}
                   <ArrowUpRight />
@@ -358,58 +409,16 @@ export function TeamPage() {
                     {t("workReplace")}
                   </Button>
                 )}
-              </div>
+              </CardActions>
             </UICard>
           );
         })}
       </div>
-      <section className="judex-work-section">
-        <div className="judex-work-section-title">
-          <h2>{t("workPositions")}</h2>
-          <small>{t("workPositionHint")}</small>
-        </div>
-        <div className="judex-position-grid">
-          {positions.map((p) => (
-            <article key={p.id}>
-              <span className={"judex-position-symbol judex-tone-" + p.tone}>
-                <Bot />
-              </span>
-              <h3>{text(p.name)}</h3>
-              <p>{text(p.prompt)}</p>
-              <div className="judex-position-nodes">
-                {p.bindings.map((b) => {
-                  const f = state.flows.find((f) => f.id === b.flowId)!;
-                  return (
-                    <Button
-                      key={b.flowId + b.nodeId}
-                      onClick={() =>
-                        go({
-                          view: "flows",
-                          id: f.id,
-                        })
-                      }
-                    >
-                      {text(f.name)} /{" "}
-                      {text(f.nodes.find((n) => n.id === b.nodeId)!.label)}
-                    </Button>
-                  );
-                })}
-              </div>
-              {management && (
-                <Btn
-                  secondary
-                  onClick={() => setEditing(p)}
-                  testId={"edit-position-" + p.id}
-                >
-                  <SlidersHorizontal />
-                  {t("workEditPosition")}
-                </Btn>
-              )}
-            </article>
-          ))}
-        </div>
-      </section>
+      </section>}
+      {(route.settingsItem?.startsWith("preference:")||prefPosition)&&<Dialog wide title={t("coopPrivateRolePreferences")} onClose={()=>{setPrefPosition(undefined);go({settingsItem:undefined});}}><RolePreferencesPage initialPositionId={route.settingsItem?.startsWith("preference:")?route.settingsItem.slice(11):prefPosition} embedded/></Dialog>}
+      {assigning && <PositionAssignmentDialog position={assigning} onClose={() => setAssigning(null)}/>}
       {inviting && <InviteDialog onClose={() => setInviting(false)} />}
+      {presetAdding && <PositionPresetsDialog onClose={() => setPresetAdding(false)}/>}
       {editing && (
         <PositionDialog
           position={editing === "new" ? undefined : editing}
@@ -435,89 +444,14 @@ export function TeamPage() {
           <UICard className="judex-work-callout">
             <h3>{t("workMyPrompt")}</h3>
             <p>
-              {viewing.person === state.currentUser
-                ? state.preferences.find(
-                    (p) =>
-                      p.projectId === project.id &&
-                      p.person === state.currentUser,
-                  )?.prompt || t("workNoPreference")
+              {isMySeat(state, viewing)
+                ? myPreference(state, project.id, viewing.positionId)?.prompt || t("workNoPreference")
                 : t("workPromptPrivate")}
             </p>
           </UICard>
           <p className="judex-muted">{t("workSimulated")}</p>
         </Dialog>
       )}
-    </>
-  );
-}
-export function PreferencesPage() {
-  const { state, project, t, act, management, reset } = useWork(),
-    value =
-      state.preferences.find(
-        (p) => p.projectId === project.id && p.person === state.currentUser,
-      )?.prompt ?? "";
-  const [prompt, setPrompt] = useWorkspaceDraft("personal-prompt", value),
-    [resetting, setResetting] = useState(false);
-  return (
-    <>
-      <Heading
-        eyebrow="YOUR WAY OF WORKING"
-        title={t("workMyPrompt")}
-        description={t("workMyPromptHint")}
-      />
-      <div className="judex-work-preferences">
-        <UICard className="judex-work-panel">
-          <Person name={state.currentUser} />
-          <Field label={t("workMyPrompt")}>
-            <UITextArea
-              className="judex-textarea judex-prompt-editor"
-              data-testid="next-personal-prompt"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder={t("workPromptExample")}
-            />
-          </Field>
-          <Btn
-            testId="next-save-preference"
-            onClick={() => act((s) => personalPrompt(s, project.id, prompt))}
-          >
-            {t("personalSave")}
-          </Btn>
-        </UICard>
-        <aside>
-          <LockKeyhole />
-          <h3>{t("personalPrivate")}</h3>
-          <p>{t("personalHint")}</p>
-          <p>{t("promptBoundary")}</p>
-        </aside>
-      </div>
-      <div className="judex-next-demo-settings">
-        <p>{t("workSimulated")}</p>
-        {management && (
-          <Btn
-            secondary
-            onClick={() => act((s) => remindPending(s, project.id))}
-            testId="simulate-receipt-reminder"
-          >
-            {t("workReminderDemo")}
-          </Btn>
-        )}
-        <p>{t("workResetHint")}</p>
-        {resetting ? (
-          <div>
-            <Btn danger testId="reset-next" onClick={reset}>
-              {t("confirm")}
-            </Btn>
-            <Btn secondary onClick={() => setResetting(false)}>
-              {t("cancel")}
-            </Btn>
-          </div>
-        ) : (
-          <Btn secondary onClick={() => setResetting(true)}>
-            {t("workReset")}
-          </Btn>
-        )}
-      </div>
     </>
   );
 }

@@ -1,0 +1,1370 @@
+components:
+  schemas:
+    Plan:
+      type: object
+      required:
+        - id
+        - title
+        - status
+        - ownerIdentityId
+        - workflowId
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 200
+        goal:
+          type: string
+        acceptanceCriteria:
+          type: string
+        status:
+          type: string
+          enum:
+            - draft
+            - active
+            - accepted
+            - cancelled
+        ownerIdentityId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        workflowId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        latestAcceptanceId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        taskStats:
+          type: object
+          required:
+            - total
+            - accepted
+            - active
+            - cancelled
+          properties:
+            total:
+              type: integer
+            accepted:
+              type: integer
+            active:
+              type: integer
+            cancelled:
+              type: integer
+            required:
+              type: integer
+              minimum: 0
+            draft:
+              type: integer
+              minimum: 0
+            skipped:
+              type: integer
+              minimum: 0
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        mainTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        myTaskCount:
+          type: integer
+        ownerName:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        referenceTaskIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        capabilities:
+          $ref: ../components/workruntime.yaml#/components/schemas/WorkCapabilities
+        discardedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+    PlanDraftRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        goal:
+          type: string
+        acceptanceCriteria:
+          type: string
+        ownerIdentityId:
+          type: string
+          format: uuid
+        workflowId:
+          type: string
+          format: uuid
+        sourceTopicId:
+          type: string
+          format: uuid
+        forkAfterSeq:
+          type: integer
+          minimum: 0
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - kind
+        - status
+        - reviewerIdentityId
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        planId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        parentTaskId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        title:
+          type: string
+          maxLength: 200
+        expectedOutput:
+          type: string
+        acceptanceCriteria:
+          type: string
+        kind:
+          type: string
+          enum:
+            - task
+            - bug
+        status:
+          type: string
+          enum:
+            - draft
+            - ready
+            - working
+            - delivered
+            - accepted
+            - rework
+            - cancelled
+        participants:
+          type: array
+          items:
+            type: object
+            required:
+              - identityId
+              - responsibility
+            properties:
+              identityId:
+                type: string
+                format: uuid
+              displayName:
+                type: string
+              responsibility:
+                type: string
+        reviewerIdentityId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        workflowId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        nodeId:
+          type:
+            - string
+            - 'null'
+        requirements:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskRequirement'
+        latestReportId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        latestAcceptanceId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        blockers:
+          type: array
+          description: 当前阻塞当前置（由服务端计算）。
+          items:
+            type: object
+            required:
+              - phase
+              - objectType
+              - objectId
+              - reason
+            properties:
+              phase:
+                type: string
+                enum:
+                  - start
+                  - accept
+              objectType:
+                type: string
+              objectId:
+                type: string
+              reason:
+                type: string
+        version:
+          type: integer
+          minimum: 1
+        mainTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        capabilities:
+          $ref: ../components/workruntime.yaml#/components/schemas/WorkCapabilities
+        discardedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        executionException:
+          anyOf:
+            - $ref: ../components/workruntime.yaml#/components/schemas/ExecutionException
+            - type: 'null'
+        bugDetails:
+          $ref: '#/components/schemas/BugDetails'
+    TaskRequirement:
+      type: object
+      required:
+        - id
+        - phase
+        - kind
+        - targetId
+        - hard
+      properties:
+        id:
+          type: string
+          format: uuid
+        phase:
+          type: string
+          enum:
+            - start
+            - accept
+            - both
+        kind:
+          type: string
+          enum:
+            - task_acceptance
+            - handoff_receipt
+            - material_ready
+        targetId:
+          type: string
+          format: uuid
+        materialVersionId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        hard:
+          type: boolean
+        label:
+          type: string
+        satisfied:
+          type: boolean
+          readOnly: true
+        sourceTaskId:
+          type: string
+          format: uuid
+        waived:
+          type: boolean
+        inheritedFrom:
+          type: string
+          format: uuid
+        fingerprint:
+          type: string
+    TaskDraftRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        planId:
+          type: string
+          format: uuid
+        parentTaskId:
+          type: string
+          format: uuid
+        expectedOutput:
+          type: string
+        acceptanceCriteria:
+          type: string
+        kind:
+          type: string
+          enum:
+            - task
+            - bug
+        bugDetails:
+          $ref: '#/components/schemas/BugDetails'
+        participantIdentityIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        reviewerIdentityId:
+          type: string
+          format: uuid
+        workflowId:
+          type: string
+          format: uuid
+        nodeId:
+          type: string
+        requirements:
+          type: array
+          items:
+            type: object
+            required:
+              - phase
+              - kind
+              - targetId
+              - hard
+            properties:
+              phase:
+                type: string
+                enum:
+                  - start
+                  - accept
+                  - both
+              kind:
+                type: string
+                enum:
+                  - task_acceptance
+                  - handoff_receipt
+                  - material_ready
+              targetId:
+                type: string
+                format: uuid
+              materialVersionId:
+                type: string
+                format: uuid
+              hard:
+                type: boolean
+              label:
+                type: string
+    StartTaskRequest:
+      type: object
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        identityId:
+          type: string
+          format: uuid
+    ExecutionMap:
+      type: object
+      required:
+        - nodes
+        - edges
+      properties:
+        planId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        nodes:
+          type: array
+          items:
+            type: object
+            required:
+              - taskId
+              - title
+              - status
+              - column
+            properties:
+              taskId:
+                type: string
+                format: uuid
+              title:
+                type: string
+              status:
+                type: string
+              column:
+                type: integer
+                description: 按真实前置关系计算的执行列（0 起）。
+              blockers:
+                type: array
+                items:
+                  $ref: ../components/workruntime.yaml#/components/schemas/WorkBlocker
+              capabilities:
+                $ref: ../components/workruntime.yaml#/components/schemas/WorkCapabilities
+              discardedAt:
+                type: [string, 'null']
+                format: date-time
+              executionException:
+                anyOf:
+                  - $ref: ../components/workruntime.yaml#/components/schemas/ExecutionException
+                  - type: 'null'
+        edges:
+          type: array
+          items:
+            type: object
+            required:
+              - fromTaskId
+              - toTaskId
+              - phase
+              - kind
+            properties:
+              fromTaskId:
+                type: string
+                format: uuid
+              toTaskId:
+                type: string
+                format: uuid
+              phase:
+                type: string
+                enum:
+                  - start
+                  - accept
+                  - both
+              kind:
+                type: string
+                enum:
+                  - hard
+                  - advisory
+                  - parent
+              original:
+                type: boolean
+              viaTaskIds:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+    WorkReport:
+      type: object
+      required:
+        - id
+        - taskId
+        - identityId
+        - reportKind
+        - bindingVersion
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+        identityId:
+          type: string
+          format: uuid
+        bindingVersion:
+          type: integer
+        submissionId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        reportKind:
+          type: string
+          enum:
+            - progress
+            - delivery
+        progressHint:
+          type:
+            - string
+            - 'null'
+        codeRefs:
+          type: array
+          items:
+            $ref: ../components/discussion.yaml#/components/schemas/CodeRef
+        environmentRefs:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+    TaskReportRequest:
+      type: object
+      required:
+        - kind
+      properties:
+        kind:
+          type: string
+          enum:
+            - progress
+            - delivery
+        submissionId:
+          type: string
+          format: uuid
+          description: 引用已 finalize 的 ready 提交；同提交只生成一份报告。
+        text:
+          type: string
+          maxLength: 65536
+        identityId:
+          type: string
+          format: uuid
+        materialVersionIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        codeRefs:
+          type: array
+          items:
+            $ref: ../components/discussion.yaml#/components/schemas/CodeRef
+        expectedTaskVersion:
+          type: integer
+          minimum: 1
+    AcceptanceReview:
+      type: object
+      required:
+        - reviewId
+        - reviewHash
+        - targetType
+        - targetId
+      properties:
+        reviewId:
+          type: string
+          format: uuid
+        reviewHash:
+          type: string
+        targetType:
+          type: string
+          enum:
+            - task
+            - plan
+        targetId:
+          type: string
+          format: uuid
+        targetVersion:
+          type: integer
+        materials:
+          type: array
+          items:
+            type: object
+            required:
+              - materialId
+              - versionId
+              - revision
+            properties:
+              materialId:
+                type: string
+                format: uuid
+              versionId:
+                type: string
+                format: uuid
+              revision:
+                type: integer
+        reports:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        taskAcceptanceIds:
+          type: array
+          description: 计划验收时引用的任务验收 ID 集合。
+          items:
+            type: string
+            format: uuid
+        blockers:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    AcceptanceRequest:
+      type: object
+      required:
+        - reviewId
+        - reviewHash
+        - expectedVersion
+        - decision
+      properties:
+        reviewId:
+          type: string
+          format: uuid
+        reviewHash:
+          type: string
+        expectedVersion:
+          type: integer
+          minimum: 1
+        decision:
+          type: string
+          enum:
+            - accept
+            - reject
+        reason:
+          type: string
+          maxLength: 2000
+    ReopenRequest:
+      type: object
+      required:
+        - expectedVersion
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        acceptanceId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+    DiscardDraftRequest:
+      type: object
+      required:
+        - expectedVersion
+        - reviewHash
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        reviewHash:
+          type: string
+    Proposal:
+      type: object
+      required:
+        - id
+        - kind
+        - status
+        - version
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - work_arrangement
+            - work_change
+            - dependency_change
+            - material_link
+            - topic_creation
+            - formal_conclusion
+            - handoff_change
+            - release_acceptance
+        status:
+          type: string
+          enum:
+            - draft
+            - pending
+            - approved
+            - cancelled
+            - stale
+        currentReviewId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        topicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        senderUserId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        revision:
+          type: integer
+        version:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+    ProposalChange:
+      type: object
+      required:
+        - operation
+        - targetType
+      properties:
+        operation:
+          type: string
+          enum:
+            - activate_object
+            - reference_task
+            - create_plan
+            - create_task
+            - update_scope
+            - set_assignment
+            - set_requirements
+            - link_material
+            - link_topic
+            - cancel_plan
+            - cancel_task
+            - update_position
+        targetType:
+          type: string
+        targetId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        clientRef:
+          type:
+            - string
+            - 'null'
+          description: 新对象临时引用；服务端分配真实 ID 后在结果中映射。
+        expectedVersion:
+          type: integer
+          description: 已有对象的版本校验；新对象省略。
+        fields:
+          type: object
+          additionalProperties: true
+        dependsOn:
+          type: array
+          items:
+            type: string
+    ProposalDraftRequest:
+      type: object
+      required:
+        - kind
+        - changes
+      properties:
+        kind:
+          type: string
+          enum:
+            - work_arrangement
+            - work_change
+            - dependency_change
+            - material_link
+            - topic_creation
+            - formal_conclusion
+            - handoff_change
+            - release_acceptance
+        topicId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          maxLength: 2000
+        changes:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ProposalChange'
+    ProposalReview:
+      type: object
+      required:
+        - reviewId
+        - reviewHash
+        - proposalId
+        - status
+        - slots
+        - changes
+      properties:
+        version:
+          type: integer
+          minimum: 1
+        workflowConstraints:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        reviewId:
+          type: string
+          format: uuid
+        reviewHash:
+          type: string
+        proposalId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - draft
+            - pending
+            - approved
+            - cancelled
+            - stale
+        submittedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        firstApprovalAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        deadlineAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProposalChange'
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApprovalSlot'
+        createdIds:
+          type: object
+          additionalProperties:
+            type: string
+            format: uuid
+        canAct:
+          type: boolean
+        unmetRequirements:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    ApprovalSlot:
+      type: object
+      required:
+        - id
+        - authorityType
+        - authorityId
+        - state
+      properties:
+        currentUserId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        bindingVersion:
+          type: integer
+        canDecide:
+          type: boolean
+        canDelegate:
+          type: boolean
+        id:
+          type: string
+          format: uuid
+        authorityType:
+          type: string
+          enum:
+            - identity
+            - user
+        authorityId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        positionName:
+          type:
+            - string
+            - 'null'
+        initialUserId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        state:
+          type: string
+          enum:
+            - pending
+            - approved
+            - rejected
+            - timeout
+            - delegated
+    ProposalSubmitRequest:
+      type: object
+      required:
+        - expectedVersion
+        - draftHash
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        draftHash:
+          type: string
+    ProposalDecisionRequest:
+      type: object
+      required:
+        - reviewId
+        - reviewHash
+        - expectedVersion
+        - decision
+        - slotIds
+      properties:
+        reviewId:
+          type: string
+          format: uuid
+        reviewHash:
+          type: string
+        expectedVersion:
+          type: integer
+          minimum: 1
+        decision:
+          type: string
+          enum:
+            - approve
+            - reject
+        slotIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
+        actingBindingVersions:
+          type: array
+          items:
+            type: object
+            required:
+              - identityId
+              - bindingVersion
+            properties:
+              identityId:
+                type: string
+                format: uuid
+              bindingVersion:
+                type: integer
+        reason:
+          type: string
+          maxLength: 2000
+    DelegateDecisionRequest:
+      type: object
+      required:
+        - reviewId
+        - reviewHash
+        - slotIds
+        - reason
+      properties:
+        reviewId:
+          type: string
+          format: uuid
+        reviewHash:
+          type: string
+        slotIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+    ProposalRevisionRequest:
+      type: object
+      required:
+        - previousReviewId
+        - changes
+        - reason
+      properties:
+        previousReviewId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        changes:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ProposalChange'
+    Handoff:
+      type: object
+      required:
+        - id
+        - targetTaskId
+        - receiverIdentityId
+        - kind
+        - state
+        - sources
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        targetTaskId:
+          type: string
+          format: uuid
+        receiverIdentityId:
+          type: string
+          format: uuid
+        receiverDisplayName:
+          type: string
+        workflowId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - dependency
+            - stage
+        state:
+          type: string
+          enum:
+            - waiting
+            - accepted
+            - needs_revision
+        version:
+          type: integer
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/HandoffSource'
+    HandoffSource:
+      type: object
+      required:
+        - id
+        - sourceTaskId
+        - senderIdentityId
+        - state
+        - currentVersionId
+      properties:
+        id:
+          type: string
+          format: uuid
+        sourceTaskId:
+          type: string
+          format: uuid
+        senderIdentityId:
+          type: string
+          format: uuid
+        senderDisplayName:
+          type: string
+        currentVersionId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        currentVersion:
+          type:
+            - integer
+            - 'null'
+        state:
+          type: string
+          enum:
+            - draft
+            - pending
+            - accepted
+            - rejected
+        reason:
+          type:
+            - string
+            - 'null'
+        sentAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        decidedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+    HandoffDraftRequest:
+      type: object
+      required:
+        - targetTaskId
+        - receiverIdentityId
+        - kind
+        - sources
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        targetTaskId:
+          type: string
+          format: uuid
+        receiverIdentityId:
+          type: string
+          format: uuid
+        workflowId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - dependency
+            - stage
+        sources:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - sourceTaskId
+              - senderIdentityId
+            properties:
+              sourceTaskId:
+                type: string
+                format: uuid
+              senderIdentityId:
+                type: string
+                format: uuid
+    HandoffSourceRevisionRequest:
+      type: object
+      required:
+        - summary
+      properties:
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 65536
+        submissionId:
+          type: string
+          format: uuid
+        materialVersionIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        reportId:
+          type: string
+          format: uuid
+    HandoffSendRequest:
+      type: object
+      required:
+        - sourceVersion
+        - reviewHash
+      properties:
+        sourceVersion:
+          type: integer
+          minimum: 1
+        reviewHash:
+          type: string
+    HandoffDecisionRequest:
+      type: object
+      required:
+        - sourceVersion
+        - reviewHash
+        - decision
+      properties:
+        sourceVersion:
+          type: integer
+          minimum: 1
+        reviewHash:
+          type: string
+        decision:
+          type: string
+          enum:
+            - accept
+            - reject
+        reason:
+          type: string
+          maxLength: 2000
+        expectedVersion:
+          type: integer
+    BugDetails:
+      type: object
+      required:
+        - environment
+        - steps
+        - expected
+        - actual
+        - severity
+      properties:
+        sourceTaskId:
+          type: string
+          format: uuid
+        observedReleaseRef:
+          type: string
+        environment:
+          type: string
+        steps:
+          type: string
+        expected:
+          type: string
+        actual:
+          type: string
+        severity:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+    ReleaseReport:
+      type: object
+      required:
+        - id
+        - versionLabel
+        - environment
+        - status
+        - reportedBy
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        versionLabel:
+          type: string
+        environment:
+          type: string
+        url:
+          type:
+            - string
+            - 'null'
+        status:
+          type: string
+          enum:
+            - success
+            - partial
+            - failed
+        repositoryCommits:
+          type: array
+          items:
+            type: object
+            required:
+              - repositoryId
+              - commit
+            properties:
+              repositoryId:
+                type: string
+                format: uuid
+              branch:
+                type: string
+              commit:
+                type: string
+        submissionId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        reportedBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+    ReleaseReportRequest:
+      type: object
+      required:
+        - versionLabel
+        - environment
+        - status
+      properties:
+        versionLabel:
+          type: string
+          minLength: 1
+          maxLength: 100
+        environment:
+          type: string
+          minLength: 1
+          maxLength: 100
+        url:
+          type: string
+        status:
+          type: string
+          enum:
+            - success
+            - partial
+            - failed
+        repositoryCommits:
+          type: array
+          items:
+            type: object
+            required:
+              - repositoryId
+              - commit
+            properties:
+              repositoryId:
+                type: string
+                format: uuid
+              branch:
+                type: string
+              commit:
+                type: string
+        submissionId:
+          type: string
+          format: uuid
+    FixPropagationRequest:
+      type: object
+      required:
+        - targetReleaseRefs
+      properties:
+        targetReleaseRefs:
+          type: array
+          minItems: 1
+          items:
+            type: string
+    AuditEntry:
+      type: object
+      required:
+        - id
+        - actorType
+        - source
+        - operation
+        - objectType
+        - occurredAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        actorType:
+          type: string
+          enum:
+            - user
+            - operator
+            - agent
+            - system
+        actorUserId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        identityId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        source:
+          type: string
+          enum:
+            - web
+            - cli
+            - delegate
+            - timeout
+            - worker
+            - operator
+            - agent
+        operation:
+          type: string
+        objectType:
+          type: string
+        objectId:
+          type: string
+        reviewId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        reason:
+          type:
+            - string
+            - 'null'
+        occurredAt:
+          type: string
+          format: date-time

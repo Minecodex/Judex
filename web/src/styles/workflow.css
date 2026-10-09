@@ -573,9 +573,7 @@
   height: 100%;
   background: var(--accent);
 }
-.judex-project-card-copy .judex-progress-track {
-  display: block;
-}
+
 .judex-sidebar {
   overflow-y: auto;
 }

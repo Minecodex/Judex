@@ -1,0 +1,391 @@
+# 交接、发布上报、审计与事件（docs/plans/v1/03 §6、04 §5、06 §4-§5）
+paths:
+  /projects/{projectId}/handoffs:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listHandoffs
+      summary: 交接分页
+      tags: [handoffs]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [waiting, accepted, needs_revision]
+      responses:
+        '200':
+          description: 交接分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/work.yaml#/components/schemas/Handoff'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    post:
+      operationId: createHandoff
+      summary: 创建交接草稿（多来源；可跨任务）
+      tags: [handoffs]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/HandoffDraftRequest'
+      responses:
+        '201':
+          description: 交接草稿。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/Handoff'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+  /projects/{projectId}/handoffs/{handoffId}/sources/{sourceId}/revisions:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: handoffId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: sourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: createHandoffSourceRevision
+      summary: 补交新来源版本（保留旧决定；发送人重新确认）
+      tags: [handoffs]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/HandoffSourceRevisionRequest'
+      responses:
+        '201':
+          description: 新来源版本。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/HandoffSource'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+  /projects/{projectId}/handoffs/{handoffId}/sources/{sourceId}/send:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: handoffId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: sourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: sendHandoffSource
+      summary: 发送来源（该来源 sender 人工确认）
+      tags: [handoffs]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/HandoffSendRequest'
+      responses:
+        '200':
+          description: 已发送。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/HandoffSource'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/handoffs/{handoffId}/sources/{sourceId}/decisions:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: handoffId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: sourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: decideHandoffSource
+      summary: 接收/拒收来源（receiver 人工确认；拒收须理由）
+      tags: [handoffs]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/HandoffDecisionRequest'
+      responses:
+        '200':
+          description: 决定结果。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/HandoffSource'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '403':
+          $ref: '../components/common.yaml#/components/responses/Forbidden'
+        '409':
+          $ref: '../components/common.yaml#/components/responses/Conflict'
+  /projects/{projectId}/handoffs/{handoffId}/reminders:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - name: handoffId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: sendHandoffReminder
+      summary: 提醒未回应来源（有冷却限制）
+      tags: [handoffs]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion:
+                  type: integer
+                  minimum: 1
+      responses:
+        '202':
+          description: 已登记提醒。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [reminded]
+                    properties:
+                      reminded:
+                        type: boolean
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+        '429':
+          $ref: '../components/common.yaml#/components/responses/RateLimited'
+  /projects/{projectId}/release-reports:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listReleaseReports
+      summary: 版本发布上报分页
+      tags: [releases]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: 上报分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/work.yaml#/components/schemas/ReleaseReport'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+    post:
+      operationId: createReleaseReport
+      summary: 上报真实环境版本事实（不是部署命令）
+      tags: [releases]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../components/work.yaml#/components/schemas/ReleaseReportRequest'
+      responses:
+        '201':
+          description: 已登记。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/work.yaml#/components/schemas/ReleaseReport'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/CommandMeta'
+  /projects/{projectId}/audit:
+    get:
+      operationId: listAudit
+      summary: 可见业务审计分页（无私人提示词）
+      tags: [audit]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+        - $ref: '../components/common.yaml#/components/parameters/LimitParam'
+        - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+        - name: objectType
+          in: query
+          schema:
+            type: string
+        - name: objectId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 审计分页。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [items, nextCursor]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/work.yaml#/components/schemas/AuditEntry'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+  /projects/{projectId}/events:
+    get:
+      operationId: subscribeProjectEvents
+      summary: 项目事件 SSE 流（after/Last-Event-ID；15s 心跳）
+      tags: [events]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+        - name: after
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: text/event-stream；事件按项目 seq 有序，eventId 去重。
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '409':
+          description: 游标过期（EVENT_CURSOR_EXPIRED），需重新 bootstrap。
+          content:
+            application/json:
+              schema:
+                $ref: '../components/common.yaml#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'

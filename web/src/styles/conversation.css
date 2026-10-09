@@ -517,3 +517,13 @@
   display: block;
   margin-top: var(--s2);
 }
+
+/* 统一工作区会话流（workspace.css 删除后迁入；仅存活选择器）。 */
+.judex-chat-app .judex-chat-thread {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--s3) var(--s4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}

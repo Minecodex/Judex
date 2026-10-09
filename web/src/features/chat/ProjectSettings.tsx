@@ -7,7 +7,6 @@ import { Btn, Field, Heading } from "../work/ui";
 import {
   roundLimit,
   validRoundLimit,
-  setDiscussionLimit,
   MAX_DISCUSSION_ROUNDS,
 } from "./discussionPolicy";
 export function ProjectSettings() {
@@ -47,7 +46,10 @@ export function ProjectSettings() {
             disabled={!valid}
             testId="save-discussion-limit"
             onClick={() =>
-              act((s) => setDiscussionLimit(s, project.id, Number(value)))
+              void act("setDiscussionLimit", {
+                projectId: project.id,
+                limit: Number(value),
+              })
             }
           >
             {t("chatSaveSettings")}

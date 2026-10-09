@@ -1,0 +1,51 @@
+paths:
+  /workflow-presets:
+    get:
+      operationId: getWorkflowPresetCatalog
+      summary: 读取全局流程模板和共用场景目录
+      tags: [workflows]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 只读流程模板，节点和连线生成缩略图；建议职位不构成授权。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data: {$ref: '../components/workflowpresets.yaml#/components/schemas/WorkflowPresetCatalog'}
+                  meta: {$ref: '../components/common.yaml#/components/schemas/RequestMeta'}
+  /projects/{projectId}/workflows/import-presets:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+    post:
+      operationId: importWorkflowPresets
+      summary: 将选定流程模板复制为项目独立草稿（owner/manager）
+      description: 同一事务导入，按稳定来源或中英文同名流程跳过重复项。不发布、不分配人员或职位、不添加审批授权。
+      tags: [workflows]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '../components/common.yaml#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '../components/workflowpresets.yaml#/components/schemas/ImportWorkflowPresetsRequest'}
+      responses:
+        '201':
+          description: 新增流程草稿及已存在的跳过项。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data: {$ref: '../components/workflowpresets.yaml#/components/schemas/ImportedWorkflowPresets'}
+                  meta: {$ref: '../components/common.yaml#/components/schemas/CommandMeta'}
+        '400': {$ref: '../components/common.yaml#/components/responses/BadRequest'}
+        '404': {$ref: '../components/common.yaml#/components/responses/NotFound'}
+        '409': {$ref: '../components/common.yaml#/components/responses/Conflict'}

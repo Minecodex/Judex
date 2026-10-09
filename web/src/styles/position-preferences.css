@@ -1,0 +1,10 @@
+.judex-position-preferences { display:flex;flex-direction:column;gap:var(--s4);min-width:0;width:100%; }
+.judex-position-preferences .judex-work-preferences { display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s4);min-width:0; }
+.judex-position-preferences .judex-field-label { min-width:0;width:100%; }
+.judex-position-preferences .judex-work-panel { display:flex;flex-direction:column;gap:var(--s4);width:100%;max-width:none;margin:0;min-width:0; }
+.judex-position-preferences .judex-prompt-editor { width:100%;min-height:var(--prompt-editor-min-height);resize:vertical; }
+.judex-position-preferences .judex-work-panel > .judex-control { align-self:flex-end; }
+.judex-position-preferences .judex-work-preferences aside { width:100%;margin:0;padding:var(--s4);border-radius:var(--r-md);background:var(--surface-soft);border:var(--stroke) solid var(--line); }
+.judex-position-preferences .judex-work-preferences aside > svg { width:var(--icon-lg);height:var(--icon-lg);color:var(--muted); }
+.judex-position-preferences .judex-work-preferences aside h3 { font-size:var(--text-base);font-weight:var(--weight-medium);margin:var(--s2) 0; }
+.judex-position-preferences .judex-work-preferences aside p { margin:var(--s1) 0;font-size:var(--text-sm);line-height:var(--leading-base); }

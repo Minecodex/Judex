@@ -1,0 +1,14 @@
+import {UICheckbox,UIWarning} from "../../components/ui/FormControls";
+import {Button} from "../../components/ui/Button";
+import {useWork} from "../work/store";
+import {effectivePlanIds} from "./scope";
+import {useCollection,LoadMore} from "../../lib/api/collections";
+import {apiWsKey,mapPlan,mapTask,type ApiPlan,type ApiTask} from "../work/apiModel";
+export function LinkedObjectPicker({plans,tasks,onPlans,onTasks,requiredPlans=[],requiredTasks=[]}:{plans:string[];tasks:string[];onPlans:(v:string[])=>void;onTasks:(v:string[])=>void;requiredPlans?:string[];requiredTasks?:string[]}){
+ const {state,project,t,text,mode}=useWork();
+ const planQuery=useCollection<ApiPlan>([...apiWsKey(project.id,state.currentUserId),"objectPicker","plans"],`/projects/${project.id}/plans`,mode==="api"),taskQuery=useCollection<ApiTask>([...apiWsKey(project.id,state.currentUserId),"objectPicker","tasks"],`/projects/${project.id}/tasks`,mode==="api");
+ const availablePlans=[...new Map([...state.plans,...(planQuery.data?.items??[]).map(p=>mapPlan(p,project.id))].map(v=>[v.id,v])).values()],availableTasks=[...new Map([...state.tasks,...(taskQuery.data?.items??[]).map(p=>mapTask(p,project.id))].map(v=>[v.id,v])).values()];
+ const implicit=effectivePlanIds({planIds:[],taskIds:tasks},availableTasks);
+ const toggle=(rows:string[],id:string,on:boolean)=>on?[...new Set([...rows,id])]:rows.filter(v=>v!==id);
+ return <><h3>{t("coopPlans")}</h3>{mode==="api"&&planQuery.isPending&&<p role="status">{t("shellLoading")}</p>}{mode==="api"&&planQuery.isError&&<UIWarning>{t("errNetwork")}<Button size="sm" onPress={()=>void planQuery.refetch()}>{t("shellRetry")}</Button></UIWarning>}<div className="judex-co-object-options">{availablePlans.filter(v=>v.projectId===project.id).map(p=><UICheckbox key={p.id} appearance="card" data-testid={"topic-plan-"+p.id} checked={plans.includes(p.id)||implicit.includes(p.id)} disabled={requiredPlans.includes(p.id)||implicit.includes(p.id)&&!plans.includes(p.id)} onChange={e=>onPlans(toggle(plans,p.id,e.target.checked))}>{text(p.title)}{implicit.includes(p.id)&&!plans.includes(p.id)&&<small>{t("coopImplicitPlan")}</small>}</UICheckbox>)}</div><LoadMore query={planQuery}/><h3>{t("workTasks")}</h3>{mode==="api"&&taskQuery.isPending&&<p role="status">{t("shellLoading")}</p>}{mode==="api"&&taskQuery.isError&&<UIWarning>{t("errNetwork")}<Button size="sm" onPress={()=>void taskQuery.refetch()}>{t("shellRetry")}</Button></UIWarning>}<div className="judex-co-object-options">{availableTasks.filter(v=>v.projectId===project.id).map(v=><UICheckbox key={v.id} appearance="card" data-testid={"topic-task-"+v.id} checked={tasks.includes(v.id)} disabled={requiredTasks.includes(v.id)} onChange={e=>onTasks(toggle(tasks,v.id,e.target.checked))}>{text(v.title)}<small>{text(availablePlans.find(p=>p.id===v.planId)?.title??"")}</small></UICheckbox>)}</div><LoadMore query={taskQuery}/></>;
+}

@@ -1,12 +1,12 @@
-Judex scaffold installed in {{ .Release.Namespace }}.
+Judex installed in {{ .Release.Namespace }}.
 
 Open the web app:
   kubectl -n {{ .Release.Namespace }} port-forward service/{{ .Release.Name }} 8080:8080
   http://127.0.0.1:8080
 
-This build serves the API foundation and production frontend shell.
-Business authentication, persistence and Agent execution are not implemented.
-GET /api/v1/system reports actual capabilities. Probes cover HTTP only.
+GET /api/v1/system reports configured capabilities. Readiness checks HTTP and PostgreSQL.
+Model and sandbox execution require the corresponding gateway and OpenSandbox configuration.
+See docs/plans/v1/REMEDIATION.md for verified behavior and remaining acceptance gates.
 
 PostgreSQL/S3 PVCs and generated Secrets are retained on uninstall.
 The {{ .Release.Namespace }}-sandboxes namespace is retained as well.

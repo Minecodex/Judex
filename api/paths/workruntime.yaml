@@ -1,0 +1,273 @@
+paths:
+  /projects/{projectId}/plans/{planId}/draft:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: updatePlanDraft
+      summary: updatePlanDraft
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/IdempotencyKeyParam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/workruntime.yaml#/components/schemas/WorkDraftUpdate
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/work.yaml#/components/schemas/Plan
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/CommandMeta
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict
+  /projects/{projectId}/plans/{planId}/discard-review:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getPlanDiscardReview
+      summary: getPlanDiscardReview
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/workruntime.yaml#/components/schemas/DraftDiscardReview
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/CommandMeta
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict
+  /projects/{projectId}/tasks/{taskId}/draft:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: updateTaskDraft
+      summary: updateTaskDraft
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/IdempotencyKeyParam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/workruntime.yaml#/components/schemas/WorkDraftUpdate
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/work.yaml#/components/schemas/Task
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/CommandMeta
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict
+  /projects/{projectId}/tasks/{taskId}/discard-review:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getTaskDiscardReview
+      summary: getTaskDiscardReview
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/workruntime.yaml#/components/schemas/DraftDiscardReview
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/CommandMeta
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict
+  /projects/{projectId}/tasks/{taskId}/execution-review:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getTaskExecutionReview
+      summary: getTaskExecutionReview
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/workruntime.yaml#/components/schemas/ExecutionReview
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/CommandMeta
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict
+      parameters:
+        - name: operation
+          in: query
+          schema:
+            type: string
+            enum:
+              - skip
+              - restore
+            default: skip
+  /projects/{projectId}/tasks/{taskId}/skip:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: skipTask
+      summary: skipTask
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/IdempotencyKeyParam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/workruntime.yaml#/components/schemas/ExecutionCommand
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/work.yaml#/components/schemas/Task
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/CommandMeta
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict
+  /projects/{projectId}/tasks/{taskId}/restore:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: restoreTask
+      summary: restoreTask
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/IdempotencyKeyParam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../components/workruntime.yaml#/components/schemas/ExecutionCommand
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/work.yaml#/components/schemas/Task
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/CommandMeta
+        '409':
+          $ref: ../components/common.yaml#/components/responses/Conflict

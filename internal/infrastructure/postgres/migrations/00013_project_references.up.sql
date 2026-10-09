@@ -1,0 +1,32 @@
+-- +goose Up
+-- A valid UUID from another project must never satisfy a project reference.
+ALTER TABLE plans ADD UNIQUE(project_id,id);
+ALTER TABLE tasks ADD UNIQUE(project_id,id);
+ALTER TABLE agent_identities ADD UNIQUE(project_id,id);
+ALTER TABLE topics ADD UNIQUE(project_id,id);
+ALTER TABLE material_versions ADD UNIQUE(project_id,id);
+ALTER TABLE handoffs ADD UNIQUE(project_id,id);
+ALTER TABLE handoff_sources ADD UNIQUE(project_id,id);
+ALTER TABLE work_reports ADD UNIQUE(project_id,id);
+ALTER TABLE tasks ADD FOREIGN KEY(project_id,plan_id) REFERENCES plans(project_id,id);
+ALTER TABLE tasks ADD FOREIGN KEY(project_id,parent_task_id) REFERENCES tasks(project_id,id);
+ALTER TABLE tasks ADD FOREIGN KEY(project_id,reviewer_identity_id) REFERENCES agent_identities(project_id,id);
+ALTER TABLE plans ADD FOREIGN KEY(project_id,owner_identity_id) REFERENCES agent_identities(project_id,id);
+ALTER TABLE task_participants ADD FOREIGN KEY(project_id,task_id) REFERENCES tasks(project_id,id);
+ALTER TABLE task_participants ADD FOREIGN KEY(project_id,identity_id) REFERENCES agent_identities(project_id,id);
+ALTER TABLE task_requirements ADD FOREIGN KEY(project_id,task_id) REFERENCES tasks(project_id,id);
+ALTER TABLE plan_task_references ADD FOREIGN KEY(project_id,plan_id) REFERENCES plans(project_id,id);
+ALTER TABLE plan_task_references ADD FOREIGN KEY(project_id,task_id) REFERENCES tasks(project_id,id);
+ALTER TABLE submissions ADD FOREIGN KEY(project_id,topic_id) REFERENCES topics(project_id,id);
+ALTER TABLE messages ADD FOREIGN KEY(project_id,topic_id) REFERENCES topics(project_id,id);
+ALTER TABLE material_entries ADD FOREIGN KEY(project_id,version_id) REFERENCES material_versions(project_id,id);
+ALTER TABLE submission_materials ADD FOREIGN KEY(project_id,material_version_id) REFERENCES material_versions(project_id,id);
+ALTER TABLE work_report_materials ADD FOREIGN KEY(project_id,report_id) REFERENCES work_reports(project_id,id);
+ALTER TABLE work_report_materials ADD FOREIGN KEY(project_id,material_version_id) REFERENCES material_versions(project_id,id);
+ALTER TABLE handoffs ADD FOREIGN KEY(project_id,target_task_id) REFERENCES tasks(project_id,id);
+ALTER TABLE handoffs ADD FOREIGN KEY(project_id,receiver_identity_id) REFERENCES agent_identities(project_id,id);
+ALTER TABLE handoff_sources ADD FOREIGN KEY(project_id,handoff_id) REFERENCES handoffs(project_id,id);
+ALTER TABLE handoff_sources ADD FOREIGN KEY(project_id,source_task_id) REFERENCES tasks(project_id,id);
+ALTER TABLE handoff_sources ADD FOREIGN KEY(project_id,sender_identity_id) REFERENCES agent_identities(project_id,id);
+ALTER TABLE source_versions ADD FOREIGN KEY(project_id,source_id) REFERENCES handoff_sources(project_id,id);
+ALTER TABLE source_versions ADD FOREIGN KEY(project_id,report_id) REFERENCES work_reports(project_id,id);

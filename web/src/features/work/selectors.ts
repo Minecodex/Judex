@@ -4,28 +4,30 @@ export const seatPerson = (s: WorkState, id: string) =>
 export const member = (s: WorkState, projectId: string) =>
   s.projects
     .find((p) => p.id === projectId)
-    ?.members.find((m) => m.name === s.currentUser);
+    ?.members.find((m) => s.currentUserId?m.userId===s.currentUserId:m.name === s.currentUser);
 export const manage = (s: WorkState, projectId: string) =>
   ["owner", "manager"].includes(member(s, projectId)?.role ?? "");
 export const ownsSeat = (s: WorkState, seatId: string) =>
-  seatPerson(s, seatId) === s.currentUser;
+  s.seats.some(v=>v.id===seatId&&(!v.status||v.status==="active")&&(s.currentUserId?v.userId===s.currentUserId:v.person===s.currentUser));
 export const canWork = (s: WorkState, task: Task) =>
   !!member(s, task.projectId) && task.seatIds.some((id) => ownsSeat(s, id));
 export const canAcceptTask = (s: WorkState, task: Task) =>
   !!member(s, task.projectId) && ownsSeat(s, task.reviewerSeatId);
 export const canOwnPlan = (s: WorkState, plan: Plan) =>
   !!member(s, plan.projectId) && ownsSeat(s, plan.ownerSeatId);
-export const planTasks = (s: WorkState, planId: string) =>
-  s.tasks.filter((t) => t.planId === planId);
+export const planTasks = (s: WorkState, planId: string,includeReferences=false) =>
+  s.tasks.filter((t) => !t.discardedAt && (t.planId === planId || includeReferences&&s.plans.find(p=>p.id===planId)?.referenceTaskIds.includes(t.id)));
 export const planReviewKey = (s: WorkState, plan: Plan) =>
   JSON.stringify({
     goal: plan.goal,
     criteria: plan.criteria,
-    tasks: planTasks(s, plan.id).map((t) => [
+    version: plan.revision,
+    tasks: planTasks(s, plan.id,true).map((t) => [
       t.id,
       t.revision,
       t.status,
       t.acceptedAt,
+      t.executionException,
     ]),
   });
 export function requirementMet(
@@ -33,6 +35,8 @@ export function requirementMet(
   task: Task,
   requirement: Task["requirements"][number],
 ) {
+  if(requirement.satisfied!==undefined)return requirement.satisfied;
+  if(requirement.waived)return true;
   if (requirement.kind === "task")
     return s.tasks.some(
       (t) => t.id === requirement.ref && t.status === "accepted",
@@ -59,7 +63,7 @@ export const blockers = (
   );
 export const needsReview = (s: WorkState, plan: Plan) =>
   plan.status === "accepted" &&
-  planTasks(s, plan.id).some((t) => t.status !== "accepted");
+  planTasks(s, plan.id,true).some((t) => !["accepted","cancelled"].includes(t.businessStatus??t.status) && !(t.planId===plan.id&&(t.executionException || (t.businessStatus??t.status)==="draft")));
 export const canSendSource = (s: WorkState, source: Source) =>
   ownsSeat(s, source.senderSeatId) && source.status === "draft";
 export function sourceActions(s: WorkState, projectId: string) {

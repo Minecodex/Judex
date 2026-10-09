@@ -37,7 +37,8 @@ spec:
             - -volume
             - -ip=$(POD_IP)
             - -ip.bind=0.0.0.0
-            - -master.volumeSizeLimitMB=1024
+            - -master.volumeSizeLimitMB={{ .Values.objectStorage.embedded.volumeSizeLimitMB }}
+            - -volume.max={{ .Values.objectStorage.embedded.maxVolumes }}
             - -filer
             - -filer.port=8888
             - -s3
@@ -46,6 +47,7 @@ spec:
           env:
             - name: POD_IP
               valueFrom: {fieldRef: {fieldPath: status.podIP}}
+            - {name: WEED_MASTER_VOLUME_GROWTH_COPY_1, value: {{ .Values.objectStorage.embedded.growthCount | quote }}}
             - {name: WEED_LEVELDB2_ENABLED, value: "true"}
             - {name: WEED_LEVELDB2_DIR, value: /data/filer}
           ports: [{containerPort: 8333}, {containerPort: 9333}, {containerPort: 8888}]

@@ -1,0 +1,84 @@
+paths:
+  /projects/{projectId}/tasks/{taskId}/main-topic:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: ensureTaskMainTopic
+      summary: 首次明确点击建立任务主讨论，并发及后续点击复用
+      tags:
+        - topics
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/IdempotencyKeyParam
+      responses:
+        '200':
+          $ref: ../components/cooperation.yaml#/components/responses/TaskMainTopicResponse
+        '201':
+          $ref: ../components/cooperation.yaml#/components/responses/TaskMainTopicResponse
+        '404':
+          $ref: ../components/common.yaml#/components/responses/NotFound
+  /projects/{projectId}/deliveries:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+    get:
+      operationId: listDeliveries
+      summary: 正式任务交付及交接的分页只读投影
+      tags:
+        - tasks
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/LimitParam
+        - $ref: ../components/common.yaml#/components/parameters/CursorParam
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - all
+              - task
+              - handoff
+        - name: filter
+          in: query
+          schema:
+            type: string
+            enum:
+              - all
+              - receive
+              - waiting
+              - revise
+      responses:
+        '200':
+          description: 当前用户关联关系与真实来源状态；不建立新的交付对象。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                      - nextCursor
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: ../components/cooperation.yaml#/components/schemas/DeliveryCard
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: ../components/common.yaml#/components/schemas/RequestMeta

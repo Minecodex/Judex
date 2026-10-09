@@ -1,93 +1,22 @@
 import {
   UIOption,
   UISelect,
-  UICheckbox,
   UITextArea,
   UIInput,
 } from "../../components/ui/FormControls";
+import {MaterialLibrary} from "../materials/MaterialLibrary";
 import { useState } from "react";
 import { FileText, FolderPlus, Upload as UploadIcon } from "lucide-react";
 import { useWork } from "./store";
 import { Btn, Dialog, Field, Upload, EvidenceList } from "./ui";
-import { createDiscussion } from "./composition";
-import { topicMessage, assignPositions } from "./actions";
-import { uid } from "./seed";
-import { words, type Evidence, type Project } from "./types";
+import { type Evidence, type Project } from "./types";
 import {
   DEFAULT_DISCUSSION_ROUNDS,
   MAX_DISCUSSION_ROUNDS,
   validRoundLimit,
 } from "../chat/discussionPolicy";
-export function ExistingAssignments() {
-  const { state, project, management, t, text, act } = useWork();
-  const [open, setOpen] = useState(false),
-    [person, setPerson] = useState(state.currentUser),
-    [ids, setIds] = useState<string[]>([]);
-  if (!management) return null;
-  const available = state.positions.filter(
-    (p) =>
-      p.projectId === project.id &&
-      !state.seats.some((s) => s.person === person && s.positionId === p.id),
-  );
-  return (
-    <>
-      <div className="judex-project-assignment">
-        <Btn secondary onClick={() => setOpen(true)}>
-          {t("projectAssign")}
-        </Btn>
-      </div>
-      {open && (
-        <Dialog title={t("projectAssign")} onClose={() => setOpen(false)}>
-          <p className="judex-project-note">{t("projectAssignHint")}</p>
-          <UISelect
-            className="judex-input"
-            aria-label={t("workTeam")}
-            value={person}
-            onChange={(e) => {
-              setPerson(e.target.value);
-              setIds([]);
-            }}
-          >
-            {project.members.map((m) => (
-              <UIOption key={m.name}>{m.name}</UIOption>
-            ))}
-          </UISelect>
-          <div className="judex-position-options">
-            {available.map((p) => (
-              <UICheckbox
-                key={p.id}
-                checked={ids.includes(p.id)}
-                onChange={(e) =>
-                  setIds(
-                    e.target.checked
-                      ? [...ids, p.id]
-                      : ids.filter((id) => id !== p.id),
-                  )
-                }
-              >
-                {text(p.name)}
-              </UICheckbox>
-            ))}
-          </div>
-          {!available.length && <p>{t("workNoItems")}</p>}
-          <Btn
-            disabled={!ids.length}
-            testId="assign-existing-position"
-            onClick={() => {
-              if (act((s) => assignPositions(s, project.id, person, ids))) {
-                setOpen(false);
-                setIds([]);
-              }
-            }}
-          >
-            {t("projectAssign")}
-          </Btn>
-        </Dialog>
-      )}
-    </>
-  );
-}
-export function ResourcesPage() {
+export function ResourcesPage(){const {mode}=useWork();return mode==="api"?<MaterialLibrary/>:<DemoResourcesPage/>;}
+function DemoResourcesPage() {
   const { state, project, t, go, act } = useWork();
   const [adding, setAdding] = useState(false),
     [files, setFiles] = useState<Evidence[]>([]),
@@ -141,33 +70,19 @@ export function ResourcesPage() {
           <Upload files={files} onChange={setFiles} />
           <Btn
             disabled={!files.length}
-            onClick={() => {
-              let id = "";
-              if (
-                act((s) => {
-                  const r = createDiscussion(
-                    s,
-                    project.id,
-                    purpose.trim() || t("projectEvidence"),
-                    [],
-                    [],
-                  );
-                  if (r.error) return r;
-                  id = r.state!.topics.at(-1)!.id;
-                  return topicMessage(
-                    r.state!,
-                    id,
-                    purpose || t("projectEvidence"),
-                    files,
-                  );
-                })
-              ) {
+            onClick={async () => {
+              const r = await act("registerResource", {
+                projectId: project.id,
+                purpose: purpose.trim() || t("projectEvidence"),
+                files,
+              });
+              if (r.ok) {
                 setAdding(false);
                 setFiles([]);
                 setPurpose("");
                 go({
                   view: "topic",
-                  id,
+                  id: r.id,
                 });
               }
             }}
@@ -231,44 +146,17 @@ export function ProjectDialog({ onClose }: { onClose: () => void }) {
           !name.trim() || !goal.trim() || !validRoundLimit(Number(maxRounds))
         }
         testId="project-create-project"
-        onClick={() => {
-          const id = uid();
-          if (
-            act((s) => {
-              if (
-                !name.trim() ||
-                !goal.trim() ||
-                !validRoundLimit(Number(maxRounds))
-              )
-                return {
-                  error: "required",
-                };
-              return {
-                state: {
-                  ...s,
-                  projects: [
-                    ...s.projects,
-                    {
-                      id,
-                      title: words(name.trim()),
-                      description: words(goal.trim()),
-                      kind,
-                      maxDiscussionRounds: Number(maxRounds),
-                      members: [
-                        {
-                          name: s.currentUser,
-                          role: "owner",
-                        },
-                      ],
-                    },
-                  ],
-                },
-              };
-            })
-          ) {
+        onClick={async () => {
+          const r = await act("createProject", {
+            name,
+            goal,
+            kind,
+            maxRounds: Number(maxRounds),
+          });
+          if (r.ok && r.id) {
             onClose();
             go({
-              projectId: id,
+              projectId: r.id,
               view: "home",
               id: undefined,
             });

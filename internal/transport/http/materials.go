@@ -1,0 +1,355 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package httptransport
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"io"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+
+	"github.com/kakj-go/Judex/internal/material"
+	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
+)
+
+// MaterialHandlers serves upload sessions and material versions (06 §4).
+type MaterialHandlers struct {
+	Materials *material.Service
+}
+
+func NewMaterialHandlers(svc *material.Service) *MaterialHandlers {
+	return &MaterialHandlers{Materials: svc}
+}
+
+func (h *MaterialHandlers) Register(spec *SpecRouter) {
+	spec.Register("listMaterialUsages", withAuth(h.usages))
+	spec.Register("getFilePreview", withAuth(h.filePreview(false)))
+	spec.Register("prepareFilePreview", withAuth(h.filePreview(true)))
+	spec.Register("downloadFilePreview", withAuth(h.previewContent))
+	spec.Register("deleteMaterial", withAuth(h.deleteLibrary))
+	spec.Register("getMaterialVersionById", withAuth(h.versionByID(false)))
+	spec.Register("downloadMaterialVersionById", withAuth(h.versionByID(true)))
+	spec.Register("listUploadSessions", withAuth(h.listSessions))
+	spec.Register("createUploadSession", withAuth(h.createSession))
+	spec.Register("uploadPart", withAuth(h.uploadPart))
+	spec.Register("completeUpload", withAuth(h.complete))
+	spec.Register("cancelUpload", withAuth(h.cancel))
+	spec.Register("listMaterials", withAuth(h.listMaterials))
+	spec.Register("listMaterialVersions", withAuth(h.listVersions))
+	spec.Register("downloadMaterialContent", withAuth(h.download))
+	spec.Register("createPreviewSession", withAuth(h.createPreview))
+}
+
+// PreviewOrigin configures where isolated previews live (empty = source
+// download only, no interactive preview claims).
+var PreviewOrigin string
+
+func (h *MaterialHandlers) createPreview(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	materialID, err := uuid.Parse(c.Param("materialId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("materialId", "invalid"))
+		return
+	}
+	versionID, err := uuid.Parse(c.Param("versionId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("versionId", "invalid"))
+		return
+	}
+	session, err := h.Materials.CreatePreviewSession(c.Request.Context(), p.UserID, projectID, materialID, versionID, PreviewOrigin)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.created(c, session)
+}
+
+func (h *MaterialHandlers) listSessions(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	sessions, err := h.Materials.ListMySessions(c.Request.Context(), p.UserID, projectID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, respond{}.list(c, sessions, nil))
+}
+
+func (h *MaterialHandlers) createSession(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	var req struct {
+		Name       string `json:"name" binding:"required"`
+		Size       int64  `json:"size" binding:"required"`
+		SHA256     string `json:"sha256" binding:"required"`
+		Mime       string `json:"mime"`
+		Kind       string `json:"kind" binding:"required"`
+		Entrypoint string `json:"entrypoint"`
+		Purpose    string `json:"purpose"`
+	}
+	if err := bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	session, err := h.Materials.CreateUpload(c.Request.Context(), p.UserID, projectID,
+		req.Name, req.Kind, req.Mime, req.Size, req.SHA256, req.Entrypoint, req.Purpose)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.created(c, session)
+}
+
+func (h *MaterialHandlers) uploadPart(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	uploadID, err := uuid.Parse(c.Param("uploadId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("uploadId", "invalid"))
+		return
+	}
+	partNumber, err := strconv.Atoi(c.Param("partNumber"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("partNumber", "invalid"))
+		return
+	}
+	declared := c.GetHeader("X-Judex-Part-SHA256")
+	if declared == "" {
+		// Fall back to computing the digest server-side when omitted; the
+		// contract keeps the header required, but a missing one degrades to
+		// server verification rather than rejection for web uploads.
+		raw, err := io.ReadAll(io.LimitReader(c.Request.Body, 1<<30))
+		if err != nil {
+			respond{}.error(c, apierrors.New(apierrors.Validation, "body unreadable"))
+			return
+		}
+		sum := sha256.Sum256(raw)
+		declared = hex.EncodeToString(sum[:])
+		c.Request.Body = io.NopCloser(newByteReader(raw))
+	}
+	written, err := h.Materials.UploadPart(c.Request.Context(), p.UserID, projectID, uploadID,
+		partNumber, declared, c.Request.Body)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, gin.H{"partNumber": partNumber, "receivedBytes": written})
+}
+
+type byteReader struct {
+	data []byte
+	pos  int
+}
+
+func newByteReader(b []byte) *byteReader { return &byteReader{data: b} }
+
+func (r *byteReader) Read(p []byte) (int, error) {
+	if r.pos >= len(r.data) {
+		return 0, io.EOF
+	}
+	n := copy(p, r.data[r.pos:])
+	r.pos += n
+	return n, nil
+}
+
+func (h *MaterialHandlers) complete(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	uploadID, err := uuid.Parse(c.Param("uploadId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("uploadId", "invalid"))
+		return
+	}
+	var req struct {
+		SourceVersion string `json:"sourceVersion"`
+	}
+	// Body is optional on complete.
+	_ = c.ShouldBindJSON(&req)
+	var sourceVersion *uuid.UUID
+	if req.SourceVersion != "" {
+		id, err := uuid.Parse(req.SourceVersion)
+		if err != nil {
+			respond{}.error(c, apierrors.Fields("sourceVersion", "invalid"))
+			return
+		}
+		sourceVersion = &id
+	}
+	version, err := h.Materials.Complete(c.Request.Context(), p.UserID, projectID, uploadID, sourceVersion)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.created(c, version)
+}
+
+func (h *MaterialHandlers) cancel(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	uploadID, err := uuid.Parse(c.Param("uploadId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("uploadId", "invalid"))
+		return
+	}
+	if err := h.Materials.Cancel(c.Request.Context(), p.UserID, projectID, uploadID); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, gin.H{"cancelled": true})
+}
+
+func (h *MaterialHandlers) listMaterials(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	object, e := optionalUUID(c.Query("linkedObjectId"))
+	if e != nil {
+		respond{}.error(c, e)
+		return
+	}
+	filter := material.LibraryFilter{Kind: c.Query("kind"), Query: c.Query("q"), Group: c.Query("formatGroup"), Sort: c.Query("sort"), ObjectType: c.Query("linkedObjectType"), ObjectID: object}
+	materials, err := h.Materials.Library(c.Request.Context(), p.UserID, projectID, filter)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	count, err := h.Materials.LibraryTotal(c.Request.Context(), p.UserID, projectID, filter)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	data := respond{}.list(c, materials, nil)
+	data["totalCount"] = count
+	respond{}.ok(c, data)
+}
+
+func (h *MaterialHandlers) listVersions(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	materialID, err := uuid.Parse(c.Param("materialId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("materialId", "invalid"))
+		return
+	}
+	versions, err := h.Materials.ListVersions(c.Request.Context(), p.UserID, projectID, materialID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, respond{}.list(c, versions, nil))
+}
+
+func (h *MaterialHandlers) download(c *gin.Context) {
+	p := principalFrom(c)
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	materialID, err := uuid.Parse(c.Param("materialId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("materialId", "invalid"))
+		return
+	}
+	versionID, err := uuid.Parse(c.Param("versionId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("versionId", "invalid"))
+		return
+	}
+	entry := c.Query("entry")
+	var body io.ReadCloser
+	var version material.MaterialVersion
+	if entry == "" {
+		body, version, err = h.Materials.FileContent(c.Request.Context(), p.UserID, projectID, materialID, versionID)
+	} else {
+		body, version, err = h.Materials.VersionObject(c.Request.Context(), p.UserID, projectID, materialID, versionID, entry)
+	}
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	defer body.Close()
+	size := version.Size
+	if entry != "" {
+		for _, e := range version.Entries {
+			if e.RelativePath == entry {
+				size = e.Size
+			}
+		}
+	}
+	serveMaterialStream(c, body, size, version.Mime, "attachment")
+}
+
+func (h *MaterialHandlers) versionByID(download bool) Handler {
+	return func(c *gin.Context) {
+		project, err := projectParam(c)
+		if err != nil {
+			respond{}.error(c, err)
+			return
+		}
+		version, err := uuid.Parse(c.Param("versionId"))
+		if err != nil {
+			respond{}.error(c, apierrors.Fields("versionId", "uuid"))
+			return
+		}
+		user := principalFrom(c).UserID
+		materialID, err := h.Materials.MaterialForVersion(c.Request.Context(), user, project, version)
+		if err != nil {
+			respond{}.error(c, err)
+			return
+		}
+		if download {
+			c.Params = append(c.Params, gin.Param{Key: "materialId", Value: materialID.String()})
+			h.download(c)
+			return
+		}
+		value, _, err := h.Materials.OpenVersion(c.Request.Context(), user, project, materialID, version)
+		if err != nil {
+			respond{}.error(c, err)
+			return
+		}
+		info, e := h.Materials.LibraryVersion(c.Request.Context(), user, project, version)
+		if e != nil {
+			respond{}.error(c, e)
+			return
+		}
+		respond{}.ok(c, struct {
+			material.MaterialVersion
+			Library material.LibraryItem `json:"library"`
+		}{value, info})
+	}
+}

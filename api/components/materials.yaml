@@ -1,0 +1,211 @@
+components:
+  schemas:
+    MaterialLibraryItem:
+      type: object
+      required:
+        - id
+        - title
+        - versionId
+        - revision
+        - size
+        - mime
+        - format
+        - authorName
+        - uploadedAt
+        - originalStatus
+        - source
+        - purpose
+        - canDelete
+        - associations
+        - previewStatus
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        kind:
+          type: string
+        visibility:
+          type: string
+        currentVersionId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        createdAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        versionId:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+        size:
+          type: integer
+        mime:
+          type: string
+        format:
+          type: string
+        authorId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        authorName:
+          type: string
+        uploadedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        source:
+          type: string
+        originalStatus:
+          type: string
+          description: 固定版本原件状态，与内容预览状态独立。
+        purpose:
+          type: string
+        deletedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        canDelete:
+          type: boolean
+        previewStatus:
+          type: string
+        associations:
+          type: array
+          items:
+            type: object
+            required:
+              - type
+              - id
+              - name
+            properties:
+              type:
+                type: string
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+    MaterialUsage:
+      type: object
+      required:
+        - id
+        - kind
+        - description
+        - actorName
+        - createdAt
+        - source
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        description:
+          type: string
+        actorId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        actorName:
+          type: string
+        createdAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        source:
+          type: string
+        taskId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        taskName:
+          type:
+            - string
+            - 'null'
+        planId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        planName:
+          type:
+            - string
+            - 'null'
+        topicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        topicName:
+          type:
+            - string
+            - 'null'
+    FilePreview:
+      type: object
+      required:
+        - status
+        - kind
+        - mime
+        - size
+        - error
+        - contentUrl
+        - thumbnail
+      properties:
+        status:
+          type: string
+          enum:
+            - not_requested
+            - pending
+            - ready
+            - failed
+            - unsupported
+        kind:
+          type: string
+        mime:
+          type: string
+        size:
+          type: integer
+        error:
+          type:
+            - string
+            - 'null'
+        contentUrl:
+          type:
+            - string
+            - 'null'
+          format: uri-reference
+          description: ready 时返回以 /api/v1 开头的鉴权内容入口。
+        thumbnail:
+          description: ready 时返回缩略图读取描述；PDF.js 读取第一页，图片、源码及目录封面读取相同固定预览。
+          oneOf:
+            - $ref: '#/components/schemas/MaterialThumbnail'
+            - type: 'null'
+    MaterialThumbnail:
+      type: object
+      required:
+        - kind
+        - url
+        - page
+      properties:
+        kind:
+          type: string
+          enum: [pdf, image, text, archive]
+        url:
+          type: string
+          format: uri-reference
+        page:
+          type:
+            - integer
+            - 'null'
+          description: PDF 缩略图固定读取第 1 页，其余格式为 null。

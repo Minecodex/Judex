@@ -6,7 +6,7 @@ export const GRAPH = {
   row: 206,
   pad: 24,
 };
-export function executionLayout(tasks: Task[], handoffs: Handoff[]) {
+export function executionLayout(tasks: Task[], handoffs: Handoff[], dimensions=GRAPH) {
   const ids = new Set(tasks.map((t) => t.id));
   const edges: { from: string; to: string; hard: boolean; at: string }[] = [];
   const external = new Map<string, string[]>();
@@ -60,8 +60,8 @@ export function executionLayout(tasks: Task[], handoffs: Handoff[]) {
   columns.forEach((items, col) =>
     items.forEach((t, row) =>
       positions.set(t.id, {
-        x: GRAPH.pad + col * GRAPH.column,
-        y: GRAPH.pad + row * GRAPH.row,
+        x: dimensions.pad + col * dimensions.column,
+        y: dimensions.pad + row * dimensions.row,
         rank: col,
       }),
     ),
@@ -72,11 +72,11 @@ export function executionLayout(tasks: Task[], handoffs: Handoff[]) {
     invalid,
     positions,
     width:
-      GRAPH.pad * 2 +
-      Math.max(0, ...columns.keys()) * GRAPH.column +
-      GRAPH.width,
+      dimensions.pad * 2 +
+      Math.max(0, ...columns.keys()) * dimensions.column +
+      dimensions.width,
     height:
-      GRAPH.pad * 2 +
-      Math.max(1, ...[...columns.values()].map((v) => v.length)) * GRAPH.row,
+      dimensions.pad * 2 +
+      Math.max(1, ...[...columns.values()].map((v) => v.length)) * dimensions.row,
   };
 }

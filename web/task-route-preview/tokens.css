@@ -1,0 +1,23 @@
+:root {
+ --d4-page-width:1680px;
+ --d4-header-height:64px;
+ --d4-drawer-width:440px;
+ --d4-panel-width:440px;
+ --d4-sidebar-width:224px;
+ --d4-center-min:400px;
+ --d4-route-offset:340px;
+ --d4-route-min-height:528px;
+ --d4-tab-width:180px;
+ --d4-graph-width:264px;
+ --d4-graph-height:248px;
+ --d4-graph-column:312px;
+ --d4-graph-row:286px;
+ --d4-graph-pad:24px;
+ --d4-graph-heading:30px;
+ --d4-menu-width:260px;
+ --d4-board-min:350px;
+ --d4-timeline-indent:14px;
+ --d4-layer-toast:90;
+ --d4-layer-viewer:40;
+}
+@media(max-width:1250px){:root{--d4-drawer-width:400px;--d4-panel-width:384px;--d4-sidebar-width:200px;}}

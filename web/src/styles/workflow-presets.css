@@ -1,0 +1,44 @@
+.judex-workflow-presets,.judex-workflow-draft-editor { display:flex;flex-direction:column;gap:var(--s4);min-width:0; }
+.judex-workflow-choice { position:relative;min-width:0; }
+.judex-workflow-choice-control { width:100%;height:100%;--choice-card-padding:var(--s4); }
+.judex-workflow-choice-control .checkbox__content { align-items:flex-start;height:100%; }
+.judex-workflow-choice-control .checkbox__control { margin-top:var(--s1);flex-shrink:0; }
+.judex-workflow-choice-control .judex-checkbox-label { flex:1;min-width:0; }
+.judex-workflow-choice-content { display:flex;flex-direction:column;gap:var(--s3);min-width:0; }
+.judex-workflow-choice-title { display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s2);min-width:0; }
+.judex-workflow-choice-title strong { font-size:var(--text-base);font-weight:var(--weight-semibold);color:var(--ink); }
+.judex-workflow-preview-action { position:absolute;right:var(--s4);bottom:var(--s4); }
+.judex-workflow-node-count { font-size:var(--text-xs);color:var(--muted);min-height:var(--s8);display:flex;align-items:center;padding-right:var(--s24); }
+.judex-work-flow-figure { min-width:0; }
+.judex-work-flow-figure > div { width:100%; }
+.judex-work-flow-figure svg { display:block;max-width:100%;height:auto;margin:auto; }
+.judex-workflow-thumbnail { height:var(--workflow-thumbnail-height);min-height:var(--workflow-thumbnail-height);padding:var(--s2) 0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--surface-soft);border-radius:var(--r-sm); }
+.judex-workflow-thumbnail svg { max-height:calc(var(--workflow-thumbnail-height) - var(--s4)); }
+.judex-workflow-viewer { display:flex;flex-direction:column;gap:var(--s3);min-width:0; }
+.judex-workflow-viewer-toolbar { display:flex;align-items:center;flex-wrap:wrap;gap:var(--s2); }
+.judex-workflow-viewer-toolbar > span,.judex-workflow-viewer-toolbar small { color:var(--muted);font-size:var(--text-sm); }
+.judex-workflow-viewer-toolbar small { margin-left:auto; }
+.judex-workflow-viewport { height:var(--workflow-viewer-height);min-height:var(--preview-height);overflow:hidden;display:flex;align-items:center;justify-content:center;border-radius:var(--r-md);background:var(--surface-soft);touch-action:none; }
+.judex-workflow-viewport .judex-work-flow-figure { width:var(--diagram-width);height:var(--diagram-height);transform:translate(var(--diagram-pan-x),var(--diagram-pan-y)) scale(var(--diagram-scale));transform-origin:center;flex-shrink:0; }
+.judex-workflow-viewport .judex-workflow-natural-figure > div { width:var(--diagram-width);height:var(--diagram-height); }
+.judex-workflow-viewport .judex-workflow-natural-figure svg { width:var(--diagram-width);height:var(--diagram-height);max-width:none!important;max-height:none;margin:0; }
+.judex-workflow-choice-badges { display:flex;flex-wrap:wrap;gap:var(--s1);justify-content:flex-end; }
+.judex-workflow-source-links { display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4);margin:var(--s4) 0;color:var(--muted);font-size:var(--text-sm); }
+.judex-workflow-source-links a { display:inline-flex;align-items:center;gap:var(--s1);color:var(--accent); }
+.judex-workflow-source-links a svg { width:var(--icon-sm);height:var(--icon-sm); }
+.judex-workflow-preview-notes small { color:var(--muted);font-size:var(--text-xs); }
+.judex-workflow-suggested-roles { margin:var(--s4) 0;color:var(--muted);font-size:var(--text-sm);line-height:var(--leading-base); }
+.judex-workflow-preview-notes { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4); }
+.judex-workflow-preview-notes article { padding:var(--s4);background:var(--surface-soft);border-radius:var(--r-md);min-width:0; }
+.judex-workflow-preview-notes h3 { margin:0 0 var(--s2);font-size:var(--text-base);font-weight:var(--weight-semibold); }
+.judex-workflow-preview-notes p { color:var(--muted);font-size:var(--text-sm);line-height:var(--leading-base); }
+.judex-workflow-draft-heading,.judex-workflow-draft-actions { display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:wrap; }
+.judex-workflow-draft-heading h3 { margin:0; }
+.judex-workflow-node-editor .disclosure__panel { display:flex;flex-direction:column;gap:var(--s3); }
+.judex-workflow-link-options { display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4);border:0;padding:0;margin:0;min-width:0; }
+.judex-workflow-link-options legend { font-size:var(--text-sm);color:var(--muted);margin-bottom:var(--s2); }
+.judex-workflow-return-option { display:flex;flex-direction:column;gap:var(--s2);flex:1;min-width:var(--s24); }
+.judex-workflow-draft-actions { justify-content:flex-end; }
+.judex-flow-main > .judex-workflow-draft-editor { margin-top:var(--s6); }
+.judex-flow-layout-draft { grid-template-columns:minmax(0,1fr); }
+.judex-flow-title .judex-ui-status { font-family:var(--font-ui); }
