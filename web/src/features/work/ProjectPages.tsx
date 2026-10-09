@@ -1,10 +1,10 @@
 import {
   UIOption,
   UISelect,
-  UICheckbox,
   UITextArea,
   UIInput,
 } from "../../components/ui/FormControls";
+import {MaterialLibrary} from "../materials/MaterialLibrary";
 import { useState } from "react";
 import { FileText, FolderPlus, Upload as UploadIcon } from "lucide-react";
 import { useWork } from "./store";
@@ -15,84 +15,8 @@ import {
   MAX_DISCUSSION_ROUNDS,
   validRoundLimit,
 } from "../chat/discussionPolicy";
-export function ExistingAssignments() {
-  const { state, project, management, t, text, act } = useWork();
-  const [open, setOpen] = useState(false),
-    [person, setPerson] = useState(state.currentUser),
-    [ids, setIds] = useState<string[]>([]);
-  if (!management) return null;
-  const available = state.positions.filter(
-    (p) =>
-      p.projectId === project.id &&
-      !state.seats.some((s) => s.person === person && s.positionId === p.id),
-  );
-  return (
-    <>
-      <div className="judex-project-assignment">
-        <Btn secondary onClick={() => setOpen(true)}>
-          {t("projectAssign")}
-        </Btn>
-      </div>
-      {open && (
-        <Dialog title={t("projectAssign")} onClose={() => setOpen(false)}>
-          <p className="judex-project-note">{t("projectAssignHint")}</p>
-          <UISelect
-            className="judex-input"
-            aria-label={t("workTeam")}
-            value={person}
-            onChange={(e) => {
-              setPerson(e.target.value);
-              setIds([]);
-            }}
-          >
-            {project.members.map((m) => (
-              <UIOption key={m.name}>{m.name}</UIOption>
-            ))}
-          </UISelect>
-          <div className="judex-position-options">
-            {available.map((p) => (
-              <UICheckbox
-                key={p.id}
-                checked={ids.includes(p.id)}
-                onChange={(e) =>
-                  setIds(
-                    e.target.checked
-                      ? [...ids, p.id]
-                      : ids.filter((id) => id !== p.id),
-                  )
-                }
-              >
-                {text(p.name)}
-              </UICheckbox>
-            ))}
-          </div>
-          {!available.length && <p>{t("workNoItems")}</p>}
-          <Btn
-            disabled={!ids.length}
-            testId="assign-existing-position"
-            onClick={async () => {
-              if (
-                (
-                  await act("assignPositions", {
-                    projectId: project.id,
-                    person,
-                    ids,
-                  })
-                ).ok
-              ) {
-                setOpen(false);
-                setIds([]);
-              }
-            }}
-          >
-            {t("projectAssign")}
-          </Btn>
-        </Dialog>
-      )}
-    </>
-  );
-}
-export function ResourcesPage() {
+export function ResourcesPage(){const {mode}=useWork();return mode==="api"?<MaterialLibrary/>:<DemoResourcesPage/>;}
+function DemoResourcesPage() {
   const { state, project, t, go, act } = useWork();
   const [adding, setAdding] = useState(false),
     [files, setFiles] = useState<Evidence[]>([]),

@@ -99,6 +99,9 @@ opensandbox:
 
 # 业务服务进程（P7-01）：mode=all|api|worker；allowedOrigins 生产必填。
 server:
+  materialPreview:
+    enabled: false
+    image: judex/material-converter:local-materials
   materialProjection:
     enabled: true
     storageClass: ""

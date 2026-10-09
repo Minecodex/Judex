@@ -21,6 +21,8 @@ func NewPositionHandlers(svc *project.Service) *PositionHandlers {
 }
 
 func (h *PositionHandlers) Register(spec *SpecRouter) {
+	spec.Register("getPositionPresetCatalog", withAuth(h.getPositionPresetCatalog))
+	spec.Register("importPositionPresets", withAuth(h.importPositionPresets))
 	spec.Register("listPositions", withAuth(h.listPositions))
 	spec.Register("createPosition", withAuth(h.createPosition))
 	spec.Register("updatePosition", withAuth(h.updatePosition))
@@ -369,7 +371,7 @@ func (h *PositionHandlers) getPreferences(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, preferences)
+	respond{}.ok(c, gin.H{"items": preferences})
 }
 
 func (h *PositionHandlers) updatePreferences(c *gin.Context) {
@@ -380,14 +382,15 @@ func (h *PositionHandlers) updatePreferences(c *gin.Context) {
 		return
 	}
 	var req struct {
-		ExpectedRevision int64  `json:"expectedRevision" binding:"required"`
-		Prompt           string `json:"prompt"`
+		PositionID       uuid.UUID `json:"positionId"`
+		ExpectedRevision int64     `json:"expectedRevision" binding:"required"`
+		Prompt           string    `json:"prompt"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	preferences, err := h.Projects.UpdateMyPreferences(c.Request.Context(), p.UserID, projectID, req.ExpectedRevision, req.Prompt)
+	preferences, err := h.Projects.UpdateMyPreferences(c.Request.Context(), p.UserID, projectID, req.PositionID, req.ExpectedRevision, req.Prompt)
 	if err != nil {
 		respond{}.error(c, err)
 		return

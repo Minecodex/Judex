@@ -21,6 +21,7 @@ import (
 // Position is the API projection (06 §3).
 type Position struct {
 	ID             uuid.UUID     `json:"id"`
+	PresetID       *string       `json:"presetId,omitempty"`
 	Name           string        `json:"name"`
 	Status         string        `json:"status"`
 	CurrentVersion int64         `json:"currentVersion"`
@@ -66,36 +67,42 @@ func (s *Service) CreatePosition(ctx context.Context, requester, projectID uuid.
 		if err := validateNodeBindings(ctx, tx, projectID, draft.NodeBindings); err != nil {
 			return err
 		}
-		now := s.now()
-		id := uuid.New()
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO position_templates (project_id, id, name, current_version, created_at, updated_at)
-			VALUES ($1,$2,$3,1,$4,$4)`, projectID, id, name, now); err != nil {
-			return apierrors.New(apierrors.Internal, "template insert failed").Wrap(err)
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO position_versions (project_id, template_id, revision, prompt, public_summary, model_id, created_by, created_at)
-			VALUES ($1,$2,1,$3,$4,$5,$6,$7)`,
-			projectID, id, draft.Prompt, draft.PublicSummary, draft.ModelID, requester, now); err != nil {
-			return apierrors.New(apierrors.Internal, "version insert failed").Wrap(err)
-		}
-		if err := writeNodeBindings(ctx, tx, projectID, id, draft.NodeBindings); err != nil {
-			return err
-		}
-		if _, err := events.AppendProjectEvent(ctx, tx, projectID, "membership.changed", "position", id.String(), nil,
-			map[string]any{"change": "created"}, now); err != nil {
-			return err
-		}
-		out = Position{ID: id, Name: name, Status: "active", CurrentVersion: 1,
-			PublicSummary: draft.PublicSummary, Prompt: draft.Prompt, ModelID: draft.ModelID,
-			Revision: 1, NodeBindings: draft.NodeBindings}
-		return audit.Append(ctx, tx, audit.Entry{
-			ProjectID: &projectID, ActorType: audit.ActorUser, ActorUserID: &requester,
-			Source: audit.SourceWeb, Operation: "position.create",
-			ObjectType: "position", ObjectID: id.String(), OccurredAt: now,
-		})
+		draft.Name = name
+		out, err = s.insertPosition(ctx, tx, requester, projectID, draft, nil)
+		return err
 	})
 	return out, err
+}
+
+// The caller holds the active project lock and has checked management rights.
+func (s *Service) insertPosition(ctx context.Context, tx postgres.Tx, requester, projectID uuid.UUID, draft PositionDraft, presetID *string) (Position, error) {
+	now, id := s.now(), uuid.New()
+	if draft.NodeBindings == nil {
+		draft.NodeBindings = []NodeBinding{}
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO position_templates (project_id, id, name, current_version, created_at, updated_at, preset_id)
+		VALUES ($1,$2,$3,1,$4,$4,$5)`, projectID, id, draft.Name, now, presetID); err != nil {
+		return Position{}, apierrors.New(apierrors.Internal, "template insert failed").Wrap(err)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO position_versions (project_id, template_id, revision, prompt, public_summary, model_id, created_by, created_at)
+		VALUES ($1,$2,1,$3,$4,$5,$6,$7)`, projectID, id, draft.Prompt, draft.PublicSummary, draft.ModelID, requester, now); err != nil {
+		return Position{}, apierrors.New(apierrors.Internal, "version insert failed").Wrap(err)
+	}
+	if err := writeNodeBindings(ctx, tx, projectID, id, draft.NodeBindings); err != nil {
+		return Position{}, err
+	}
+	if _, err := events.AppendProjectEvent(ctx, tx, projectID, "membership.changed", "position", id.String(), nil,
+		map[string]any{"change": "created", "presetId": presetID}, now); err != nil {
+		return Position{}, err
+	}
+	if err := audit.Append(ctx, tx, audit.Entry{ProjectID: &projectID, ActorType: audit.ActorUser, ActorUserID: &requester,
+		Source: audit.SourceWeb, Operation: "position.create", ObjectType: "position", ObjectID: id.String(), OccurredAt: now}); err != nil {
+		return Position{}, err
+	}
+	return Position{ID: id, PresetID: presetID, Name: draft.Name, Status: "active", CurrentVersion: 1,
+		PublicSummary: draft.PublicSummary, Prompt: draft.Prompt, ModelID: draft.ModelID, Revision: 1, NodeBindings: draft.NodeBindings}, nil
 }
 
 // UpdatePosition produces a new revision (02 §6 职责可修改产生版本).
@@ -120,9 +127,10 @@ func (s *Service) UpdatePosition(ctx context.Context, requester, projectID, posi
 			return err
 		}
 		var currentRevision int64
+		var presetID *string
 		if err := tx.QueryRow(ctx, `
-			SELECT current_version FROM position_templates WHERE id=$1 AND project_id=$2 AND status='active' FOR UPDATE`,
-			positionID, projectID).Scan(&currentRevision); err != nil {
+			SELECT current_version, preset_id FROM position_templates WHERE id=$1 AND project_id=$2 AND status='active' FOR UPDATE`,
+			positionID, projectID).Scan(&currentRevision, &presetID); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apierrors.New(apierrors.NotFound, "position not found")
 			}
@@ -154,7 +162,10 @@ func (s *Service) UpdatePosition(ctx context.Context, requester, projectID, posi
 			map[string]any{"change": "revised"}, now); err != nil {
 			return err
 		}
-		out = Position{ID: positionID, Name: name, Status: "active", CurrentVersion: next,
+		if draft.NodeBindings == nil {
+			draft.NodeBindings = []NodeBinding{}
+		}
+		out = Position{ID: positionID, PresetID: presetID, Name: name, Status: "active", CurrentVersion: next,
 			PublicSummary: draft.PublicSummary, Prompt: draft.Prompt, ModelID: draft.ModelID,
 			Revision: next, NodeBindings: draft.NodeBindings}
 		return audit.Append(ctx, tx, audit.Entry{
@@ -172,7 +183,7 @@ func (s *Service) ListPositions(ctx context.Context, requester, projectID uuid.U
 		return nil, err
 	}
 	rows, err := paging.Query(ctx, s.pool, `
-		SELECT t.id, t.name, t.status, t.current_version, v.public_summary, v.prompt, v.model_id, v.revision
+		SELECT t.id, t.name, t.status, t.current_version, v.public_summary, v.prompt, v.model_id, v.revision, t.preset_id
 		/*keys*/ FROM position_templates t
 		JOIN position_versions v ON v.template_id=t.id AND v.revision=t.current_version
 		WHERE t.project_id=$1 /*page*/`, "t.created_at", "t.id", projectID)
@@ -180,13 +191,16 @@ func (s *Service) ListPositions(ctx context.Context, requester, projectID uuid.U
 		return nil, apierrors.New(apierrors.Internal, "positions failed").Wrap(err)
 	}
 	defer rows.Close()
-	var out []Position
+	out := []Position{}
 	for rows.Next() {
 		var p Position
-		if err := rows.Scan(&p.ID, &p.Name, &p.Status, &p.CurrentVersion, &p.PublicSummary, &p.Prompt, &p.ModelID, &p.Revision); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Status, &p.CurrentVersion, &p.PublicSummary, &p.Prompt, &p.ModelID, &p.Revision, &p.PresetID); err != nil {
 			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
 		}
-		p.NodeBindings, _ = s.nodeBindingsFor(ctx, projectID, p.ID)
+		p.NodeBindings, err = s.nodeBindingsFor(ctx, projectID, p.ID)
+		if err != nil {
+			return nil, apierrors.New(apierrors.Internal, "position bindings failed").Wrap(err)
+		}
 		out = append(out, p)
 	}
 	return out, rows.Err()
@@ -200,7 +214,7 @@ func (s *Service) nodeBindingsFor(ctx context.Context, projectID, positionID uui
 		return nil, err
 	}
 	defer rows.Close()
-	var out []NodeBinding
+	out := []NodeBinding{}
 	for rows.Next() {
 		var b NodeBinding
 		if err := rows.Scan(&b.WorkflowID, &b.NodeID); err != nil {

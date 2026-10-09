@@ -57,7 +57,9 @@ export function useProjectEvents(projectId: string | null, cursor: number | unde
       if (row.projectId !== projectId || row.seq <= lastSeq) return;
       lastSeq = row.seq;
       cursorRef.current = lastSeq;
-      for (const root of invalidationRoots(row.type)) {
+      if (row.type === 'material.preview.changed') {
+        void client.invalidateQueries({predicate: query => query.queryKey[0] === 'materials' && query.queryKey[1] === projectId && query.queryKey.includes(row.objectId)});
+      } else for (const root of invalidationRoots(row.type)) {
         void client.invalidateQueries({ queryKey: [root, projectId] });
       }
       onEvent?.(row);

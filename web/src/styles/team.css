@@ -1,0 +1,11 @@
+.judex-position-card { display:flex;flex-direction:column;gap:var(--s3);padding:var(--s5);min-width:0;border-radius:var(--r-lg); }
+.judex-position-card-top { display:flex;align-items:center;justify-content:space-between;gap:var(--s3); }
+.judex-position-card .judex-position-symbol { margin:0; }
+.judex-position-card h3 { font-size:var(--text-lg);font-weight:var(--weight-semibold);line-height:var(--leading-title);margin:0; }
+.judex-position-card > p { margin:0;font-size:var(--text-sm);line-height:var(--leading-base);color:var(--muted); }
+.judex-position-holders { display:flex;flex-direction:column;gap:var(--s2);margin-top:auto;padding-top:var(--s2); }
+.judex-position-holders > span,.judex-position-holders > small { font-size:var(--text-xs);color:var(--muted); }
+.judex-position-holders > div { display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap; }
+.judex-position-holder { display:inline-flex;align-items:center;gap:var(--s2);font-size:var(--text-sm); }
+.judex-position-card .judex-card-actions { border-top:var(--stroke) solid var(--line);padding-top:var(--s3); }
+.judex-position-card .judex-position-nodes { gap:var(--s2);margin:0; }

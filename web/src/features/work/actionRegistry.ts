@@ -1,3 +1,6 @@
+import {demoTaskMain,demoReplaceLinks} from "../cooperation/demo";
+import {updateDemoDraft,discardDemoWork,changeDemoExecution,proposeDemoWorkChange} from './demoRuntime.ts';
+import {demoFork,demoTaskActivity,demoResolve} from "../chat/demoCollaboration";
 import {
   acceptInvite,
   assignPositions,
@@ -29,13 +32,26 @@ import {
 import { uid } from "./seed";
 import { words, type Result, type WorkState } from "./types";
 import type { ActionPayloads } from "./storeTypes";
+import { importDemoPositionPresets } from "./positionPresets";
+import {importDemoWorkflowPresets,saveDemoFlowDraft,publishDemoFlowDraft} from './workflowPresets';
 
 export type DemoFn<K extends keyof ActionPayloads> = (
   s: WorkState,
   p: ActionPayloads[K],
-) => Result & { id?: string };
+) => Result & { id?: string; createdCount?: number; skippedCount?: number };
 
 export const demoActions: { [K in keyof ActionPayloads]: DemoFn<K> } = {
+ updateWorkDraft:updateDemoDraft,discardWork:discardDemoWork,executionException:changeDemoExecution,proposeWorkChange:proposeDemoWorkChange,
+ ensureTaskMainTopic:(s,p)=>demoTaskMain(s,p.taskId),
+ replaceTopicLinks:(s,p)=>demoReplaceLinks(s,p),
+ forkTopic:(s,p)=>demoFork(s,p),
+ recordTaskActivity:(s,p)=>demoTaskActivity(s,p),
+ resolveDiscussionSuggestion:(s,p)=>demoResolve(s,p),
+ retryTaskAnalysis:(s)=>({state:s}),
+  importPositionPresets: (s, p) => importDemoPositionPresets(s, p.projectId, p),
+  importWorkflowPresets: (s,p) => importDemoWorkflowPresets(s,p.projectId,p),
+  saveFlowDraft: (s,p) => saveDemoFlowDraft(s,p.projectId,p.flowId,p.expectedVersion,p.body),
+  publishFlowDraft: (s,p) => publishDemoFlowDraft(s,p.projectId,p.flowId,p.expectedVersion,p.draftHash),
   sourceDecision: (s, p) =>
     sourceDecision(
       s,
@@ -49,7 +65,7 @@ export const demoActions: { [K in keyof ActionPayloads]: DemoFn<K> } = {
     reviseSource(s, p.handoffId, p.sourceId, p.revision, p.summary, p.files),
   sendSource: (s, p) => sendSource(s, p.handoffId, p.sourceId, p.revision),
   reportTask: (s, p) => reportTask(s, p.taskId, p.summary, p.files),
-  taskAction: (s, p) => taskAction(s, p.taskId, p.op, p.reason, p.revision),
+  taskAction: (s, p) => taskAction(s, p.taskId, p.op, p.reason, p.revision, p.identityId),
   planAction: (s, p) => planAction(s, p.planId, p.op, p.key),
   decideDraft: (s, p) => decideDraft(s, p.taskId),
   createWork: (s, p) => {
@@ -64,11 +80,11 @@ export const demoActions: { [K in keyof ActionPayloads]: DemoFn<K> } = {
               : r.state.tasks.at(-1)!.id,
         };
   },
-  topicMessage: (s, p) => topicMessage(s, p.topicId, p.body, p.files),
+  topicMessage: (s, p) => p.taskId?demoTaskActivity(s,{taskId:p.taskId,kind:"reply",topicId:p.topicId,body:p.body,files:p.files??[]}):topicMessage(s,p.topicId,p.body,p.files),
   publishFlow: (s, p) =>
     publishFlow(s, p.flowId, p.version, p.instructions, p.material),
   refreshHandoff: (s, p) => refreshHandoff(s, p.handoffId),
-  personalPrompt: (s, p) => personalPrompt(s, p.projectId, p.prompt),
+  personalPrompt: (s, p) => personalPrompt(s, p.projectId, p.positionId, p.expectedRevision, p.prompt),
   savePosition: (s, p) => savePosition(s, p.projectId, p.value),
   invitePerson: (s, p) => invitePerson(s, p.projectId, p.name, p.positionIds),
   assignPositions: (s, p) => assignPositions(s, p.projectId, p.person, p.ids),
@@ -90,6 +106,7 @@ export const demoActions: { [K in keyof ActionPayloads]: DemoFn<K> } = {
       p.receiver,
       p.ids,
       p.kind,
+      p.senderIdentityIds,
     );
     return r.error ? r : { ...r, id: r.state.handoffs.at(-1)!.id };
   },
@@ -99,7 +116,7 @@ export const demoActions: { [K in keyof ActionPayloads]: DemoFn<K> } = {
   },
   sendTopicMessage: (s, p) => {
     if (p.topicId) {
-      const r = topicMessage(s, p.topicId, p.body, p.files);
+      const r = p.taskId?demoTaskActivity(s,{taskId:p.taskId,kind:"reply",topicId:p.topicId,body:p.body,files:p.files??[]}):topicMessage(s, p.topicId, p.body, p.files);
       return r.error ? r : { ...r, id: p.topicId };
     }
     const created = createDiscussion(s, p.projectId, p.title, [], []);

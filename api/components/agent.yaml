@@ -121,8 +121,12 @@ components:
           type: string
           enum:
             - proposal.decision
+            - topic.fork
+            - discussion_suggestion.resolve
             - task.acceptance
             - task.reopen
+            - task.skip
+            - task.restore
             - plan.acceptance
             - plan.reopen
             - handoff.send

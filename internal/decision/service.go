@@ -117,6 +117,12 @@ func (s *Service) CreateDraft(ctx context.Context, requester, projectID uuid.UUI
 		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {
 			return err
 		}
+		var err error
+		changes, err = work.SnapshotPlanOrigins(ctx, tx, projectID, topicID, nil, changes)
+		if err != nil {
+			return err
+		}
+
 		now := s.now()
 		id = uuid.New()
 		if _, err := tx.Exec(ctx, `

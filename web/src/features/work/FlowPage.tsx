@@ -7,96 +7,16 @@ import {
 } from "../../components/ui/FormControls";
 import { useWorkspaceDraft } from "../chat/useWorkspaceDraft";
 import { Button } from "../../components/ui/Button";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Check, GitBranch, Plus, Sparkles } from "lucide-react";
 import { useWork } from "./store";
 import { Btn, Dialog, Field, Heading, EmptyState } from "./ui";
 import type { Flow } from "./types";
-import { uid } from "./seed";
-function flowCode(flow: Flow, english: boolean) {
-  const label = (v: string) => v.replace(/["<>\r\n]/g, " ");
-  return (
-    "flowchart LR\n" +
-    flow.nodes
-      .map(
-        (n) =>
-          "  " + n.id + '["' + label(english ? n.label.en : n.label.zh) + '"]',
-      )
-      .join("\n") +
-    "\n" +
-    flow.edges.map(([a, b]) => "  " + a + " --> " + b).join("\n")
-  );
-}
-function FlowDiagram({ flow }: { flow: Flow }) {
-  const { locale, theme } = useWork(),
-    ref = useRef<HTMLDivElement>(null),
-    [svg, setSvg] = useState(""),
-    [error, setError] = useState(false);
-  const code = flowCode(flow, locale === "en");
-  useEffect(() => {
-    let live = true;
-    import("mermaid")
-      .then(async ({ default: mermaid }) => {
-        if (!ref.current || !live) return;
-        const style = getComputedStyle(ref.current);
-        // Mermaid's color parser cannot consume modern CSS color-mix values.
-        const color = (token: string) => {
-          const canvas = document.createElement("canvas");
-          canvas.width = canvas.height = 1;
-          const context = canvas.getContext("2d")!;
-          context.fillStyle = style.getPropertyValue(token).trim();
-          context.fillRect(0, 0, 1, 1);
-          const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
-          return `rgb(${r}, ${g}, ${b})`;
-        };
-        mermaid.initialize({
-          startOnLoad: false,
-          securityLevel: "strict",
-          theme: theme === "dark" ? "dark" : "base",
-          themeVariables: {
-            fontFamily: "Segoe UI, Microsoft YaHei, sans-serif",
-            primaryColor: color("--accent-soft"),
-            primaryTextColor: color("--ink"),
-            primaryBorderColor: color("--accent"),
-            lineColor: color("--muted"),
-          },
-        });
-        const result = await mermaid.render(
-          "judexFlow" + uid().replaceAll("-", ""),
-          code,
-        );
-        if (live) {
-          setSvg(result.svg);
-          setError(false);
-        }
-      })
-      .catch((error) => {
-        if (import.meta.env.DEV)
-          console.error("Workflow renderer failed", error);
-        if (live) setError(true);
-      });
-    return () => {
-      live = false;
-    };
-  }, [code, theme]);
-  return (
-    <div
-      ref={ref}
-      className="judex-work-flow-figure"
-      data-testid="workflow-diagram"
-    >
-      {error ? (
-        <pre>{code}</pre>
-      ) : (
-        <div
-          dangerouslySetInnerHTML={{
-            __html: svg,
-          }}
-        />
-      )}
-    </div>
-  );
-}
+import {WorkflowDiagram as FlowDiagram,workflowCode as flowCode} from "./WorkflowDiagram";
+import {WorkflowPresetsDialog} from "./WorkflowPresetsDialog";
+import {WorkflowDraftEditor} from "./WorkflowDraftEditor";
+import {UIDialog} from "../../components/ui/Presentation";
+import {UIStatus} from "../../components/ui/FormControls";
 function NewFlowDialog({ onClose }: { onClose: () => void }) {
   const { t, project, act } = useWork(),
     [name, setName] = useState(""),
@@ -155,7 +75,8 @@ export function FlowPage() {
       useWork(),
     flows = state.flows.filter((f) => f.projectId === project.id),
     flow = flows.find((f) => f.id === route.id) ?? flows[0],
-    [creating, setCreating] = useState(false);
+    [creating, setCreating] = useState(false),
+    [templates,setTemplates] = useState(false), [editing,setEditing] = useState(false);
   return (
     <>
       <Heading
@@ -164,10 +85,10 @@ export function FlowPage() {
         description={t("workFlowHint")}
       >
         {management && (
-          <Btn secondary onClick={() => setCreating(true)}>
+          <><Button variant="primary" data-testid="open-workflow-presets" onPress={() => setTemplates(true)}><Plus/>{t("workflowPresetsOpen")}</Button><Btn secondary onClick={() => setCreating(true)}>
             <Plus />
             {t("workNewFlow")}
-          </Btn>
+          </Btn></>
         )}
       </Heading>
       <div className="judex-work-segments judex-work-filter">
@@ -187,14 +108,15 @@ export function FlowPage() {
         ))}
       </div>
       {flow ? (
-        <div className="judex-flow-layout">
+        <div className={'judex-flow-layout'+(flow.status === 'draft'?' judex-flow-layout-draft':'')}>
           <section className="judex-flow-main">
             <div className="judex-flow-title">
               <GitBranch />
               <h2>{text(flow.name)}</h2>
-              <span>v{flow.version}</span>
+              <span>v{flow.version}</span><UIStatus>{t(flow.status === "draft" ? "workflowDraft" : "workflowPublished")}</UIStatus>
+              {management && flow.status !== "draft" && <Button size="sm" data-testid="edit-workflow" onPress={() => setEditing(true)}>{t("workflowEdit")}</Button>}
             </div>
-            <FlowDiagram flow={flow} />
+            {flow.status === "draft" ? (flow.body ? <WorkflowDraftEditor key={flow.id} flow={flow}/> : <p role="status">{t('workflowDiagramLoading')}</p>) : <FlowDiagram flow={flow} /> }
             <p className="judex-work-small-note">{t("workFlowLabels")}</p>
             <div className="judex-flow-node-notes">
               {flow.nodes.map((node) => (
@@ -227,15 +149,17 @@ export function FlowPage() {
               <p>{text(flow.instructions)}</p>
             </UICard>
           </section>
-          <FlowEditor
+          {flow.status !== "draft" && <FlowEditor
             key={flow.id + ":" + flow.version + ":" + state.currentUser}
             flow={flow}
-          />
+          />}
         </div>
       ) : (
         <EmptyState text={t("workNoItems")} />
       )}
       {creating && <NewFlowDialog onClose={() => setCreating(false)} />}
+      {templates && <WorkflowPresetsDialog onClose={() => setTemplates(false)}/>}
+      {editing && flow && <UIDialog title={t("workflowEdit")} wide onClose={() => setEditing(false)}><WorkflowDraftEditor key={flow.id+":"+flow.status} flow={flow}/></UIDialog>}
     </>
   );
 }

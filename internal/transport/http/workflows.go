@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
+	"github.com/kakj-go/Judex/internal/project/catalog"
 	"github.com/kakj-go/Judex/internal/workflow"
 )
 
@@ -25,6 +26,31 @@ func (h *WorkflowHandlers) Register(spec *SpecRouter) {
 	spec.Register("listWorkflowVersions", withAuth(h.versions))
 	spec.Register("updateWorkflowDraft", withAuth(h.updateDraft))
 	spec.Register("publishWorkflow", withAuth(h.publish))
+	spec.Register("getWorkflowPresetCatalog", withAuth(h.presets))
+	spec.Register("importWorkflowPresets", withAuth(h.importPresets))
+}
+
+func (h *WorkflowHandlers) presets(c *gin.Context) {
+	respond{}.ok(c, catalog.Workflows())
+}
+
+func (h *WorkflowHandlers) importPresets(c *gin.Context) {
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	var request workflow.ImportPresetsRequest
+	if err = bindJSON(c, &request); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	result, err := h.Workflows.ImportPresets(c.Request.Context(), principalFrom(c).UserID, projectID, request)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.created(c, result)
 }
 
 func projectParam(c *gin.Context) (uuid.UUID, error) {

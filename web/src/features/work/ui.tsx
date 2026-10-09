@@ -3,7 +3,7 @@ import {
   UIStatus,
   UIFilePicker,
 } from "../../components/ui/FormControls";
-import { Button as HeroButton, Modal } from "@heroui/react";
+import { UIDialog, PageHeading, PersonAvatar, EmptyState as SharedEmptyState } from "../../components/ui/Presentation";
 import { Button } from "../../components/ui/Button";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { X, ArrowUpRight, Paperclip, FileText, Check } from "lucide-react";
@@ -18,6 +18,7 @@ export function Btn({
   disabled = false,
   testId,
   danger = false,
+  size,
 }: {
   children: ReactNode;
   onClick?: () => void;
@@ -25,69 +26,25 @@ export function Btn({
   disabled?: boolean;
   testId?: string;
   danger?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 }) {
   return (
-    <HeroButton
+    <Button
       variant={danger ? "danger" : secondary ? "secondary" : "primary"}
-      isDisabled={disabled}
+      size={size}
+      disabled={disabled}
       onPress={onClick}
       data-testid={testId}
       className={
-        "judex-button judex-button-" +
-        (danger ? "danger" : secondary ? "secondary" : "primary")
+        "judex-button"
       }
     >
       {children}
-    </HeroButton>
+    </Button>
   );
 }
-export function Dialog({
-  title,
-  onClose,
-  children,
-  wide = false,
-}: {
-  title: string;
-  onClose: () => void;
-  children: ReactNode;
-  wide?: boolean;
-}) {
-  const { t, theme } = useWork();
-  return (
-    <Modal.Backdrop
-      isOpen
-      isDismissable
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-      className="judex-overlay"
-      data-theme={theme}
-    >
-      <Modal.Container
-        size={wide ? "lg" : "md"}
-        className={
-          "judex-dialog-container" +
-          (wide ? " judex-dialog-container-wide" : "")
-        }
-      >
-        <Modal.Dialog aria-label={title} className="judex-dialog-content">
-          <Modal.Header className="judex-dialog-header">
-            <Modal.Heading>{title}</Modal.Heading>
-            <HeroButton
-              className="judex-dialog-close"
-              variant="ghost"
-              isIconOnly
-              aria-label={t("close")}
-              onPress={onClose}
-            >
-              <X />
-            </HeroButton>
-          </Modal.Header>
-          <Modal.Body className="judex-dialog-body">{children}</Modal.Body>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
-  );
+export function Dialog({title,onClose,children,wide=false}:{title:string;onClose:()=>void;children:ReactNode;wide?:boolean}) {
+ return <UIDialog title={title} onClose={onClose} wide={wide}>{children}</UIDialog>;
 }
 export function Person({
   seatId,
@@ -108,9 +65,7 @@ export function Person({
         "judex-work-person" + (small ? " judex-work-person-small" : "")
       }
     >
-      <span className={"judex-initial judex-tone-" + (pos?.tone ?? "mint")}>
-        {person.slice(0, 1)}
-      </span>
+      <PersonAvatar name={person} small={small} tone={pos?.tone === 'lilac' ? 'violet' : pos?.tone === 'peach' ? 'sand' : 'green'} />
       <span>
         <strong>{person}</strong>
         {!small && pos && <small>{text(pos.name)}</small>}
@@ -155,16 +110,7 @@ export function Heading({
   description?: string;
   children?: ReactNode;
 }) {
-  return (
-    <div className="judex-work-heading-row">
-      <div>
-        {eyebrow && <span className="judex-eyebrow">{eyebrow}</span>}
-        <h1>{title}</h1>
-        {description && <p>{description}</p>}
-      </div>
-      {children && <div className="judex-work-heading-actions">{children}</div>}
-    </div>
-  );
+  return <PageHeading title={title} eyebrow={eyebrow} description={description} className="judex-work-heading-row">{children}</PageHeading>;
 }
 export function Field({
   label,
@@ -175,20 +121,8 @@ export function Field({
 }) {
   return <FormField label={label}>{children}</FormField>;
 }
-export function EmptyState({
-  text,
-  children,
-}: {
-  text: string;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="judex-work-empty">
-      <Check />
-      <p>{text}</p>
-      {children}
-    </div>
-  );
+export function EmptyState({text,children}:{text:string;children?:ReactNode}) {
+ return <SharedEmptyState title="" description={text} icon={<Check />}>{children}</SharedEmptyState>;
 }
 export function TaskRow({
   task,

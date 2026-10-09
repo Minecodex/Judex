@@ -564,14 +564,14 @@ paths:
       - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
     get:
       operationId: getMyPreferences
-      summary: 本人项目偏好（仅本人可见）
+      summary: 本人当前任职的独立工作提示词（仅本人可见）
       tags: [positions]
       security:
         - sessionCookie: []
         - bearerGrant: []
       responses:
         '200':
-          description: 偏好。
+          description: 当前承担的职位各返回一项，未保存时 revision 为 0、prompt 为空；无任职时 items 为空。
           content:
             application/json:
               schema:
@@ -579,12 +579,18 @@ paths:
                 required: [data, meta]
                 properties:
                   data:
-                    $ref: '../components/projects.yaml#/components/schemas/PersonalPreferences'
+                    type: object
+                    required: [items]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../components/projects.yaml#/components/schemas/PersonalPreferences'
                   meta:
                     $ref: '../components/common.yaml#/components/schemas/RequestMeta'
     put:
       operationId: updateMyPreferences
-      summary: 更新本人偏好（产生新 revision）
+      summary: 更新本人指定职位的提示词（独立 revision，须当前任职）
       tags: [positions]
       security:
         - sessionCookie: []

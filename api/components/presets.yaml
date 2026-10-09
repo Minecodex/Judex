@@ -1,0 +1,97 @@
+components:
+  schemas:
+    PresetText:
+      type: object
+      required: [zh, en]
+      properties:
+        zh:
+          type: string
+        en:
+          type: string
+    PositionPreset:
+      type: object
+      required: [id, name, summary, prompt]
+      properties:
+        id:
+          type: string
+        name:
+          $ref: '#/components/schemas/PresetText'
+        summary:
+          $ref: '#/components/schemas/PresetText'
+        prompt:
+          $ref: '#/components/schemas/PresetText'
+    PositionScenario:
+      type: object
+      required: [id, name, description, roleIds]
+      properties:
+        id:
+          type: string
+        name:
+          $ref: '#/components/schemas/PresetText'
+        description:
+          $ref: '#/components/schemas/PresetText'
+        roleIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+    PositionPresetCatalog:
+      type: object
+      required: [version, roles, scenarios]
+      properties:
+        version:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/PositionPreset'
+        scenarios:
+          type: array
+          items:
+            $ref: '#/components/schemas/PositionScenario'
+    ImportPositionPresetsRequest:
+      type: object
+      additionalProperties: false
+      required: [catalogVersion, scenarioId, roleIds, locale]
+      properties:
+        catalogVersion:
+          type: string
+          minLength: 1
+          maxLength: 64
+        scenarioId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        roleIds:
+          type: array
+          minItems: 1
+          maxItems: 32
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+        locale:
+          type: string
+          enum: [zh-CN, en]
+    ImportedPositionPresets:
+      type: object
+      required: [items, skipped]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '../components/projects.yaml#/components/schemas/Position'
+        skipped:
+          type: array
+          items:
+            type: object
+            required: [presetId, positionId, name]
+            properties:
+              presetId:
+                type: string
+              positionId:
+                type: string
+                format: uuid
+              name:
+                type: string

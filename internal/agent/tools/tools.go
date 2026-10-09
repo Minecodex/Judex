@@ -46,14 +46,15 @@ type Tool struct {
 // Env carries the per-run execution context tools may use; it deliberately
 // exposes NO credentials and NO write access to formal state.
 type Env struct {
-	QueryWorkPage  func(context.Context, string, map[string]any) (map[string]any, error)
-	Publish        func(context.Context, string, map[string]any, []byte) (map[string]any, error)
-	ReadContext    func(context.Context, string, string, string, int, int) (map[string]any, error)
-	RecordAnalysis func(context.Context, string, map[string]any) (map[string]any, error)
-	QueryKnowledge func(context.Context, string, string, int) (map[string]any, error)
-	ProjectID      string
-	RunID          string
-	IdentityID     string
+	RecordTaskAnalysis func(context.Context, string, map[string]any) (map[string]any, error)
+	QueryWorkPage      func(context.Context, string, map[string]any) (map[string]any, error)
+	Publish            func(context.Context, string, map[string]any, []byte) (map[string]any, error)
+	ReadContext        func(context.Context, string, string, string, int, int) (map[string]any, error)
+	RecordAnalysis     func(context.Context, string, map[string]any) (map[string]any, error)
+	QueryKnowledge     func(context.Context, string, string, int) (map[string]any, error)
+	ProjectID          string
+	RunID              string
+	IdentityID         string
 	// Sandbox executes read/write/edit/bash (nil → those tools refuse).
 	Sandbox SandboxExec
 	// ReadMaterialContent lets the live-test stub return injected Chinese

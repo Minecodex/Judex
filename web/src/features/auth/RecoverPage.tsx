@@ -96,7 +96,7 @@ export function RecoverPage() {
             <Input autoComplete="new-password" />
             <FieldError>{fieldErrors.confirm ? t(fieldErrors.confirm) : ""}</FieldError>
           </TextField>
-          <Button type="submit" isPending={mutation.isPending}>
+          <Button variant="primary" fullWidth size="lg" type="submit" isPending={mutation.isPending}>
             {mutation.isPending ? t("submitting") : t("submitRecover")}
           </Button>
           {mutation.isError && (

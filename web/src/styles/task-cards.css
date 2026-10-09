@@ -407,11 +407,6 @@
   font-size: var(--text-sm);
   margin-bottom: var(--s4) !important;
 }
-.judex-project-assignment {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: var(--s3);
-}
 .judex-project-section-heading {
   display: flex;
   align-items: center;

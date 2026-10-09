@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/kakj-go/Judex/internal/audit"
+	"github.com/kakj-go/Judex/internal/collaboration"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/kakj-go/Judex/internal/platform/events"
@@ -30,41 +31,29 @@ import (
 
 // Topic is the API projection (06 §4).
 type Topic struct {
-	ID             uuid.UUID   `json:"id"`
-	Title          string      `json:"title"`
-	Kind           string      `json:"kind"`
-	ContextType    *string     `json:"contextType"`
-	ContextID      *uuid.UUID  `json:"contextId"`
-	LastMessageSeq int64       `json:"lastMessageSeq"`
-	Links          []TopicLink `json:"links"`
-	CreatedAt      time.Time   `json:"createdAt"`
+	LinksVersion   int64                     `json:"linksVersion"`
+	ParentTopicID  *uuid.UUID                `json:"parentTopicId"`
+	ForkAfterSeq   int64                     `json:"forkAfterSeq"`
+	SourceRefs     []collaboration.SourceRef `json:"sourceRefs"`
+	ID             uuid.UUID                 `json:"id"`
+	Title          string                    `json:"title"`
+	Kind           string                    `json:"kind"`
+	ContextType    *string                   `json:"contextType"`
+	ContextID      *uuid.UUID                `json:"contextId"`
+	LastMessageSeq int64                     `json:"lastMessageSeq"`
+	Links          []TopicLink               `json:"links"`
+	CreatedAt      time.Time                 `json:"createdAt"`
 }
 
-type TopicLink struct {
-	ObjectType string    `json:"objectType"`
-	ObjectID   uuid.UUID `json:"objectId"`
-}
+type TopicLink = collaboration.Link
 
 // Message is one committed chat record (kind/author derived server-side).
-type Message struct {
-	ID                 uuid.UUID  `json:"id"`
-	TopicID            uuid.UUID  `json:"topicId"`
-	Seq                int64      `json:"seq"`
-	Kind               string     `json:"kind"`
-	AuthorUserID       *uuid.UUID `json:"authorUserId"`
-	AuthorName         *string    `json:"authorDisplayName"`
-	IdentityID         *uuid.UUID `json:"identityId"`
-	Source             *string    `json:"source"`
-	SubmissionID       *uuid.UUID `json:"submissionId"`
-	RunID              *uuid.UUID `json:"runId"`
-	Content            string     `json:"content"`
-	State              string     `json:"state"`
-	MaterialVersionIDs []string   `json:"materialVersionIds"`
-	CreatedAt          time.Time  `json:"createdAt"`
-}
+type Message = collaboration.Message
 
 // Submission is the unified entry record.
 type Submission struct {
+	PlanID              *uuid.UUID `json:"planId"`
+	DiscussionIntent    string     `json:"discussionIntent"`
 	ExpectedTaskVersion int64      `json:"expectedTaskVersion,omitempty"`
 	ReportID            *uuid.UUID `json:"reportId,omitempty"`
 	ID                  uuid.UUID  `json:"id"`
@@ -129,12 +118,16 @@ func (s *Service) CreateTopic(ctx context.Context, requester, projectID uuid.UUI
 		if _, err := memberRoleTx(ctx, tx, projectID, requester); err != nil {
 			return err
 		}
+
 		now := s.now()
 		id := uuid.New()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO topics (project_id, id, title, kind, created_by, created_at)
 			VALUES ($1,$2,$3,'discussion',$4,$5)`, projectID, id, title, requester, now); err != nil {
 			return apierrors.New(apierrors.Internal, "topic insert failed").Wrap(err)
+		}
+		if err := collaboration.ValidateLinks(ctx, tx, projectID, links); err != nil {
+			return err
 		}
 		for _, link := range links {
 			if _, err := tx.Exec(ctx, `
@@ -160,21 +153,28 @@ func (s *Service) CreateTopic(ctx context.Context, requester, projectID uuid.UUI
 			map[string]any{"change": "topic_created"}, now); err != nil {
 			return err
 		}
-		out = Topic{ID: id, Title: title, Kind: "discussion", Links: links, CreatedAt: now}
+		out = Topic{ID: id, Title: title, Kind: "discussion", Links: links, CreatedAt: now, LinksVersion: 1}
 		return nil
 	})
 	return out, err
 }
 
 // ListTopics returns discussion topics ordered by recent activity.
-func (s *Service) ListTopics(ctx context.Context, requester, projectID uuid.UUID) ([]Topic, error) {
+func (s *Service) ListTopics(ctx context.Context, requester, projectID uuid.UUID, filters ...TopicFilter) ([]Topic, error) {
+	f := TopicFilter{}
+	if len(filters) > 0 {
+		f = filters[0]
+	}
+	if f.PlanID != nil && f.TaskID != nil {
+		return nil, apierrors.Fields("scope", "choose planId or taskId")
+	}
+	if f.Kind != "" && f.Kind != "discussion" && f.Kind != "project_room" {
+		return nil, apierrors.Fields("kind", "enum")
+	}
 	if _, err := memberRoleTx(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
-	rows, err := paging.Query(ctx, s.pool, `
-		SELECT id, title, kind, context_type, context_id, last_message_seq, created_at
-		/*keys*/ FROM topics WHERE project_id=$1 AND kind<>'handoff'
-		/*page*/`, "created_at", "id", projectID)
+	rows, err := paging.Query(ctx, s.pool, topicListSQL, "t.created_at", "t.id", projectID, f.PlanID, f.TaskID, strings.TrimSpace(f.Query), f.Kind)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "topics failed").Wrap(err)
 	}
@@ -182,39 +182,25 @@ func (s *Service) ListTopics(ctx context.Context, requester, projectID uuid.UUID
 	var out []Topic
 	for rows.Next() {
 		var t Topic
-		if err := rows.Scan(&t.ID, &t.Title, &t.Kind, &t.ContextType, &t.ContextID, &t.LastMessageSeq, &t.CreatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.Title, &t.Kind, &t.ContextType, &t.ContextID, &t.LastMessageSeq, &t.CreatedAt, &t.ParentTopicID, &t.ForkAfterSeq, &t.LinksVersion); err != nil {
 			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
 		}
 		out = append(out, t)
 	}
-	return out, rows.Err()
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	if err = s.topicReferences(ctx, projectID, out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // LinkTopic attaches plan/task references (06 §4).
 func (s *Service) LinkTopic(ctx context.Context, requester, projectID, topicID uuid.UUID, links []TopicLink) error {
-	for _, link := range links {
-		if link.ObjectType != "plan" && link.ObjectType != "task" {
-			return apierrors.Fields("targetRefs[].objectType", "enum")
-		}
-	}
-	return s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
-			return err
-		}
-		if _, err := memberRoleTx(ctx, tx, projectID, requester); err != nil {
-			return err
-		}
-		for _, link := range links {
-			if _, err := tx.Exec(ctx, `
-				INSERT INTO topic_work_links (project_id, topic_id, object_type, object_id, created_at)
-				VALUES ($1,$2,$3,$4,$5)
-				ON CONFLICT (topic_id, object_type, object_id) DO NOTHING`,
-				projectID, topicID, link.ObjectType, link.ObjectID, s.now()); err != nil {
-				return apierrors.New(apierrors.Internal, "link failed").Wrap(err)
-			}
-		}
-		return nil
-	})
+	return s.changeLinks(ctx, requester, projectID, topicID, nil, links, false)
 }
 
 // ListMessages pages messages by seq (beforeSeq anchor for history fill).
@@ -222,66 +208,11 @@ func (s *Service) ListMessages(ctx context.Context, requester, projectID, topicI
 	if _, err := memberRoleTx(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
-	if limit < 1 || limit > 101 {
-		limit = 50
-	}
 	afterSeq := int64(0)
 	if len(after) > 0 {
 		afterSeq = after[0]
 	}
-	direction := "DESC"
-	if afterSeq > 0 {
-		direction = "ASC"
-	}
-	rows, err := s.pool.Query(ctx, `
-		SELECT m.id, m.topic_id, m.seq, m.kind, m.author_user_id,
-		       COALESCE(u.display_name, ''), m.identity_id, m.submission_id, m.run_id,
-		       m.content, m.state, m.created_at, (SELECT source FROM submissions WHERE id=m.submission_id), ARRAY(SELECT material_version_id::text FROM submission_materials WHERE submission_id=m.submission_id ORDER BY material_version_id)
-		FROM messages m LEFT JOIN users u ON u.id = m.author_user_id
-		WHERE m.project_id=$1 AND m.topic_id=$2 AND ($3=0 OR m.seq<$3) AND ($5=0 OR m.seq>$5)
-		ORDER BY m.seq `+direction+` LIMIT $4`, projectID, topicID, beforeSeq, limit, afterSeq)
-	if err != nil {
-		return nil, apierrors.New(apierrors.Internal, "messages failed").Wrap(err)
-	}
-	defer rows.Close()
-	var out []Message
-	for rows.Next() {
-		var (
-			m           Message
-			authorName  string
-			authorNull  uuid.NullUUID
-			identityN   uuid.NullUUID
-			submissionN uuid.NullUUID
-			runN        uuid.NullUUID
-		)
-		if err := rows.Scan(&m.ID, &m.TopicID, &m.Seq, &m.Kind, &authorNull, &authorName,
-			&identityN, &submissionN, &runN, &m.Content, &m.State, &m.CreatedAt, &m.Source, &m.MaterialVersionIDs); err != nil {
-			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
-		}
-		if authorNull.Valid {
-			id := authorNull.UUID
-			m.AuthorUserID = &id
-			m.AuthorName = &authorName
-		}
-		if identityN.Valid {
-			id := identityN.UUID
-			m.IdentityID = &id
-		}
-		if submissionN.Valid {
-			id := submissionN.UUID
-			m.SubmissionID = &id
-		}
-		if runN.Valid {
-			id := runN.UUID
-			m.RunID = &id
-		}
-		out = append(out, m)
-	}
-	// Reverse to ascending order.
-	for i, j := 0, len(out)-1; afterSeq == 0 && i < j; i, j = i+1, j-1 {
-		out[i], out[j] = out[j], out[i]
-	}
-	return out, rows.Err()
+	return collaboration.ReadHistory(ctx, s.pool, projectID, topicID, beforeSeq, afterSeq, -1, limit)
 }
 
 // CreateSubmission is the unified POST /projects/{p}/submissions entry
@@ -289,6 +220,18 @@ func (s *Service) ListMessages(ctx context.Context, requester, projectID, topicI
 // and its committed message land in one transaction keyed by
 // (project, actor, clientSubmissionId) so retries return the original.
 func (s *Service) CreateSubmission(ctx context.Context, requester, projectID uuid.UUID, sub Submission) (Submission, error) {
+	if sub.DiscussionIntent == "" {
+		sub.DiscussionIntent = "auto"
+	}
+	if sub.DiscussionIntent != "auto" && sub.DiscussionIntent != "question" && sub.DiscussionIntent != "reply" {
+		return Submission{}, apierrors.Fields("discussionIntent", "enum")
+	}
+	if sub.DiscussionIntent == "reply" && (sub.TopicID == nil || sub.TaskID == nil) {
+		return Submission{}, apierrors.Fields("topicId", "required for reply")
+	}
+	if sub.DiscussionIntent != "auto" && sub.Purpose != "message" {
+		return Submission{}, apierrors.Fields("purpose", "question and reply use message")
+	}
 	if sub.ClientSubmissionID == "" {
 		return Submission{}, apierrors.Fields("clientSubmissionId", "required")
 	}
@@ -326,17 +269,48 @@ func (s *Service) CreateSubmission(ctx context.Context, requester, projectID uui
 			return err
 		}
 		_ = role
+		if sub.PlanID != nil {
+			var valid bool
+			if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM plans WHERE id=$1 AND project_id=$2)`, sub.PlanID, projectID).Scan(&valid); err != nil {
+				return err
+			}
+			if !valid {
+				return apierrors.New(apierrors.InvalidReference, "plan not found in project")
+			}
+		}
+		if sub.TaskID != nil {
+			var plan *uuid.UUID
+			if err := tx.QueryRow(ctx, `SELECT plan_id FROM tasks WHERE id=$1 AND project_id=$2`, sub.TaskID, projectID).Scan(&plan); err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return apierrors.New(apierrors.InvalidReference, "task not found in project")
+				}
+				return err
+			}
+			if sub.PlanID != nil && (plan == nil || *plan != *sub.PlanID) {
+				return apierrors.Fields("planId", "does not match task")
+			}
+			sub.PlanID = plan
+		}
+		if sub.TaskID != nil {
+			var valid bool
+			if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM tasks WHERE project_id=$1 AND id=$2)`, projectID, *sub.TaskID).Scan(&valid); err != nil {
+				return err
+			}
+			if !valid {
+				return apierrors.New(apierrors.InvalidReference, "task not found in project")
+			}
+		}
 		// Replay: identical clientSubmissionId returns the stored result.
 		var existing Submission
 		scanErr := tx.QueryRow(ctx, `
 			SELECT id, client_submission_id, purpose, source, text, topic_id, task_id, identity_id,
-			       actor_user_id, status, created_at,expected_task_version
+			       actor_user_id, status, created_at,expected_task_version,discussion_intent,plan_id
 			FROM submissions
 			WHERE project_id=$1 AND actor_user_id=$2 AND client_submission_id=$3`,
 			projectID, requester, sub.ClientSubmissionID).
 			Scan(&existing.ID, &existing.ClientSubmissionID, &existing.Purpose, &existing.Source,
 				&existing.Text, &existing.TopicID, &existing.TaskID, &existing.IdentityID,
-				&existing.ActorUserID, &existing.Status, &existing.CreatedAt, &existing.ExpectedTaskVersion)
+				&existing.ActorUserID, &existing.Status, &existing.CreatedAt, &existing.ExpectedTaskVersion, &existing.DiscussionIntent, &existing.PlanID)
 		if scanErr == nil {
 			// Attach message ref if present.
 			var messageID uuid.NullUUID
@@ -368,7 +342,7 @@ func (s *Service) CreateSubmission(ctx context.Context, requester, projectID uui
 			if err := tx.QueryRow(ctx, `
 				SELECT v.state, m.project_id FROM material_versions v
 				JOIN materials m ON m.id=v.material_id
-				WHERE v.id=$1`, versionID).Scan(&state, &materialProject); err != nil {
+				WHERE v.id=$1 AND m.deleted_at IS NULL`, versionID).Scan(&state, &materialProject); err != nil {
 				if errors.Is(err, pgx.ErrNoRows) {
 					return apierrors.New(apierrors.InvalidReference, "material version not found")
 				}
@@ -394,6 +368,11 @@ func (s *Service) CreateSubmission(ctx context.Context, requester, projectID uui
 				return err
 			}
 			created.ReportID = &report
+		}
+		if sub.TaskID != nil && created.ReportID == nil {
+			if _, err := collaboration.EnqueueAnalysis(ctx, tx.Tx, projectID, *sub.TaskID, requester, "submission", created.ID, sub.TopicID, s.now()); err != nil {
+				return err
+			}
 		}
 		out = created
 		return nil
@@ -424,16 +403,19 @@ func (s *Service) submissionMaterials(ctx context.Context, q interface {
 // finalizeSubmissionTx writes submission + message + links atomically and
 // bumps topic.last_message_seq under the project lock.
 func (s *Service) finalizeSubmissionTx(ctx context.Context, tx pgx.Tx, requester, projectID uuid.UUID, sub Submission, materialCheck func(uuid.UUID) error) (Submission, error) {
+	if sub.DiscussionIntent == "" {
+		sub.DiscussionIntent = "auto"
+	}
 	now := s.now()
 	id := uuid.New()
 	hash := submissionHash(sub)
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO submissions (project_id, id, actor_user_id, identity_id, source, client_submission_id,
-			text, topic_id, task_id, purpose, status, payload_hash, expected_task_version, code_refs_json, created_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'ready',$11,$12,'[]',$13)`,
+			text, topic_id, task_id, purpose, status, payload_hash, expected_task_version, code_refs_json, created_at,discussion_intent,plan_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'ready',$11,$12,'[]',$13,$14,$15)`,
 		projectID, id, requester, nullableUUID(sub.IdentityID), sub.Source, sub.ClientSubmissionID,
 		sub.Text, nullableUUID(sub.TopicID), nullableUUID(sub.TaskID), sub.Purpose,
-		hash, sub.ExpectedTaskVersion, now); err != nil {
+		hash, sub.ExpectedTaskVersion, now, sub.DiscussionIntent, sub.PlanID); err != nil {
 		var pgErr interface{ SQLState() string }
 		if errors.As(err, &pgErr) && pgErr.SQLState() == "23505" {
 			return Submission{}, apierrors.New(apierrors.IdempotencyConflict, "duplicate clientSubmissionId")
@@ -454,6 +436,9 @@ func (s *Service) finalizeSubmissionTx(ctx context.Context, tx pgx.Tx, requester
 			INSERT INTO submission_materials (project_id, submission_id, material_version_id)
 			VALUES ($1,$2,$3)`, projectID, id, vid); err != nil {
 			return Submission{}, apierrors.New(apierrors.Internal, "submission material failed").Wrap(err)
+		}
+		if _, err := events.AppendProjectEvent(ctx, tx, projectID, "material.changed", "material_version", vid.String(), nil, map[string]any{"versionId": vid, "submissionId": id}, now); err != nil {
+			return Submission{}, err
 		}
 	}
 	messageID := uuid.Nil
@@ -503,7 +488,7 @@ func nullableUUID(id *uuid.UUID) any {
 }
 
 func submissionHash(sub Submission) string {
-	payload := map[string]any{"text": sub.Text, "purpose": sub.Purpose, "materials": sub.MaterialVersionIDs, "topic": sub.TopicID, "task": sub.TaskID, "identity": sub.IdentityID, "expectedVersion": sub.ExpectedTaskVersion}
+	payload := map[string]any{"plan": sub.PlanID, "text": sub.Text, "purpose": sub.Purpose, "materials": sub.MaterialVersionIDs, "topic": sub.TopicID, "task": sub.TaskID, "identity": sub.IdentityID, "expectedVersion": sub.ExpectedTaskVersion, "discussionIntent": sub.DiscussionIntent}
 	if len(sub.MaterialVersionIDs) == 0 {
 		payload["materials"] = []string{}
 	}
@@ -517,9 +502,13 @@ func (s *Service) GetTopic(ctx context.Context, user, project, topic uuid.UUID) 
 		return Topic{}, err
 	}
 	var out Topic
-	err := s.pool.QueryRow(ctx, `SELECT id,title,kind,context_type,context_id,last_message_seq,created_at FROM topics WHERE id=$1 AND project_id=$2`, topic, project).Scan(&out.ID, &out.Title, &out.Kind, &out.ContextType, &out.ContextID, &out.LastMessageSeq, &out.CreatedAt)
+	err := s.pool.QueryRow(ctx, `SELECT id,title,kind,context_type,context_id,last_message_seq,created_at,parent_topic_id,fork_after_seq,links_version FROM topics WHERE id=$1 AND project_id=$2`, topic, project).Scan(&out.ID, &out.Title, &out.Kind, &out.ContextType, &out.ContextID, &out.LastMessageSeq, &out.CreatedAt, &out.ParentTopicID, &out.ForkAfterSeq, &out.LinksVersion)
 	if err != nil {
 		return out, apierrors.New(apierrors.NotFound, "topic not found")
 	}
-	return out, nil
+	items := []Topic{out}
+	if err = s.topicReferences(ctx, project, items); err != nil {
+		return out, err
+	}
+	return items[0], nil
 }

@@ -1,0 +1,26 @@
+.judex-local-connection { display:flex;flex-direction:column;gap:var(--s6); }
+.judex-local-connection .judex-page-heading { margin-bottom:0; }
+.judex-connection-downloads { display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:var(--s5); }
+.judex-download-card { display:flex;flex-direction:column;align-items:flex-start;padding:var(--s6);gap:var(--s5);min-width:0; }
+.judex-download-card-heading { display:flex;align-items:flex-start;gap:var(--s3);min-width:0; }
+.judex-download-mark { display:flex;align-items:center;justify-content:center;width:var(--card-mark);height:var(--card-mark);border-radius:var(--r-md);background:var(--green-bg);color:var(--green-ink);flex-shrink:0; }
+.judex-download-mark svg { display:block;width:var(--icon-lg);height:var(--icon-lg); }
+.judex-download-mark.judex-color-violet { background:var(--violet-bg);color:var(--violet-ink); }
+.judex-download-card h2,.judex-connection-guide h2 { font-size:var(--text-lg);font-weight:var(--weight-semibold);margin:0 0 var(--s2); }
+.judex-download-card p { color:var(--muted);font-size:var(--text-sm);line-height:var(--leading-base);margin:0; }
+.judex-platform-downloads { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s4);width:100%;margin-top:auto; }
+.judex-platform-downloads > div { display:flex;flex-direction:column;gap:var(--s3);min-width:0; }
+.judex-platform-downloads .judex-control { width:100%;padding:var(--s3);font-size:var(--text-sm); }
+.judex-download-card small { font-size:var(--text-xs);color:var(--muted);line-height:var(--leading-base); }
+.judex-download-meta { margin-top:auto; }
+.judex-connection-guide { padding:var(--s6);display:flex;flex-direction:column;gap:var(--s4); }
+.judex-connection-guide ol { margin:0;padding-left:var(--s5);color:var(--muted);font-size:var(--text-sm);line-height:var(--leading-wide); }
+.judex-connection-guide li+li { margin-top:var(--s2); }
+.judex-connection-commands { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s4); }
+.judex-connection-commands > div { padding:var(--s3);background:var(--surface-soft);border-radius:var(--r-sm);min-width:0; }
+.judex-command-heading { display:flex;justify-content:space-between;align-items:center;gap:var(--s2);color:var(--muted);font-size:var(--text-xs);margin-bottom:var(--s2); }
+.judex-connection-commands code { display:block;font-family:var(--font-mono);font-size:var(--text-sm);line-height:var(--leading-base);overflow-wrap:anywhere;white-space:pre-wrap; }
+.judex-connection-install-title { font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0; }
+.judex-connection-footer { display:flex;justify-content:space-between;align-items:center;gap:var(--s4); }
+.judex-connection-footer p,.judex-connection-status { color:var(--muted);font-size:var(--text-sm);line-height:var(--leading-base);margin:0; }
+@media (max-width:1250px) { .judex-connection-downloads { grid-template-columns:minmax(0,1fr); }.judex-connection-commands { grid-template-columns:minmax(0,1fr); } }

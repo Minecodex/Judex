@@ -1,4 +1,10 @@
 export const membershipZh = {
+  teamAssignOpen: '分配成员', teamAssignTitle: '分配职位：{position}', teamAssignMember: '选择项目成员',
+  teamAssignHint: '选择已加入项目的成员承担此职位。同一职位可由多位成员分别承担。',
+  teamAssignConfirm: '确认分配', teamAssigning: '正在分配…', teamAssignNoMembers: '现有成员均已承担此职位，可邀请新成员加入项目。',
+  teamAssignBoundary: '新增独立任职身份，已有工作、记录和个人偏好按原有规则保留。',
+  teamAssignSuccess: '已将“{position}”分配给 {name}', teamAssignFailed: '分配失败，请重试。',
+  teamPositionMembers: '承担成员', teamPositionUnassigned: '尚未分配成员', teamAssignedIdentities: '成员的任职与工作', teamBindingReview: '流程节点待核对',
   roleOwner: "项目创建人",
   roleManager: "项目管理员",
   roleMember: "项目成员",
@@ -94,6 +100,12 @@ export const membershipZh = {
   invitationAssignedCount: "已指定 {count} 个机器人",
 };
 export const membershipEn: Record<keyof typeof membershipZh, string> = {
+  teamAssignOpen: 'Assign member', teamAssignTitle: 'Assign position: {position}', teamAssignMember: 'Choose a project member',
+  teamAssignHint: 'Choose an existing member for this position. Multiple members can hold independent work identities for the same position.',
+  teamAssignConfirm: 'Confirm assignment', teamAssigning: 'Assigning…', teamAssignNoMembers: 'Every current member already holds this position. Invite another member to the project.',
+  teamAssignBoundary: 'Create an independent work identity while preserving existing work, records and personal preferences.',
+  teamAssignSuccess: 'Assigned “{position}” to {name}', teamAssignFailed: 'Could not assign this position. Please try again.',
+  teamPositionMembers: 'Assigned members', teamPositionUnassigned: 'No member assigned', teamAssignedIdentities: 'Member identities and work', teamBindingReview: 'Workflow binding needs review',
   roleOwner: "Project creator",
   roleManager: "Project manager",
   roleMember: "Project member",

@@ -1,114 +1,12 @@
-import {chooseValue} from "./workspace-helpers";
-import { test, expect } from "@playwright/test";
-import {
-  openAccount,
-  openSettings,
-  openTool,
-  selectPerson,
-} from "./workspace-helpers";
-test("account menu owns appearance, invitation and sign-out; settings are a separate reversible page", async ({
-  page,
-}) => {
-  const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/?project=leaf&view=topic&item=labels");
-  await expect(page.getByTestId("chat-new-tab")).toHaveCount(0);
-  await expect(page.getByTestId("new-discussion")).toHaveText("新建讨论");
-  await expect(page.getByTestId("next-theme")).toHaveCount(0);
-  await page.getByTestId("work-discussion-input").fill("返回后仍保留");
-  await openTool(page, "plans");
-  await openAccount(page);
-  await expect(page.getByTestId("account-invite")).toBeDisabled();
-  await expect(page.getByTestId("account-logout")).toBeVisible();
-  await page.getByTestId("next-theme").click();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await page.getByTestId("account-settings").click();
-  await expect(page.getByTestId("settings-page")).toBeVisible();
-  await expect(page.locator(".judex-chat-app")).toBeHidden();
-  await chooseValue(page,"settings-language","en");
-  await expect(
-    page.getByRole("heading", { name: "General", exact: true }),
-  ).toBeVisible();
-  await page.getByTestId("settings-section-preferences").click();
-  await page.getByTestId("next-personal-prompt").fill("A draft in settings");
-  await page.screenshot({
-    path: test.info().outputPath("settings-dark-en.png"),
-    animations: "disabled",
-  });
-  await page.getByTestId("settings-back").click();
-  await expect(page.getByTestId("work-discussion-input")).toHaveValue(
-    "返回后仍保留",
-  );
-  await expect(page.getByTestId("workspace-tab-plans")).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await openSettings(page, "preferences");
-  await expect(page.getByTestId("next-personal-prompt")).toHaveValue(
-    "A draft in settings",
-  );
-  await page.reload();
-  await expect(page.getByTestId("settings-page")).toBeVisible();
-  await expect(page.getByTestId("next-personal-prompt")).toHaveValue(
-    "A draft in settings",
-  );
-  expect(errors).toEqual([]);
+import {test,expect} from '@playwright/test';
+import {openChat,demoState} from './cooperation-helpers';
+import {openAccount,openSettings,selectPerson,toggleTheme,toggleLanguage} from './workspace-helpers';
+test('top account owns appearance and full settings return preserves chat and private drafts',async({page})=>{
+ await openChat(page);await selectPerson(page,'林然');await expect(page.getByTestId('new-discussion')).toHaveText('新建会话');await expect(page.locator('.judex-chat-sidebar [data-testid=account-menu-button]')).toHaveCount(0);await page.getByTestId('work-discussion-input').fill('返回后仍保留');await toggleTheme(page);await expect(page.locator('html')).toHaveAttribute('data-theme','dark');await openSettings(page,'preferences');await page.getByTestId('next-personal-prompt').fill('只属于本人职位的草稿');await page.keyboard.press('Escape');await page.getByTestId('settings-back').click();await expect(page.getByTestId('work-discussion-input')).toHaveValue('返回后仍保留');await openSettings(page,'preferences');await expect(page.getByTestId('next-personal-prompt')).toHaveValue('只属于本人职位的草稿');await page.reload();await expect(page.getByTestId('next-personal-prompt')).toHaveValue('只属于本人职位的草稿');await expect(page.getByTestId('settings-section-preferences')).toHaveCount(0);
 });
-test("managers can invite from the account menu, project configuration is not a work tab", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await selectPerson(page, "林然");
-  await openAccount(page);
-  await page.getByTestId("account-invite").click();
-  await page.getByTestId("next-invite-name").fill("新伙伴");
-  await page.getByTestId("invite-position-build-role").check();
-  await page.getByTestId("next-create-invite").click();
-  const s = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem("judex.web.preview.v1")!),
-  );
-  expect(s.invites.some((i: any) => i.person === "新伙伴")).toBe(true);
-  await page.getByTestId("workspace-add-tool").click();
-  for (const id of [
-    "preferences",
-    "project-settings",
-    "team",
-    "flows",
-    "local",
-  ])
-    await expect(page.getByTestId("work-nav-" + id)).toHaveCount(0);
-  await openSettings(page, "project");
-  await expect(page.getByTestId("project-discussion-limit")).toBeEnabled();
-  await page.getByTestId("settings-back").click();
-  await expect(page.getByTestId("workspace-tab-settings:project")).toHaveCount(
-    0,
-  );
+test('project card invitation requires management and stays separate from workspace tabs',async({page})=>{
+ await page.goto('/');await selectPerson(page,'林然');const card=page.locator('.judex-co-project-card').filter({has:page.getByTestId('project-enter-leaf')});await card.getByRole('button',{name:'邀请用户',exact:true}).click();await page.getByTestId('next-invite-name').fill('新伙伴');await page.getByTestId('invite-position-build-role').click();await page.getByTestId('next-create-invite').click();expect((await demoState(page)).invites.some((v:any)=>v.person==='新伙伴')).toBe(true);await page.keyboard.press('Escape');await card.getByTestId('project-enter-leaf').click();await openSettings(page,'project');await expect(page.getByTestId('project-discussion-limit')).toBeEnabled();await page.getByTestId('settings-back').click();await selectPerson(page,'顾言');await page.locator('.judex-co-brand').click();await expect(page.locator('.judex-co-project-card').filter({has:page.getByTestId('project-enter-leaf')}).getByRole('button',{name:'邀请用户',exact:true})).toBeDisabled();await expect(page.getByTestId('workspace-tab-settings:project')).toHaveCount(0);
 });
-test("leaving preview does not erase work and cannot silently re-enter on reload", async ({
-  page,
-}) => {
-  await page.goto("/");
-  // 演示工作区懒加载：先等 seed 写入，再取快照
-  await expect
-    .poll(
-      async () =>
-        (await page.evaluate(() => localStorage.getItem("judex.web.preview.v1"))) !==
-        null,
-      { timeout: 10000 },
-    )
-    .toBe(true);
-  const before = await page.evaluate(() =>
-    localStorage.getItem("judex.web.preview.v1"),
-  );
-  await openAccount(page);
-  await page.getByTestId("account-logout").click();
-  await expect(page.getByText("已退出交互预览", { exact: true })).toBeVisible();
-  await expect(page.locator(".judex-chat-app")).toHaveCount(0);
-  await page.reload();
-  await expect(page.getByText("已退出交互预览", { exact: true })).toBeVisible();
-  expect(
-    await page.evaluate(() => localStorage.getItem("judex.web.preview.v1")),
-  ).toBe(before);
-  await page.getByTestId("return-preview").click();
-  await expect(page.getByTestId("account-menu-button")).toBeVisible();
+test('leaving preview retains work and reload does not silently sign in again',async({page})=>{
+ await page.goto('/');await expect(page.getByTestId('account-menu-button')).toBeVisible();const before=await page.evaluate(()=>localStorage.getItem('judex.web.preview.v1'));await openAccount(page);await page.getByTestId('account-logout').click();await expect(page.getByText('已退出交互预览',{exact:true})).toBeVisible();await page.reload();await expect(page.getByText('已退出交互预览',{exact:true})).toBeVisible();expect(await page.evaluate(()=>localStorage.getItem('judex.web.preview.v1'))).toBe(before);await page.getByTestId('return-preview').click();await expect(page.getByTestId('account-menu-button')).toBeVisible();
 });

@@ -25,6 +25,8 @@ var intentOperations = map[string]bool{
 	"proposal.submit": true, "proposal.decision": true, "task.acceptance": true, "task.reopen": true,
 	"plan.acceptance": true, "plan.reopen": true, "handoff.send": true,
 	"handoff.decision": true, "project.create": true, "workflow.publish": true,
+	"topic.fork": true, "discussion_suggestion.resolve": true,
+	"task.skip": true, "task.restore": true,
 }
 
 // IntentTTL bounds the confirmation window (07 §5 默认 10min).
@@ -55,7 +57,7 @@ func (s *Service) CreateIntent(ctx context.Context, requester, projectID uuid.UU
 	}
 	sum := sha256.Sum256(raw)
 	canonicalHash := hex.EncodeToString(sum[:])
-	if operation == "project.create" && reviewHash != canonicalHash {
+	if (operation == "project.create" || operation == "topic.fork" || operation == "discussion_suggestion.resolve") && reviewHash != canonicalHash {
 		return nil, apierrors.New(apierrors.ReviewStale, "project payload hash changed")
 	}
 	if reviewHash == "" {

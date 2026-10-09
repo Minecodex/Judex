@@ -1,3 +1,5 @@
+import {cooperationApiActions} from "../cooperation/commands";
+import {runtimeApiActions} from './apiRuntimeActions';
 // api 模式命名动作执行器（P2）：与 actionRegistry 命名一一对应的真实 REST 写操作。
 // 未在 apiActions 中出现的动作在 api 模式仍不可用（调用方提示 shellUnavailable）。
 // 约定：写操作带幂等键；需要 reviewHash/expectedVersion 的操作先读冻结引用再提交。
@@ -6,6 +8,8 @@ import type { components } from "../../lib/api/schema";
 import type { ActResult, ActionPayloads } from "./storeTypes";
 import type { Evidence, WorkState } from "./types";
 import type { ProposalInput } from "../chat/proposalModel";
+import {workflowApiActions} from './apiWorkflowActions';
+import {apiCollaborationActions} from './apiCollaborationActions';
 
 type Schema = components["schemas"];
 type ApiProposal = Schema["Proposal"];
@@ -25,7 +29,6 @@ type ApiPosition = Schema["Position"];
 type ApiMember = Schema["ProjectMember"];
 type ApiIdentity = Schema["Identity"];
 type ApiInvitation = Schema["Invitation"];
-type ApiPreferences = Schema["PersonalPreferences"];
 type ApiWorkflow = Schema["Workflow"];
 type ApiWorkflowVersion = Schema["WorkflowVersion"];
 
@@ -90,11 +93,12 @@ async function memberUserId(
   const members = await listItems<ApiMember>(
     `/projects/${projectId}/members?limit=100`,
   );
-  const user = members.find(
+  const candidates = members.filter(
     (m) => m.displayName === displayName && m.state === "active",
   );
-  if (!user) throw new APIError(404, "NOT_FOUND", "member not found");
-  return user.userId;
+  if (!candidates.length) throw new APIError(404, "NOT_FOUND", "member not found");
+  if (candidates.length > 1) throw new APIError(409, "INVALID_REFERENCE", "select a member by user ID");
+  return candidates[0].userId;
 }
 
 // ---- 附件：demo Evidence（dataURL/文本）还原成 File 走分片上传 ----
@@ -114,7 +118,7 @@ type UploadSession = {
   partCount: number;
 };
 
-async function uploadFile(projectId: string, file: File): Promise<string> {
+export async function uploadFile(projectId: string, file: File, purpose=""): Promise<string> {
   const base = `/projects/${projectId}/uploads`;
   const checksum = await sha256(await file.arrayBuffer());
   const open = await request<{ items: UploadSession[] }>(base);
@@ -126,6 +130,7 @@ async function uploadFile(projectId: string, file: File): Promise<string> {
       sha256: checksum,
       mime: file.type || "application/octet-stream",
       kind: "file",
+      ...(purpose?{purpose}:{}),
     }));
   for (let part = 0; part < upload.partCount; part++) {
     const bytes = await file
@@ -161,13 +166,13 @@ async function evidenceToFile(evidence: Evidence): Promise<File> {
   });
 }
 
-async function uploadEvidence(
+export async function uploadEvidence(
   projectId: string,
   files: Evidence[] | undefined,
 ): Promise<string[]> {
   const ids: string[] = [];
   for (const evidence of files ?? [])
-    ids.push(await uploadFile(projectId, await evidenceToFile(evidence)));
+    ids.push(evidence.versionId??await uploadFile(projectId, await evidenceToFile(evidence)));
   return ids;
 }
 
@@ -198,12 +203,15 @@ async function findHandoffSource(
 }
 
 // 参与者身份：取参与者列表中绑定当前用户的 identity。
-function actingIdentity(
+export function actingIdentity(
   ctx: ApiActContext,
   task: ApiTask,
+  selected?:string,
 ): string | undefined {
-  return task.participants?.find((p) => p.displayName === ctx.displayName)
-    ?.identityId;
+  const held=(task.participants??[]).filter(p=>ctx.state.seats.some(s=>s.id===p.identityId&&s.userId===ctx.userId&&(!s.status||s.status==="active"))).map(p=>p.identityId);
+  if(selected){if(!held.includes(selected))throw new APIError(403,"FORBIDDEN","selected responsibility is no longer held");return selected;}
+  if(held.length!==1)throw new APIError(422,"VALIDATION_ERROR","choose a current task responsibility");
+  return held[0];
 }
 
 // 提交并（按当前用户可决定的席位）批准一个提案；返回提案 id。
@@ -289,12 +297,15 @@ async function sendMessage(
   topicId: string,
   body: string,
   files: Evidence[] | undefined,
+  taskId?:string,planId?:string,
 ): Promise<void> {
   const materialVersionIds = await uploadEvidence(projectId, files);
   await post(`/projects/${projectId}/submissions`, {
     clientSubmissionId: crypto.randomUUID(),
     purpose: "message",
     topicId,
+    ...(planId?{planId}:{}),
+      ...(taskId?{taskId,discussionIntent:"reply"}:{}),
     // 服务端要求非空 text；纯附件消息退化为首个附件名。
     text: body.trim() || (files?.[0]?.name ?? ""),
     materialVersionIds,
@@ -304,15 +315,26 @@ async function sendMessage(
 export const apiActions: {
   [K in keyof ActionPayloads]?: Executor<K>;
 } = {
+  ...runtimeApiActions,
+  proposeWorkChange:async(projectId,p)=>{
+    const scope:Record<string,unknown>={},assignment:Record<string,unknown>={};let requirements:unknown;
+    for(const [key,value] of Object.entries(p.fields)){if(['title','goal','expectedOutput','acceptanceCriteria'].includes(key))scope[key]=value;else if(['ownerIdentityId','reviewerIdentityId','participantIdentityIds'].includes(key))assignment[key]=value;else if(key==='requirements')requirements=value;}
+    const changes:ApiProposalChange[]=[];let version=p.expectedVersion;
+    for(const [operation,fields] of [['update_scope',scope],['set_assignment',assignment],['set_requirements',requirements?{requirements}:{}]] as const){if(Object.keys(fields).length)changes.push({operation,targetType:p.kind,targetId:p.id,expectedVersion:version++,fields});}
+    const proposal=await post<ApiProposal>(`/projects/${projectId}/proposals`,{kind:'work_change',reason:p.reason,changes});const review=await fetchReview(projectId,proposal.id);await post(`/projects/${projectId}/proposals/${proposal.id}/submit`,{expectedVersion:proposal.version,draftHash:review.reviewHash});return {ok:true,id:proposal.id};
+  },
+  ...workflowApiActions,
+  ...apiCollaborationActions,
+ ...cooperationApiActions,
   topicMessage: async (projectId, p) => {
-    await sendMessage(projectId, p.topicId, p.body, p.files);
+    await sendMessage(projectId, p.topicId, p.body, p.files,p.taskId,p.planId);
     return { ok: true, id: p.topicId };
   },
   sendTopicMessage: async (projectId, p, ctx) => {
     if (p.topicId)
       return apiActions.topicMessage!(
         projectId,
-        { topicId: p.topicId, body: p.body, files: p.files },
+        { topicId: p.topicId, body: p.body, files: p.files,taskId:p.taskId,planId:p.planId },
         ctx,
       );
     if (p.files?.length) {
@@ -338,20 +360,7 @@ export const apiActions: {
     });
     return { ok: true, id: topic.id };
   },
-  registerResource: async (projectId, p) => {
-    const materialVersionIds = await uploadEvidence(projectId, p.files);
-    const topic = await post<ApiTopic>(`/projects/${projectId}/topics`, {
-      title: p.purpose,
-    });
-    await post(`/projects/${projectId}/submissions`, {
-      clientSubmissionId: crypto.randomUUID(),
-      purpose: "material",
-      topicId: topic.id,
-      text: p.purpose,
-      materialVersionIds,
-    });
-    return { ok: true, id: topic.id };
-  },
+  registerResource:async(projectId,p)=>{const ids=await uploadEvidence(projectId,p.files);await post('/projects/'+projectId+'/submissions',{clientSubmissionId:crypto.randomUUID(),purpose:'material',text:p.purpose,materialVersionIds:ids,...(p.taskId?{taskId:p.taskId}:p.planId?{planId:p.planId}:{})});return {ok:true};},
   discussTopic: async (projectId, p, ctx) => {
     const page = await request<{ items: ApiMessage[] }>(
       `/projects/${projectId}/topics/${p.topicId}/messages?limit=50`,
@@ -376,19 +385,20 @@ export const apiActions: {
       const task = await fetchTask(projectId, p.taskId);
       await post(`/projects/${projectId}/tasks/${p.taskId}/start`, {
         expectedVersion: task.version,
-        identityId: actingIdentity(ctx, task),
+        identityId: actingIdentity(ctx, task, p.identityId),
       });
       return { ok: true, id: p.taskId };
     }
     if (p.op === "accept") {
-      const review = await request<ApiAcceptanceReview>(
+      const review = p.frozenReview ?? await request<ApiAcceptanceReview>(
         `/projects/${projectId}/tasks/${p.taskId}/acceptance-review`,
       );
       await post(`/projects/${projectId}/tasks/${p.taskId}/acceptances`, {
         reviewId: review.reviewId,
         reviewHash: review.reviewHash,
         expectedVersion: review.targetVersion ?? 1,
-        decision: "accept",
+        decision:p.decision??"accept",
+        ...(p.reason?{reason:p.reason}:{}),
       });
       return { ok: true, id: p.taskId };
     }
@@ -408,7 +418,7 @@ export const apiActions: {
     await post(`/projects/${projectId}/tasks/${p.taskId}/reports`, {
       kind: "delivery",
       text: p.summary.trim() || (p.files[0]?.name ?? ""),
-      identityId: actingIdentity(ctx, task),
+      identityId: actingIdentity(ctx, task, p.identityId),
       materialVersionIds,
       expectedTaskVersion: task.version,
     });
@@ -440,7 +450,7 @@ export const apiActions: {
       return { ok: true, id: p.planId };
     }
     if (p.op === "accept") {
-      const review = await request<ApiAcceptanceReview>(
+      const review = p.frozenReview ?? await request<ApiAcceptanceReview>(
         `/projects/${projectId}/plans/${p.planId}/acceptance-review`,
       );
       await post(`/projects/${projectId}/plans/${p.planId}/acceptances`, {
@@ -464,6 +474,7 @@ export const apiActions: {
   },
   sourceDecision: async (projectId, p) => {
     const source = await findHandoffSource(projectId, p.handoffId, p.sourceId);
+    if(source.currentVersion!==p.revision)throw new APIError(409,"SOURCE_VERSION_CONFLICT","source changed");
     await post(
       `/projects/${projectId}/handoffs/${p.handoffId}/sources/${p.sourceId}/decisions`,
       {
@@ -477,6 +488,15 @@ export const apiActions: {
   },
   reviseSource: async (projectId, p, ctx) => {
     const source = await findHandoffSource(projectId, p.handoffId, p.sourceId);
+    if(source.currentVersion!==p.revision)throw new APIError(409,"SOURCE_VERSION_CONFLICT","source changed");
+    let cursor="",held=false;
+    do{
+      const identities=await request<{items:ApiIdentity[];nextCursor?:string|null}>(`/projects/${projectId}/identities?limit=100${cursor?"&cursor="+encodeURIComponent(cursor):""}`);
+      const identity=identities.items.find(v=>v.id===source.senderIdentityId);
+      if(identity){held=identity.status==="active"&&identity.currentBinding?.userId===ctx.userId;break;}
+      cursor=identities.nextCursor??"";
+    }while(cursor);
+    if(!held)throw new APIError(403,"FORBIDDEN","only the current sender may revise a source");
     const task = await fetchTask(projectId, source.sourceTaskId);
     // 新版本以交付报告为证据载体：有附件先补一条交付报告，否则复用最新报告。
     let reportId = task.latestReportId ?? null;
@@ -486,7 +506,7 @@ export const apiActions: {
         {
           kind: "delivery",
           text: p.summary,
-          identityId: actingIdentity(ctx, task),
+          identityId: actingIdentity(ctx, task,p.identityId??(task.participants?.some(v=>v.identityId===source.senderIdentityId)?source.senderIdentityId:undefined)),
           materialVersionIds: await uploadEvidence(projectId, p.files),
           expectedTaskVersion: task.version,
         },
@@ -521,14 +541,15 @@ export const apiActions: {
     );
     return { ok: true, id: p.handoffId };
   },
-  proposeHandoff: async (projectId, p) => {
+  proposeHandoff: async (projectId, p,ctx) => {
     const target = await fetchTask(projectId, p.target);
     const sources: { sourceTaskId: string; senderIdentityId: string }[] = [];
     for (const id of p.ids) {
       const task = id === p.target ? target : await fetchTask(projectId, id);
-      const sender = task.participants?.[0]?.identityId;
+      const sender = p.senderIdentityIds?.[id]??actingIdentity(ctx,task);
       if (!sender)
-        throw new APIError(422, "VALIDATION_ERROR", "source task has no participant");
+        throw new APIError(422, "VALIDATION_ERROR", "choose a sender responsibility for each source");
+      if(p.senderIdentityIds?.[id]&&!ctx.state.seats.some(s=>s.id===sender&&(!s.status||s.status==="active")&&!!s.userId))throw new APIError(422,"INVALID_REFERENCE","sender responsibility is not currently bound");
       sources.push({ sourceTaskId: id, senderIdentityId: sender });
     }
     const handoff = await post<ApiHandoff>(`/projects/${projectId}/handoffs`, {
@@ -576,7 +597,8 @@ export const apiActions: {
     return { ok: true, id: proposal.id };
   },
   decideProposal: async (projectId, p) => {
-    const review = await fetchReview(projectId, p.proposalId);
+    const review = p.frozenReview ?? await fetchReview(projectId, p.proposalId);
+    if(review.version!==undefined&&review.version!==p.revision)throw new APIError(409,"VERSION_CONFLICT","proposal review changed");
     await decideOnReview(
       projectId,
       p.proposalId,
@@ -688,15 +710,23 @@ export const apiActions: {
         expectedVersion: current.currentVersion,
         name: p.value.name,
         prompt: p.value.prompt,
+        publicSummary: p.value.publicSummary ?? current.publicSummary,
+        modelId: current.modelId ?? null,
         nodeBindings,
       });
       return { ok: true, id: p.value.id };
     }
     const position = await post<ApiPosition>(
       `/projects/${projectId}/positions`,
-      { name: p.value.name, prompt: p.value.prompt, nodeBindings },
+      { name: p.value.name, prompt: p.value.prompt, publicSummary: p.value.publicSummary, nodeBindings },
     );
     return { ok: true, id: position.id };
+  },
+  importPositionPresets: async (projectId, p) => {
+    const result = await post<Schema['ImportedPositionPresets']>(`/projects/${projectId}/positions/import-presets`, {
+      catalogVersion: p.catalogVersion, scenarioId: p.scenarioId, roleIds: p.roleIds, locale: p.locale,
+    });
+    return {ok: true, createdCount: result.items.length, skippedCount: result.skipped.length};
   },
   // 语义差异：demo 按"姓名"邀请，REST 按 targetEmail（api 模式输入即邮箱）。
   invitePerson: async (projectId, p) => {
@@ -718,14 +748,14 @@ export const apiActions: {
     return { ok: true, id: p.invitationId };
   },
   assignPositions: async (projectId, p) => {
-    const userId = await memberUserId(projectId, p.person);
+    const userId = p.userId ?? await memberUserId(projectId, p.person);
     for (const positionId of p.ids)
       await post(`/projects/${projectId}/identities`, { positionId, userId });
     return { ok: true };
   },
   // demo 无 reason 输入；后端必填，给固定文案。
   replaceSeat: async (projectId, p) => {
-    const newUserId = await memberUserId(projectId, p.to);
+    const newUserId = p.userId ?? await memberUserId(projectId, p.to);
     const identities = await listItems<ApiIdentity>(
       `/projects/${projectId}/identities?limit=100`,
     );
@@ -739,11 +769,9 @@ export const apiActions: {
     return { ok: true, id: p.seatId };
   },
   personalPrompt: async (projectId, p) => {
-    const preferences = await request<ApiPreferences>(
-      `/projects/${projectId}/me/preferences`,
-    );
     await put(`/projects/${projectId}/me/preferences`, {
-      expectedRevision: preferences.revision,
+      positionId: p.positionId,
+      expectedRevision: p.expectedRevision,
       prompt: p.prompt,
     });
     return { ok: true };

@@ -110,7 +110,7 @@ func (j *journal) ToolStart(ctx context.Context, call model.ToolCall) error {
 		switch call.Name {
 		case "read", "write", "edit", "bash":
 			effect = "sandbox"
-		case "propose_changes", "record_analysis", "publish":
+		case "propose_changes", "record_analysis", "record_task_analysis", "publish":
 			effect = "draft"
 		}
 		if _, err = tx.Exec(ctx, `INSERT INTO tool_calls(project_id,id,run_id,tool_call_id,name,args_hash,effect_class,state,started_at) VALUES($1,$2,$3,$4,$5,$6,$7,'prepared',now())`, j.project, uuid.New(), j.run, call.ID, call.Name, hex.EncodeToString(sum[:]), effect); err != nil {

@@ -1,9 +1,12 @@
-# 讨论、材料与事件对象（docs/plans/v1/04、06 §4）
 components:
   schemas:
     Topic:
       type: object
-      required: [id, title, kind, createdAt]
+      required:
+        - id
+        - title
+        - kind
+        - createdAt
       properties:
         id:
           type: string
@@ -13,7 +16,10 @@ components:
           maxLength: 200
         kind:
           type: string
-          enum: [project_room, discussion, handoff]
+          enum:
+            - project_room
+            - discussion
+            - handoff
         contextType:
           type:
             - string
@@ -29,20 +35,41 @@ components:
           type: array
           items:
             type: object
-            required: [objectType, objectId]
+            required:
+              - objectType
+              - objectId
             properties:
               objectType:
                 type: string
-                enum: [plan, task]
+                enum:
+                  - plan
+                  - task
               objectId:
                 type: string
                 format: uuid
         createdAt:
           type: string
           format: date-time
+        parentTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        forkAfterSeq:
+          type: integer
+          minimum: 0
+        sourceRefs:
+          type: array
+          items:
+            $ref: ../components/collaboration.yaml#/components/schemas/ConversationSourceRef
+        linksVersion:
+          type: integer
+          format: int64
+          minimum: 1
     CreateTopicRequest:
       type: object
-      required: [title]
+      required:
+        - title
       properties:
         title:
           type: string
@@ -55,17 +82,23 @@ components:
           type: array
           items:
             type: object
-            required: [objectType, objectId]
+            required:
+              - objectType
+              - objectId
             properties:
               objectType:
                 type: string
-                enum: [plan, task]
+                enum:
+                  - plan
+                  - task
               objectId:
                 type: string
                 format: uuid
     TopicLinkRequest:
       type: object
-      required: [targetRefs, expectedVersion]
+      required:
+        - targetRefs
+        - expectedVersion
       properties:
         expectedVersion:
           type: integer
@@ -75,17 +108,28 @@ components:
           minItems: 1
           items:
             type: object
-            required: [objectType, objectId]
+            required:
+              - objectType
+              - objectId
             properties:
               objectType:
                 type: string
-                enum: [plan, task]
+                enum:
+                  - plan
+                  - task
               objectId:
                 type: string
                 format: uuid
     Message:
       type: object
-      required: [id, topicId, seq, kind, content, state, createdAt]
+      required:
+        - id
+        - topicId
+        - seq
+        - kind
+        - content
+        - state
+        - createdAt
       properties:
         id:
           type: string
@@ -97,7 +141,10 @@ components:
           type: integer
         kind:
           type: string
-          enum: [human, agent, system]
+          enum:
+            - human
+            - agent
+            - system
         authorUserId:
           type:
             - string
@@ -120,7 +167,10 @@ components:
           type:
             - string
             - 'null'
-          enum: [web, cli, platform]
+          enum:
+            - web
+            - cli
+            - platform
         submissionId:
           type:
             - string
@@ -135,7 +185,9 @@ components:
           type: string
         state:
           type: string
-          enum: [committed, superseded]
+          enum:
+            - committed
+            - superseded
         materialVersionIds:
           type: array
           items:
@@ -144,9 +196,38 @@ components:
         createdAt:
           type: string
           format: date-time
+        originTopicId:
+          type: string
+          format: uuid
+        inherited:
+          type: boolean
+        materials:
+          type: array
+          items:
+            type: object
+            required:
+              - versionId
+              - name
+            properties:
+              versionId:
+                type: string
+                format: uuid
+              name:
+                type: string
+        taskId:
+          type:
+            - string
+            - 'null'
+          format: uuid
     Submission:
       type: object
-      required: [id, clientSubmissionId, purpose, source, status, createdAt]
+      required:
+        - id
+        - clientSubmissionId
+        - purpose
+        - source
+        - status
+        - createdAt
       properties:
         id:
           type: string
@@ -156,10 +237,17 @@ components:
           format: uuid
         purpose:
           type: string
-          enum: [message, progress, delivery, material]
+          enum:
+            - message
+            - progress
+            - delivery
+            - material
         source:
           type: string
-          enum: [web, cli, agent]
+          enum:
+            - web
+            - cli
+            - agent
         text:
           type: string
         topicId:
@@ -184,7 +272,10 @@ components:
           format: uuid
         status:
           type: string
-          enum: [preparing, ready, failed]
+          enum:
+            - preparing
+            - ready
+            - failed
         materialVersionIds:
           type: array
           items:
@@ -207,9 +298,22 @@ components:
         createdAt:
           type: string
           format: date-time
+        discussionIntent:
+          type: string
+          enum:
+            - auto
+            - question
+            - reply
+        planId:
+          type:
+            - string
+            - 'null'
+          format: uuid
     CodeRef:
       type: object
-      required: [repositoryId, verification]
+      required:
+        - repositoryId
+        - verification
       properties:
         repositoryId:
           type: string
@@ -225,17 +329,25 @@ components:
           type: string
         verification:
           type: string
-          enum: [reported]
+          enum:
+            - reported
     SubmissionRequest:
       type: object
-      required: [clientSubmissionId, purpose, text]
+      required:
+        - clientSubmissionId
+        - purpose
+        - text
       properties:
         clientSubmissionId:
           type: string
           format: uuid
         purpose:
           type: string
-          enum: [message, progress, delivery, material]
+          enum:
+            - message
+            - progress
+            - delivery
+            - material
         text:
           type: string
           minLength: 1
@@ -261,19 +373,44 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CodeRef'
+        discussionIntent:
+          type: string
+          enum:
+            - auto
+            - question
+            - reply
+          default: auto
+        planId:
+          type:
+            - string
+            - 'null'
+          format: uuid
     UploadSession:
       type: object
-      required: [id, state, kind, expectedSize, checksum, partSize, expiresAt]
+      required:
+        - id
+        - state
+        - kind
+        - expectedSize
+        - checksum
+        - partSize
+        - expiresAt
       properties:
         id:
           type: string
           format: uuid
         state:
           type: string
-          enum: [open, completed, cancelled, expired]
+          enum:
+            - open
+            - completed
+            - cancelled
+            - expired
         kind:
           type: string
-          enum: [file, html_bundle]
+          enum:
+            - file
+            - html_bundle
         name:
           type: string
         expectedSize:
@@ -303,7 +440,12 @@ components:
           format: date-time
     CreateUploadRequest:
       type: object
-      required: [name, size, sha256, mime, kind]
+      required:
+        - name
+        - size
+        - sha256
+        - mime
+        - kind
       properties:
         name:
           type: string
@@ -313,24 +455,31 @@ components:
           minimum: 1
         sha256:
           type: string
-          pattern: '^[0-9a-f]{64}$'
+          pattern: ^[0-9a-f]{64}$
         mime:
           type: string
         kind:
           type: string
-          enum: [file, html_bundle]
+          enum:
+            - file
+            - html_bundle
         entrypoint:
           type: string
           description: HTML 包入口相对路径。
+        purpose:
+          type: string
     CompleteUploadRequest:
       type: object
-      required: [parts]
+      required:
+        - parts
       properties:
         parts:
           type: array
           items:
             type: object
-            required: [partNumber, sha256]
+            required:
+              - partNumber
+              - sha256
             properties:
               partNumber:
                 type: integer
@@ -342,7 +491,13 @@ components:
           description: 针对已有材料派生发布时的当前版本号；落后返回 SOURCE_VERSION_CONFLICT。
     Material:
       type: object
-      required: [id, title, kind, visibility, currentVersionId, createdAt]
+      required:
+        - id
+        - title
+        - kind
+        - visibility
+        - currentVersionId
+        - createdAt
       properties:
         id:
           type: string
@@ -351,10 +506,14 @@ components:
           type: string
         kind:
           type: string
-          enum: [file, html_bundle, text]
+          enum:
+            - file
+            - html_bundle
+            - text
         visibility:
           type: string
-          enum: [project]
+          enum:
+            - project
         currentVersionId:
           type:
             - string
@@ -365,7 +524,13 @@ components:
           format: date-time
     MaterialVersion:
       type: object
-      required: [id, revision, state, sha256, size, createdAt]
+      required:
+        - id
+        - revision
+        - state
+        - sha256
+        - size
+        - createdAt
       properties:
         id:
           type: string
@@ -378,7 +543,10 @@ components:
           minimum: 1
         state:
           type: string
-          enum: [staged, ready, unavailable]
+          enum:
+            - staged
+            - ready
+            - unavailable
         sha256:
           type: string
         size:
@@ -394,7 +562,10 @@ components:
           description: HTML 包的相对路径清单。
           items:
             type: object
-            required: [relativePath, size, sha256]
+            required:
+              - relativePath
+              - size
+              - sha256
             properties:
               relativePath:
                 type: string
@@ -413,9 +584,13 @@ components:
         createdAt:
           type: string
           format: date-time
+        library:
+          $ref: ../components/materials.yaml#/components/schemas/MaterialLibraryItem
     PreviewSession:
       type: object
-      required: [previewUrl, expiresAt]
+      required:
+        - previewUrl
+        - expiresAt
       properties:
         previewUrl:
           type: string
@@ -426,7 +601,14 @@ components:
           format: date-time
     ProjectEvent:
       type: object
-      required: [eventId, projectId, seq, type, objectType, objectId, occurredAt]
+      required:
+        - eventId
+        - projectId
+        - seq
+        - type
+        - objectType
+        - objectId
+        - occurredAt
       properties:
         eventId:
           type: string
@@ -451,6 +633,8 @@ components:
             - membership.changed
             - run.changed
             - notification.created
+            - material.changed
+            - material.preview.changed
         objectType:
           type: string
         objectId:
@@ -469,7 +653,11 @@ components:
           additionalProperties: true
     Notification:
       type: object
-      required: [id, type, createdAt, readAt]
+      required:
+        - id
+        - type
+        - createdAt
+        - readAt
       properties:
         id:
           type: string
@@ -502,20 +690,36 @@ components:
           type: string
     PendingAction:
       type: object
-      required: [id, kind, objectType, objectId, createdAt]
+      required:
+        - id
+        - kind
+        - objectType
+        - objectId
+        - createdAt
       properties:
         id:
           type: string
           format: uuid
         kind:
           type: string
-          enum: [submit, approve, receive, accept, revise, reopen]
+          enum:
+            - submit
+            - approve
+            - receive
+            - accept
+            - revise
+            - reopen
         projectId:
           type: string
           format: uuid
         objectType:
           type: string
-          enum: [proposal, handoff, task, plan, topic]
+          enum:
+            - proposal
+            - handoff
+            - task
+            - plan
+            - topic
         objectId:
           type: string
           format: uuid

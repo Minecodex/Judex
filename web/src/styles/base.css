@@ -21,13 +21,8 @@ select {
 button {
   cursor: pointer;
 }
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-button {
-  border: 0;
-}
+
+
 .judex-app {
   min-width: var(--desktop-min);
   min-height: 100vh;
@@ -36,9 +31,7 @@ button {
   font-size: var(--text-base);
   line-height: var(--leading-base);
 }
-.judex-app button {
-  color: inherit;
-}
+
 .judex-app button,
 .judex-app a {
   transition:

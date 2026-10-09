@@ -159,11 +159,15 @@ func NewRouter(opts Options, spec *SpecRouter) (*gin.Engine, error) {
 		info, err := fs.Stat(opts.Assets, name)
 		if err == nil && !info.IsDir() {
 			c.Header("Cache-Control", "no-cache")
+			if strings.HasPrefix(name, "downloads/") && strings.HasSuffix(name, ".zip") {
+				c.Header("Content-Disposition", "attachment; filename=\""+path.Base(name)+"\"")
+				c.Header("X-Content-Type-Options", "nosniff")
+			}
 			http.ServeFileFS(c.Writer, c.Request, opts.Assets, name)
 			return
 		}
 		// Asset misses must remain errors rather than returning an HTML document.
-		if path.Ext(name) != "" || strings.HasPrefix(name, "assets/") {
+		if path.Ext(name) != "" || strings.HasPrefix(name, "assets/") || strings.HasPrefix(name, "downloads/") {
 			respond{}.error(c, errAssetNotFound)
 			return
 		}

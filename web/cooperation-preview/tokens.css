@@ -1,0 +1,11 @@
+:root{
+ --co-header-height:64px;
+ --co-node-width:280px;
+ --co-route-gap:48px;
+ --co-task-min-height:238px;
+ --co-filter-width:220px;
+ --co-chat-center-min:360px;
+ --co-tab-width:230px;
+ --co-composer-height:68px;
+ --co-signed-out-height:70vh;
+}

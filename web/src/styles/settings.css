@@ -281,23 +281,6 @@
   display: grid;
   gap: var(--s4);
 }
-.judex-settings-content .judex-work-preferences {
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--s6);
-}
-.judex-settings-content .judex-work-preferences > .judex-work-panel {
-  width: 100%;
-  max-width: none;
-}
-.judex-settings-content .judex-prompt-editor {
-  width: 100%;
-  min-height: var(--chat-graph-min);
-}
-.judex-settings-content .judex-work-preferences aside {
-  background: var(--surface-soft);
-  color: var(--ink);
-  border: var(--stroke) solid var(--line);
-}
 .judex-settings-content .judex-next-demo-settings {
   display: none;
 }

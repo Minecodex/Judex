@@ -4,12 +4,17 @@
 // 事件类型 → 需要失效的 query 根键（调用方再拼上 projectId 前缀）。
 // 未知事件类型不盲目全量失效（诚实降级：新事件由各自查询的轮询兜底）。
 export const PROJECT_EVENT_TYPES = [
+ "topic.links.changed",
+  "topic.forked",
+  "task.activity.changed",
+  "analysis.changed",
+  "discussion_suggestion.changed",
   "message.committed",
   "proposal.changed",
   "task.changed",
   "plan.changed",
   "handoff.changed",
-  "material.ready",
+  "material.changed", "material.ready", "material.preview.changed",
   "membership.changed",
   "workflow.published",
 ] as const;
@@ -17,13 +22,20 @@ export const PROJECT_EVENT_TYPES = [
 export type ProjectEventType = (typeof PROJECT_EVENT_TYPES)[number];
 
 export const EVENT_INVALIDATION_ROOTS: Record<string, string[]> = {
-  "message.committed": ["messages", "topics", "runs", "actions"],
+ "topic.links.changed":["topics","topic","task","plans","collaboration","cooperation","actions","bootstrap"],
+  "topic.forked":["topics","messages","collaboration"],
+ "task.activity.changed":["materials","collaboration","tasks","task","actions"],
+  "analysis.changed":["collaboration","runs","actions"],
+  "discussion_suggestion.changed":["collaboration","topics","actions"],
+  "message.committed": ["materials","messages", "topics", "runs", "actions"],
   "proposal.changed": ["proposals", "proposalReview", "actions", "tasks", "plans"],
-  "task.changed": ["tasks", "task", "executionMap", "actions"],
-  "plan.changed": ["plans", "plan", "tasks", "executionMap", "actions"],
+  "task.changed": ["materials","tasks", "task", "routeTasks","plans","plan","cooperation","collaboration", "executionMap", "actions"],
+  "plan.changed": ["plans", "plan", "tasks","routeTasks","cooperation","collaboration", "executionMap", "actions"],
   "handoff.changed": ["handoffs", "actions", "topics"],
+  "material.changed": ["materials","actions"],
   "material.ready": ["materials", "actions"],
-  "membership.changed": ["members", "bootstrap", "identities", "positions"],
+  "material.preview.changed": ["materials"],
+  "membership.changed": ["materials","members", "bootstrap", "identities", "positions","tasks","task","plans","plan","cooperation"],
   "workflow.published": ["workflows", "plans"],
 };
 

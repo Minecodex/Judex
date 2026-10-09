@@ -28,6 +28,7 @@ func (h *DiscussionHandlers) Register(spec *SpecRouter) {
 	spec.Register("getTopic", withAuth(h.getTopic))
 	spec.Register("listMessages", withAuth(h.listMessages))
 	spec.Register("linkTopic", withAuth(h.linkTopic))
+	spec.Register("replaceTopicLinks", withAuth(h.replaceLinks))
 	spec.Register("createSubmission", withAuth(h.createSubmission))
 }
 
@@ -38,12 +39,29 @@ func (h *DiscussionHandlers) listTopics(c *gin.Context) {
 		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
 		return
 	}
-	topics, err := h.Discussion.ListTopics(c.Request.Context(), p.UserID, projectID)
+	plan, e := optionalUUID(c.Query("planId"))
+	if e != nil {
+		respond{}.error(c, e)
+		return
+	}
+	task, e := optionalUUID(c.Query("taskId"))
+	if e != nil {
+		respond{}.error(c, e)
+		return
+	}
+	topics, err := h.Discussion.ListTopics(c.Request.Context(), p.UserID, projectID, discussion.TopicFilter{PlanID: plan, TaskID: task, Query: c.Query("q"), Kind: c.Query("kind")})
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(c, topics, nil))
+	count, e := h.Discussion.CountTopics(c.Request.Context(), p.UserID, projectID, discussion.TopicFilter{PlanID: plan, TaskID: task, Query: c.Query("q"), Kind: c.Query("kind")})
+	if e != nil {
+		respond{}.error(c, e)
+		return
+	}
+	page := respond{}.list(c, topics, nil)
+	page["totalCount"] = count
+	respond{}.ok(c, page)
 }
 
 func (h *DiscussionHandlers) createTopic(c *gin.Context) {
@@ -221,10 +239,12 @@ func (h *DiscussionHandlers) createSubmission(c *gin.Context) {
 	var req struct {
 		ClientSubmissionID  string   `json:"clientSubmissionId" binding:"required"`
 		ExpectedTaskVersion int64    `json:"expectedTaskVersion"`
+		DiscussionIntent    string   `json:"discussionIntent"`
 		Purpose             string   `json:"purpose" binding:"required"`
 		Text                string   `json:"text" binding:"required"`
 		TopicID             string   `json:"topicId"`
 		TaskID              string   `json:"taskId"`
+		PlanID              string   `json:"planId"`
 		IdentityID          string   `json:"identityId"`
 		MaterialVersionIDs  []string `json:"materialVersionIds"`
 	}
@@ -234,11 +254,20 @@ func (h *DiscussionHandlers) createSubmission(c *gin.Context) {
 	}
 	sub := discussion.Submission{
 		ClientSubmissionID:  req.ClientSubmissionID,
+		DiscussionIntent:    req.DiscussionIntent,
 		ExpectedTaskVersion: req.ExpectedTaskVersion,
 		Purpose:             req.Purpose,
 		Source:              "web",
 		Text:                req.Text,
 		MaterialVersionIDs:  req.MaterialVersionIDs,
+	}
+	if req.PlanID != "" {
+		id, e := uuid.Parse(req.PlanID)
+		if e != nil {
+			respond{}.error(c, apierrors.Fields("planId", "uuid"))
+			return
+		}
+		sub.PlanID = &id
 	}
 	if req.TopicID != "" {
 		id, err := uuid.Parse(req.TopicID)

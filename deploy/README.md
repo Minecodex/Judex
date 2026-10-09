@@ -1,5 +1,7 @@
 # Kubernetes 部署骨架
 
+2026-10-09 本地 `judex` 已更新到 Helm revision 21，包含 Demo4 正式交互、运行例外及共享资料体验修复，访问 `http://127.0.0.1:18097/`。当前源码、镜像、同镜像隔离业务与真实模型证据见 [Demo4 当前部署复核](../docs/plans/demo4/REVIEW5-20261009.md)和[共享资料体验收尾](../docs/共享资料体验收尾-20261009.md)。发布保留既有数据、Secret、PVC、模型及沙箱配置；此前 revision 14／15／18／19／20 的记录继续作为历史证据保留。
+
 Go 单体服务托管生产前端。Helm 同时声明 PostgreSQL、SeaweedFS、OpenSandbox，也可独立选择外部 PG / S3。需要可用 K8s、动态 PVC StorageClass、Helm 3.16+、安装 Operator / CRD 的权限及集群可拉取的 Judex 镜像。
 
 ```sh
@@ -73,28 +75,21 @@ kubectl -n judex port-forward svc/judex 18097:8080   # http://127.0.0.1:18097
 
 本机 Docker 与 Kubernetes 节点 containerd 是不同镜像存储。每次构建使用独立 tag，先导入节点，再用 Helm 更新；仅重启旧 tag 不能保证使用新构建。本地未推送 registry 的镜像使用 `IfNotPresent`。
 
-以下命令针对已有的 `docker-desktop` 集群、`desktop-control-plane` 节点容器和 `judex` Release / Namespace，在仓库根目录顺序执行，任何命令失败都应停止后续步骤。PowerShell 使用文件传递镜像归档，避免旧版本 PowerShell 的文本管道损坏二进制数据：
+以下命令针对已有的 `docker-desktop` 集群、`desktop-control-plane` 节点容器和 `judex` Release / Namespace，在仓库根目录顺序执行，任何命令失败都应停止后续步骤。导入脚本直接传递镜像归档的二进制字节，避免 PowerShell 文本管道损坏归档：
 
 ```powershell
 $imageVersion = 'local-' + (Get-Date -Format yyyyMMdd-HHmmss)
-$imageArchive = Join-Path $env:TEMP "judex-$imageVersion.tar"
-$nodeArchive = "/tmp/judex-$imageVersion.tar"
-
+$env:JUDEX_RELEASE_VERSION = $imageVersion
 npm run build
 docker build -f deploy/docker/server.Dockerfile --build-arg VERSION=$imageVersion -t "judex/server:$imageVersion" .
-docker save --output $imageArchive "judex/server:$imageVersion"
-docker cp $imageArchive "desktop-control-plane:$nodeArchive"
-docker exec desktop-control-plane ctr --namespace k8s.io images import $nodeArchive
-# 确认 import 成功后再清理本次归档。
-docker exec desktop-control-plane rm -- $nodeArchive
-Remove-Item -LiteralPath $imageArchive
+node scripts/deploy/load-local-image.mjs "judex/server:$imageVersion"
 
-helm upgrade judex deploy/helm/judex --kube-context docker-desktop -n judex --reset-then-reuse-values --set-string image.repository=judex/server --set-string image.tag=$imageVersion --set image.pullPolicy=IfNotPresent --wait --wait-for-jobs --timeout 10m
+helm upgrade judex deploy/helm/judex --kube-context docker-desktop -n judex --reuse-values --set-string image.repository=judex/server --set-string image.tag=$imageVersion --atomic --wait --timeout 10m
 kubectl --context docker-desktop -n judex rollout status deployment/judex --timeout=180s
 kubectl --context docker-desktop -n judex get pods
 ```
 
-`--reset-then-reuse-values` 将当前 Chart 默认配置与已有 Release 自定义配置合并，保留现有模型和凭据引用，并补齐新增配置字段。升级前检查模板变化；同步当前 Chart 可能更新沙箱配置或重启数据服务，现有 PVC 和 Secret 按 Chart 保留。
+前端构建会生成同版本的 Windows/macOS CLI 和 Skills ZIP；`JUDEX_RELEASE_VERSION` 必须与 Docker 的 `VERSION` 相同，镜像构建会检查这一点。`--reuse-values` 保留现有模型、凭据、沙箱和数据服务配置，`--atomic` 在失败时回滚。升级前检查模板变化；若 Chart 引入必需的新配置，先审查并显式合并该配置，再升级。导入的归档保存在 `.cache/deploy`，作为本机部署证据。
 
 发布后重新启动本地转发（原转发随旧 Pod 退出会断开），并检查 `/healthz`、`/readyz`、`/api/v1/system` 返回的版本是否为本次 tag：
 
@@ -103,3 +98,17 @@ kubectl --context docker-desktop -n judex port-forward service/judex 18097:8080
 ```
 
 部署验证可在临时 Namespace 运行 `tests/k8s/smoke.mjs`；浏览器业务 E2E 通过 `JUDEX_E2E_BASE_URL` 指向临时部署，必须把该访问 Origin 加入 `server.allowedOrigins`。测试资源按运行标签核对归属后删除。
+
+
+2026-10-07 12:05 的本机发布为 Helm revision 6，镜像 `judex/server:local-20261007120038-ea51afc0`，服务端与 Windows/macOS CLI、Skills 下载清单版本均为 `0.1.0-ui.20261007120038`。更新前通过隔离 namespace 的 11 条真实浏览器测试；更新后核对健康检查、生产网页校验值、三个实际下载 ZIP 和业务数据/Secret/PVC 保持。证据见 `.cache/deploy/ui-downloads-20261007120038-ea51afc0/manifest.json`，完整界面验收说明见 [桌面界面统一改造](../docs/界面优化预览.md)。
+
+
+2026-10-07 14:10 的职位场景模板发布为 Helm revision 7，镜像 `judex/server:local-20261007140030-9b42bc04`，应用和客户端下载版本 `0.1.0-presets.20261007140030`。Migration 19 增加可空来源标识及活跃预设唯一索引，既有业务记录、Secret/PVC 与运行配置已核对保持。当前镜像通过隔离 namespace 的 13 条业务浏览器验收，详情和证据见 [职位场景模板](../docs/职位场景模板.md)。
+
+
+2026-10-07 15:15 的边框、卡片按钮与职位优先分配更新为 Helm revision 8，镜像 `judex/server:local-20261007151045-4ad93210`，应用/客户端下载版本 `0.1.0-ui.20261007151045`。部署前的当前镜像通过隔离 namespace 的 14 条业务浏览器验收，原有 9 个职位及其他业务数据、Secret/PVC、运行配置已核对保持；完整范围见 [职位场景模板](../docs/职位场景模板.md)。
+
+
+2026-10-07 16:24 的标签边框与功能列表悬停更新为 Helm revision 9，镜像 `judex/server:local-20261007161448-b7fad684`，应用/客户端下载版本 `0.1.0-ui.20261007161448`。当前镜像通过隔离 namespace 的 14 条真实业务浏览器测试，原有数据、Secret/PVC 与运行配置核对保持；记录见 [统一界面组件规范](../docs/统一界面组件规范.md)。
+
+2026-10-07 16:49 的固定返回项目列表更新为 Helm revision 10，镜像 `judex/server:local-20261007164302-00199b76`，应用/客户端下载版本 `0.1.0-ui.20261007164302`。通过隔离 namespace 的 15 条真实业务浏览器测试，包含项目间往返、草稿/附件恢复与实际提交；测试资源已按所属标识清理。生产资源、三个下载包、现有业务数据、Secret/PVC 与运行配置已核对。端口转发 `http://127.0.0.1:18097/` 已恢复；证据见 `.cache/deploy/project-return-20261007164302-00199b76/manifest.json`。

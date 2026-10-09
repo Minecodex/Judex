@@ -31,6 +31,9 @@ export function errorKey(error: unknown): Key | null {
       return validationKey(error) ?? "errValidation";
     case "FORBIDDEN":
       return "errForbidden";
+    case "VERSION_CONFLICT":
+    case "REVIEW_STALE":
+      return "workErrorStale";
     case "NOT_IMPLEMENTED":
       return "errServer";
     default:

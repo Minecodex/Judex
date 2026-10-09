@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/kakj-go/Judex/internal/platform/paging"
+	"github.com/kakj-go/Judex/internal/work"
 	"net/url"
 	"strconv"
 )
@@ -39,14 +40,19 @@ func (e *Executor) queryWorkPage(ctx context.Context, project string, args map[s
 	fields := `'id',t.id,'title',t.title,'status',t.status,'version',t.version`
 	switch kind {
 	case "task":
+		fields += `,'discardedAt',t.discarded_at,'executionException',(SELECT jsonb_build_object('id',x.id,'previousStatus',x.previous_status,'reason',x.reason,'actorUserId',x.actor_user_id,'createdAt',x.created_at,'waivers',x.waivers_json) FROM task_execution_exceptions x WHERE x.project_id=t.project_id AND x.task_id=t.id AND x.restored_at IS NULL)`
 		fields += `,'expectedOutput',t.expected_output,'acceptanceCriteria',t.acceptance_criteria,'planId',t.plan_id,'reviewerIdentityId',t.reviewer_identity_id,'workflowId',t.workflow_id,'nodeId',t.node_id,'latestReportId',t.latest_report_id,'latestAcceptanceId',t.latest_acceptance_id`
 	case "plan":
+		fields += `,'discardedAt',t.discarded_at`
 		fields += `,'goal',t.goal,'acceptanceCriteria',t.acceptance_criteria,'ownerIdentityId',t.owner_identity_id,'workflowId',t.workflow_id`
 	case "proposal":
 		label = "t.kind"
 		fields = `'id',t.id,'kind',t.kind,'status',t.status,'version',t.version,'reason',t.reason,'reviewId',t.current_review_id`
 	}
 	sql := `SELECT jsonb_build_object(` + fields + `) /*keys*/ FROM ` + table + ` t WHERE t.project_id=$1 AND ($2::uuid IS NULL OR t.id=$2) AND ($3='' OR strpos(lower(` + label + `),lower($3))>0) /*page*/`
+	if kind == "task" || kind == "plan" {
+		sql = `SELECT jsonb_build_object(` + fields + `) /*keys*/ FROM ` + table + ` t WHERE t.project_id=$1 AND ($2::uuid IS NULL OR t.id=$2) AND (t.discarded_at IS NULL OR $2::uuid IS NOT NULL) AND ($3='' OR strpos(lower(` + label + `),lower($3))>0) /*page*/`
+	}
 	rows, err := paging.Query(ctx, e.Pool, sql, "t.created_at", "t.id", project, id, query)
 	if err != nil {
 		return nil, err
@@ -66,6 +72,21 @@ func (e *Executor) queryWorkPage(ctx context.Context, project string, args map[s
 	}
 	if err = rows.Err(); err != nil {
 		return nil, err
+	}
+	rows.Close()
+	if kind == "task" {
+		for _, item := range items {
+			task, err := uuid.Parse(fmt.Sprint(item["id"]))
+			if err != nil {
+				return nil, err
+			}
+			facts, err := work.ReadTaskExecutionFacts(ctx, e.Pool, uuid.MustParse(project), task)
+			if err != nil {
+				return nil, err
+			}
+			item["effectiveRequirements"] = facts.Requirements
+			item["blockers"] = facts.Blockers
+		}
 	}
 	return map[string]any{"items": items, "nextCursor": paging.Next(ctx)}, nil
 }

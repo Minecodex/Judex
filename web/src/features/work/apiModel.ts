@@ -47,10 +47,17 @@ type List<T> = { items: T[]; nextCursor?: string | null };
 // 列表读取；invitations/audit 等资源对普通成员可能 403，按空集合降级。
 async function list<T>(path: string): Promise<T[]> {
   try {
-    const page = await request<List<T>>(
-      path + (path.includes("?") ? "&" : "?") + "limit=100",
-    );
-    return page.items ?? [];
+    const items:T[]=[];
+    let cursor:string|null|undefined;
+    const seen=new Set<string>();
+    do {
+      const page = await request<List<T>>(path + (path.includes("?") ? "&" : "?") + "limit=100" + (cursor?"&cursor="+encodeURIComponent(cursor):""));
+      items.push(...(page.items??[]));
+      cursor=page.nextCursor;
+      if(cursor&&seen.has(cursor))throw new Error("Repeated collection cursor");
+      if(cursor)seen.add(cursor);
+    }while(cursor);
+    return items;
   } catch (error) {
     if (
       error instanceof APIError &&
@@ -75,11 +82,11 @@ async function optional<T>(path: string): Promise<T | null> {
 }
 
 export const API_WS_ROOT = "apiWs";
-export const apiWsKey = (projectId: string) => [API_WS_ROOT, projectId];
+export const apiWsKey = (projectId: string,userId?:string) => [API_WS_ROOT, projectId,...(userId?[userId]:[])];
 
-export function apiWorkspaceQueries(projectId: string) {
+export function apiWorkspaceQueries(projectId: string,userId?:string) {
   const base = `/projects/${projectId}`;
-  const key = (...parts: string[]) => [...apiWsKey(projectId), ...parts];
+  const key = (...parts: string[]) => [...apiWsKey(projectId,userId), ...parts];
   return {
     bootstrap: {
       queryKey: key("bootstrap"),
@@ -128,7 +135,7 @@ export function apiWorkspaceQueries(projectId: string) {
     },
     preferences: {
       queryKey: key("preferences"),
-      queryFn: () => optional<ApiPreferences>(`${base}/me/preferences`),
+      queryFn: async () => (await request<{items: ApiPreferences[]}>(`${base}/me/preferences`)).items,
     },
     audit: {
       queryKey: key("audit"),
@@ -185,6 +192,8 @@ export function mapPosition(
     id: p.id,
     projectId,
     name: text(p.name),
+    presetId: p.presetId,
+    publicSummary: text(p.publicSummary),
     prompt: text(p.prompt),
     tone: TONES[index % TONES.length],
     bindings: (p.nodeBindings ?? []).map((b) => ({
@@ -203,21 +212,27 @@ export function mapSeat(i: ApiIdentity, positions: ApiPosition[]): Seat {
       positions.find((p) => p.name === i.positionName)?.id ??
       "",
     person: i.currentBinding?.displayName ?? "",
+    userId: i.currentBinding?.userId,
+    status: i.status,
     notes: text(""),
   };
 }
 
 export function mapPlan(p: ApiPlan, projectId: string): Plan {
   return {
+    revision:p.version,capabilities:p.capabilities,discardedAt:p.discardedAt,
     id: p.id,
     projectId,
     title: text(p.title),
-    goal: text(p.goal),
+    mainTopicId:p.mainTopicId??undefined,
+ taskStats:p.taskStats,myTaskCount:p.myTaskCount,ownerName:p.ownerName,updatedAt:timestamp(p.updatedAt),
+ businessStatus:p.status,
+ goal: text(p.goal),
     criteria: lines(p.acceptanceCriteria),
     ownerSeatId: p.ownerIdentityId ?? "",
     flowId: p.workflowId ?? "",
     status: p.status === "cancelled" ? "draft" : p.status,
-    referenceTaskIds: [],
+    referenceTaskIds:p.referenceTaskIds??[],
   };
 }
 
@@ -229,7 +244,12 @@ const REQUIREMENT_KIND = {
 
 export function mapTask(t: ApiTask, projectId: string): Task {
   return {
+    kind:t.kind,bugDetails:t.bugDetails,
+    capabilities:t.capabilities,discardedAt:t.discardedAt,executionException:t.executionException,
     revision: t.version ?? 1,
+ mainTopicId:t.mainTopicId??undefined,
+ participantNames:(t.participants??[]).map(p=>p.displayName??""),
+ businessStatus:t.status,
     id: t.id,
     projectId,
     planId: t.planId ?? null,
@@ -243,6 +263,7 @@ export function mapTask(t: ApiTask, projectId: string): Task {
     nodeId: t.nodeId ?? "",
     status: t.status === "cancelled" ? "draft" : t.status,
     requirements: (t.requirements ?? []).map((r) => ({
+      satisfied:r.satisfied,waived:r.waived,inheritedFrom:r.inheritedFrom,sourceTaskId:r.sourceTaskId,fingerprint:r.fingerprint,
       id: r.id,
       at: r.phase,
       label: text(r.label ?? r.kind),
@@ -304,22 +325,30 @@ export function mapFlow(
   const published =
     versions.find((v) => v.id === w.publishedVersionId) ??
     versions.find((v) => v.state === "published");
-  const body = published?.body;
+  const draft = versions.find(v => v.state === 'draft');
+  const body = published?.body ?? draft?.body;
   const nodes = (body?.nodes ?? []).map((n) => ({
     id: n.id,
     label: text(n.name),
+    responsibility: text(n.responsibility),
+    kind: n.kind,
+    phase: n.phase ? text(n.phase):undefined,
   }));
-  const edges: [string, string][] = body?.advisoryEdges?.length
-    ? body.advisoryEdges.map((e) => [e.from, e.to])
-    : nodes.slice(1).map((n, i) => [nodes[i].id, n.id]);
+  const edges: [string, string][] = (body?.advisoryEdges ?? []).filter(e => e.kind !== 'feedback').map(e => [e.from, e.to]);
   return {
     id: w.id,
     projectId,
-    name: text(w.name),
-    version: published?.revision ?? w.version ?? 1,
+    name: text(body?.name ?? w.name),
+    version: published?.revision ?? draft?.revision ?? 1,
+    status: published ? 'published' : 'draft',
+    presetId: w.presetId,
+    definitionVersion: w.version ?? 1,
+    body,
+    draft: draft?.body ? {body: draft.body, hash: draft.draftHash ?? '', revision: draft.revision} : undefined,
     instructions: text(body?.instructions),
     nodes,
     edges,
+    connections:(body?.advisoryEdges ?? []).map(e => ({from:e.from,to:e.to,kind:e.kind,label:e.label ? text(e.label):undefined})),
     history: versions
       .filter((v) => v.state === "published")
       .map((v) => ({
@@ -337,7 +366,14 @@ export function mapTopic(
   messages: ApiMessage[],
 ): Topic {
   return {
+ linksVersion:topic.linksVersion??1,
     id: topic.id,
+ kind:topic.kind,
+ parentTopicId:topic.parentTopicId??undefined,
+ forkAfterSeq:topic.forkAfterSeq??0,
+ lastMessageSeq:topic.lastMessageSeq??0,
+ mainPlanId:topic.contextType==="plan"?topic.contextId??undefined:undefined,
+ sourceRefs:topic.sourceRefs??[],
     projectId,
     title: text(topic.title),
     planIds: (topic.links ?? [])
@@ -354,6 +390,11 @@ export function mapTopic(
       .filter((m) => m.state === "committed")
       .map((m) => ({
         id: m.id,
+ seq:m.seq,
+ inherited:m.inherited,
+ originTopicId:m.originTopicId,
+ taskId:m.taskId??undefined,
+ materials:m.materials??[],
         actor:
           m.kind === "human"
             ? (m.authorDisplayName ?? "")
@@ -505,13 +546,14 @@ export type ApiWorkspaceSnapshot = {
   topics: ApiTopic[];
   topicMessages: Record<string, ApiMessage[]>;
   invitations: ApiInvitation[];
-  preferences: ApiPreferences | null;
+  preferences: ApiPreferences[];
   audit: ApiAuditEntry[];
   workflows: ApiWorkflow[];
   workflowVersions: Record<string, ApiWorkflowVersion[]>;
   proposals: ApiProposal[];
   proposalReviews: Record<string, ApiProposalReview | null | undefined>;
   currentUser: string;
+  currentUserId: string;
 };
 
 export function assembleWorkState(
@@ -520,7 +562,7 @@ export function assembleWorkState(
 ): WorkState {
   const members = data.members
     .filter((m) => m.state === "active")
-    .map((m) => ({ name: m.displayName, role: m.role }));
+    .map((m) => ({ name: m.displayName, role: m.role, userId: m.userId, email: m.email }));
   const positions = data.positions
     .filter((p) => p.status === "active")
     .map((p, i) => mapPosition(p, projectId, i));
@@ -545,6 +587,7 @@ export function assembleWorkState(
   return {
     schema: 4,
     currentUser: data.currentUser,
+    currentUserId: data.currentUserId,
     projects,
     positions,
     seats,
@@ -558,13 +601,14 @@ export function assembleWorkState(
     invites: data.invitations
       .map((i) => mapInvite(i, projectId, data.members))
       .filter((i): i is Invite => !!i),
-    preferences: [
-      {
+    preferences: data.preferences.map(preference => ({
         projectId,
+        positionId: preference.positionId,
         person: data.currentUser,
-        prompt: data.preferences?.prompt ?? "",
-      },
-    ],
+        userId: data.currentUserId,
+        revision: preference.revision,
+        prompt: preference.prompt,
+    })),
     events: data.audit.map((e) =>
       mapAudit(e, projectId, data.members, data.identities),
     ),

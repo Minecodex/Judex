@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/kakj-go/Judex/internal/collaboration"
 
 	agentcontext "github.com/kakj-go/Judex/internal/agent/context"
 	"github.com/kakj-go/Judex/internal/agent/runner"
@@ -27,6 +28,7 @@ import (
 	"github.com/kakj-go/Judex/internal/job"
 	"github.com/kakj-go/Judex/internal/material"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
+	"github.com/kakj-go/Judex/internal/work"
 )
 
 // Executor runs one discussion batch end-to-end.
@@ -63,13 +65,20 @@ func (e *Executor) now() time.Time {
 // business state.
 func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUID) error {
 	var topicID uuid.UUID
+	var taskID *uuid.UUID
 	var sourceText string
 	var maxRounds int
-	if err := e.Pool.QueryRow(ctx, `SELECT b.topic_id,COALESCE(s.text,''),b.max_rounds FROM discussion_batches b LEFT JOIN submissions s ON s.id=b.source_submission_id AND s.project_id=b.project_id WHERE b.id=$1 AND b.project_id=$2`, batchID, projectID).Scan(&topicID, &sourceText, &maxRounds); err != nil {
+	if err := e.Pool.QueryRow(ctx, `SELECT COALESCE(b.topic_id,'00000000-0000-0000-0000-000000000000'::uuid),COALESCE(s.text,r.progress_hint,''),b.max_rounds,b.task_id FROM discussion_batches b LEFT JOIN submissions s ON s.id=b.source_submission_id AND s.project_id=b.project_id LEFT JOIN work_reports r ON r.id=b.source_report_id AND r.project_id=b.project_id WHERE b.id=$1 AND b.project_id=$2`, batchID, projectID).Scan(&topicID, &sourceText, &maxRounds, &taskID); err != nil {
 		return err
 	}
 	coordinator := e.coordinatorID(ctx, projectID)
-	sessionID, err := e.ensureSession(ctx, projectID, topicID, coordinator)
+	var sessionID uuid.UUID
+	var err error
+	if taskID != nil && topicID == uuid.Nil {
+		sessionID, err = e.ensureTaskSession(ctx, projectID, *taskID, coordinator)
+	} else {
+		sessionID, err = e.ensureSession(ctx, projectID, topicID, coordinator)
+	}
 	if err != nil {
 		return err
 	}
@@ -99,10 +108,19 @@ func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUI
 			if _, err = tx.Exec(ctx, `UPDATE agent_runs SET state='cancelled',version=version+1,updated_at=now() WHERE batch_id=$1 AND state NOT IN ('succeeded','failed','cancelled')`, batchID); err != nil {
 				return err
 			}
+			if err = collaboration.FinishTaskAnalysis(ctx, tx, projectID, batchID, "cancelled", "项目已归档，分析已取消。", e.now()); err != nil {
+				return err
+			}
 			_, err = tx.Exec(ctx, `UPDATE discussion_batches SET state='cancelled',version=version+1,updated_at=now() WHERE id=$1`, batchID)
 			return err
 		}
-		if oldState == "running" || oldState == "provisioning" || batchState == "running" {
+		var priorTools bool
+		if oldState == "queued" && reserved > 0 {
+			if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM tool_calls WHERE run_id IN(SELECT id FROM agent_runs WHERE batch_id=$1))`, batchID).Scan(&priorTools); err != nil {
+				return err
+			}
+		}
+		if oldState == "running" || oldState == "provisioning" || batchState == "running" || priorTools {
 			transcript, safe, recoverErr := recoverTranscript(ctx, tx, batchID, runID)
 			if recoverErr != nil {
 				return recoverErr
@@ -115,6 +133,12 @@ func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUI
 				if err = claimSession(ctx, tx, sessionID, runID); err != nil {
 					return err
 				}
+				if _, err = tx.Exec(ctx, `UPDATE discussion_batches SET state='running',version=version+1,updated_at=now() WHERE id=$1`, batchID); err != nil {
+					return err
+				}
+				if _, err = tx.Exec(ctx, `UPDATE task_analyses SET state='running',updated_at=now() WHERE batch_id=$1`, batchID); err != nil {
+					return err
+				}
 				_, err = tx.Exec(ctx, `UPDATE agent_runs SET state='running',lease_token=$2,version=version+1,updated_at=now() WHERE id=$1`, runID, lease)
 				return err
 			}
@@ -124,6 +148,9 @@ func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUI
 				return err
 			}
 			if _, err = tx.Exec(ctx, `UPDATE agent_runs SET state='waiting_human',lease_token=$2,version=version+1,budget_snapshot=jsonb_build_object('reason','interrupted run: reconcile unknown tool results'),updated_at=now() WHERE batch_id=$1 AND state NOT IN ('succeeded','failed','cancelled')`, batchID, lease); err != nil {
+				return err
+			}
+			if err = collaboration.FinishTaskAnalysis(ctx, tx, projectID, batchID, "waiting_human", "中断的执行需要核对，未重复执行工具。", e.now()); err != nil {
 				return err
 			}
 			_, err = tx.Exec(ctx, `UPDATE discussion_batches SET state='waiting_human',version=version+1,updated_at=now() WHERE id=$1`, batchID)
@@ -140,10 +167,16 @@ func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUI
 		} else if oldState != "queued" {
 			return errAlreadyDone
 		}
+		if err = tx.QueryRow(ctx, `SELECT COALESCE(max(attempt),0)+1 FROM model_calls WHERE run_id=$1`, runID).Scan(&startAttempt); err != nil {
+			return err
+		}
 		if err = claimSession(ctx, tx, sessionID, runID); err != nil {
 			return err
 		}
 		if _, err = tx.Exec(ctx, `UPDATE agent_runs SET state='running',lease_token=$2,version=version+1,updated_at=now() WHERE id=$1`, runID, lease); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, `UPDATE task_analyses SET state='running',updated_at=now() WHERE batch_id=$1`, batchID); err != nil {
 			return err
 		}
 		if _, err = tx.Exec(ctx, `UPDATE discussion_batches SET state='running',rounds_reserved=rounds_reserved+1,version=version+1,updated_at=now() WHERE id=$1`, batchID); err != nil {
@@ -187,7 +220,7 @@ func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUI
 	}
 	registry := tools.New()
 	tools.RegisterDefaults(registry)
-	caller := &positionCaller{executor: e, project: projectID, topic: topicID, batch: batchID, parent: runID}
+	caller := &positionCaller{executor: e, project: projectID, topic: topicID, batch: batchID, parent: runID, task: taskID}
 	tools.RegisterCallAgent(registry, caller)
 	harness := &runner.Runner{Provider: provider, Registry: registry, Clock: e.Clock}
 	env := e.toolEnv(projectID, topicID)
@@ -238,7 +271,7 @@ func (e *Executor) gatherFacts(ctx context.Context, projectID, topicID uuid.UUID
 	}
 	taskRows, err := e.Pool.Query(ctx, `
 		SELECT title || '（' || status || '）' FROM tasks
-		WHERE project_id=$1 AND status NOT IN ('draft','cancelled') ORDER BY updated_at DESC LIMIT 10`, projectID)
+		WHERE project_id=$1 AND status NOT IN ('draft','cancelled') AND (id IN(SELECT object_id FROM topic_work_links WHERE topic_id=$2 AND object_type='task') OR plan_id IN(SELECT object_id FROM topic_work_links WHERE topic_id=$2 AND object_type='plan')) ORDER BY updated_at DESC LIMIT 50`, projectID, topicID)
 	if err == nil {
 		defer taskRows.Close()
 		for taskRows.Next() {
@@ -326,10 +359,26 @@ func (e *Executor) toolEnv(projectID, topicID uuid.UUID) tools.Env {
 				return "", err
 			}
 			defer tx.Rollback(ctx)
+			var origin *uuid.UUID
+			var cutoff *int64
+			if topicID != uuid.Nil {
+				origin = &topicID
+				authority, _ := tools.Authority(ctx)
+				var seq int64
+				if err = tx.QueryRow(ctx, `SELECT COALESCE(max(covered_seq),0) FROM context_checkpoints WHERE run_id=$1`, authority.Run).Scan(&seq); err != nil {
+					return "", err
+				}
+				cutoff = &seq
+			}
+			typed, err = work.SnapshotPlanOrigins(ctx, tx, projectID, origin, cutoff, typed)
+			if err != nil {
+				return "", err
+			}
+			changes, _ = json.Marshal(typed)
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO proposals (project_id, id, kind, status, reason, created_at, updated_at)
-				VALUES ($1,$2,'work_arrangement','draft',$3,$4,$4)`,
-				pid, id, draft["reason"], e.now()); err != nil {
+				INSERT INTO proposals (project_id, id, topic_id,kind, status, reason, created_at, updated_at)
+				VALUES ($1,$2,$5,'work_arrangement','draft',$3,$4,$4)`,
+				pid, id, draft["reason"], e.now(), origin); err != nil {
 				return "", err
 			}
 			if _, err := tx.Exec(ctx, `
@@ -344,6 +393,7 @@ func (e *Executor) toolEnv(projectID, topicID uuid.UUID) tools.Env {
 		},
 	}
 	e.contextTools(&env, projectID)
+	e.activityTools(&env, projectID)
 	return env
 }
 
@@ -392,11 +442,27 @@ func (e *Executor) commit(ctx context.Context, projectID, topicID, batchID, runI
 			return err
 		}
 		if projectState != "active" {
+			if err := collaboration.FinishTaskAnalysis(ctx, tx, projectID, batchID, "cancelled", "项目已归档，分析已取消。", now); err != nil {
+				return err
+			}
 			_, err := tx.Exec(ctx, `UPDATE discussion_batches SET state='cancelled',version=version+1,updated_at=now() WHERE id=$1`, batchID)
 			return err
 		}
 		if outcome.State == "succeeded" {
 			if _, err := tx.Exec(ctx, `UPDATE agent_sessions SET last_consumed_seq=GREATEST(last_consumed_seq,COALESCE((SELECT max(covered_seq) FROM context_checkpoints WHERE run_id=$2),0)) WHERE id=$1`, sessionID, runID); err != nil {
+				return err
+			}
+		}
+		var activityTask *uuid.UUID
+		if err := tx.QueryRow(ctx, `SELECT task_id FROM discussion_batches WHERE id=$1 AND project_id=$2`, batchID, projectID).Scan(&activityTask); err != nil {
+			return err
+		}
+		if activityTask != nil {
+			if err := collaboration.FinishTaskAnalysis(ctx, tx, projectID, batchID, batchState, content, now); err != nil {
+				return err
+			}
+			if topicID == uuid.Nil {
+				_, err := tx.Exec(ctx, `UPDATE discussion_batches SET state=$2,version=version+1,updated_at=now() WHERE id=$1`, batchID, batchState)
 				return err
 			}
 		}

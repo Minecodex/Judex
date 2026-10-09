@@ -329,7 +329,7 @@ test("the same template supports many people, while private preferences stay wit
     before + 1,
   );
   assert.equal(s.seats.filter((v) => v.person === "赵可").length, 2);
-  s = ok(personalPrompt(s, "leaf", "赵可的私人偏好"));
+  s = ok(personalPrompt(s, "leaf", "build-role", 0, "赵可的私人偏好"));
   const seat = s.seats.find(
     (v) => v.person === "赵可" && v.positionId === "build-role",
   );

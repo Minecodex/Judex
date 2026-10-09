@@ -66,17 +66,14 @@ test("old closed flags never lock chat, and reaching a limit does not approve or
   s = topicMessage(s, "labels", "仍然可以继续发言").state;
   assert.equal(s.topics[0].discussionRuns.length, 2);
 });
-test("work reporting starts a discussion budget; replaying the same report does not reset it", () => {
-  let s = seedWork();
-  s.currentUser = "顾言";
-  s = reportTask(s, "build", "本地进展与验证结果", []).state;
-  const topic = s.topics.find((t) => t.taskIds.includes("build"));
-  const run = latestDiscussionRun(s, topic.id);
-  assert.equal(run.trigger, "work_report");
-  assert.equal(run.rounds, 1);
-  assert.deepEqual(
-    discussWorkSubmission(s, "build", run.sourceId, "本地进展与验证结果", [])
-      .state,
-    s,
-  );
+test("work reporting creates one task analysis without task conversations, replay is idempotent", () => {
+ let s=seedWork();s.currentUser="顾言";
+ s=reportTask(s,"build","本地进展与验证结果",[]).state;
+ const activity=s.taskActivities.at(-1),count=s.topics.length;
+ assert.equal(activity.taskId,"build");
+ assert.equal(activity.analysis.state,"completed");
+ assert.equal(s.topics.some(t=>t.title.zh.startsWith("工作上报：")),false);
+ const replay=discussWorkSubmission(s,"build",activity.id,"本地进展与验证结果",[]).state;
+ assert.deepEqual(replay,s);
+ assert.equal(replay.topics.length,count);
 });

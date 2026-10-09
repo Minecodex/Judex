@@ -28,8 +28,11 @@ export function useSplitLayoutBase(open: boolean, t: SplitTranslator) {
   });
   const [box, setBox] = useState({
     width: 1440,
-    limits: { left: 200, center: 360, right: 320, divider: 8 },
+    limits: { left: 200, center: 360, right: 320, divider: 1 },
   });
+  const customized = useRef(false);
+  try { customized.current ||= !!localStorage.getItem(SPLIT_KEY); } catch { /* storage is optional */ }
+  const defaults = useRef({left:240,right:356});
   const [resizing, setResizing] = useState(false),
     [expanded, setExpanded] = useState(false);
   const latest = useRef(ratio);
@@ -43,6 +46,7 @@ export function useSplitLayoutBase(open: boolean, t: SplitTranslator) {
     id: number;
   } | null>(null);
   const persist = (value: SplitRatio) => {
+    customized.current = true;
     try {
       localStorage.setItem(SPLIT_KEY, JSON.stringify(value));
     } catch {
@@ -56,6 +60,8 @@ export function useSplitLayoutBase(open: boolean, t: SplitTranslator) {
       if (!el.clientWidth) return;
       const style = getComputedStyle(el);
       const n = (key: string) => Number.parseFloat(style.getPropertyValue(key));
+      defaults.current={left:n('--layout-left-default'),right:n('--layout-right-default')};
+      if (!customized.current && !drag.current) setRatio({left:defaults.current.left/el.clientWidth,right:defaults.current.right/el.clientWidth});
       setBox({
         width: el.clientWidth,
         limits: {
@@ -111,7 +117,7 @@ export function useSplitLayoutBase(open: boolean, t: SplitTranslator) {
     return next;
   };
   const reset = (side: "left" | "right") =>
-    persist(adjust(side, box.width * DEFAULT_SPLIT[side]));
+    persist(adjust(side, defaults.current[side]));
   const divider = (side: "left" | "right") => {
     const name = t(side === "left" ? "chatResizeLeft" : "chatResizeRight");
     return (

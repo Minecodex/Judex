@@ -1,5 +1,9 @@
 # 05 Agent 与沙箱
 
+2026-10-07 会话分叉与任务分析补充：任务上报事务登记 task_activity 批次，材料 ready 且可读后执行。任务级 session 与议题 session 分离，岗位调用仍使用现有 harness/worker、流程约束、预算、lease 与恢复。task facts 只包含当前任务、所属计划和必要依赖；议题 facts 通过共享历史解析器读取该分支固定的公开历史，每次模型边界重新读取正式工作状态、任职和已发布流程。
+
+协调者通过 record_task_analysis 保存结构化公开 summary、basis、disagreements 与可选 discussion 建议。没有结构化结果、模型未配置、外部调用失败或预算耗尽都保留真实失败/待处理状态与原记录；成功文本不冒充结构化分析。人明确选择新建、主讨论继续或指定已有会话，分析本身不创建会话、不验收。重试沿用原批次、工具结果和预算，不重放未知工具效果。Agent 工作提案与人的提案共用计划来源快照规则，批准后每个计划各建主讨论。
+
 ## 1. 首版运行拓扑
 
 主 Agent 为项目 coordinator，按 topic 保有独立 session；岗位子 Agent 按 identity＋topic 独立 session。harness 在 server worker 进程，模型调用、PG 上下文、业务工具均在服务器。四工具派发至该 run 的 OpenSandbox 容器，一 run 一 sandbox。不得在业务 Server 主机执行模型 shell，也不主动调用成员电脑。

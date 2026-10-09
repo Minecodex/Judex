@@ -18,26 +18,26 @@ import (
 
 	"github.com/kakj-go/Judex/internal/audit"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
-	"github.com/kakj-go/Judex/internal/platform/auth"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/kakj-go/Judex/internal/platform/events"
 )
 
 // Project is the API projection (06 §3).
 type Project struct {
-	ID                     uuid.UUID  `json:"id"`
-	Title                  string     `json:"title"`
-	Description            string     `json:"description"`
-	Kind                   string     `json:"kind"`
-	Status                 string     `json:"status"`
-	CreatorUserID          uuid.UUID  `json:"-"`
-	OwnerUserID            uuid.UUID  `json:"-"`
-	MaxDiscussionRounds    int        `json:"maxDiscussionRounds"`
-	ApprovalTimeoutSeconds int        `json:"approvalTimeoutSeconds"`
-	DefaultModelID         *uuid.UUID `json:"defaultModelId"`
-	Version                int64      `json:"version"`
-	CreatedAt              time.Time  `json:"createdAt"`
-	UpdatedAt              time.Time  `json:"updatedAt"`
+	Summary                *ProjectSummary `json:"summary,omitempty"`
+	ID                     uuid.UUID       `json:"id"`
+	Title                  string          `json:"title"`
+	Description            string          `json:"description"`
+	Kind                   string          `json:"kind"`
+	Status                 string          `json:"status"`
+	CreatorUserID          uuid.UUID       `json:"-"`
+	OwnerUserID            uuid.UUID       `json:"-"`
+	MaxDiscussionRounds    int             `json:"maxDiscussionRounds"`
+	ApprovalTimeoutSeconds int             `json:"approvalTimeoutSeconds"`
+	DefaultModelID         *uuid.UUID      `json:"defaultModelId"`
+	Version                int64           `json:"version"`
+	CreatedAt              time.Time       `json:"createdAt"`
+	UpdatedAt              time.Time       `json:"updatedAt"`
 	// ViewerRole is filled per requester: owner/manager/member or nil.
 	ViewerRole *string `json:"role"`
 }
@@ -196,41 +196,8 @@ func (s *Service) MembershipFor(ctx context.Context, requester, projectID uuid.U
 // ListForUser returns projects where the user is an active member, newest
 // first (cursor pagination wired at the handler layer).
 func (s *Service) ListForUser(ctx context.Context, user uuid.UUID, limit int, afterCreatedAt *time.Time, afterID *uuid.UUID) ([]Project, bool, error) {
-	var scope []uuid.UUID
-	if actor := auth.FromContext(ctx); actor != nil && actor.Kind == auth.KindCLI {
-		scope = actor.ProjectScope
-	}
-	rows, err := s.pool.Query(ctx, `
-		SELECT p.id, p.title, p.description, p.kind, p.status, p.version,
-		       p.max_discussion_rounds, p.approval_timeout_seconds, p.default_model_id,
-		       p.created_at, p.updated_at, m.role
-		FROM project_members m JOIN projects p ON p.id = m.project_id
-		WHERE m.user_id=$1 AND m.state='active' AND (cardinality($5::uuid[])=0 OR p.id=ANY($5))
-		  AND ($2::timestamptz IS NULL OR (p.created_at, p.id) < ($2, $3::uuid))
-		ORDER BY p.created_at DESC, p.id DESC
-		LIMIT $4`, user, afterCreatedAt, afterID, limit+1, nonNilProjectScope(scope))
-	if err != nil {
-		return nil, false, apierrors.New(apierrors.Internal, "project list failed").Wrap(err)
-	}
-	defer rows.Close()
-	var out []Project
-	for rows.Next() {
-		p := Project{}
-		if err := rows.Scan(&p.ID, &p.Title, &p.Description, &p.Kind, &p.Status, &p.Version,
-			&p.MaxDiscussionRounds, &p.ApprovalTimeoutSeconds, &p.DefaultModelID,
-			&p.CreatedAt, &p.UpdatedAt, &p.ViewerRole); err != nil {
-			return nil, false, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
-		}
-		out = append(out, p)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, false, apierrors.New(apierrors.Internal, "rows failed").Wrap(err)
-	}
-	more := len(out) > limit
-	if more {
-		out = out[:limit]
-	}
-	return out, more, nil
+	items, more, _, err := s.ListOverview(ctx, user, limit, afterCreatedAt, afterID, ListOptions{})
+	return items, more, err
 }
 
 // Get returns the project if the requester is an active member.

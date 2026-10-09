@@ -41,7 +41,7 @@ export function ConversationTabBar({
                 : text(
                     (tab.kind === "topic" ? state.topics : state.handoffs).find(
                       (v) => v.id === tab.id,
-                    )!.title,
+                    )?.title??tab.id??t("shellLoading"),
                   );
           return (
             <Tabs.Tab

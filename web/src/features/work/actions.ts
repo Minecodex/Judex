@@ -11,6 +11,7 @@ import {
   type Text,
 } from "./types.ts";
 import { uid } from "./seed.ts";
+import { myPositions, myPreference } from "./preferences.ts";
 import {
   blockers,
   canWork,
@@ -193,6 +194,7 @@ export function reportTask(
 ): Result {
   const task = state.tasks.find((t) => t.id === taskId);
   if (!task || !canWork(state, task)) return fail("permission");
+  if (task.executionException || task.discardedAt) return fail("blocked");
   if (["draft", "accepted"].includes(task.status)) return fail("stale");
   if (!summary.trim()) return fail("required");
   const s = structuredClone(state),
@@ -232,11 +234,17 @@ export function taskAction(
   action: "start" | "accept" | "reopen",
   reason = "",
   expectedRevision?: number,
+  identityId?: string,
 ): Result {
   const task = state.tasks.find((t) => t.id === taskId);
   if (!task || !member(state, task.projectId)) return fail("permission");
+  if (task.executionException || task.discardedAt) return fail("blocked");
   if (action === "start" ? !canWork(state, task) : !canAcceptTask(state, task))
     return fail("permission");
+  if(action==="start"){
+    const held=task.seatIds.filter(id=>ownsSeat(state,id));
+    if(identityId?!held.includes(identityId):held.length!==1)return fail(identityId?"permission":"required");
+  }
   if (action === "reopen" && (task.status !== "accepted" || !reason.trim()))
     return fail("required");
   if (action === "accept" && task.status !== "delivered") return fail("stale");
@@ -289,11 +297,11 @@ export function planAction(
 ): Result {
   const plan = state.plans.find((p) => p.id === planId);
   if (!plan || !canOwnPlan(state, plan)) return fail("permission");
-  const tasks = planTasks(state, planId);
+  const tasks = planTasks(state, planId,true);
   if (
     action === "accept" &&
     (!tasks.length ||
-      tasks.some((t) => t.status !== "accepted") ||
+      tasks.some((t) => !["accepted", "cancelled"].includes(t.businessStatus??t.status) && !(t.planId===plan.id && (t.executionException || (t.businessStatus??t.status)==="draft"))) ||
       plan.status !== "active")
   )
     return fail("blocked");
@@ -376,7 +384,7 @@ export function createWork(
     !position ||
     position.projectId !== projectId ||
     !state.flows.some(
-      (f) => f.id === draft.flowId && f.projectId === projectId,
+      (f) => f.id === draft.flowId && f.projectId === projectId && f.status !== 'draft',
     ) ||
     (draft.planId &&
       !state.plans.some(
@@ -399,6 +407,8 @@ export function createWork(
       projectId,
       title: W(draft.title),
       goal: W(draft.description),
+      createdBy: state.currentUserId??state.currentUser,
+      revision: 1,
       criteria,
       ownerSeatId: draft.seatId,
       flowId: draft.flowId,
@@ -412,6 +422,7 @@ export function createWork(
       projectId,
       title: W(draft.title),
       expected: W(draft.description),
+      createdBy: state.currentUserId??state.currentUser,
       criteria,
       seatIds: [draft.seatId],
       reviewerSeatId: draft.planId
@@ -543,15 +554,19 @@ export function refreshHandoff(state: WorkState, handoffId: string): Result {
 export function personalPrompt(
   state: WorkState,
   projectId: string,
+  positionId: string,
+  expectedRevision: number,
   prompt: string,
 ): Result {
-  if (!member(state, projectId)) return fail("permission");
+  if (!member(state, projectId) || !myPositions(state, projectId).some(p => p.id === positionId)) return fail("permission");
+  if ((myPreference(state, projectId, positionId)?.revision ?? 0) !== expectedRevision) return fail("stale");
   const s = structuredClone(state);
+  const current = myPreference(s, projectId, positionId);
   s.preferences = [
     ...s.preferences.filter(
-      (p) => p.projectId !== projectId || p.person !== s.currentUser,
+      (p) => p !== current,
     ),
-    { projectId, person: s.currentUser, prompt },
+    { projectId, positionId, person: s.currentUser, userId: s.currentUserId, revision: expectedRevision + 1, prompt },
   ];
   return { state: s };
 }
@@ -562,6 +577,7 @@ export function savePosition(
     id?: string;
     name: string;
     prompt: string;
+    publicSummary?: string;
     flowId: string;
     nodeId: string;
   },
@@ -570,9 +586,10 @@ export function savePosition(
   if (![value.name, value.prompt].every((v) => v.trim()))
     return fail("required");
   if (
-    !state.flows.some(
+    (value.flowId || value.nodeId) && !state.flows.some(
       (f) =>
         f.id === value.flowId &&
+        f.status !== 'draft' &&
         f.projectId === projectId &&
         f.nodes.some((n) => n.id === value.nodeId),
     )
@@ -590,8 +607,9 @@ export function savePosition(
     projectId,
     name: W(value.name.trim()),
     prompt: W(value.prompt.trim()),
+    publicSummary: W(value.publicSummary ?? value.prompt.trim()),
     tone: "mint",
-    bindings: [{ flowId: value.flowId, nodeId: value.nodeId }],
+    bindings: value.flowId ? [{ flowId: value.flowId, nodeId: value.nodeId }] : [],
   };
   if (value.id)
     s.positions = s.positions.map((p) =>

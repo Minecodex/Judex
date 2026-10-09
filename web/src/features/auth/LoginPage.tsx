@@ -8,6 +8,7 @@ import { usePreferences } from "../../stores/preferences";
 import { translate, type Key } from "../../i18n";
 import { login } from "./api";
 import { errorKey } from "./errors";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { safeReturnTo, useAuth } from "./AuthProvider";
 
 export function LoginPage() {
@@ -35,8 +36,9 @@ export function LoginPage() {
   return (
     <Card className="judex-auth-card">
       <Card.Header>
-        <Card.Title>{t("loginTitle")}</Card.Title>
-        <Card.Description>{t("loginHint")}</Card.Description>
+        <span className="judex-entry-badge">{t("portalSpace")}</span>
+        <Card.Title>{t("portalWelcome")}</Card.Title>
+        <Card.Description>{t("portalLoginHint")}</Card.Description>
       </Card.Header>
       <Card.Content>
         {location.state?.expired && (
@@ -51,7 +53,7 @@ export function LoginPage() {
         >
           <TextField isRequired type="email" name="email" value={email} onChange={setEmail}>
             <Label>{t("fieldEmail")}</Label>
-            <Input autoComplete="email" />
+            <Input autoComplete="email" placeholder={t("portalEmailPlaceholder")} />
           </TextField>
           <TextField
             isRequired
@@ -60,19 +62,12 @@ export function LoginPage() {
             value={password}
             onChange={setPassword}
           >
-            <Label>{t("fieldPassword")}</Label>
-            <Input autoComplete="current-password" />
+            <div className="judex-field-heading"><Label>{t("fieldPassword")}</Label><Button size="sm" className="judex-text-link" onPress={() => navigate("/recover")}>{t("toRecover")}</Button></div>
+            <div className="judex-password-field"><Input autoComplete="current-password" placeholder={t("portalPasswordPlaceholder")} /><Button isIconOnly size="sm" aria-label={reveal ? t("hidePassword") : t("showPassword")} onPress={() => setReveal(!reveal)}>{reveal ? <EyeOff /> : <Eye />}</Button></div>
           </TextField>
-          <label className="judex-auth-reveal">
-            <input
-              type="checkbox"
-              checked={reveal}
-              onChange={(event) => setReveal(event.target.checked)}
-            />
-            {reveal ? t("hidePassword") : t("showPassword")}
-          </label>
-          <Button type="submit" isPending={mutation.isPending}>
+          <Button type="submit" variant="primary" size="lg" fullWidth isPending={mutation.isPending}>
             {mutation.isPending ? t("submitting") : t("submitLogin")}
+            <ArrowRight />
           </Button>
           {mutation.isError && (
             <UIWarning role="alert" aria-live="polite">
@@ -82,11 +77,9 @@ export function LoginPage() {
         </form>
       </Card.Content>
       <Card.Footer>
-        <Button variant="ghost" onClick={() => navigate("/register")}>
-          {t("toRegister")}
-        </Button>
-        <Button variant="ghost" onClick={() => navigate("/recover")}>
-          {t("toRecover")}
+        <span>{t("portalNewAccount")}</span>
+        <Button variant="ghost" className="judex-text-link" onClick={() => navigate("/register")}>
+          {t("portalCreateAccount")}
         </Button>
       </Card.Footer>
     </Card>

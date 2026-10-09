@@ -171,24 +171,27 @@ func TestPositionsInvitationsIdentities(t *testing.T) {
 		t.Fatalf("old binding must be closed exactly once, got %d", closedBindings)
 	}
 
-	// 个人偏好：版本化 + 本人可见（其他成员也是 null 默认）。
+	// 无任职者不可设置；当前任职者按职位版本化，其他人只能读取自己的空配置。
 	prefs, err := svc.GetMyPreferences(ctx, newbie.ID, proj.ID)
-	if err != nil || prefs.Revision != 0 || prefs.Prompt != "" {
+	if err != nil || len(prefs) != 0 {
 		t.Fatalf("default prefs: %+v %v", prefs, err)
 	}
-	updated1, err := svc.UpdateMyPreferences(ctx, newbie.ID, proj.ID, 0, "偏好简洁报告")
+	if _, err := svc.UpdateMyPreferences(ctx, newbie.ID, proj.ID, positionID, 0, "旧任职偏好"); !errors.IsCode(err, errors.Forbidden) {
+		t.Fatalf("unassigned preference must be forbidden: %v", err)
+	}
+	updated1, err := svc.UpdateMyPreferences(ctx, third.ID, proj.ID, positionID, 0, "偏好简洁报告")
 	if err != nil || updated1.Revision != 1 {
 		t.Fatalf("prefs update: %v %+v", err, updated1)
 	}
-	if _, err := svc.UpdateMyPreferences(ctx, newbie.ID, proj.ID, 0, "旧版本"); errors.IsCode(err, errors.VersionConflict) == false {
+	if _, err := svc.UpdateMyPreferences(ctx, third.ID, proj.ID, positionID, 0, "旧版本"); errors.IsCode(err, errors.VersionConflict) == false {
 		t.Fatalf("stale prefs must conflict, got %v", err)
 	}
 	otherView, err := svc.GetMyPreferences(ctx, other.ID, proj.ID)
-	if err != nil || otherView.Prompt != "" {
+	if err != nil || len(otherView) != 1 || otherView[0].PositionID != positionID || otherView[0].Prompt != "" || otherView[0].Revision != 0 {
 		t.Fatalf("other member sees own empty prefs, not newbie's: %+v %v", otherView, err)
 	}
 	var revisions int
-	if err := pool.QueryRow(ctx, `SELECT count(*) FROM preference_revisions WHERE project_id=$1 AND user_id=$2`, proj.ID, newbie.ID).Scan(&revisions); err != nil {
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM position_preference_revisions WHERE project_id=$1 AND user_id=$2 AND position_id=$3`, proj.ID, third.ID, positionID).Scan(&revisions); err != nil {
 		t.Fatal(err)
 	}
 	if revisions != 1 {
@@ -253,7 +256,10 @@ func TestModelCatalogAndProjectConfig(t *testing.T) {
 	badModel := uuid.New()
 	_, err = svc.Update(ctx, owner.ID, proj.ID, proj.Version, project.UpdateRequest{
 		DefaultModelID: &badModel, DefaultModelSet: true,
-	}, func(ctx context.Context, id uuid.UUID) error { _, err := agent.ModelEnabled(ctx, fixture.Pool, id); return err })
+	}, func(ctx context.Context, id uuid.UUID) error {
+		_, err := agent.ModelEnabled(ctx, fixture.Pool, id)
+		return err
+	})
 	if errors.IsCode(err, errors.InvalidReference) == false {
 		t.Fatalf("unknown model must be InvalidReference, got %v", err)
 	}
@@ -261,7 +267,10 @@ func TestModelCatalogAndProjectConfig(t *testing.T) {
 	disabledID, _ := uuid.Parse(m1)
 	if _, err = svc.Update(ctx, owner.ID, proj.ID, proj.Version, project.UpdateRequest{
 		DefaultModelID: &disabledID, DefaultModelSet: true,
-	}, func(ctx context.Context, id uuid.UUID) error { _, err := agent.ModelEnabled(ctx, fixture.Pool, id); return err }); errors.IsCode(err, errors.InvalidReference) == false {
+	}, func(ctx context.Context, id uuid.UUID) error {
+		_, err := agent.ModelEnabled(ctx, fixture.Pool, id)
+		return err
+	}); errors.IsCode(err, errors.InvalidReference) == false {
 		t.Fatalf("disabled model must be rejected, got %v", err)
 	}
 	// 启用模型 + 轮次超范围拒绝。
@@ -280,7 +289,10 @@ func TestModelCatalogAndProjectConfig(t *testing.T) {
 	}
 	updated, err := svc.Update(ctx, owner.ID, proj.ID, proj.Version, project.UpdateRequest{
 		DefaultModelID: &enabledID, DefaultModelSet: true,
-	}, func(ctx context.Context, id uuid.UUID) error { _, err := agent.ModelEnabled(ctx, fixture.Pool, id); return err })
+	}, func(ctx context.Context, id uuid.UUID) error {
+		_, err := agent.ModelEnabled(ctx, fixture.Pool, id)
+		return err
+	})
 	if err != nil || updated.DefaultModelID == nil || *updated.DefaultModelID != enabledID {
 		t.Fatalf("model set: %v %+v", err, updated)
 	}

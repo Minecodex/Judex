@@ -23,6 +23,7 @@ import (
 	"github.com/kakj-go/Judex/internal/agent/batch"
 	"github.com/kakj-go/Judex/internal/agent/runner"
 	"github.com/kakj-go/Judex/internal/agent/tools"
+	"github.com/kakj-go/Judex/internal/collaboration"
 	"github.com/kakj-go/Judex/internal/config"
 	"github.com/kakj-go/Judex/internal/decision"
 	"github.com/kakj-go/Judex/internal/discussion"
@@ -139,6 +140,8 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 		app.projects = project.NewService(pool, nil)
 		app.workflows = workflow.NewService(pool, nil)
 		app.materials = material.NewService(pool, app.objects, material.DefaultLimits(), nil)
+		app.materials.SetConverterURL(os.Getenv("JUDEX_MATERIAL_CONVERTER_URL"))
+		app.handlers = append(app.handlers, app.materials.PreviewHandler())
 		app.discussion = discussion.NewService(pool, nil)
 		app.work = work.NewService(pool, nil)
 		app.decisions = decision.NewService(pool, nil, 86400)
@@ -244,8 +247,11 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			httptransport.NewPositionHandlers(app.projects).Register(spec)
 			httptransport.NewMaterialHandlers(app.materials).Register(spec)
 			httptransport.NewDiscussionHandlers(app.discussion).Register(spec)
+			collaborationService := collaboration.NewService(app.pool)
+			httptransport.NewCollaborationHandlers(collaborationService, app.discussion).Register(spec)
 			httptransport.NewSSEHandlers(app.pool.Pool).Register(spec)
 			httptransport.NewWorkHandlers(app.work).Register(spec)
+			httptransport.NewCooperationHandlers(app.work, app.discussion).Register(spec)
 			httptransport.NewProposalHandlers(app.decisions).Register(spec)
 			httptransport.NewHandoffHandlers(app.handoffs, app.work).Register(spec)
 			httptransport.NewResearchHandlers(app.work).Register(spec)
@@ -253,6 +259,8 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 			intentHandlers.Projects = app.projects
 			intentHandlers.Handoffs = app.handoffs
 			intentHandlers.Workflows = app.workflows
+			intentHandlers.Collaboration = collaborationService
+			intentHandlers.Discussion = app.discussion
 			intentHandlers.Register(spec)
 			httptransport.NewAgentHandlers(app.pool).Register(spec)
 			idSvc := app.identity

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"sync/atomic"
@@ -13,6 +14,9 @@ import (
 func main() {
 	var mode atomic.Value
 	mode.Store("normal")
+	if value := os.Getenv("JUDEX_FIXTURE_MODE"); value != "" {
+		mode.Store(value)
+	}
 	http.HandleFunc("/mode/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			w.WriteHeader(405)
@@ -77,6 +81,44 @@ func main() {
 			emit("[DONE]")
 			return
 		}
+		if m == "collaboration" {
+			text := func(value string) {
+				frame, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"content": value}, "finish_reason": "stop"}}, "usage": map[string]int{"prompt_tokens": 100, "completion_tokens": 50}})
+				emit(string(frame))
+				emit("[DONE]")
+			}
+			var transcript strings.Builder
+			for _, message := range req.Messages {
+				transcript.WriteString(message.Content)
+				transcript.WriteByte('\n')
+			}
+			all := transcript.String()
+			if len(req.Messages) > 0 && !strings.Contains(req.Messages[0].Content, "你是项目协调者") {
+				text("岗位已核对当前任务的事实与证据，未执行正式验收。")
+				return
+			}
+			if strings.Contains(all, "\"analysisId\"") {
+				text("公开分析与讨论建议已保存，等待人选择讨论位置。")
+				return
+			}
+			name, id := "record_task_analysis", "controlled-task-analysis"
+			args := map[string]any{"summary": "当前任务进展已核对，原始记录保持可追溯。", "disagreements": []string{}}
+			if !strings.Contains(all, "岗位已核对") {
+				match := regexp.MustCompile(`"identityId"\s*:\s*"([0-9a-f-]{36})"`).FindStringSubmatch(all)
+				if len(match) > 1 {
+					name, id = "call_agent", "controlled-position"
+					args = map[string]any{"position": match[1], "question": "按当前职责核对这项任务，保留缺失项", "material": ""}
+				}
+			} else if strings.Contains(all, "COLLAB_QUESTION") {
+				args["discussion"] = map[string]any{"title": "登录问题核对", "reason": "这项问题需要持续协调开发与测试的依据。"}
+			}
+			arguments, _ := json.Marshal(args)
+			frame, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"tool_calls": []any{map[string]any{"index": 0, "id": id, "function": map[string]any{"name": name, "arguments": string(arguments)}}}}}}})
+			emit(string(frame))
+			emit(`{"choices":[{"delta":{},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":100,"completion_tokens":50}}`)
+			emit("[DONE]")
+			return
+		}
 		hasTool := false
 		for _, msg := range req.Messages {
 			hasTool = hasTool || msg.Role == "tool"
@@ -90,7 +132,11 @@ func main() {
 		}
 		emit("[DONE]")
 	})
-	if err := http.ListenAndServe(":8081", nil); err != nil {
+	addr := os.Getenv("JUDEX_FIXTURE_ADDR")
+	if addr == "" {
+		addr = ":8081"
+	}
+	if err := http.ListenAndServe(addr, nil); err != nil {
 		panic(err)
 	}
 }

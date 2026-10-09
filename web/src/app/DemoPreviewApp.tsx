@@ -1,9 +1,10 @@
 import { Suspense, lazy, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Card } from "@heroui/react";
+import { Card } from "@heroui/react";
+import { Button } from "../components/ui/Button";
 import { usePreferences } from "../stores/preferences";
 import { translate, type Key } from "../i18n";
-const WorkApp = lazy(() => import("../features/chat/ChatWorkspace"));
+const WorkApp = lazy(() => import("../features/cooperation/CooperationShell"));
 // 演示模式的退出预览态：无会话概念，退出只进入引导页并可返回，
 // 刷新不自动重入（sessionSession judex.preview.signedOut 持久）。
 const SIGNED_OUT_KEY = "judex.preview.signedOut";

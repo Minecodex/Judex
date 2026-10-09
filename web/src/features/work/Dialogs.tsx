@@ -1,3 +1,4 @@
+import {ApiAcceptanceDialog} from "../cooperation/FrozenReview";
 import {
   UIInput,
   UITextArea,
@@ -11,7 +12,10 @@ import { ArrowRight, Copy } from "lucide-react";
 import { useWork } from "./store";
 import { Btn, Dialog, EvidenceList, Field, Upload } from "./ui";
 import type { Evidence, Task, Handoff, Source, Plan } from "./types";
-import { ownsSeat, planTasks, planReviewKey } from "./selectors";
+import { planTasks, planReviewKey } from "./selectors";
+import { isMySeat, myPreference } from "./preferences";
+import {ownsSeat} from "./selectors";
+import {TaskResponsibilityPicker} from "./TaskResponsibilityPicker";
 export function CreateWorkDialog({
   kind,
   onClose,
@@ -27,7 +31,7 @@ export function CreateWorkDialog({
       (p) => p.id === s.positionId && p.projectId === project.id,
     ),
   );
-  const flows = state.flows.filter((f) => f.projectId === project.id);
+  const flows = state.flows.filter((f) => f.projectId === project.id && f.status !== "draft");
   const [draft, setDraft] = useState({
     kind,
     title: "",
@@ -191,7 +195,7 @@ export function CreateWorkDialog({
         </Btn>
         <Btn
           testId="create-work-draft"
-          disabled={!seats.length || !flows.length}
+          disabled={!draft.title.trim()}
           onClick={async () => {
             const r = await act("createWork", { projectId: project.id, draft });
             if (r.ok) {
@@ -221,9 +225,11 @@ export function ReportDialog({
   source?: Source;
   onClose: () => void;
 }) {
-  const { t, text, act } = useWork(),
+  const { state,t, text, act } = useWork(),
     [summary, setSummary] = useState(""),
     [files, setFiles] = useState<Evidence[]>([]);
+  const held=task.seatIds.filter(id=>ownsSeat(state,id)),[identityId,setIdentity]=useState(source&&held.includes(source.senderSeatId)?source.senderSeatId:held.length===1?held[0]:""),[busy,setBusy]=useState(false);
+  const needsContribution=!source||files.length>0,valid=!needsContribution||task.seatIds.includes(identityId)&&ownsSeat(state,identityId);
   return (
     <Dialog
       title={t(source ? "workRevise" : "workTaskReport")}
@@ -243,13 +249,16 @@ export function ReportDialog({
         />
       </Field>
       <Upload files={files} onChange={setFiles} />
+      {needsContribution&&<Field label={t("workChooseSeat")}><TaskResponsibilityPicker task={task} value={identityId} onChange={setIdentity} testId="source-report-identity"/></Field>}
       <div className="judex-modal-actions">
         <Btn secondary onClick={onClose}>
           {t("cancel")}
         </Btn>
         <Btn
           testId="submit-report"
+          disabled={!valid||busy}
           onClick={async () => {
+            if(!valid||busy)return;setBusy(true);try{
             const r =
               handoff && source
                 ? await act("reviseSource", {
@@ -258,9 +267,11 @@ export function ReportDialog({
                     revision: source.revision,
                     summary,
                     files,
+                    identityId,
                   })
-                : await act("reportTask", { taskId: task.id, summary, files });
+                : await act("reportTask", { taskId: task.id, summary, files,identityId });
             if (r.ok) onClose();
+            }finally{setBusy(false);}
           }}
         >
           {t(source ? "workSaveRevision" : "workSubmitReport")}
@@ -319,7 +330,8 @@ export function ReasonDialog({
     </Dialog>
   );
 }
-export function AcceptanceDialog({
+export function AcceptanceDialog(props:{task?:Task;plan?:Plan;onClose:()=>void}){const {mode}=useWork();return mode==="api"?<ApiAcceptanceDialog {...props}/>:<DemoAcceptanceDialog {...props}/>;}
+function DemoAcceptanceDialog({
   task,
   plan,
   onClose,
@@ -331,7 +343,7 @@ export function AcceptanceDialog({
   const { t, text, state, act } = useWork();
   const [review] = useState(() => ({
     tasks: structuredClone(
-      plan ? planTasks(state, plan.id) : task ? [task] : [],
+      plan ? planTasks(state, plan.id,true) : task ? [task] : [],
     ),
     taskRevision: task?.revision,
     planKey: plan ? planReviewKey(state, plan) : undefined,
@@ -406,9 +418,6 @@ export function BriefDialog({
 }) {
   const { state, text, t, setToast } = useWork();
   const flow = state.flows.find((f) => f.id === task.flowId)!;
-  const mine = state.preferences.find(
-    (p) => p.projectId === task.projectId && p.person === state.currentUser,
-  );
   const roles = [...new Set([...task.seatIds, task.reviewerSeatId])]
     .map((id) => state.seats.find((s) => s.id === id)!)
     .filter(Boolean);
@@ -426,9 +435,10 @@ export function BriefDialog({
         " · " +
         text(state.positions.find((p) => p.id === seat.positionId)!.prompt),
     ),
-    roles.some((s) => ownsSeat(state, s.id))
-      ? t("workMyPrompt") + ": " + (mine?.prompt || t("workNoPreference"))
-      : t("workPromptPrivate"),
+    ...[...new Set(roles.filter(seat => isMySeat(state, seat)).map(seat => seat.positionId))].map(positionId =>
+      t("workMyPositionPrompt") + " · " + text(state.positions.find(position => position.id === positionId)!.name) + ": " +
+      (myPreference(state, task.projectId, positionId)?.prompt || t("workNoPreference"))),
+    roles.some(seat => !isMySeat(state, seat)) ? t("workPromptPrivate") : "",
     task.branch ?? "",
     t("workLocalHint"),
     t("workSimulated"),

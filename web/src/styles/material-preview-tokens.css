@@ -1,0 +1,37 @@
+:root {
+ --mp-header-height:64px; --mp-note-height:26px; --mp-library-width:1160px; --mp-sort-width:136px; --mp-notice-layer:100;
+ --mp-sidebar-width:216px; --mp-panel-width:418px; --mp-viewer-width:1120px;
+ --mp-thumbnail-height:168px; --mp-thumbnail-compact:116px; --mp-message-file-width:232px;
+ --mp-viewer-height:530px; --mp-paper-width:570px; --mp-paper-height:660px;
+ --mp-portrait-height:122px; --mp-cover-width:145px; --mp-cover-height:174px;
+ --mp-code-line-height:1.8; --mp-meta-line-height:1.5; --mp-reader-columns:minmax(0,1fr) 252px;
+ --mp-white:#fff; --mp-paper:#fffefb; --mp-paper-ink:#27332f; --mp-paper-muted:#69766d; --mp-paper-line:#e1e7de;
+ --mp-art-bg:#e6eee7; --mp-art-paper:#fffefb; --mp-art-ink:#2d473b; --mp-art-muted:#6c8070; --mp-art-line:#c8d5c9; --mp-art-accent:#3c6852;
+ --mp-format-pdf-bg:#f4eae5; --mp-format-pdf-ink:#a85346;
+ --mp-format-docx-bg:#e8edf3; --mp-format-docx-ink:#45678c;
+ --mp-format-xlsx-bg:#e5eee7; --mp-format-xlsx-ink:#3e7254;
+ --mp-format-png-bg:#e9efdf; --mp-format-png-ink:#617447;
+ --mp-format-md-bg:#e8ede9; --mp-format-md-ink:#4a6656;
+ --mp-format-pptx-bg:#f4ebdf; --mp-format-pptx-ink:#9f7143;
+ --mp-format-json-bg:#eae8f1; --mp-format-json-ink:#796796;
+ --mp-format-zip-bg:#eeecdf; --mp-format-zip-ink:#857649;
+ --mp-code-bg:#27372e; --mp-code-ink:#c4d8c8; --mp-code-accent:#ecdfaa;
+ --mp-format-pill-bg:#ffffffd9; --mp-format-caption-bg:#ffffffa8;
+ --mp-thumb-shadow:0 8px 20px #27372e14;
+ --mp-preview-scrim:#263e32e8;
+ --mp-preview-hover-shadow:0 8px 24px #21372c12;
+}
+:root[data-theme="dark"] {
+ --mp-format-pdf-bg:#392d29; --mp-format-pdf-ink:#e5afa2;
+ --mp-format-docx-bg:#28323d; --mp-format-docx-ink:#afc6e0;
+ --mp-format-xlsx-bg:#2b3b30; --mp-format-xlsx-ink:#b4d3bd;
+ --mp-format-png-bg:#303b29; --mp-format-png-ink:#c3d3a9;
+ --mp-format-md-bg:#2c3930; --mp-format-md-ink:#b7cdbd;
+ --mp-format-pptx-bg:#3b3328; --mp-format-pptx-ink:#dfc3a0;
+ --mp-format-json-bg:#34303e; --mp-format-json-ink:#c8bade;
+ --mp-format-zip-bg:#393629; --mp-format-zip-ink:#d4c89e;
+ --mp-format-pill-bg:#202822ed; --mp-format-caption-bg:#202822d6;
+ --mp-thumb-shadow:0 8px 20px #00000030; --mp-preview-hover-shadow:0 8px 24px #00000035;
+}
+@media (min-width:1720px) { :root { --mp-panel-width:472px; --mp-sidebar-width:248px; } }
+@media (max-width:1250px) { :root { --mp-panel-width:346px; --mp-sidebar-width:192px; --mp-message-file-width:210px; --mp-reader-columns:minmax(0,1fr) 226px; } }

@@ -29,6 +29,8 @@ import (
 
 // Node is one process node (structured authority).
 type Node struct {
+	Kind                  string   `json:"kind,omitempty"`
+	Phase                 string   `json:"phase,omitempty"`
 	DelegationUserIDs     []string `json:"delegationUserIds,omitempty"`
 	ID                    string   `json:"id"`
 	Name                  string   `json:"name"`
@@ -39,8 +41,10 @@ type Node struct {
 
 // Edge is an advisory ordering between nodes (not a permission).
 type Edge struct {
-	From string `json:"from"`
-	To   string `json:"to"`
+	From  string `json:"from"`
+	To    string `json:"to"`
+	Kind  string `json:"kind,omitempty"`
+	Label string `json:"label,omitempty"`
 }
 
 // HardRule is a whitelisted structured precondition (02 §7).
@@ -63,6 +67,7 @@ type Body struct {
 
 // Definition is the workflow aggregate head.
 type Definition struct {
+	PresetID           *string    `json:"presetId,omitempty"`
 	ID                 uuid.UUID  `json:"id"`
 	Name               string     `json:"name"`
 	PublishedVersionID *uuid.UUID `json:"publishedVersionId"`
@@ -128,7 +133,10 @@ func Validate(body Body) error {
 			return apierrors.Fields("advisoryEdges", "self")
 		}
 	}
-	if hasCycle(body.Nodes, body.AdvisoryEdges) {
+	if err := validateGraphAnnotations(body); err != nil {
+		return err
+	}
+	if hasCycle(body.Nodes, forwardEdges(body.AdvisoryEdges)) {
 		return apierrors.Fields("advisoryEdges", "cycle")
 	}
 	for i, rule := range body.HardRules {
@@ -192,32 +200,20 @@ func hasCycle(nodes []Node, edges []Edge) bool {
 	return false
 }
 
-// GenerateMermaid renders the read-only diagram from the structured body.
-func GenerateMermaid(body Body) string {
-	var b strings.Builder
-	b.WriteString("flowchart LR\n")
-	for _, node := range body.Nodes {
-		label := strings.NewReplacer("\"", "'", "\n", " ").Replace(node.Name)
-		fmt.Fprintf(&b, "  %s[\"%s\"]\n", mermaidID(node.ID), label)
-	}
-	for _, edge := range body.AdvisoryEdges {
-		fmt.Fprintf(&b, "  %s --> %s\n", mermaidID(edge.From), mermaidID(edge.To))
-	}
-	return b.String()
-}
-
-func mermaidID(id string) string {
-	return "n_" + strings.ReplaceAll(strings.ToLower(id), "-", "_")
-}
-
 // ConstraintHash fingerprints the permission-relevant parts for review
 // impact analysis (02 §7 服务端比较规范化约束 hash)。
 func ConstraintHash(body Body) string {
+	nodes := append([]Node(nil), body.Nodes...)
+	for i := range nodes {
+		// Display grouping and decision shape do not grant business authority.
+		nodes[i].Kind = ""
+		nodes[i].Phase = ""
+	}
 	relevant := struct {
 		Nodes            []Node            `json:"nodes"`
 		HardRules        []HardRule        `json:"hardRules"`
 		ApprovalPolicies map[string]string `json:"approvalPolicies"`
-	}{body.Nodes, body.HardRules, body.ApprovalPolicies}
+	}{nodes, body.HardRules, body.ApprovalPolicies}
 	raw, _ := json.Marshal(canonicalize(relevant))
 	return fmt.Sprintf("%x", sha256Sum(raw))
 }
@@ -235,36 +231,9 @@ func (s *Service) Create(ctx context.Context, requester, projectID uuid.UUID, bo
 		if _, err := s.membership(ctx, tx, requester, projectID); err != nil {
 			return err
 		}
-		now := s.now()
-		id := uuid.New()
-		versionID := uuid.New()
-		nodesJSON, _ := json.Marshal(body.Nodes)
-		edgesJSON, _ := json.Marshal(body.AdvisoryEdges)
-		hardJSON, _ := json.Marshal(body.HardRules)
-		policiesJSON, _ := json.Marshal(body.ApprovalPolicies)
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO workflow_definitions (project_id, id, name, created_at, updated_at)
-			VALUES ($1,$2,$3,$4,$4)`, projectID, id, body.Name, now); err != nil {
-			return apierrors.New(apierrors.Internal, "definition insert failed").Wrap(err)
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO workflow_versions (project_id, id, definition_id, revision, state, instructions,
-				nodes_json, advisory_edges_json, approval_policies_json, hard_rules_json, mermaid, author_user_id, created_at,name)
-			VALUES ($1,$2,$3,1,'draft',$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-			projectID, versionID, id, body.Instructions, nodesJSON, edgesJSON, policiesJSON, hardJSON,
-			GenerateMermaid(body), requester, now, body.Name); err != nil {
-			return apierrors.New(apierrors.Internal, "draft insert failed").Wrap(err)
-		}
-		if _, err := events.AppendProjectEvent(ctx, tx, projectID, "workflow.published", "workflow", id.String(), nil,
-			map[string]any{"change": "draft_created"}, now); err != nil {
-			return err
-		}
-		out = Definition{ID: id, Name: body.Name, HasDraft: true, Version: 1}
-		return audit.Append(ctx, tx, audit.Entry{
-			ProjectID: &projectID, ActorType: audit.ActorUser, ActorUserID: &requester,
-			Source: audit.SourceWeb, Operation: "workflow.create",
-			ObjectType: "workflow", ObjectID: id.String(), OccurredAt: now,
-		})
+		var err error
+		out, err = s.insertDefinition(ctx, tx, requester, projectID, body, nil)
+		return err
 	})
 	return out, err
 }
@@ -365,7 +334,12 @@ func (s *Service) UpdateDraft(ctx context.Context, requester, projectID, workflo
 			return apierrors.New(apierrors.VersionConflict, "workflow version conflict")
 		}
 		out = Version{ID: draftID, Revision: revision, State: "draft", Body: &body, Mermaid: GenerateMermaid(body)}
-		return nil
+		if _, err := events.AppendProjectEvent(ctx, tx, projectID, "workflow.published", "workflow", workflowID.String(), &revision,
+			map[string]any{"change": "draft_updated"}, s.now()); err != nil {
+			return err
+		}
+		return audit.Append(ctx, tx, audit.Entry{ProjectID: &projectID, ActorType: audit.ActorUser, ActorUserID: &requester,
+			Source: audit.SourceWeb, Operation: "workflow.draft.update", ObjectType: "workflow", ObjectID: workflowID.String(), OccurredAt: s.now()})
 	})
 	return out, err
 }
@@ -449,7 +423,7 @@ func (s *Service) List(ctx context.Context, requester, projectID uuid.UUID) ([]D
 	rows, err := paging.Query(ctx, s.pool, `
 		SELECT d.id, d.name, d.published_version_id,
 		       EXISTS(SELECT 1 FROM workflow_versions v WHERE v.definition_id=d.id AND v.state='draft'),
-		       d.version
+		       d.version, d.preset_id
 		/*keys*/ FROM workflow_definitions d WHERE d.project_id=$1 /*page*/`, "d.created_at", "d.id", projectID)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "list failed").Wrap(err)
@@ -458,7 +432,7 @@ func (s *Service) List(ctx context.Context, requester, projectID uuid.UUID) ([]D
 	var out []Definition
 	for rows.Next() {
 		var d Definition
-		if err := rows.Scan(&d.ID, &d.Name, &d.PublishedVersionID, &d.HasDraft, &d.Version); err != nil {
+		if err := rows.Scan(&d.ID, &d.Name, &d.PublishedVersionID, &d.HasDraft, &d.Version, &d.PresetID); err != nil {
 			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
 		}
 		out = append(out, d)

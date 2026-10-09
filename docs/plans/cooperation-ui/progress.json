@@ -1,0 +1,1627 @@
+{
+  "schemaVersion": 1,
+  "planId": "cooperation-ui",
+  "title": "项目协同前端重构实施计划",
+  "createdAt": "2026-10-08",
+  "status": "completed",
+  "baseline": {
+    "head": "e701073",
+    "workingTree": "dirty",
+    "note": "编制时源码核对；实施开始需重新记录未提交改动、文件校验值与运行环境。"
+  },
+  "scope": {
+    "frontend": "当前 demo 流程与现有完整设置，正式 api/demo 共用组件树。",
+    "backend": "任务主讨论、范围与关联版本、只读投影、事件及合法 AI 上下文所需最小补充。",
+    "deployment": "临时 namespace 验收；现有运行部署升级为后续明确发布动作。"
+  },
+  "documents": {
+    "overview": "README.md",
+    "contracts": "01-页面路由与数据契约.md",
+    "tasks": "02-实施任务清单.md",
+    "acceptance": "03-测试验收与交付.md"
+  },
+  "statusRules": {
+    "allowed": [
+      "planned",
+      "in_progress",
+      "blocked",
+      "completed"
+    ],
+    "completed": "交付、依赖与验收出口均有本轮证据，不能以历史或 demo 结果替代真实验收。",
+    "evidence": "每条证据记录构建或源码标识、命令或场景、结果与文件位置。"
+  },
+  "phases": [
+    {
+      "id": "P0",
+      "title": "基线、路由与视觉契约",
+      "status": "completed"
+    },
+    {
+      "id": "P1",
+      "title": "后端最小补充与查询契约",
+      "status": "completed"
+    },
+    {
+      "id": "P2",
+      "title": "项目外壳、项目列表与账户",
+      "status": "completed"
+    },
+    {
+      "id": "P3",
+      "title": "项目协同四类标签",
+      "status": "completed"
+    },
+    {
+      "id": "P4",
+      "title": "计划路线与任务详情",
+      "status": "completed"
+    },
+    {
+      "id": "P5",
+      "title": "对象范围 Chatbox 与会话协作",
+      "status": "completed"
+    },
+    {
+      "id": "P6",
+      "title": "完整设置与全入口收口",
+      "status": "completed"
+    },
+    {
+      "id": "P7",
+      "title": "验收与交付",
+      "status": "completed"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "P0-01",
+      "phase": "P0",
+      "title": "登记源码、现有改动与运行基线",
+      "status": "completed",
+      "dependsOn": [],
+      "acceptanceIds": [],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/baseline.json",
+        ".cache/cooperation-ui/implementation-20261008/source-limits.json",
+        ".cache/cooperation-ui/implementation-20261008/heroui-docs.json",
+        "tests/web/cooperation.test.mjs"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P0-02",
+      "phase": "P0",
+      "title": "冻结视觉场景与完整功能清单",
+      "status": "completed",
+      "dependsOn": [
+        "P0-01"
+      ],
+      "acceptanceIds": [],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/baseline.json",
+        ".cache/cooperation-ui/implementation-20261008/source-limits.json",
+        ".cache/cooperation-ui/implementation-20261008/heroui-docs.json",
+        "tests/web/cooperation.test.mjs"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P0-03",
+      "phase": "P0",
+      "title": "定义对象范围、路由与视图恢复契约",
+      "status": "completed",
+      "dependsOn": [
+        "P0-02"
+      ],
+      "acceptanceIds": [
+        "NAV-04",
+        "VIEW-02"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/baseline.json",
+        ".cache/cooperation-ui/implementation-20261008/source-limits.json",
+        ".cache/cooperation-ui/implementation-20261008/heroui-docs.json",
+        "tests/web/cooperation.test.mjs"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P0-04",
+      "phase": "P0",
+      "title": "统一布局 token、组件与 i18n 边界",
+      "status": "completed",
+      "dependsOn": [
+        "P0-02"
+      ],
+      "acceptanceIds": [
+        "VIS-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/baseline.json",
+        ".cache/cooperation-ui/implementation-20261008/source-limits.json",
+        ".cache/cooperation-ui/implementation-20261008/heroui-docs.json",
+        "tests/web/cooperation.test.mjs"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P1-01",
+      "phase": "P1",
+      "title": "计划卡批量投影与本人筛选",
+      "status": "completed",
+      "dependsOn": [
+        "P0-03"
+      ],
+      "acceptanceIds": [
+        "HUB-01",
+        "HUB-05",
+        "PERF-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/backend-projections.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        "tests/integration/cooperation_test.go",
+        "api/openapi.yaml",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P1-02",
+      "phase": "P1",
+      "title": "任务主讨论持久化与并发 get-or-create",
+      "status": "completed",
+      "dependsOn": [
+        "P0-03"
+      ],
+      "acceptanceIds": [
+        "NAV-03",
+        "TOPIC-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/backend-projections.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        "tests/integration/cooperation_test.go",
+        "api/openapi.yaml",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P1-03",
+      "phase": "P1",
+      "title": "按对象范围分页查询会话",
+      "status": "completed",
+      "dependsOn": [
+        "P1-02"
+      ],
+      "acceptanceIds": [
+        "HUB-05",
+        "TOPIC-02",
+        "TOPIC-04"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/backend-projections.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        "tests/integration/cooperation_test.go",
+        "api/openapi.yaml",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P1-04",
+      "phase": "P1",
+      "title": "版本化编辑关联并保护主关联",
+      "status": "completed",
+      "dependsOn": [
+        "P1-03"
+      ],
+      "acceptanceIds": [
+        "TOPIC-03"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/backend-projections.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        "tests/integration/cooperation_test.go",
+        "api/openapi.yaml",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/evidence-audit.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
+        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        ".cache/cooperation-ui/remediation2-20261008/completion.json",
+        ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
+        ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-full-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-after-topic-fix.log",
+        ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
+        ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
+        ".cache/k8s/judex-ui-e90921fa/manifest.json",
+        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md"
+      ],
+      "notes": "2026-10-08 收尾后复核重新打开：R2-01: AI 建议及安排 link_topic 追加绕过 linksVersion，旧关联编辑可覆盖新关联。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。",
+      "postClosureReview": {
+        "date": "2026-10-08",
+        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "reason": "R2-01: AI 建议及安排 link_topic 追加绕过 linksVersion，旧关联编辑可覆盖新关联。"
+      }
+    },
+    {
+      "id": "P1-05",
+      "phase": "P1",
+      "title": "本人待决筛选与交付接收投影",
+      "status": "completed",
+      "dependsOn": [
+        "P1-01"
+      ],
+      "acceptanceIds": [
+        "HUB-02",
+        "HUB-03",
+        "HUB-05"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/backend-projections.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        "tests/integration/cooperation_test.go",
+        "api/openapi.yaml",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/evidence-audit.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
+        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        ".cache/cooperation-ui/remediation2-20261008/completion.json",
+        ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
+        ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-full-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-after-topic-fix.log",
+        ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
+        ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
+        ".cache/k8s/judex-ui-e90921fa/manifest.json",
+        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md"
+      ],
+      "notes": "2026-10-08 收尾后复核重新打开：R2-04: waiting/revise 必须按本人来源状态筛选，当前使用整个交接状态。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。",
+      "postClosureReview": {
+        "date": "2026-10-08",
+        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "reason": "R2-04: waiting/revise 必须按本人来源状态筛选，当前使用整个交接状态。"
+      }
+    },
+    {
+      "id": "P1-06",
+      "phase": "P1",
+      "title": "同步 OpenAPI、类型、SSE 与 CLI 链接",
+      "status": "completed",
+      "dependsOn": [
+        "P1-04",
+        "P1-05"
+      ],
+      "acceptanceIds": [
+        "NAV-04",
+        "TOPIC-04",
+        "BIZ-03"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/backend-projections.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        "tests/integration/cooperation_test.go",
+        "api/openapi.yaml",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P1-07",
+      "phase": "P1",
+      "title": "关联对象当前事实与 Agent 上下文",
+      "status": "completed",
+      "dependsOn": [
+        "P1-04"
+      ],
+      "acceptanceIds": [
+        "AI-02",
+        "AI-03"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/backend-projections.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        "tests/integration/cooperation_test.go",
+        "api/openapi.yaml",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P2-01",
+      "phase": "P2",
+      "title": "共用项目页面外壳与按需数据查询",
+      "status": "completed",
+      "dependsOn": [
+        "P0-04",
+        "P1-06"
+      ],
+      "acceptanceIds": [
+        "NAV-04",
+        "PERF-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/final-acceptance-loop.log",
+        ".cache/cooperation-ui/implementation-20261008/offline-performance.log",
+        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        ".cache/cooperation-ui/closure-20261008/desktop-final.log",
+        ".cache/cooperation-ui/closure-20261008/web-release.log",
+        ".cache/k8s/judex-ui-d9facb1b/manifest.json"
+      ],
+      "notes": "",
+      "review": {
+        "date": "2026-10-08",
+        "previousStatus": "completed",
+        "result": "resolved",
+        "findingIds": [
+          "R06"
+        ],
+        "evidence": [
+          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          ".cache/cooperation-ui/review-20261008/browser-results.json"
+        ],
+        "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
+      }
+    },
+    {
+      "id": "P2-02",
+      "phase": "P2",
+      "title": "统一右上角账户与用户隔离",
+      "status": "completed",
+      "dependsOn": [
+        "P2-01"
+      ],
+      "acceptanceIds": [
+        "VIEW-03",
+        "SET-05"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/final-acceptance-loop.log",
+        ".cache/cooperation-ui/implementation-20261008/offline-performance.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P2-03",
+      "phase": "P2",
+      "title": "改造项目卡片与最近讨论入口",
+      "status": "completed",
+      "dependsOn": [
+        "P2-02"
+      ],
+      "acceptanceIds": [
+        "NAV-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/final-acceptance-loop.log",
+        ".cache/cooperation-ui/implementation-20261008/offline-performance.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P2-04",
+      "phase": "P2",
+      "title": "空项目引导与历史讨论入口",
+      "status": "completed",
+      "dependsOn": [
+        "P2-03"
+      ],
+      "acceptanceIds": [
+        "NAV-05"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/final-acceptance-loop.log",
+        ".cache/cooperation-ui/implementation-20261008/offline-performance.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P3-01",
+      "phase": "P3",
+      "title": "计划列表卡片与筛选",
+      "status": "completed",
+      "dependsOn": [
+        "P2-04",
+        "P1-01"
+      ],
+      "acceptanceIds": [
+        "HUB-01",
+        "HUB-05"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/comparison.json",
+        ".cache/cooperation-ui/implementation-20261008/offline-performance.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P3-02",
+      "phase": "P3",
+      "title": "需要我决定卡片与冻结审阅",
+      "status": "completed",
+      "dependsOn": [
+        "P3-01",
+        "P1-05"
+      ],
+      "acceptanceIds": [
+        "HUB-02",
+        "BIZ-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/comparison.json",
+        ".cache/cooperation-ui/implementation-20261008/offline-performance.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P3-03",
+      "phase": "P3",
+      "title": "交付接收卡片与独立操作",
+      "status": "completed",
+      "dependsOn": [
+        "P3-02"
+      ],
+      "acceptanceIds": [
+        "HUB-03",
+        "BIZ-02"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/comparison.json",
+        ".cache/cooperation-ui/implementation-20261008/offline-performance.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/evidence-audit.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
+        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        ".cache/cooperation-ui/remediation2-20261008/completion.json",
+        ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
+        ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-full-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-after-topic-fix.log",
+        ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
+        ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
+        ".cache/k8s/judex-ui-e90921fa/manifest.json",
+        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md",
+        ".cache/cooperation-ui/final-review-20261008/evidence-audit.json",
+        ".cache/cooperation-ui/final-review-20261008/browser-results.json",
+        ".cache/cooperation-ui/final-review-20261008/recheck-race.json",
+        "docs/plans/cooperation-ui/REVIEW3-20261008.md",
+        ".cache/cooperation-ui/remediation3-20261008/completion.json",
+        ".cache/cooperation-ui/remediation3-20261008/desktop-full-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/api-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/k8s-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/visual/results.json",
+        "tests/e2e/cooperation-scope-fixes.spec.ts",
+        "tests/e2e/business.cooperation-scope-fixes.spec.ts",
+        "docs/plans/cooperation-ui/REMEDIATION3-20261008.md"
+      ],
+      "notes": "2026-10-08 收尾后复核重新打开：R2-04: 多发送者的个人交接筛选误归类，正式 PostgreSQL 已复现。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。\n2026-10-08 第三次复核重开：R3-03: 多参与者交接未明确选择来源发送职责。\n2026-10-08 第三次复核修复完成：对象生命周期、附件作用域、核对请求作废、交接与报告职责选择补回归；当前镜像完成 20 项隔离业务及真实模型检查。",
+      "postClosureReview": {
+        "date": "2026-10-08",
+        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "reason": "R2-04: 多发送者的个人交接筛选误归类，正式 PostgreSQL 已复现。"
+      },
+      "review3": {
+        "date": "2026-10-08",
+        "document": "REVIEW3-20261008.md",
+        "reason": "R3-03: 多参与者交接未明确选择来源发送职责。"
+      }
+    },
+    {
+      "id": "P3-04",
+      "phase": "P3",
+      "title": "共享资料标签与真实版本",
+      "status": "completed",
+      "dependsOn": [
+        "P3-01"
+      ],
+      "acceptanceIds": [
+        "HUB-04"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/comparison.json",
+        ".cache/cooperation-ui/implementation-20261008/offline-performance.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P3-05",
+      "phase": "P3",
+      "title": "协同视图恢复与后台局部刷新",
+      "status": "completed",
+      "dependsOn": [
+        "P3-03",
+        "P3-04"
+      ],
+      "acceptanceIds": [
+        "NAV-04",
+        "HUB-05",
+        "TOPIC-04"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/comparison.json",
+        ".cache/cooperation-ui/implementation-20261008/offline-performance.log",
+        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        ".cache/cooperation-ui/closure-20261008/desktop-final.log",
+        ".cache/cooperation-ui/closure-20261008/web-release.log",
+        ".cache/k8s/judex-ui-d9facb1b/manifest.json"
+      ],
+      "notes": "",
+      "review": {
+        "date": "2026-10-08",
+        "previousStatus": "completed",
+        "result": "resolved",
+        "findingIds": [
+          "R01",
+          "R02",
+          "R07"
+        ],
+        "evidence": [
+          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          ".cache/cooperation-ui/review-20261008/browser-results.json"
+        ],
+        "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
+      }
+    },
+    {
+      "id": "P4-01",
+      "phase": "P4",
+      "title": "计划独立路线与真实依赖",
+      "status": "completed",
+      "dependsOn": [
+        "P3-01",
+        "P1-06"
+      ],
+      "acceptanceIds": [
+        "MAP-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/comparison.json",
+        ".cache/cooperation-ui/implementation-20261008/backend-projections.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P4-02",
+      "phase": "P4",
+      "title": "分离计划任务卡的主体与讨论按钮",
+      "status": "completed",
+      "dependsOn": [
+        "P4-01"
+      ],
+      "acceptanceIds": [
+        "NAV-02",
+        "NAV-03",
+        "A11Y-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/comparison.json",
+        ".cache/cooperation-ui/implementation-20261008/backend-projections.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P4-03",
+      "phase": "P4",
+      "title": "共用路线预览与完整路线",
+      "status": "completed",
+      "dependsOn": [
+        "P4-02"
+      ],
+      "acceptanceIds": [
+        "NAV-02",
+        "MAP-02"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/comparison.json",
+        ".cache/cooperation-ui/implementation-20261008/backend-projections.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P4-04",
+      "phase": "P4",
+      "title": "任务详情、正式上报、原记录与流程参考",
+      "status": "completed",
+      "dependsOn": [
+        "P4-02"
+      ],
+      "acceptanceIds": [
+        "TASK-01",
+        "TASK-02",
+        "TASK-03",
+        "BIZ-02"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/comparison.json",
+        ".cache/cooperation-ui/implementation-20261008/backend-projections.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/evidence-audit.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
+        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        ".cache/cooperation-ui/remediation2-20261008/completion.json",
+        ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
+        ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-full-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-after-topic-fix.log",
+        ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
+        ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
+        ".cache/k8s/judex-ui-e90921fa/manifest.json",
+        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md",
+        ".cache/cooperation-ui/final-review-20261008/evidence-audit.json",
+        ".cache/cooperation-ui/final-review-20261008/browser-results.json",
+        ".cache/cooperation-ui/final-review-20261008/recheck-race.json",
+        "docs/plans/cooperation-ui/REVIEW3-20261008.md",
+        ".cache/cooperation-ui/remediation3-20261008/completion.json",
+        ".cache/cooperation-ui/remediation3-20261008/desktop-full-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/api-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/k8s-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/visual/results.json",
+        "tests/e2e/cooperation-scope-fixes.spec.ts",
+        "tests/e2e/business.cooperation-scope-fixes.spec.ts",
+        "docs/plans/cooperation-ui/REMEDIATION3-20261008.md"
+      ],
+      "notes": "2026-10-08 收尾后复核重新打开：R2-02/R2-03: 报告旧版本缺明确重新核对；多职责启动缺身份选择。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。\n2026-10-08 第三次复核重开：R3-01/R3-02/R3-03: 任务详情状态、核对请求与发送职责的组合场景未闭环。\n2026-10-08 第三次复核修复完成：对象生命周期、附件作用域、核对请求作废、交接与报告职责选择补回归；当前镜像完成 20 项隔离业务及真实模型检查。",
+      "postClosureReview": {
+        "date": "2026-10-08",
+        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "reason": "R2-02/R2-03: 报告旧版本缺明确重新核对；多职责启动缺身份选择。"
+      },
+      "review3": {
+        "date": "2026-10-08",
+        "document": "REVIEW3-20261008.md",
+        "reason": "R3-01/R3-02/R3-03: 任务详情状态、核对请求与发送职责的组合场景未闭环。"
+      }
+    },
+    {
+      "id": "P4-05",
+      "phase": "P4",
+      "title": "路线缩放、定位、本人高亮和恢复",
+      "status": "completed",
+      "dependsOn": [
+        "P4-03",
+        "P4-04"
+      ],
+      "acceptanceIds": [
+        "MAP-02",
+        "VIEW-02"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/comparison.json",
+        ".cache/cooperation-ui/implementation-20261008/backend-projections.log",
+        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        ".cache/cooperation-ui/closure-20261008/desktop-final.log",
+        ".cache/cooperation-ui/closure-20261008/web-release.log",
+        ".cache/k8s/judex-ui-d9facb1b/manifest.json"
+      ],
+      "notes": "",
+      "review": {
+        "date": "2026-10-08",
+        "previousStatus": "completed",
+        "result": "resolved",
+        "findingIds": [
+          "R03",
+          "R07"
+        ],
+        "evidence": [
+          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          ".cache/cooperation-ui/review-20261008/browser-results.json"
+        ],
+        "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
+      }
+    },
+    {
+      "id": "P5-01",
+      "phase": "P5",
+      "title": "对象范围 Chatbox 与相关会话侧栏",
+      "status": "completed",
+      "dependsOn": [
+        "P4-05",
+        "P1-03"
+      ],
+      "acceptanceIds": [
+        "TOPIC-04"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/api-browser-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P5-02",
+      "phase": "P5",
+      "title": "统一计划与按需任务主讨论入口",
+      "status": "completed",
+      "dependsOn": [
+        "P5-01",
+        "P1-02"
+      ],
+      "acceptanceIds": [
+        "NAV-03",
+        "TOPIC-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/api-browser-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P5-03",
+      "phase": "P5",
+      "title": "多计划多任务新建与编辑关联",
+      "status": "completed",
+      "dependsOn": [
+        "P5-02",
+        "P1-04"
+      ],
+      "acceptanceIds": [
+        "TOPIC-02",
+        "TOPIC-03"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/api-browser-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/evidence-audit.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
+        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        ".cache/cooperation-ui/remediation2-20261008/completion.json",
+        ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
+        ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-full-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-after-topic-fix.log",
+        ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
+        ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
+        ".cache/k8s/judex-ui-e90921fa/manifest.json",
+        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md"
+      ],
+      "notes": "2026-10-08 收尾后复核重新打开：R2-01: 关联版本未覆盖全部追加用例，无法保护编辑窗口与 AI 确认之间的并发。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。",
+      "postClosureReview": {
+        "date": "2026-10-08",
+        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "reason": "R2-01: 关联版本未覆盖全部追加用例，无法保护编辑窗口与 AI 确认之间的并发。"
+      }
+    },
+    {
+      "id": "P5-04",
+      "phase": "P5",
+      "title": "完整标签与明确任务输入上下文",
+      "status": "completed",
+      "dependsOn": [
+        "P5-03"
+      ],
+      "acceptanceIds": [
+        "VIEW-01",
+        "AI-02"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/api-browser-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        ".cache/cooperation-ui/closure-20261008/desktop-final.log",
+        ".cache/cooperation-ui/closure-20261008/web-release.log",
+        ".cache/k8s/judex-ui-d9facb1b/manifest.json"
+      ],
+      "notes": "",
+      "review": {
+        "date": "2026-10-08",
+        "previousStatus": "completed",
+        "result": "resolved",
+        "findingIds": [
+          "R04"
+        ],
+        "evidence": [
+          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          ".cache/cooperation-ui/review-20261008/browser-results.json"
+        ],
+        "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
+      }
+    },
+    {
+      "id": "P5-05",
+      "phase": "P5",
+      "title": "草稿阅读位置、分栏最大化与状态迁移",
+      "status": "completed",
+      "dependsOn": [
+        "P5-04"
+      ],
+      "acceptanceIds": [
+        "VIEW-02",
+        "VIEW-03"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/api-browser-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        ".cache/cooperation-ui/closure-20261008/desktop-final.log",
+        ".cache/cooperation-ui/closure-20261008/web-release.log",
+        ".cache/k8s/judex-ui-d9facb1b/manifest.json",
+        ".cache/cooperation-ui/final-review-20261008/evidence-audit.json",
+        ".cache/cooperation-ui/final-review-20261008/browser-results.json",
+        ".cache/cooperation-ui/final-review-20261008/recheck-race.json",
+        "docs/plans/cooperation-ui/REVIEW3-20261008.md",
+        ".cache/cooperation-ui/remediation3-20261008/completion.json",
+        ".cache/cooperation-ui/remediation3-20261008/desktop-full-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/api-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/k8s-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/visual/results.json",
+        "tests/e2e/cooperation-scope-fixes.spec.ts",
+        "tests/e2e/business.cooperation-scope-fixes.spec.ts",
+        "docs/plans/cooperation-ui/REMEDIATION3-20261008.md"
+      ],
+      "notes": "\n2026-10-08 第三次复核重开：R3-01: 任务对象变化时附件进入另一对象的上报草稿。\n2026-10-08 第三次复核修复完成：对象生命周期、附件作用域、核对请求作废、交接与报告职责选择补回归；当前镜像完成 20 项隔离业务及真实模型检查。",
+      "review": {
+        "date": "2026-10-08",
+        "previousStatus": "completed",
+        "result": "resolved",
+        "findingIds": [
+          "R05"
+        ],
+        "evidence": [
+          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          ".cache/cooperation-ui/review-20261008/browser-results.json"
+        ],
+        "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
+      },
+      "review3": {
+        "date": "2026-10-08",
+        "document": "REVIEW3-20261008.md",
+        "reason": "R3-01: 任务对象变化时附件进入另一对象的上报草稿。"
+      }
+    },
+    {
+      "id": "P5-06",
+      "phase": "P5",
+      "title": "固定点分叉、来源跳转与历史分页",
+      "status": "completed",
+      "dependsOn": [
+        "P5-05"
+      ],
+      "acceptanceIds": [
+        "FORK-01",
+        "FORK-02"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/api-browser-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P5-07",
+      "phase": "P5",
+      "title": "任务摘要、关键卡与人工处理 AI 建议",
+      "status": "completed",
+      "dependsOn": [
+        "P5-06",
+        "P1-07"
+      ],
+      "acceptanceIds": [
+        "AI-01",
+        "AI-03",
+        "TASK-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/api-browser-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/evidence-audit.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
+        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        ".cache/cooperation-ui/remediation2-20261008/completion.json",
+        ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
+        ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-full-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-after-topic-fix.log",
+        ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
+        ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
+        ".cache/k8s/judex-ui-e90921fa/manifest.json",
+        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md"
+      ],
+      "notes": "2026-10-08 收尾后复核重新打开：R2-01/R2-05: 建议追加关联需统一版本；已有讨论选择缺项目范围检索和分页。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。",
+      "postClosureReview": {
+        "date": "2026-10-08",
+        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "reason": "R2-01/R2-05: 建议追加关联需统一版本；已有讨论选择缺项目范围检索和分页。"
+      }
+    },
+    {
+      "id": "P6-01",
+      "phase": "P6",
+      "title": "复用完整项目设置与返回",
+      "status": "completed",
+      "dependsOn": [
+        "P5-07"
+      ],
+      "acceptanceIds": [
+        "SET-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/release-downloads.log",
+        ".cache/cooperation-ui/implementation-20261008/api-regression-attempt1.log",
+        ".cache/cooperation-ui/implementation-20261008/bundle-isolation.json"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P6-02",
+      "phase": "P6",
+      "title": "成员职位完整能力及本人私有偏好",
+      "status": "completed",
+      "dependsOn": [
+        "P6-01"
+      ],
+      "acceptanceIds": [
+        "SET-02",
+        "SET-03"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/release-downloads.log",
+        ".cache/cooperation-ui/implementation-20261008/api-regression-attempt1.log",
+        ".cache/cooperation-ui/implementation-20261008/bundle-isolation.json"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P6-03",
+      "phase": "P6",
+      "title": "完整流程配置、模板、预览与发布",
+      "status": "completed",
+      "dependsOn": [
+        "P6-01"
+      ],
+      "acceptanceIds": [
+        "SET-04"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/release-downloads.log",
+        ".cache/cooperation-ui/implementation-20261008/api-regression-attempt1.log",
+        ".cache/cooperation-ui/implementation-20261008/bundle-isolation.json"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P6-04",
+      "phase": "P6",
+      "title": "真实下载、账户与单次确认路径",
+      "status": "completed",
+      "dependsOn": [
+        "P6-02",
+        "P6-03"
+      ],
+      "acceptanceIds": [
+        "SET-05",
+        "BIZ-03"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/release-downloads.log",
+        ".cache/cooperation-ui/implementation-20261008/api-regression-attempt1.log",
+        ".cache/cooperation-ui/implementation-20261008/bundle-isolation.json"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P6-05",
+      "phase": "P6",
+      "title": "旧入口收口、单一树与文档同步",
+      "status": "completed",
+      "dependsOn": [
+        "P6-04"
+      ],
+      "acceptanceIds": [
+        "NAV-01",
+        "VIEW-01",
+        "SET-01",
+        "SET-05"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/release-downloads.log",
+        ".cache/cooperation-ui/implementation-20261008/api-regression-attempt1.log",
+        ".cache/cooperation-ui/implementation-20261008/bundle-isolation.json"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P7-01",
+      "phase": "P7",
+      "title": "逻辑集成、Go、类型、构建与制品检查",
+      "status": "completed",
+      "dependsOn": [
+        "P6-05"
+      ],
+      "acceptanceIds": [
+        "TASK-03",
+        "TOPIC-01",
+        "TOPIC-03",
+        "HUB-05"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/final-vet.log",
+        ".cache/cooperation-ui/implementation-20261008/web-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/final-style-check.json",
+        ".cache/cooperation-ui/implementation-20261008/release-build.log",
+        ".cache/cooperation-ui/implementation-20261008/release-demo-build.log"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "P7-02",
+      "phase": "P7",
+      "title": "同树 demo 桌面全路径与存量回归",
+      "status": "completed",
+      "dependsOn": [
+        "P7-01"
+      ],
+      "acceptanceIds": [
+        "NAV-01",
+        "NAV-02",
+        "NAV-03",
+        "NAV-04",
+        "NAV-05",
+        "VIEW-01",
+        "VIEW-02"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/final-vet.log",
+        ".cache/cooperation-ui/implementation-20261008/web-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/final-style-check.json",
+        ".cache/cooperation-ui/implementation-20261008/release-build.log",
+        ".cache/cooperation-ui/implementation-20261008/release-demo-build.log",
+        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        ".cache/cooperation-ui/closure-20261008/desktop-final.log",
+        ".cache/cooperation-ui/closure-20261008/web-release.log",
+        ".cache/k8s/judex-ui-d9facb1b/manifest.json"
+      ],
+      "notes": "新入口替代旧导航合同；18项当前桌面回归，业务断言由真实 API 和58项逻辑回归保留。",
+      "review": {
+        "date": "2026-10-08",
+        "previousStatus": "completed",
+        "result": "resolved",
+        "findingIds": [
+          "R08"
+        ],
+        "evidence": [
+          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          ".cache/cooperation-ui/review-20261008/browser-results.json"
+        ],
+        "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
+      }
+    },
+    {
+      "id": "P7-03",
+      "phase": "P7",
+      "title": "临时 K8s 真实 API、CLI、双用户与受控模型",
+      "status": "completed",
+      "dependsOn": [
+        "P7-02"
+      ],
+      "acceptanceIds": [
+        "TASK-01",
+        "TASK-02",
+        "TOPIC-01",
+        "TOPIC-02",
+        "FORK-01",
+        "FORK-02",
+        "AI-01",
+        "BIZ-01",
+        "BIZ-02",
+        "BIZ-03"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/final-vet.log",
+        ".cache/cooperation-ui/implementation-20261008/web-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/final-style-check.json",
+        ".cache/cooperation-ui/implementation-20261008/release-build.log",
+        ".cache/cooperation-ui/implementation-20261008/release-demo-build.log",
+        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        ".cache/cooperation-ui/closure-20261008/desktop-final.log",
+        ".cache/cooperation-ui/closure-20261008/web-release.log",
+        ".cache/k8s/judex-ui-d9facb1b/manifest.json"
+      ],
+      "notes": "",
+      "review": {
+        "date": "2026-10-08",
+        "previousStatus": "completed",
+        "result": "resolved",
+        "findingIds": [
+          "R09"
+        ],
+        "evidence": [
+          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          ".cache/cooperation-ui/review-20261008/browser-results.json"
+        ],
+        "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
+      }
+    },
+    {
+      "id": "P7-04",
+      "phase": "P7",
+      "title": "现有真实模型的最小分析验证",
+      "status": "completed",
+      "dependsOn": [
+        "P7-03"
+      ],
+      "acceptanceIds": [
+        "AI-04"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/final-vet.log",
+        ".cache/cooperation-ui/implementation-20261008/web-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/final-style-check.json",
+        ".cache/cooperation-ui/implementation-20261008/release-build.log",
+        ".cache/cooperation-ui/implementation-20261008/release-demo-build.log"
+      ],
+      "notes": "真实 GLM-5.3：.cache/k8s/judex-ui-12132b7f，11次模型调用、1次岗位运行、1次结构化保存。"
+    },
+    {
+      "id": "P7-05",
+      "phase": "P7",
+      "title": "固定环境视觉与语言主题桌面缩放",
+      "status": "completed",
+      "dependsOn": [
+        "P7-02"
+      ],
+      "acceptanceIds": [
+        "VIS-01",
+        "A11Y-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/final-vet.log",
+        ".cache/cooperation-ui/implementation-20261008/web-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/final-style-check.json",
+        ".cache/cooperation-ui/implementation-20261008/release-build.log",
+        ".cache/cooperation-ui/implementation-20261008/release-demo-build.log",
+        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        ".cache/cooperation-ui/closure-20261008/desktop-final.log",
+        ".cache/cooperation-ui/closure-20261008/web-release.log",
+        ".cache/k8s/judex-ui-d9facb1b/manifest.json"
+      ],
+      "notes": "",
+      "review": {
+        "date": "2026-10-08",
+        "previousStatus": "completed",
+        "result": "resolved",
+        "findingIds": [
+          "R10"
+        ],
+        "evidence": [
+          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          ".cache/cooperation-ui/review-20261008/browser-results.json"
+        ],
+        "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
+      }
+    },
+    {
+      "id": "P7-06",
+      "phase": "P7",
+      "title": "分页性能、身份变化、断网与导航恢复",
+      "status": "completed",
+      "dependsOn": [
+        "P7-03",
+        "P7-05"
+      ],
+      "acceptanceIds": [
+        "HUB-05",
+        "VIEW-03",
+        "TASK-03",
+        "AI-03",
+        "PERF-01",
+        "A11Y-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/final-vet.log",
+        ".cache/cooperation-ui/implementation-20261008/web-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/final-style-check.json",
+        ".cache/cooperation-ui/implementation-20261008/release-build.log",
+        ".cache/cooperation-ui/implementation-20261008/release-demo-build.log",
+        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        ".cache/cooperation-ui/closure-20261008/desktop-final.log",
+        ".cache/cooperation-ui/closure-20261008/web-release.log",
+        ".cache/k8s/judex-ui-d9facb1b/manifest.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/evidence-audit.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
+        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        ".cache/cooperation-ui/remediation2-20261008/completion.json",
+        ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
+        ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-full-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-after-topic-fix.log",
+        ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
+        ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
+        ".cache/k8s/judex-ui-e90921fa/manifest.json",
+        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md",
+        ".cache/cooperation-ui/final-review-20261008/evidence-audit.json",
+        ".cache/cooperation-ui/final-review-20261008/browser-results.json",
+        ".cache/cooperation-ui/final-review-20261008/recheck-race.json",
+        "docs/plans/cooperation-ui/REVIEW3-20261008.md",
+        ".cache/cooperation-ui/remediation3-20261008/completion.json",
+        ".cache/cooperation-ui/remediation3-20261008/desktop-full-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/api-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/k8s-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/visual/results.json",
+        "tests/e2e/cooperation-scope-fixes.spec.ts",
+        "tests/e2e/business.cooperation-scope-fixes.spec.ts",
+        "docs/plans/cooperation-ui/REMEDIATION3-20261008.md"
+      ],
+      "notes": "2026-10-08 收尾后复核重新打开：R2-01 至 R2-05: 补旧草稿、多职责、跨范围建议选择和多发送者筛选回归。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。\n2026-10-08 第三次复核重开：新增任务切换、迟到核对响应和同任务多发送职责回归。\n2026-10-08 第三次复核修复完成：对象生命周期、附件作用域、核对请求作废、交接与报告职责选择补回归；当前镜像完成 20 项隔离业务及真实模型检查。",
+      "review": {
+        "date": "2026-10-08",
+        "previousStatus": "completed",
+        "result": "resolved",
+        "findingIds": [
+          "R01",
+          "R02",
+          "R11"
+        ],
+        "evidence": [
+          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          ".cache/cooperation-ui/review-20261008/browser-results.json"
+        ],
+        "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
+      },
+      "postClosureReview": {
+        "date": "2026-10-08",
+        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "reason": "R2-01 至 R2-05: 补旧草稿、多职责、跨范围建议选择和多发送者筛选回归。"
+      },
+      "review3": {
+        "date": "2026-10-08",
+        "document": "REVIEW3-20261008.md",
+        "reason": "新增任务切换、迟到核对响应和同任务多发送职责回归。"
+      }
+    },
+    {
+      "id": "P7-07",
+      "phase": "P7",
+      "title": "所属资源清理与证据交付",
+      "status": "completed",
+      "dependsOn": [
+        "P7-04",
+        "P7-06"
+      ],
+      "acceptanceIds": [
+        "ENV-01"
+      ],
+      "evidence": [
+        ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/final-vet.log",
+        ".cache/cooperation-ui/implementation-20261008/web-tests-final.log",
+        ".cache/cooperation-ui/implementation-20261008/desktop-final-attempt3.log",
+        ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
+        ".cache/cooperation-ui/implementation-20261008/visual/final-style-check.json",
+        ".cache/cooperation-ui/implementation-20261008/release-build.log",
+        ".cache/cooperation-ui/implementation-20261008/release-demo-build.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/evidence-audit.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
+        ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
+        ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
+        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        ".cache/cooperation-ui/remediation2-20261008/completion.json",
+        ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
+        ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-full-attempt1.log",
+        ".cache/cooperation-ui/remediation2-20261008/desktop-after-topic-fix.log",
+        ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
+        ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
+        ".cache/k8s/judex-ui-e90921fa/manifest.json",
+        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md",
+        ".cache/cooperation-ui/final-review-20261008/evidence-audit.json",
+        ".cache/cooperation-ui/final-review-20261008/browser-results.json",
+        ".cache/cooperation-ui/final-review-20261008/recheck-race.json",
+        "docs/plans/cooperation-ui/REVIEW3-20261008.md",
+        ".cache/cooperation-ui/remediation3-20261008/completion.json",
+        ".cache/cooperation-ui/remediation3-20261008/desktop-full-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/api-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/k8s-attempt1.log",
+        ".cache/cooperation-ui/remediation3-20261008/visual/results.json",
+        "tests/e2e/cooperation-scope-fixes.spec.ts",
+        "tests/e2e/business.cooperation-scope-fixes.spec.ts",
+        "docs/plans/cooperation-ui/REMEDIATION3-20261008.md"
+      ],
+      "notes": "2026-10-08 收尾后复核重新打开：最新独立复核确认功能出口未全闭环，交付报告不能继续声明全部完成；环境清理证据仍有效。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。\n2026-10-08 第三次复核重开：第三次复核发现尚未满足的功能出口，完整交付状态重新校准；清理与模型证据保留。\n2026-10-08 第三次复核修复完成：对象生命周期、附件作用域、核对请求作废、交接与报告职责选择补回归；当前镜像完成 20 项隔离业务及真实模型检查。",
+      "postClosureReview": {
+        "date": "2026-10-08",
+        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "reason": "最新独立复核确认功能出口未全闭环，交付报告不能继续声明全部完成；环境清理证据仍有效。"
+      },
+      "review3": {
+        "date": "2026-10-08",
+        "document": "REVIEW3-20261008.md",
+        "reason": "第三次复核发现尚未满足的功能出口，完整交付状态重新校准；清理与模型证据保留。"
+      }
+    }
+  ],
+  "acceptanceReport": "REMEDIATION3-20261008.md",
+  "environmentEvidence": [
+    ".cache/k8s/judex-ui-2bfaaae2/manifest.json",
+    ".cache/k8s/judex-ui-12132b7f/manifest.json",
+    ".cache/k8s/judex-ui-e90921fa/manifest.json",
+    ".cache/k8s/judex-ui-71cd9eca/manifest.json"
+  ],
+  "knownGates": [
+    {
+      "id": "workflow-routing",
+      "status": "existing_open",
+      "source": "../../职位多流程关联实测.md",
+      "note": "新 UI 不表示通用多流程自动判定已验收；本轮验证明确任务分析、合法事实与诚实失败状态。"
+    }
+  ],
+  "execution": {
+    "startedAt": "2026-10-08",
+    "artifactRoot": ".cache/cooperation-ui/implementation-20261008",
+    "preview": "http://127.0.0.1:5196/",
+    "productionDeploymentUpgraded": true,
+    "completedAt": "2026-10-08",
+    "reopenedAt": "2026-10-08",
+    "latestAcceptanceComplete": true,
+    "productionURL": "http://127.0.0.1:18097/"
+  },
+  "review": {
+    "date": "2026-10-08",
+    "result": "resolved",
+    "document": "REVIEW-20261008.md",
+    "reopenedTasks": [
+      "P2-01",
+      "P3-05",
+      "P4-05",
+      "P5-04",
+      "P5-05",
+      "P7-02",
+      "P7-03",
+      "P7-05",
+      "P7-06"
+    ],
+    "browserReproductions": 7,
+    "historicalEvidenceRetained": true
+  },
+  "closure": {
+    "date": "2026-10-08",
+    "document": "CLOSURE-20261008.md",
+    "desktop": 51,
+    "visualMatrix": 20,
+    "web": 59,
+    "controlledKubernetes": 15,
+    "realModel": {
+      "analysisToolCalls": 1,
+      "roleRuns": 1,
+      "modelCalls": 10
+    },
+    "namespace": "judex-ui-d9facb1b",
+    "cleanedUp": true,
+    "deploymentUpgraded": false
+  },
+  "postClosureReview": {
+    "date": "2026-10-08",
+    "result": "resolved",
+    "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+    "reopenedTasks": [
+      "P1-04",
+      "P1-05",
+      "P3-03",
+      "P4-04",
+      "P5-03",
+      "P5-07",
+      "P7-06",
+      "P7-07"
+    ],
+    "confirmedFindings": 4,
+    "sourceInspectedGap": 1,
+    "artifactRoot": ".cache/cooperation-ui/review-after-closure-20261008",
+    "historicalEvidenceRetained": true
+  },
+  "remediation2": {
+    "date": "2026-10-08",
+    "document": "REMEDIATION2-20261008.md",
+    "reopenedResolved": 8,
+    "fixedFindings": [
+      "R2-01",
+      "R2-02",
+      "R2-03",
+      "R2-04",
+      "R2-05"
+    ],
+    "checks": {
+      "desktop": 55,
+      "afterTopicFix": 12,
+      "web": 59,
+      "controlled": 18,
+      "realModel": {
+        "roleRuns": 1,
+        "modelCalls": 8,
+        "analysisToolCalls": 1
+      },
+      "visual": 96,
+      "visualErrors": []
+    },
+    "artifactRoot": ".cache/cooperation-ui/remediation2-20261008",
+    "namespace": "judex-ui-e90921fa",
+    "cleanedUp": true,
+    "deploymentUpgraded": false
+  },
+  "review3": {
+    "date": "2026-10-08",
+    "result": "resolved",
+    "document": "REVIEW3-20261008.md",
+    "reopenedTasks": [
+      "P3-03",
+      "P4-04",
+      "P5-05",
+      "P7-06",
+      "P7-07"
+    ],
+    "findings": [
+      "R3-01",
+      "R3-02",
+      "R3-03"
+    ],
+    "artifactRoot": ".cache/cooperation-ui/final-review-20261008",
+    "historicalEvidenceRetained": true
+  },
+  "remediation3": {
+    "date": "2026-10-08",
+    "document": "REMEDIATION3-20261008.md",
+    "reopenedResolved": 5,
+    "checks": {
+      "desktop": 58,
+      "web": 61,
+      "controlled": 20,
+      "visual": 96,
+      "realModel": {
+        "roleRuns": 1,
+        "modelCalls": 9,
+        "analysisToolCalls": 1
+      }
+    },
+    "artifactRoot": ".cache/cooperation-ui/remediation3-20261008",
+    "namespace": "judex-ui-71cd9eca",
+    "cleanedUp": true,
+    "deploymentUpgraded": false
+  },
+  "localRelease": {
+    "date": "2026-10-08",
+    "document": "LOCAL-RELEASE-20261008.md",
+    "context": "docker-desktop",
+    "namespace": "judex",
+    "revision": 14,
+    "previousRevision": 13,
+    "image": "judex/server:local-cooperation-20261008215701-4b10e3a2",
+    "version": "0.1.0-cooperation.20261008215701",
+    "sourceHash": "4b10e3a2f32f25f0401a4e9b241176a60a100a157f3b81350b6b8edd978fb63f",
+    "imageId": "sha256:c46142442146345d16e6f365876714b75ee7775cbd18ef127a61e922f2764c9e",
+    "url": "http://127.0.0.1:18097/",
+    "publishedAt": "2026-10-08T14:12:20.969Z",
+    "artifactRoot": ".cache/deploy/cooperation-20261008215701-4b10e3a2",
+    "checks": {
+      "web": 61,
+      "controlledKubernetes": 20,
+      "realModel": {
+        "roleRuns": 1,
+        "modelCalls": 8,
+        "analysisToolCalls": 1
+      },
+      "migration": 23,
+      "businessTablesPreserved": 40,
+      "secretsPreserved": 5,
+      "pvcsPreserved": 2,
+      "downloads": 3,
+      "browserStates": 2
+    },
+    "testNamespace": "judex-ui-4bf930f3",
+    "cleanedUp": true
+  },
+  "uiConsistency": {
+    "date": "2026-10-08",
+    "document": "UI-CONSISTENCY-20261008.md",
+    "revision": 15,
+    "previousRevision": 14,
+    "image": "judex/server:local-ui-consistency-20261008225122-5ff295b2",
+    "version": "0.1.0-ui.20261008225122",
+    "sourceHashAtBuild": "5ff295b2d30b74018231bd2b6e39214eb59b675d445d37fd1be8b95454f72f96",
+    "imageId": "sha256:878c6decdd9b628e7f61052021966964f5be123c5d0cc9dbd329851e32fc22f1",
+    "releaseFromVerifiedArtifact": true,
+    "worktreeChangedAfterBuild": true,
+    "url": "http://127.0.0.1:18097/",
+    "artifactRoot": ".cache/deploy/ui-consistency-20261008225122-5ff295b2",
+    "namespace": "judex-ui-2391d310",
+    "cleanedUp": true,
+    "checks": {
+      "desktop": 74,
+      "newGeometry": 33,
+      "visualSystem": 20,
+      "cooperation": 21,
+      "web": 61,
+      "controlledKubernetes": 20,
+      "migration": 23,
+      "businessTablesPreserved": 40,
+      "downloads": 3,
+      "publishedBrowserStates": 2
+    },
+    "worktreeSourceLimits": {
+      "checked": 393,
+      "max": 1806
+    }
+  }
+}

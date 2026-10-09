@@ -1,0 +1,33 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {seedWork} from "../../web/src/features/work/seed.ts";
+import {ensureDemoMainTopics,demoTaskActivity,demoResolve,demoFork,demoHistory} from "../../web/src/features/chat/demoCollaboration.ts";
+test("reports and discussion suggestions stay separate from conversation creation and acceptance",()=>{
+ let s=ensureDemoMainTopics(seedWork());s.currentUser="顾言";s.tasks.find(t=>t.id==="build").status="working";
+ const before=s.topics.length;
+ s=demoTaskActivity(s,{taskId:"build",kind:"progress",body:"update",files:[]}).state;
+ assert.equal(s.topics.length,before);
+ s=demoTaskActivity(s,{taskId:"build",kind:"question",body:"question",files:[]}).state;
+ assert.equal(s.topics.length,before);
+ const suggestion=s.discussionSuggestions.at(-1);
+ const r=demoResolve(s,{suggestionId:suggestion.id,expectedVersion:1,mode:"create"});s=r.state;
+ assert.equal(s.topics.length,before+1);
+ assert.equal(s.tasks.find(t=>t.id==="build").status,"working");
+ const replay=demoResolve(s,{suggestionId:suggestion.id,expectedVersion:1,mode:"create"});
+ assert.equal(replay.id,r.id);assert.equal(replay.state.topics.length,before+1);
+});
+test("forked histories share original message identity, parent and child suffixes diverge",()=>{
+ let s=ensureDemoMainTopics(seedWork());
+ const original=s.topics.find(t=>t.id==="labels");s.currentUser="林然";
+ const cutoff=1;
+ const fork=demoFork(s,{topicId:original.id,title:"branch",forkAfterSeq:cutoff,planIds:[],taskIds:[]});s=fork.state;
+ const child=s.topics.find(t=>t.id===fork.id);
+ child.messages.push({id:"child-new",actor:"林然",kind:"person",text:{zh:"child",en:"child"},at:1});
+ s.topics.find(t=>t.id===original.id).messages.push({id:"parent-new",actor:"林然",kind:"person",text:{zh:"parent",en:"parent"},at:2});
+ const history=demoHistory(s,child);
+ assert.equal(history[0].id,original.messages[0].id);
+ assert.equal(history[0].inherited,true);assert.equal(history.at(-1).seq,2);
+ assert.equal(history.some(m=>m.id==="parent-new"),false);
+ const nested=demoFork(s,{topicId:child.id,title:"nested",forkAfterSeq:1,planIds:[],taskIds:[]});
+ assert.equal(demoHistory(nested.state,nested.state.topics.find(t=>t.id===nested.id)).length,1);
+});

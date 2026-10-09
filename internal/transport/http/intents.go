@@ -10,7 +10,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/kakj-go/Judex/internal/collaboration"
 	"github.com/kakj-go/Judex/internal/decision"
+	"github.com/kakj-go/Judex/internal/discussion"
 	"github.com/kakj-go/Judex/internal/handoff"
 	"github.com/kakj-go/Judex/internal/platform/auth"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
@@ -21,11 +23,13 @@ import (
 
 // IntentHandlers serves confirmation intents (06 §6).
 type IntentHandlers struct {
-	Decisions *decision.Service
-	Work      *work.Service
-	Projects  *project.Service
-	Handoffs  *handoff.Service
-	Workflows *workflow.Service
+	Collaboration *collaboration.Service
+	Discussion    *discussion.Service
+	Decisions     *decision.Service
+	Work          *work.Service
+	Projects      *project.Service
+	Handoffs      *handoff.Service
+	Workflows     *workflow.Service
 }
 
 func NewIntentHandlers(decisions *decision.Service, workSvc *work.Service) *IntentHandlers {
@@ -164,6 +168,44 @@ func (h *IntentHandlers) executorFor(projectID uuid.UUID) decision.Executor {
 		text := func(key string) string { v, _ := inner[key].(string); return v }
 		id := func(key string) uuid.UUID { v, _ := uuid.Parse(text(key)); return v }
 		switch operation {
+		case "task.skip", "task.restore":
+			var input work.ExceptionCommand
+			raw, _ := json.Marshal(inner)
+			if err = json.Unmarshal(raw, &input); err != nil {
+				return "", err
+			}
+			input.ReviewHash = reviewHash
+			action := "skip"
+			if operation == "task.restore" {
+				action = "restore"
+			}
+			err = h.Work.ChangeExecutionExceptionTx(ctx, tx, userID, projectID, objectID, action, input)
+			return "task:" + objectID.String(), err
+		case "topic.fork":
+			var input collaboration.ForkInput
+			raw, _ := json.Marshal(inner)
+			if err := json.Unmarshal(raw, &input); err != nil {
+				return "", err
+			}
+			output, err := h.Discussion.Fork(ctx, userID, projectID, objectID, input)
+			if err != nil {
+				return "", err
+			}
+			return "topic:" + output.ID.String(), nil
+		case "discussion_suggestion.resolve":
+			var input collaboration.ResolveInput
+			raw, _ := json.Marshal(inner)
+			if err := json.Unmarshal(raw, &input); err != nil {
+				return "", err
+			}
+			output, err := h.Collaboration.Resolve(ctx, userID, projectID, objectID, input)
+			if err != nil {
+				return "", err
+			}
+			if output.ResultTopicID != nil {
+				return "topic:" + output.ResultTopicID.String(), nil
+			}
+			return "discussion_suggestion:" + output.ID.String() + ":" + output.State, nil
 		case "task.acceptance":
 			expected := int64(0)
 			if v, ok := inner["expectedVersion"].(float64); ok {

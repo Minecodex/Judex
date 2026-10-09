@@ -1,6 +1,7 @@
+import {AccountSecurity} from "./AccountSecurity";
 import { UICard, UIOption, UISelect } from "../../components/ui/FormControls";
 import { useState } from "react";
-import { Input, Button as HeroButton } from "@heroui/react";
+import { Input } from "@heroui/react";
 import {
   ArrowLeft,
   Search,
@@ -21,19 +22,8 @@ import { PreferencesPage, TeamPage, InvitePage } from "../work/TeamPages";
 import { ProjectSettings } from "../chat/ProjectSettings";
 import { FlowPage } from "../work/FlowPage";
 import type { SettingsSection } from "./navigation";
+import { LocalAIConnection } from './LocalAIConnection';
 const sections = [
-  {
-    id: "general",
-    label: "accountGeneral",
-    icon: Settings2,
-    group: "accountPersonalGroup",
-  },
-  {
-    id: "preferences",
-    label: "accountPreferences",
-    icon: SlidersHorizontal,
-    group: "accountPersonalGroup",
-  },
   {
     id: "project",
     label: "accountProjectAI",
@@ -62,7 +52,7 @@ const sections = [
 export function SettingsScreen() {
   const { route, t, project, text, go, membership, state } = useWork();
   const [search, setSearch] = useState("");
-  const active = route.settingsSection ?? "general";
+  const active = route.settingsSection==="general"?"project":route.settingsSection==="preferences"?"team":route.settingsSection??"project";
   const visible = sections.filter((section) =>
     t(section.label).toLowerCase().includes(search.toLowerCase()),
   );
@@ -139,7 +129,7 @@ export function SettingsScreen() {
           className="judex-settings-content"
           key={project.id + state.currentUser + active}
         >
-          {!membership && active !== "general" ? (
+          {!membership && active !== "security" ? (
             <InvitePage />
           ) : (
             <SettingContent section={active} />
@@ -152,6 +142,7 @@ export function SettingsScreen() {
 function SettingContent({ section }: { section: SettingsSection }) {
   const { t, project, route, state, go } = useWork();
   switch (section) {
+    case "security":return <AccountSecurity/>;
     case "general":
       return <GeneralSettings />;
     case "preferences":
@@ -175,28 +166,7 @@ function SettingContent({ section }: { section: SettingsSection }) {
         </WorkView>
       );
     case "local":
-      return (
-        <section className="judex-settings-local">
-          <h1>{t("accountLocal")}</h1>
-          <p>{t("chatLocalBody")}</p>
-          <UICard className="judex-settings-card">
-            <Terminal size={24} />
-            <h2>{t("chatLocalTitle")}</h2>
-            <p>{t("chatLocalBoundary")}</p>
-            <HeroButton
-              onPress={() =>
-                go({
-                  settingsSection: undefined,
-                  view: "tasks",
-                  id: undefined,
-                })
-              }
-            >
-              {t("chatOpenTasks")}
-            </HeroButton>
-          </UICard>
-        </section>
-      );
+      return <LocalAIConnection />;
   }
 }
 function GeneralSettings() {
@@ -236,7 +206,7 @@ function GeneralSettings() {
           </div>
           <div className="judex-settings-theme-options">
             {(["light", "dark"] as const).map((value) => (
-              <HeroButton
+              <Button
                 key={value}
                 variant={theme === value ? "secondary" : "ghost"}
                 aria-pressed={theme === value}
@@ -244,7 +214,7 @@ function GeneralSettings() {
               >
                 {theme === value && <Check size={14} />}{" "}
                 {t(value === "light" ? "accountLight" : "accountDark")}
-              </HeroButton>
+              </Button>
             ))}
           </div>
         </div>

@@ -52,6 +52,32 @@ components:
         updatedAt:
           type: string
           format: date-time
+        summary:
+          $ref: '#/components/schemas/ProjectSummary'
+    ProjectSummary:
+      type: object
+      required: [memberCount, topicCount, memberPreview]
+      properties:
+        memberCount: {type: integer, minimum: 0}
+        topicCount: {type: integer, minimum: 0}
+        memberPreview:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            required: [userId, displayName]
+            properties:
+              userId: {type: string, format: uuid}
+              displayName: {type: string}
+    RecentTopic:
+      type: object
+      required: [topicId, title, projectId, projectTitle, lastActivityAt]
+      properties:
+        topicId: {type: string, format: uuid}
+        title: {type: string}
+        projectId: {type: string, format: uuid}
+        projectTitle: {type: string}
+        lastActivityAt: {type: string, format: date-time}
     CreateProjectRequest:
       type: object
       required: [title]
@@ -349,6 +375,9 @@ components:
         - type: object
           required: [prompt, nodeBindings, revision]
           properties:
+            presetId:
+              type: string
+              description: 创建时复制的内置模板 ID；内容独立编辑，来源保持。
             prompt:
               type: string
               description: 公开职责提示词（所有人可见）。
@@ -501,8 +530,11 @@ components:
           maxLength: 2000
     PersonalPreferences:
       type: object
-      required: [revision, prompt]
+      required: [positionId, revision, prompt]
       properties:
+        positionId:
+          type: string
+          format: uuid
         revision:
           type: integer
           minimum: 0
@@ -511,8 +543,11 @@ components:
           maxLength: 20000
     UpdatePersonalPreferencesRequest:
       type: object
-      required: [expectedRevision, prompt]
+      required: [positionId, expectedRevision, prompt]
       properties:
+        positionId:
+          type: string
+          format: uuid
         expectedRevision:
           type: integer
           minimum: 0
@@ -554,6 +589,11 @@ components:
       type: object
       required: [id, name, responsibility, allowedPositionIds, defaultApprovalPolicy]
       properties:
+        kind:
+          type: string
+          enum: [activity, decision]
+          description: 图中的活动或评审形状，不构成审批授权。
+        phase: {type: string, maxLength: 120, description: 只读图的阶段分组说明。}
         id:
           type: string
           description: 稳定节点 ID，发布后不可复用为不同含义。
@@ -613,6 +653,11 @@ components:
                 type: string
               to:
                 type: string
+              kind:
+                type: string
+                enum: [sequence, feedback]
+                description: sequence 保持无环；feedback 为评审节点返回前序节点的协作参考。
+              label: {type: string, maxLength: 200, description: 人工阅读的条件说明，不是可执行表达式。}
         hardRules:
           type: array
           items:
@@ -626,6 +671,9 @@ components:
       type: object
       required: [id, name, publishedVersionId]
       properties:
+        presetId:
+          type: string
+          description: 内置流程模板的稳定来源 ID，项目独立编辑后仍保留。
         id:
           type: string
           format: uuid

@@ -1,0 +1,28 @@
+.judex-position-presets { display:flex;flex-direction:column;gap:var(--s5); }
+.judex-preset-scenario { display:flex;align-items:center;gap:var(--s4);padding:var(--s4);background:var(--surface-soft);border-radius:var(--r-md); }
+.judex-preset-scenario > div { flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--s2); }
+.judex-preset-scenario-icon,.judex-preset-role-icon { display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--green-bg);color:var(--green-ink);border-radius:var(--r-sm); }
+.judex-preset-scenario-icon { width:var(--card-mark);height:var(--card-mark); }
+.judex-preset-scenario-icon svg { width:var(--icon-lg);height:var(--icon-lg);display:block; }
+.judex-preset-field-label,.judex-preset-legend { font-size:var(--text-sm);font-weight:var(--weight-medium);color:var(--ink); }
+.judex-preset-toolbar { display:flex;align-items:center;justify-content:space-between;gap:var(--s4); }
+.judex-preset-toolbar h3 { font-size:var(--text-lg);font-weight:var(--weight-semibold);margin:0; }
+.judex-preset-toolbar p { font-size:var(--text-sm);line-height:var(--leading-base);color:var(--muted);margin:var(--s2) 0 0; }
+.judex-preset-toolbar .judex-control { flex-shrink:0; }
+.judex-preset-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3);border:0;padding:0;margin:0;min-width:0; }
+.judex-preset-legend { padding:0;margin-bottom:var(--s3); }
+.judex-position-preset-card { min-width:0;--choice-card-padding:var(--s4); }
+.judex-position-preset-card .checkbox__content { align-items:flex-start; }
+.judex-position-preset-card .checkbox__control { margin-top:var(--s1);flex-shrink:0; }
+.judex-position-preset-card .judex-checkbox-label { flex:1; }
+.judex-preset-card-content { display:flex;flex-direction:column;gap:var(--s2); }
+.judex-preset-card-top { display:flex;align-items:center;justify-content:space-between;gap:var(--s2); }
+.judex-preset-role-icon { width:var(--s8);height:var(--s8); }
+.judex-preset-role-icon svg { width:var(--icon);height:var(--icon);display:block; }
+.judex-preset-card-content strong { font-size:var(--text-base);font-weight:var(--weight-semibold);color:var(--ink); }
+.judex-preset-summary { font-size:var(--text-sm);line-height:var(--leading-base);color:var(--muted); }
+.judex-preset-added .checkbox__content { background:var(--surface-soft); }
+.judex-preset-footer { display:flex;align-items:center;justify-content:space-between;gap:var(--s4);width:100%; }
+.judex-preset-footer > span,.judex-preset-boundary { font-size:var(--text-sm);line-height:var(--leading-base);color:var(--muted);margin:0; }
+.judex-preset-footer > div { display:flex;align-items:center;gap:var(--s2);flex-shrink:0; }
+.judex-position-presets .judex-empty-state { padding:var(--s8) var(--s5); }

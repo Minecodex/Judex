@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/kakj-go/Judex/internal/audit"
+	"github.com/kakj-go/Judex/internal/collaboration"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/kakj-go/Judex/internal/platform/events"
@@ -86,10 +87,14 @@ func (s *Service) ReportInTx(ctx context.Context, tx pgx.Tx, requester, projectI
 		}
 	}
 	if status == "accepted" {
+
 		return uuid.Nil, 0, apierrors.New(apierrors.InvalidTransition, "已验收任务不能追加报告；需 reviewer 重开")
 	}
 	if status == "cancelled" || status == "draft" {
 		return uuid.Nil, 0, apierrors.New(apierrors.InvalidTransition, "task is "+status)
+	}
+	if err := ensureTaskExecutable(ctx, tx, projectID, in.TaskID); err != nil {
+		return uuid.Nil, 0, err
 	}
 	if in.Kind == "delivery" && status != "ready" && status != "working" && status != "rework" {
 		return uuid.Nil, 0, apierrors.New(apierrors.InvalidTransition, "delivery from "+status)
@@ -107,16 +112,6 @@ func (s *Service) ReportInTx(ctx context.Context, tx pgx.Tx, requester, projectI
 				return uuid.Nil, 0, apierrors.New(apierrors.RequirementUnmet, "delivery prerequisites unmet").WithDetails(map[string]any{"blockers": blockers})
 			}
 		}
-		var missing int
-		err = tx.QueryRow(ctx, `SELECT count(*) FROM task_participants p JOIN tasks t ON t.id=p.task_id
-   WHERE p.task_id=$1 AND p.identity_id<>$2 AND NOT EXISTS(SELECT 1 FROM work_reports r
-    WHERE r.task_id=t.id AND r.identity_id=p.identity_id AND r.agreement_version=t.agreement_version)`, in.TaskID, identityID).Scan(&missing)
-		if err != nil {
-			return uuid.Nil, 0, err
-		}
-		if missing > 0 {
-			return uuid.Nil, 0, apierrors.New(apierrors.RequirementUnmet, "required participant contributions missing")
-		}
 	}
 	for _, raw := range in.MaterialVersionIDs {
 		vid, err := uuid.Parse(raw)
@@ -124,7 +119,7 @@ func (s *Service) ReportInTx(ctx context.Context, tx pgx.Tx, requester, projectI
 			return uuid.Nil, 0, apierrors.Fields("materialVersionIds", "uuid")
 		}
 		var ready bool
-		if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM material_versions WHERE project_id=$1 AND id=$2 AND state='ready')`, projectID, vid).Scan(&ready); err != nil {
+		if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM material_versions v JOIN materials m ON m.id=v.material_id WHERE v.project_id=$1 AND v.id=$2 AND v.state='ready' AND m.deleted_at IS NULL)`, projectID, vid).Scan(&ready); err != nil {
 			return uuid.Nil, 0, err
 		}
 		if !ready {
@@ -141,10 +136,10 @@ func (s *Service) ReportInTx(ctx context.Context, tx pgx.Tx, requester, projectI
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO work_reports (project_id, id, task_id, identity_id, binding_version, submission_id,
-			report_kind, progress_hint, created_by, created_at, agreement_version,payload_hash,task_version,code_refs_json,environment_refs_json)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,(SELECT agreement_version FROM tasks WHERE id=$3),$11,$12,$13,$14)`,
+			report_kind, progress_hint, created_by, created_at, agreement_version,payload_hash,task_version,code_refs_json,environment_refs_json,source)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,(SELECT agreement_version FROM tasks WHERE id=$3),$11,$12,$13,$14,$15)`,
 		projectID, reportID, in.TaskID, identityColumn, bindingVersion, in.SubmissionID,
-		in.Kind, nullableText(in.Text), requester, now, hash, currentVer+1, codeRefs, envRefs); err != nil {
+		in.Kind, nullableText(in.Text), requester, now, hash, currentVer+1, codeRefs, envRefs, string(audit.ContextSource(ctx))); err != nil {
 		return uuid.Nil, 0, apierrors.New(apierrors.Internal, "report insert failed").Wrap(err)
 	}
 	for _, raw := range in.MaterialVersionIDs {
@@ -152,9 +147,25 @@ func (s *Service) ReportInTx(ctx context.Context, tx pgx.Tx, requester, projectI
 			return uuid.Nil, 0, err
 		}
 	}
+	if _, err := tx.Exec(ctx, `UPDATE work_reports SET plan_id=(SELECT plan_id FROM tasks WHERE id=$2) WHERE id=$1`, reportID, in.TaskID); err != nil {
+		return uuid.Nil, 0, err
+	}
 	nextStatus := status
 	if in.Kind == "delivery" {
-		nextStatus = "delivered"
+		var missing int
+		// A participant may submit their contribution before the others. Only
+		// explicit delivery with all current agreement contributions can put
+		// the whole task into review; it never represents another person's work.
+		if err = tx.QueryRow(ctx, `SELECT count(*) FROM task_participants p JOIN tasks t ON t.project_id=p.project_id AND t.id=p.task_id
+ WHERE p.project_id=$1 AND p.task_id=$2 AND NOT EXISTS(SELECT 1 FROM work_reports r
+ WHERE r.project_id=p.project_id AND r.task_id=p.task_id AND r.identity_id=p.identity_id AND r.agreement_version=t.agreement_version)`, projectID, in.TaskID).Scan(&missing); err != nil {
+			return uuid.Nil, 0, err
+		}
+		if missing == 0 {
+			nextStatus = "delivered"
+		} else {
+			nextStatus = "working"
+		}
 	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE tasks SET status=$2, latest_report_id=$3, version=version+1, updated_at=$4
@@ -176,6 +187,9 @@ func (s *Service) ReportInTx(ctx context.Context, tx pgx.Tx, requester, projectI
 		Operation:  "work.report." + in.Kind,
 		ObjectType: "task", ObjectID: in.TaskID.String(), OccurredAt: now,
 	}); err != nil {
+		return uuid.Nil, 0, err
+	}
+	if _, err := collaboration.EnqueueAnalysis(ctx, tx, projectID, in.TaskID, requester, "report", reportID, nil, now); err != nil {
 		return uuid.Nil, 0, err
 	}
 	return reportID, currentVer + 1, nil

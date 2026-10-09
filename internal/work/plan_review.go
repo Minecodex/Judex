@@ -19,24 +19,47 @@ func (s *Service) planReview(ctx context.Context, q dbQuery, project, plan uuid.
 	if err != nil {
 		return out, apierrors.New(apierrors.NotFound, "plan not found")
 	}
-	rows, err := q.Query(ctx, `SELECT t.id,t.status,t.latest_acceptance_id,t.title FROM tasks t WHERE t.project_id=$1 AND
+	rows, err := q.Query(ctx, `SELECT t.id,t.status,t.latest_acceptance_id,t.title,t.version,t.plan_id FROM tasks t WHERE t.project_id=$1 AND t.discarded_at IS NULL AND
  (t.plan_id=$2 OR EXISTS(SELECT 1 FROM plan_task_references r WHERE r.project_id=$1 AND r.plan_id=$2 AND r.task_id=t.id)) ORDER BY t.id`, project, plan)
 	if err != nil {
 		return out, err
 	}
 	defer rows.Close()
 	tasks := []map[string]any{}
+	type fact struct {
+		id           uuid.UUID
+		state, title string
+		acceptance   *uuid.UUID
+		version      int64
+		planID       *uuid.UUID
+	}
+	facts := []fact{}
 	for rows.Next() {
 		var id uuid.UUID
 		var state, title string
 		var acceptance *uuid.UUID
-		if err = rows.Scan(&id, &state, &acceptance, &title); err != nil {
+		var version int64
+		var planID *uuid.UUID
+		if err = rows.Scan(&id, &state, &acceptance, &title, &version, &planID); err != nil {
 			return out, err
 		}
-		tasks = append(tasks, map[string]any{"taskId": id, "title": title, "status": state, "acceptanceId": acceptance})
+		facts = append(facts, fact{id, state, title, acceptance, version, planID})
+	}
+	if err = rows.Err(); err != nil {
+		return out, err
+	}
+	rows.Close()
+	for _, f := range facts {
+		id, state, acceptance, title := f.id, f.state, f.acceptance, f.title
+		exception, e := activeException(ctx, q, project, id)
+		if e != nil {
+			return out, e
+		}
+		skipped := exception != nil && f.planID != nil && *f.planID == plan
+		tasks = append(tasks, map[string]any{"taskId": id, "title": title, "status": state, "acceptanceId": acceptance, "version": f.version, "executionException": exception})
 		if state == "accepted" && acceptance != nil {
 			out.TaskAcceptanceIDs = append(out.TaskAcceptanceIDs, acceptance.String())
-		} else if state != "cancelled" {
+		} else if state != "cancelled" && state != "draft" && !skipped {
 			out.Blockers = append(out.Blockers, Blocker{Phase: "accept", ObjectType: "task", ObjectID: id.String(), Reason: "任务尚未有效验收"})
 		}
 	}

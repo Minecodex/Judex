@@ -105,10 +105,11 @@ type MaterialEntry struct {
 }
 
 type Service struct {
-	pool   *postgres.Pool
-	store  ObjectStore
-	limits Limits
-	now    func() time.Time
+	converterURL string
+	pool         *postgres.Pool
+	store        ObjectStore
+	limits       Limits
+	now          func() time.Time
 }
 
 // unavailableStore makes missing object storage an explicit 503 instead of a
@@ -218,7 +219,7 @@ func partKey(stagingKey string, partNumber int) string {
 }
 
 // CreateUpload opens a session and computes the part plan (04 §2 step 1).
-func (s *Service) CreateUpload(ctx context.Context, requester, projectID uuid.UUID, name, kind, mime string, size int64, checksum, entrypoint string) (UploadSession, error) {
+func (s *Service) CreateUpload(ctx context.Context, requester, projectID uuid.UUID, name, kind, mime string, size int64, checksum, entrypoint string, purposes ...string) (UploadSession, error) {
 	if l := utf8.RuneCountInString(strings.TrimSpace(name)); l < 1 || l > 500 {
 		return UploadSession{}, apierrors.Fields("name", "length")
 	}
@@ -241,6 +242,13 @@ func (s *Service) CreateUpload(ctx context.Context, requester, projectID uuid.UU
 	if entrypoint != "" && !safeRelativePath(entrypoint) {
 		return UploadSession{}, apierrors.Fields("entrypoint", "path")
 	}
+	purpose := ""
+	if len(purposes) > 0 {
+		purpose = strings.TrimSpace(purposes[0])
+	}
+	if utf8.RuneCountInString(purpose) > 2048 {
+		return UploadSession{}, apierrors.Fields("purpose", "length")
+	}
 	var out UploadSession
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
 		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
@@ -255,11 +263,11 @@ func (s *Service) CreateUpload(ctx context.Context, requester, projectID uuid.UU
 		stagingKey := fmt.Sprintf("staging/%s/%s", projectID, id)
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO upload_sessions (project_id, id, owner_user_id, state, kind, name, staging_key,
-				expected_size, checksum, mime, entrypoint, part_size, part_count, expires_at, created_at)
-			VALUES ($1,$2,$3,'open',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+				expected_size, checksum, mime, entrypoint, part_size, part_count, expires_at, created_at,purpose)
+			VALUES ($1,$2,$3,'open',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 			RETURNING id, state, kind, name, expected_size, checksum, mime, part_size, part_count, expires_at`,
 			projectID, id, requester, kind, name, stagingKey, size, checksum,
-			mime, nullable(entrypoint), s.limits.PartSize, partCount, now.Add(s.limits.SessionTTL), now).
+			mime, nullable(entrypoint), s.limits.PartSize, partCount, now.Add(s.limits.SessionTTL), now, purpose).
 			Scan(&out.ID, &out.State, &out.Kind, &out.Name, &out.ExpectedSize, &out.Checksum,
 				&out.Mime, &out.PartSize, &out.PartCount, &out.ExpiresAt); err != nil {
 			return apierrors.New(apierrors.Internal, "session insert failed").Wrap(err)
@@ -464,10 +472,21 @@ func (s *Service) Complete(ctx context.Context, requester, projectID, uploadID u
 		// store (server-side verification, no client involvement).
 		if kind == "file" || kind == "html_bundle" {
 			hasher := sha256.New()
+			var probe []byte
 			for n := 1; n <= partCount; n++ {
 				body, err := s.store.Get(ctx, partKey(stagingKey, n))
 				if err != nil {
 					return err
+				}
+				if n == 1 {
+					header := make([]byte, 512)
+					count, e := io.ReadFull(body, header)
+					if e != nil && e != io.EOF && e != io.ErrUnexpectedEOF {
+						body.Close()
+						return e
+					}
+					probe = header[:count]
+					_, _ = hasher.Write(probe)
 				}
 				if _, err := io.Copy(hasher, body); err != nil {
 					body.Close()
@@ -477,6 +496,9 @@ func (s *Service) Complete(ctx context.Context, requester, projectID, uploadID u
 			}
 			if got := hex.EncodeToString(hasher.Sum(nil)); got != checksum {
 				return apierrors.Newf(apierrors.RequirementUnmet, "whole-file checksum mismatch")
+			}
+			if kind == "file" {
+				mime = detectedMime(name, probe)
 			}
 		}
 		now := s.now()
@@ -496,7 +518,7 @@ func (s *Service) Complete(ctx context.Context, requester, projectID, uploadID u
 				}
 				return apierrors.New(apierrors.Internal, "source lookup failed").Wrap(err)
 			}
-			if err := tx.QueryRow(ctx, `SELECT current_version_id FROM materials WHERE id=$1`, sourceMaterial).
+			if err := tx.QueryRow(ctx, `SELECT current_version_id FROM materials WHERE id=$1 AND deleted_at IS NULL`, sourceMaterial).
 				Scan(&currentVersionID); err != nil {
 				return apierrors.New(apierrors.Internal, "material lookup failed").Wrap(err)
 			}
@@ -526,6 +548,9 @@ func (s *Service) Complete(ctx context.Context, requester, projectID, uploadID u
 			checksum, expectedSize, mime, entrypoint, requester,
 			fmt.Sprintf(`{"uploadId":%q}`, uploadID.String()), now); err != nil {
 			return apierrors.New(apierrors.Internal, "version insert failed").Wrap(err)
+		}
+		if err := s.registerLibraryMetadata(ctx, tx, projectID, materialID, versionID, uploadID, requester, name, mime); err != nil {
+			return err
 		}
 		if kind == "html_bundle" {
 			if entrypoint == nil {

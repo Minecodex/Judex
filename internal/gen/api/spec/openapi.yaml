@@ -797,6 +797,486 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /projects/{projectId}/topics/{topicId}/fork:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: topicId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: forkTopic
+      summary: 从固定消息位置分叉公开会话
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForkTopicRequest'
+      responses:
+        '201':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Topic'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/tasks/{taskId}/activity:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listTaskActivity
+      summary: 任务统一活动时间线
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                      - nextCursor
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TaskActivity'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/plans/{planId}/discussion-summary:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getPlanDiscussionSummary
+      summary: 计划主讨论的任务摘要及待处理讨论建议
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PlanDiscussionSummary'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/discussion-suggestions:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listDiscussionSuggestions
+      summary: 待处理讨论建议
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+        - name: planId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: taskId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                      - nextCursor
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DiscussionSuggestion'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/discussion-suggestions/{suggestionId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: suggestionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getDiscussionSuggestion
+      summary: 取得讨论建议与冻结来源
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DiscussionSuggestion'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      operationId: resolveDiscussionSuggestion
+      summary: 人选择讨论建议的承载位置
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveDiscussionSuggestionRequest'
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DiscussionSuggestion'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/task-analyses/{analysisId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: analysisId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getTaskAnalysis
+      summary: 读取真实任务分析状态
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TaskAnalysis'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/task-analyses/{analysisId}/retry:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: analysisId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: retryTaskAnalysis
+      summary: 保留来源与预算的任务分析重试
+      tags:
+        - collaboration
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: []
+              properties: {}
+      responses:
+        '200':
+          description: 议题详情。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TaskAnalysis'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/tasks/{taskId}/main-topic:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: ensureTaskMainTopic
+      summary: 首次明确点击建立任务主讨论，并发及后续点击复用
+      tags:
+        - topics
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/TaskMainTopicResponse'
+        '201':
+          $ref: '#/components/responses/TaskMainTopicResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /projects/{projectId}/deliveries:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+    get:
+      operationId: listDeliveries
+      summary: 正式任务交付及交接的分页只读投影
+      tags:
+        - tasks
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - all
+              - task
+              - handoff
+        - name: filter
+          in: query
+          schema:
+            type: string
+            enum:
+              - all
+              - receive
+              - waiting
+              - revise
+      responses:
+        '200':
+          description: 当前用户关联关系与真实来源状态；不建立新的交付对象。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                      - nextCursor
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DeliveryCard'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /confirmation-intents:
     parameters: []
     post:
@@ -1377,6 +1857,222 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /projects/{projectId}/material-versions/{versionId}/usages:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: versionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listMaterialUsages
+      summary: listMaterialUsages
+      tags:
+        - materials
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                      - nextCursor
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MaterialUsage'
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    type: object
+                    additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+  /projects/{projectId}/material-versions/{versionId}/preview:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: versionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getFilePreview
+      summary: getFilePreview
+      tags:
+        - materials
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/FilePreview'
+                  meta:
+                    type: object
+                    additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: prepareFilePreview
+      summary: prepareFilePreview
+      tags:
+        - materials
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+        - name: retry
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/FilePreview'
+                  meta:
+                    type: object
+                    additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /projects/{projectId}/material-versions/{versionId}/preview/content:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: versionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: downloadFilePreview
+      summary: 鉴权预览内容
+      tags:
+        - materials
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - name: Range
+          in: header
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 预览流
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: 范围内容
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '416':
+          description: 范围无效
+  /projects/{projectId}/materials/{materialId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: materialId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: deleteMaterial
+      summary: deleteMaterial
+      tags:
+        - materials
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - deleted
+                    properties:
+                      deleted:
+                        type: boolean
+                  meta:
+                    type: object
+                    additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - expectedCurrentVersionId
+              properties:
+                expectedCurrentVersionId:
+                  type: string
+                  format: uuid
   /projects/{projectId}/material-versions/{versionId}:
     get:
       operationId: getMaterialVersionById
@@ -1464,6 +2160,43 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /me/recent-topics:
+    get:
+      operationId: listRecentTopics
+      summary: 本人有权访问的最近讨论
+      tags:
+        - me
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: 按最近消息时间排序，无消息时使用讨论创建时间。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/RecentTopic'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /me:
     patch:
       operationId: updateMe
@@ -1771,6 +2504,13 @@ paths:
               - accept
               - revise
               - reopen
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum:
+              - decision
+              - execution
       responses:
         '200':
           description: 待办分页。
@@ -1796,6 +2536,9 @@ paths:
                         type:
                           - string
                           - 'null'
+                      totalCount:
+                        type: integer
+                        minimum: 0
                   meta:
                     $ref: '#/components/schemas/RequestMeta'
         '401':
@@ -2556,7 +3299,7 @@ paths:
       - $ref: '#/components/parameters/ProjectIdParam'
     get:
       operationId: getMyPreferences
-      summary: 本人项目偏好（仅本人可见）
+      summary: 本人当前任职的独立工作提示词（仅本人可见）
       tags:
         - positions
       security:
@@ -2564,7 +3307,7 @@ paths:
         - bearerGrant: []
       responses:
         '200':
-          description: 偏好。
+          description: 当前承担的职位各返回一项，未保存时 revision 为 0、prompt 为空；无任职时 items 为空。
           content:
             application/json:
               schema:
@@ -2574,7 +3317,14 @@ paths:
                   - meta
                 properties:
                   data:
-                    $ref: '#/components/schemas/PersonalPreferences'
+                    type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PersonalPreferences'
                   meta:
                     $ref: '#/components/schemas/RequestMeta'
         '401':
@@ -2583,7 +3333,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
     put:
       operationId: updateMyPreferences
-      summary: 更新本人偏好（产生新 revision）
+      summary: 更新本人指定职位的提示词（独立 revision，须当前任职）
       tags:
         - positions
       security:
@@ -2681,6 +3431,15 @@ paths:
               - active
               - accepted
               - cancelled
+        - name: q
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+        - name: mine
+          in: query
+          schema:
+            type: boolean
       responses:
         '200':
           description: 计划分页。
@@ -2706,6 +3465,9 @@ paths:
                         type:
                           - string
                           - 'null'
+                      totalCount:
+                        type: integer
+                        minimum: 0
                   meta:
                     $ref: '#/components/schemas/RequestMeta'
         '401':
@@ -2796,7 +3558,7 @@ paths:
           format: uuid
     post:
       operationId: discardPlan
-      summary: 丢弃草稿计划（作者；无正式引用）
+      summary: 丢弃草稿：作者、计划负责人或管理员，版本化影响核对
       tags:
         - plans
       security:
@@ -2827,6 +3589,16 @@ paths:
                     properties:
                       discarded:
                         type: boolean
+                      id:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                        enum:
+                          - cancelled
+                      version:
+                        type: integer
+                        minimum: 1
                   meta:
                     $ref: '#/components/schemas/CommandMeta'
         '401':
@@ -3000,6 +3772,11 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: includeReferences
+          in: query
+          schema:
+            type: boolean
+          description: 只读纳入计划正式引用的任务，保留原所属计划。
       responses:
         '200':
           description: 任务分页。
@@ -3115,7 +3892,7 @@ paths:
           format: uuid
     post:
       operationId: discardTask
-      summary: 丢弃任务草稿（作者；无正式引用）
+      summary: 丢弃草稿：作者、计划负责人或管理员，版本化影响核对
       tags:
         - tasks
       security:
@@ -3146,6 +3923,16 @@ paths:
                     properties:
                       discarded:
                         type: boolean
+                      id:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                        enum:
+                          - cancelled
+                      version:
+                        type: integer
+                        minimum: 1
                   meta:
                     $ref: '#/components/schemas/CommandMeta'
         '401':
@@ -3170,6 +3957,16 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: includeDrafts
+          in: query
+          schema:
+            type: boolean
+          description: 只读展示草稿与已取消节点，不改变正式状态。
+        - name: includeReferences
+          in: query
+          schema:
+            type: boolean
+          description: 只读纳入计划正式引用的任务，保留原所属计划。
       responses:
         '200':
           description: 执行图。
@@ -3505,6 +4302,78 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /position-presets:
+    get:
+      operationId: getPositionPresetCatalog
+      summary: 全局内置场景与职位模板（只读）
+      tags:
+        - positions
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 版本化的双语内置模板目录。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PositionPresetCatalog'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /projects/{projectId}/positions/import-presets:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+    post:
+      operationId: importPositionPresets
+      summary: 批量复制选定场景的职位到项目（owner/manager）
+      description: 同一事务创建独立职位，按模板来源或中英文同名职位跳过重复项；不分配成员、流程节点、模型或审批权限。
+      tags:
+        - positions
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportPositionPresetsRequest'
+      responses:
+        '201':
+          description: 新增职位及已存在的跳过项。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ImportedPositionPresets'
+                  meta:
+                    $ref: '#/components/schemas/CommandMeta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /projects:
     get:
       operationId: listProjects
@@ -3517,6 +4386,28 @@ paths:
       parameters:
         - $ref: '#/components/parameters/LimitParam'
         - $ref: '#/components/parameters/CursorParam'
+        - in: query
+          name: q
+          schema:
+            type: string
+            maxLength: 200
+          description: 项目名称和简介的字面搜索。
+        - in: query
+          name: ownership
+          schema:
+            type: string
+            enum:
+              - all
+              - owned
+              - joined
+            default: all
+        - in: query
+          name: include
+          schema:
+            type: string
+            enum:
+              - summary
+          description: 整页批量返回活跃成员和讨论摘要。
       responses:
         '200':
           description: 项目分页。
@@ -3533,7 +4424,11 @@ paths:
                     required:
                       - items
                       - nextCursor
+                      - totalCount
                     properties:
+                      totalCount:
+                        type: integer
+                        minimum: 0
                       items:
                         type: array
                         items:
@@ -4517,6 +5412,21 @@ paths:
               - project_room
               - discussion
               - handoff
+        - name: planId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: taskId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+            maxLength: 200
       responses:
         '200':
           description: 议题分页。
@@ -4542,6 +5452,9 @@ paths:
                         type:
                           - string
                           - 'null'
+                      totalCount:
+                        type: integer
+                        minimum: 0
                   meta:
                     $ref: '#/components/schemas/RequestMeta'
         '401':
@@ -4725,6 +5638,42 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    put:
+      operationId: replaceTopicLinks
+      summary: 按预期关联版本替换对象引用，保留主讨论必需归属
+      tags:
+        - topics
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceTopicLinksRequest'
+      responses:
+        '200':
+          description: 当前会话及新的关联版本。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Topic'
+                  meta:
+                    $ref: '#/components/schemas/CommandMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
   /projects/{projectId}/submissions:
@@ -5050,6 +5999,18 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: formatGroup
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
       responses:
         '200':
           description: 材料分页。
@@ -5070,7 +6031,10 @@ paths:
                       items:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Material'
+                          $ref: '#/components/schemas/MaterialLibraryItem'
+                      totalCount:
+                        type: integer
+                        description: 当前搜索、格式与工作范围下的资料总数。
                       nextCursor:
                         type:
                           - string
@@ -5224,6 +6188,78 @@ paths:
                     $ref: '#/components/schemas/PreviewSession'
                   meta:
                     $ref: '#/components/schemas/RequestMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /workflow-presets:
+    get:
+      operationId: getWorkflowPresetCatalog
+      summary: 读取全局流程模板和共用场景目录
+      tags:
+        - workflows
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 只读流程模板，节点和连线生成缩略图；建议职位不构成授权。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/WorkflowPresetCatalog'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /projects/{projectId}/workflows/import-presets:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+    post:
+      operationId: importWorkflowPresets
+      summary: 将选定流程模板复制为项目独立草稿（owner/manager）
+      description: 同一事务导入，按稳定来源或中英文同名流程跳过重复项。不发布、不分配人员或职位、不添加审批授权。
+      tags:
+        - workflows
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportWorkflowPresetsRequest'
+      responses:
+        '201':
+          description: 新增流程草稿及已存在的跳过项。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ImportedWorkflowPresets'
+                  meta:
+                    $ref: '#/components/schemas/CommandMeta'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -5462,6 +6498,306 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/plans/{planId}/draft:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: updatePlanDraft
+      summary: updatePlanDraft
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkDraftUpdate'
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Plan'
+                  meta:
+                    $ref: '#/components/schemas/CommandMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/plans/{planId}/discard-review:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getPlanDiscardReview
+      summary: getPlanDiscardReview
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DraftDiscardReview'
+                  meta:
+                    $ref: '#/components/schemas/CommandMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/tasks/{taskId}/draft:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: updateTaskDraft
+      summary: updateTaskDraft
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkDraftUpdate'
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+                  meta:
+                    $ref: '#/components/schemas/CommandMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/tasks/{taskId}/discard-review:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getTaskDiscardReview
+      summary: getTaskDiscardReview
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DraftDiscardReview'
+                  meta:
+                    $ref: '#/components/schemas/CommandMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/tasks/{taskId}/execution-review:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getTaskExecutionReview
+      summary: getTaskExecutionReview
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ExecutionReview'
+                  meta:
+                    $ref: '#/components/schemas/CommandMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+        - name: operation
+          in: query
+          schema:
+            type: string
+            enum:
+              - skip
+              - restore
+            default: skip
+  /projects/{projectId}/tasks/{taskId}/skip:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: skipTask
+      summary: skipTask
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutionCommand'
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+                  meta:
+                    $ref: '#/components/schemas/CommandMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/tasks/{taskId}/restore:
+    parameters:
+      - $ref: '#/components/parameters/ProjectIdParam'
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: restoreTask
+      summary: restoreTask
+      tags:
+        - work
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutionCommand'
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+                  meta:
+                    $ref: '#/components/schemas/CommandMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
 components:
   schemas:
     StartRunRequest:
@@ -5600,8 +6936,12 @@ components:
           type: string
           enum:
             - proposal.decision
+            - topic.fork
+            - discussion_suggestion.resolve
             - task.acceptance
             - task.reopen
+            - task.skip
+            - task.restore
             - plan.acceptance
             - plan.reopen
             - handoff.send
@@ -6091,6 +7431,336 @@ components:
           type: integer
         partSizeBytes:
           type: integer
+    ConversationSourceRef:
+      type: object
+      required:
+        - type
+        - id
+      properties:
+        type:
+          type: string
+          enum:
+            - report
+            - submission
+            - message
+        id:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+          description: 查询返回的任务来源定位；写入时始终按源记录重新校验。
+    ForkTopicRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        forkAfterSeq:
+          type: integer
+          minimum: 0
+        links:
+          type: array
+          items:
+            type: object
+            required:
+              - objectType
+              - objectId
+            properties:
+              objectType:
+                type: string
+                enum:
+                  - plan
+                  - task
+              objectId:
+                type: string
+                format: uuid
+        sourceRefs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationSourceRef'
+    TaskAnalysis:
+      type: object
+      required:
+        - id
+        - taskId
+        - batchId
+        - sourceType
+        - sourceId
+        - state
+        - summary
+        - disagreements
+        - basis
+        - errorCode
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+        batchId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        sourceType:
+          type: string
+          enum:
+            - report
+            - submission
+        sourceId:
+          type: string
+          format: uuid
+        state:
+          type: string
+        summary:
+          type: string
+        disagreements:
+          type: array
+          items:
+            type: string
+        basis:
+          type: array
+          items:
+            type: string
+        errorCode:
+          type:
+            - string
+            - 'null'
+        updatedAt:
+          type: string
+          format: date-time
+    TaskActivity:
+      type: object
+      required:
+        - id
+        - taskId
+        - kind
+        - sourceType
+        - source
+        - text
+        - actorUserId
+        - actorName
+        - identityId
+        - createdAt
+        - materialVersionIds
+        - materials
+        - topicIds
+        - analysis
+      properties:
+        id:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - progress
+            - delivery
+            - question
+            - reply
+            - message
+            - decision
+        sourceType:
+          type: string
+        source:
+          type: string
+        text:
+          type: string
+        actorUserId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        actorName:
+          type: string
+        identityId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        materialVersionIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        materials:
+          type: array
+          items:
+            type: object
+            required:
+              - versionId
+              - name
+            properties:
+              versionId:
+                type: string
+                format: uuid
+              name:
+                type: string
+        topicIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        analysis:
+          anyOf:
+            - $ref: '#/components/schemas/TaskAnalysis'
+            - type: 'null'
+    DiscussionSuggestion:
+      type: object
+      required:
+        - id
+        - analysisId
+        - taskId
+        - planId
+        - title
+        - reason
+        - parentTopicId
+        - forkAfterSeq
+        - suggestedTopicId
+        - state
+        - version
+        - resultTopicId
+        - sourceRef
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        analysisId:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+        planId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        title:
+          type: string
+        reason:
+          type: string
+        parentTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        forkAfterSeq:
+          type: integer
+          minimum: 0
+        suggestedTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        state:
+          type: string
+          enum:
+            - pending
+            - handled
+            - dismissed
+        version:
+          type: integer
+          minimum: 1
+        resultTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        sourceRef:
+          $ref: '#/components/schemas/ConversationSourceRef'
+        createdAt:
+          type: string
+          format: date-time
+    ResolveDiscussionSuggestionRequest:
+      type: object
+      required:
+        - expectedVersion
+        - mode
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        mode:
+          type: string
+          enum:
+            - create
+            - main
+            - link
+            - dismiss
+        title:
+          type: string
+          maxLength: 200
+        topicId:
+          type: string
+          format: uuid
+        links:
+          type: array
+          items:
+            type: object
+            required:
+              - objectType
+              - objectId
+            properties:
+              objectType:
+                type: string
+                enum:
+                  - plan
+                  - task
+              objectId:
+                type: string
+                format: uuid
+    PlanDiscussionSummary:
+      type: object
+      required:
+        - planId
+        - mainTopicId
+        - tasks
+        - suggestions
+      properties:
+        planId:
+          type: string
+          format: uuid
+        mainTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        tasks:
+          type: array
+          items:
+            type: object
+            required:
+              - taskId
+              - activityCount
+              - latestActivity
+            properties:
+              taskId:
+                type: string
+                format: uuid
+              activityCount:
+                type: integer
+                minimum: 0
+              latestActivity:
+                anyOf:
+                  - $ref: '#/components/schemas/TaskActivity'
+                  - type: 'null'
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscussionSuggestion'
     RequestMeta:
       type: object
       required:
@@ -6202,6 +7872,101 @@ components:
             - string
             - 'null'
           description: 下一页游标；null 表示没有更多数据。
+    TaskMainTopicResult:
+      type: object
+      required:
+        - mainTopicId
+        - topic
+      properties:
+        mainTopicId:
+          type: string
+          format: uuid
+        topic:
+          $ref: '#/components/schemas/Topic'
+    ReplaceTopicLinksRequest:
+      type: object
+      required:
+        - expectedLinksVersion
+        - targetRefs
+      properties:
+        expectedLinksVersion:
+          type: integer
+          format: int64
+          minimum: 1
+        targetRefs:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required:
+              - objectType
+              - objectId
+            properties:
+              objectType:
+                type: string
+                enum:
+                  - plan
+                  - task
+              objectId:
+                type: string
+                format: uuid
+    DeliveryCard:
+      type: object
+      required:
+        - id
+        - objectId
+        - objectType
+        - taskId
+        - planId
+        - title
+        - status
+        - version
+        - summary
+        - incoming
+        - outgoing
+        - sourceCount
+        - pendingCount
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        objectId:
+          type: string
+          format: uuid
+        objectType:
+          type: string
+          enum:
+            - task
+            - handoff
+        taskId:
+          type: string
+          format: uuid
+        planId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        title:
+          type: string
+        status:
+          type: string
+        version:
+          type: integer
+          format: int64
+        summary:
+          type: string
+        incoming:
+          type: boolean
+        outgoing:
+          type: boolean
+        sourceCount:
+          type: integer
+        pendingCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
     Topic:
       type: object
       required:
@@ -6252,6 +8017,22 @@ components:
         createdAt:
           type: string
           format: date-time
+        parentTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        forkAfterSeq:
+          type: integer
+          minimum: 0
+        sourceRefs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationSourceRef'
+        linksVersion:
+          type: integer
+          format: int64
+          minimum: 1
     CreateTopicRequest:
       type: object
       required:
@@ -6382,6 +8163,29 @@ components:
         createdAt:
           type: string
           format: date-time
+        originTopicId:
+          type: string
+          format: uuid
+        inherited:
+          type: boolean
+        materials:
+          type: array
+          items:
+            type: object
+            required:
+              - versionId
+              - name
+            properties:
+              versionId:
+                type: string
+                format: uuid
+              name:
+                type: string
+        taskId:
+          type:
+            - string
+            - 'null'
+          format: uuid
     Submission:
       type: object
       required:
@@ -6461,6 +8265,17 @@ components:
         createdAt:
           type: string
           format: date-time
+        discussionIntent:
+          type: string
+          enum:
+            - auto
+            - question
+            - reply
+        planId:
+          type:
+            - string
+            - 'null'
+          format: uuid
     CodeRef:
       type: object
       required:
@@ -6525,6 +8340,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CodeRef'
+        discussionIntent:
+          type: string
+          enum:
+            - auto
+            - question
+            - reply
+          default: auto
+        planId:
+          type:
+            - string
+            - 'null'
+          format: uuid
     UploadSession:
       type: object
       required:
@@ -6606,6 +8433,8 @@ components:
         entrypoint:
           type: string
           description: HTML 包入口相对路径。
+        purpose:
+          type: string
     CompleteUploadRequest:
       type: object
       required:
@@ -6722,6 +8551,8 @@ components:
         createdAt:
           type: string
           format: date-time
+        library:
+          $ref: '#/components/schemas/MaterialLibraryItem'
     PreviewSession:
       type: object
       required:
@@ -6769,6 +8600,8 @@ components:
             - membership.changed
             - run.changed
             - notification.created
+            - material.changed
+            - material.preview.changed
         objectType:
           type: string
         objectId:
@@ -6872,6 +8705,338 @@ components:
         createdAt:
           type: string
           format: date-time
+    MaterialLibraryItem:
+      type: object
+      required:
+        - id
+        - title
+        - versionId
+        - revision
+        - size
+        - mime
+        - format
+        - authorName
+        - uploadedAt
+        - originalStatus
+        - source
+        - purpose
+        - canDelete
+        - associations
+        - previewStatus
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        kind:
+          type: string
+        visibility:
+          type: string
+        currentVersionId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        createdAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        versionId:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+        size:
+          type: integer
+        mime:
+          type: string
+        format:
+          type: string
+        authorId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        authorName:
+          type: string
+        uploadedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        source:
+          type: string
+        originalStatus:
+          type: string
+          description: 固定版本原件状态，与内容预览状态独立。
+        purpose:
+          type: string
+        deletedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        canDelete:
+          type: boolean
+        previewStatus:
+          type: string
+        associations:
+          type: array
+          items:
+            type: object
+            required:
+              - type
+              - id
+              - name
+            properties:
+              type:
+                type: string
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+    MaterialUsage:
+      type: object
+      required:
+        - id
+        - kind
+        - description
+        - actorName
+        - createdAt
+        - source
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        description:
+          type: string
+        actorId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        actorName:
+          type: string
+        createdAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        source:
+          type: string
+        taskId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        taskName:
+          type:
+            - string
+            - 'null'
+        planId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        planName:
+          type:
+            - string
+            - 'null'
+        topicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        topicName:
+          type:
+            - string
+            - 'null'
+    FilePreview:
+      type: object
+      required:
+        - status
+        - kind
+        - mime
+        - size
+        - error
+        - contentUrl
+        - thumbnail
+      properties:
+        status:
+          type: string
+          enum:
+            - not_requested
+            - pending
+            - ready
+            - failed
+            - unsupported
+        kind:
+          type: string
+        mime:
+          type: string
+        size:
+          type: integer
+        error:
+          type:
+            - string
+            - 'null'
+        contentUrl:
+          type:
+            - string
+            - 'null'
+          format: uri-reference
+          description: ready 时返回以 /api/v1 开头的鉴权内容入口。
+        thumbnail:
+          description: ready 时返回缩略图读取描述；PDF.js 读取第一页，图片、源码及目录封面读取相同固定预览。
+          oneOf:
+            - $ref: '#/components/schemas/MaterialThumbnail'
+            - type: 'null'
+    MaterialThumbnail:
+      type: object
+      required:
+        - kind
+        - url
+        - page
+      properties:
+        kind:
+          type: string
+          enum:
+            - pdf
+            - image
+            - text
+            - archive
+        url:
+          type: string
+          format: uri-reference
+        page:
+          type:
+            - integer
+            - 'null'
+          description: PDF 缩略图固定读取第 1 页，其余格式为 null。
+    PresetText:
+      type: object
+      required:
+        - zh
+        - en
+      properties:
+        zh:
+          type: string
+        en:
+          type: string
+    PositionPreset:
+      type: object
+      required:
+        - id
+        - name
+        - summary
+        - prompt
+      properties:
+        id:
+          type: string
+        name:
+          $ref: '#/components/schemas/PresetText'
+        summary:
+          $ref: '#/components/schemas/PresetText'
+        prompt:
+          $ref: '#/components/schemas/PresetText'
+    PositionScenario:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - roleIds
+      properties:
+        id:
+          type: string
+        name:
+          $ref: '#/components/schemas/PresetText'
+        description:
+          $ref: '#/components/schemas/PresetText'
+        roleIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+    PositionPresetCatalog:
+      type: object
+      required:
+        - version
+        - roles
+        - scenarios
+      properties:
+        version:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/PositionPreset'
+        scenarios:
+          type: array
+          items:
+            $ref: '#/components/schemas/PositionScenario'
+    ImportPositionPresetsRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - catalogVersion
+        - scenarioId
+        - roleIds
+        - locale
+      properties:
+        catalogVersion:
+          type: string
+          minLength: 1
+          maxLength: 64
+        scenarioId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        roleIds:
+          type: array
+          minItems: 1
+          maxItems: 32
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+        locale:
+          type: string
+          enum:
+            - zh-CN
+            - en
+    ImportedPositionPresets:
+      type: object
+      required:
+        - items
+        - skipped
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Position'
+        skipped:
+          type: array
+          items:
+            type: object
+            required:
+              - presetId
+              - positionId
+              - name
+            properties:
+              presetId:
+                type: string
+              positionId:
+                type: string
+                format: uuid
+              name:
+                type: string
     Project:
       type: object
       required:
@@ -6935,6 +9100,57 @@ components:
           type: string
           format: date-time
         updatedAt:
+          type: string
+          format: date-time
+        summary:
+          $ref: '#/components/schemas/ProjectSummary'
+    ProjectSummary:
+      type: object
+      required:
+        - memberCount
+        - topicCount
+        - memberPreview
+      properties:
+        memberCount:
+          type: integer
+          minimum: 0
+        topicCount:
+          type: integer
+          minimum: 0
+        memberPreview:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            required:
+              - userId
+              - displayName
+            properties:
+              userId:
+                type: string
+                format: uuid
+              displayName:
+                type: string
+    RecentTopic:
+      type: object
+      required:
+        - topicId
+        - title
+        - projectId
+        - projectTitle
+        - lastActivityAt
+      properties:
+        topicId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        projectId:
+          type: string
+          format: uuid
+        projectTitle:
+          type: string
+        lastActivityAt:
           type: string
           format: date-time
     CreateProjectRequest:
@@ -7314,6 +9530,9 @@ components:
             - nodeBindings
             - revision
           properties:
+            presetId:
+              type: string
+              description: 创建时复制的内置模板 ID；内容独立编辑，来源保持。
             prompt:
               type: string
               description: 公开职责提示词（所有人可见）。
@@ -7494,9 +9713,13 @@ components:
     PersonalPreferences:
       type: object
       required:
+        - positionId
         - revision
         - prompt
       properties:
+        positionId:
+          type: string
+          format: uuid
         revision:
           type: integer
           minimum: 0
@@ -7506,9 +9729,13 @@ components:
     UpdatePersonalPreferencesRequest:
       type: object
       required:
+        - positionId
         - expectedRevision
         - prompt
       properties:
+        positionId:
+          type: string
+          format: uuid
         expectedRevision:
           type: integer
           minimum: 0
@@ -7565,6 +9792,16 @@ components:
         - allowedPositionIds
         - defaultApprovalPolicy
       properties:
+        kind:
+          type: string
+          enum:
+            - activity
+            - decision
+          description: 图中的活动或评审形状，不构成审批授权。
+        phase:
+          type: string
+          maxLength: 120
+          description: 只读图的阶段分组说明。
         id:
           type: string
           description: 稳定节点 ID，发布后不可复用为不同含义。
@@ -7641,6 +9878,16 @@ components:
                 type: string
               to:
                 type: string
+              kind:
+                type: string
+                enum:
+                  - sequence
+                  - feedback
+                description: sequence 保持无环；feedback 为评审节点返回前序节点的协作参考。
+              label:
+                type: string
+                maxLength: 200
+                description: 人工阅读的条件说明，不是可执行表达式。
         hardRules:
           type: array
           items:
@@ -7659,6 +9906,9 @@ components:
         - name
         - publishedVersionId
       properties:
+        presetId:
+          type: string
+          description: 内置流程模板的稳定来源 ID，项目独立编辑后仍保留。
         id:
           type: string
           format: uuid
@@ -7834,11 +10084,44 @@ components:
               type: integer
             cancelled:
               type: integer
+            required:
+              type: integer
+              minimum: 0
+            draft:
+              type: integer
+              minimum: 0
+            skipped:
+              type: integer
+              minimum: 0
         version:
           type: integer
           minimum: 1
         createdAt:
           type: string
+          format: date-time
+        mainTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        myTaskCount:
+          type: integer
+        ownerName:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        referenceTaskIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        capabilities:
+          $ref: '#/components/schemas/WorkCapabilities'
+        discardedAt:
+          type:
+            - string
+            - 'null'
           format: date-time
     PlanDraftRequest:
       type: object
@@ -7859,6 +10142,12 @@ components:
         workflowId:
           type: string
           format: uuid
+        sourceTopicId:
+          type: string
+          format: uuid
+        forkAfterSeq:
+          type: integer
+          minimum: 0
     Task:
       type: object
       required:
@@ -7972,6 +10261,24 @@ components:
         version:
           type: integer
           minimum: 1
+        mainTopicId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        capabilities:
+          $ref: '#/components/schemas/WorkCapabilities'
+        discardedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        executionException:
+          anyOf:
+            - $ref: '#/components/schemas/ExecutionException'
+            - type: 'null'
+        bugDetails:
+          $ref: '#/components/schemas/BugDetails'
     TaskRequirement:
       type: object
       required:
@@ -8010,6 +10317,17 @@ components:
           type: string
         satisfied:
           type: boolean
+          readOnly: true
+        sourceTaskId:
+          type: string
+          format: uuid
+        waived:
+          type: boolean
+        inheritedFrom:
+          type: string
+          format: uuid
+        fingerprint:
+          type: string
     TaskDraftRequest:
       type: object
       required:
@@ -8126,8 +10444,18 @@ components:
               blockers:
                 type: array
                 items:
-                  type: object
-                  additionalProperties: true
+                  $ref: '#/components/schemas/WorkBlocker'
+              capabilities:
+                $ref: '#/components/schemas/WorkCapabilities'
+              discardedAt:
+                type:
+                  - string
+                  - 'null'
+                format: date-time
+              executionException:
+                anyOf:
+                  - $ref: '#/components/schemas/ExecutionException'
+                  - type: 'null'
         edges:
           type: array
           items:
@@ -8156,6 +10484,13 @@ components:
                   - hard
                   - advisory
                   - parent
+              original:
+                type: boolean
+              viaTaskIds:
+                type: array
+                items:
+                  type: string
+                  format: uuid
     WorkReport:
       type: object
       required:
@@ -8335,10 +10670,13 @@ components:
       type: object
       required:
         - expectedVersion
+        - reviewHash
       properties:
         expectedVersion:
           type: integer
           minimum: 1
+        reviewHash:
+          type: string
     Proposal:
       type: object
       required:
@@ -9058,6 +11396,424 @@ components:
         occurredAt:
           type: string
           format: date-time
+    WorkflowPresetNode:
+      type: object
+      required:
+        - id
+        - name
+        - responsibility
+      properties:
+        kind:
+          type: string
+          enum:
+            - activity
+            - decision
+        phase:
+          $ref: '#/components/schemas/PresetText'
+        id:
+          type: string
+        name:
+          $ref: '#/components/schemas/PresetText'
+        responsibility:
+          $ref: '#/components/schemas/PresetText'
+    WorkflowPreset:
+      type: object
+      required:
+        - id
+        - name
+        - summary
+        - instructions
+        - nodes
+        - edges
+        - roleIds
+        - scenarioIds
+      properties:
+        complexity:
+          type: string
+          enum:
+            - basic
+            - advanced
+        sources:
+          type: array
+          items:
+            type: object
+            required:
+              - title
+              - url
+            properties:
+              title:
+                $ref: '#/components/schemas/PresetText'
+              url:
+                type: string
+                format: uri
+                pattern: ^https://
+        id:
+          type: string
+        name:
+          $ref: '#/components/schemas/PresetText'
+        summary:
+          $ref: '#/components/schemas/PresetText'
+        instructions:
+          $ref: '#/components/schemas/PresetText'
+        nodes:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/WorkflowPresetNode'
+        edges:
+          type: array
+          items:
+            type: object
+            required:
+              - from
+              - to
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+              kind:
+                type: string
+                enum:
+                  - sequence
+                  - feedback
+              label:
+                $ref: '#/components/schemas/PresetText'
+        roleIds:
+          type: array
+          items:
+            type: string
+        scenarioIds:
+          type: array
+          items:
+            type: string
+    WorkflowScenario:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - workflowIds
+      properties:
+        id:
+          type: string
+        name:
+          $ref: '#/components/schemas/PresetText'
+        description:
+          $ref: '#/components/schemas/PresetText'
+        workflowIds:
+          type: array
+          items:
+            type: string
+    WorkflowPresetCatalog:
+      type: object
+      required:
+        - version
+        - workflows
+        - scenarios
+        - roles
+      properties:
+        version:
+          type: string
+        workflows:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowPreset'
+        scenarios:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowScenario'
+        roles:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: string
+              name:
+                $ref: '#/components/schemas/PresetText'
+    ImportWorkflowPresetsRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - catalogVersion
+        - scenarioId
+        - workflowIds
+        - locale
+      properties:
+        catalogVersion:
+          type: string
+          minLength: 1
+          maxLength: 64
+        scenarioId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        workflowIds:
+          type: array
+          minItems: 1
+          maxItems: 32
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+        locale:
+          type: string
+          enum:
+            - zh-CN
+            - en
+    ImportedWorkflowPresets:
+      type: object
+      required:
+        - items
+        - skipped
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workflow'
+        skipped:
+          type: array
+          items:
+            type: object
+            required:
+              - presetId
+              - workflowId
+              - name
+            properties:
+              presetId:
+                type: string
+              workflowId:
+                type: string
+                format: uuid
+              name:
+                type: string
+    WorkCapabilities:
+      type: object
+      required:
+        - editDraft
+        - discardDraft
+        - proposeChange
+        - skip
+        - restore
+      properties:
+        editDraft:
+          type: boolean
+        discardDraft:
+          type: boolean
+        proposeChange:
+          type: boolean
+        skip:
+          type: boolean
+        restore:
+          type: boolean
+    ExceptionWaiver:
+      type: object
+      required:
+        - taskId
+        - requirementId
+        - fingerprint
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        requirementId:
+          type: string
+          format: uuid
+        fingerprint:
+          type: string
+    ExecutionException:
+      type: object
+      required:
+        - id
+        - reason
+        - previousStatus
+        - actorUserId
+        - createdAt
+        - waivers
+      properties:
+        id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        previousStatus:
+          type: string
+          enum:
+            - ready
+            - working
+            - delivered
+            - rework
+        actorUserId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        waivers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExceptionWaiver'
+    ExceptionImpact:
+      type: object
+      required:
+        - taskId
+        - planId
+        - title
+        - status
+        - version
+        - alreadyStarted
+        - requirements
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        planId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        title:
+          type: string
+        status:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        alreadyStarted:
+          type: boolean
+        requirements:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskRequirement'
+    ExecutionReview:
+      type: object
+      required:
+        - taskId
+        - targetVersion
+        - operation
+        - reviewHash
+        - title
+        - current
+        - affectedTasks
+        - referencingPlanIds
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        targetVersion:
+          type: integer
+          minimum: 1
+        operation:
+          type: string
+          enum:
+            - skip
+            - restore
+        reviewHash:
+          type: string
+        title:
+          type: string
+        current:
+          anyOf:
+            - $ref: '#/components/schemas/ExecutionException'
+            - type: 'null'
+        affectedTasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExceptionImpact'
+        referencingPlanIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+    ExecutionCommand:
+      type: object
+      required:
+        - expectedVersion
+        - reviewHash
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        reviewHash:
+          type: string
+        reason:
+          type: string
+          minLength: 1
+        waivers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExceptionWaiver'
+        acknowledgeStarted:
+          type: boolean
+    DraftDiscardReview:
+      type: object
+      required:
+        - targetId
+        - targetType
+        - targetVersion
+        - title
+        - reviewHash
+        - tasks
+        - blockers
+      properties:
+        targetId:
+          type: string
+          format: uuid
+        targetType:
+          type: string
+          enum:
+            - task
+            - plan
+        targetVersion:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+        reviewHash:
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExceptionImpact'
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkBlocker'
+    WorkDraftUpdate:
+      type: object
+      required:
+        - expectedVersion
+        - fields
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        fields:
+          type: object
+          minProperties: 1
+          additionalProperties: true
+    WorkBlocker:
+      type: object
+      required:
+        - phase
+        - objectType
+        - objectId
+        - reason
+      properties:
+        phase:
+          type: string
+        objectType:
+          type: string
+        objectId:
+          type: string
+        reason:
+          type: string
   parameters:
     LimitParam:
       name: limit
@@ -9150,6 +11906,20 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    TaskMainTopicResponse:
+      description: 稳定的任务主讨论，已有会话复用。
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - data
+              - meta
+            properties:
+              data:
+                $ref: '#/components/schemas/TaskMainTopicResult'
+              meta:
+                $ref: '#/components/schemas/CommandMeta'
   securitySchemes:
     sessionCookie:
       type: apiKey

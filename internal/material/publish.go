@@ -68,7 +68,7 @@ func (s *Service) PublishInTx(ctx context.Context, tx pgx.Tx, project, run uuid.
 	}
 	for _, source := range in.SourceVersionIDs {
 		var current bool
-		err = tx.QueryRow(ctx, `SELECT m.current_version_id=v.id AND v.state='ready' FROM material_versions v JOIN materials m ON m.id=v.material_id AND m.project_id=v.project_id WHERE v.id=$1 AND v.project_id=$2`, source, project).Scan(&current)
+		err = tx.QueryRow(ctx, `SELECT m.current_version_id=v.id AND v.state='ready' FROM material_versions v JOIN materials m ON m.id=v.material_id AND m.project_id=v.project_id WHERE m.deleted_at IS NULL AND v.id=$1 AND v.project_id=$2`, source, project).Scan(&current)
 		if err != nil || !current {
 			return out, apierrors.New(apierrors.SourceVersionConf, "source version is no longer current in project")
 		}
@@ -79,7 +79,7 @@ func (s *Service) PublishInTx(ctx context.Context, tx pgx.Tx, project, run uuid.
 		materialID = *in.MaterialID
 		var current *uuid.UUID
 		var kind string
-		err = tx.QueryRow(ctx, `SELECT current_version_id,kind FROM materials WHERE id=$1 AND project_id=$2 FOR UPDATE`, materialID, project).Scan(&current, &kind)
+		err = tx.QueryRow(ctx, `SELECT current_version_id,kind FROM materials WHERE id=$1 AND project_id=$2 AND deleted_at IS NULL FOR UPDATE`, materialID, project).Scan(&current, &kind)
 		if err != nil || current == nil || in.BaseVersionID == nil || *current != *in.BaseVersionID || kind != in.Kind {
 			return out, apierrors.New(apierrors.SourceVersionConf, "target base version changed")
 		}

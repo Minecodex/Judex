@@ -180,6 +180,7 @@ export function UICheckbox({
   disabled,
   "data-testid": testId,
   "aria-label": label,
+  appearance = 'plain',
 }: {
   checked?: boolean;
   onChange?: (event: CheckEvent) => void;
@@ -188,10 +189,11 @@ export function UICheckbox({
   disabled?: boolean;
   "data-testid"?: string;
   "aria-label"?: string;
+  appearance?: 'plain' | 'card';
 }) {
   return (
     <Checkbox
-      className={"judex-checkbox-field " + (className ?? "")}
+      className={"judex-checkbox-field " + (appearance === 'card' ? 'judex-checkbox-card ' : '') + (className ?? "")}
       isSelected={checked}
       isDisabled={disabled}
       onChange={(selected) =>
@@ -222,7 +224,7 @@ export function UIStatus({
   ...props
 }: ComponentProps<typeof Chip>) {
   return (
-    <Chip {...props} className={className}>
+    <Chip {...props} className={'judex-ui-status '+(!className && !props.color ? 'judex-ui-status-neutral ' : '')+className}>
       <Chip.Label>{children}</Chip.Label>
     </Chip>
   );
@@ -260,15 +262,21 @@ export function UIDisclosure({
   children,
   className = "",
   open = false,
+  isExpanded,
+  onExpandedChange,
 }: {
   title: ReactNode;
   children?: ReactNode;
   className?: string;
   open?: boolean;
+  isExpanded?: boolean;
+  onExpandedChange?: (expanded:boolean)=>void;
 }) {
   return (
     <Disclosure
       defaultExpanded={open}
+      isExpanded={isExpanded}
+      onExpandedChange={onExpandedChange}
       className={"judex-ui-disclosure " + className}
     >
       <Disclosure.Heading>

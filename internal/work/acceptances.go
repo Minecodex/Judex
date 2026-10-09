@@ -116,6 +116,9 @@ func (s *Service) decideTaskAcceptanceTx(ctx context.Context, tx pgx.Tx, request
 		if err := RequireIdentityHolder(ctx, tx, requester, projectID, nullUUIDPtr(reviewerIdentity)); err != nil {
 			return err
 		}
+		if err := ensureTaskExecutable(ctx, tx, projectID, taskID); err != nil {
+			return err
+		}
 		if status != "delivered" {
 			return apierrors.New(apierrors.InvalidTransition, "task is "+status)
 		}

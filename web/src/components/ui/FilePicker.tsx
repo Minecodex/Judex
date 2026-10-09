@@ -1,5 +1,5 @@
 import { useRef, type InputHTMLAttributes, type ReactNode } from "react";
-import { Button } from "@heroui/react";
+import { Button } from "./Button";
 export function FilePicker({
   children,
   ...props

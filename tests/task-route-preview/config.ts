@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'.',testMatch:'*.spec.ts',timeout:30000,workers:1,retries:0,use:{baseURL:'http://127.0.0.1:5396',viewport:{width:1440,height:1000},screenshot:'only-on-failure',trace:'retain-on-failure'},outputDir:'../../.cache/demo4/test-results',reporter:[['list']],webServer:{command:'node tests/task-route-preview/server.mjs',cwd:'../..',url:'http://127.0.0.1:5396/demo4.html',reuseExistingServer:true,timeout:10000}});

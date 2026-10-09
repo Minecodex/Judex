@@ -305,7 +305,7 @@ func (s *Service) applyChanges(ctx context.Context, tx pgx.Tx, projectID, actor 
 			return nil, apierrors.New(apierrors.ReviewStale, "workflow constraints changed")
 		}
 	}
-	return work.ApplyChanges(ctx, tx, projectID, actor, changes)
+	return work.ApplyReviewedChanges(ctx, tx, projectID, actor, changes, reviewID)
 }
 
 // SettleTimeout is the deadline command (03 §4): locks project→proposal→

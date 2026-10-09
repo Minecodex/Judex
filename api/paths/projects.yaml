@@ -11,6 +11,17 @@ paths:
       parameters:
         - $ref: '../components/common.yaml#/components/parameters/LimitParam'
         - $ref: '../components/common.yaml#/components/parameters/CursorParam'
+        - in: query
+          name: q
+          schema: {type: string, maxLength: 200}
+          description: 项目名称和简介的字面搜索。
+        - in: query
+          name: ownership
+          schema: {type: string, enum: [all, owned, joined], default: all}
+        - in: query
+          name: include
+          schema: {type: string, enum: [summary]}
+          description: 整页批量返回活跃成员和讨论摘要。
       responses:
         '200':
           description: 项目分页。
@@ -22,8 +33,9 @@ paths:
                 properties:
                   data:
                     type: object
-                    required: [items, nextCursor]
+                    required: [items, nextCursor, totalCount]
                     properties:
+                      totalCount: {type: integer, minimum: 0}
                       items:
                         type: array
                         items:

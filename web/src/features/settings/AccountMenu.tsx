@@ -5,7 +5,8 @@ import {
   UIWarning,
 } from "../../components/ui/FormControls";
 import { useState } from "react";
-import { Popover, Button as HeroButton } from "@heroui/react";
+import { Popover } from "@heroui/react";
+import { Button } from "../../components/ui/Button";
 import {
   ChevronUp,
   UserPlus,
@@ -19,7 +20,11 @@ import {
 import { useWork } from "../work/store";
 import { InviteDialog } from "../work/TeamPages";
 import { dataMode } from "../../lib/api/client";
-export function AccountMenu({ onLogout }: { onLogout: () => Promise<void> }) {
+import { PersonAvatar } from "../../components/ui/Presentation";
+export function AccountMenu({ onLogout, onBackToProjects }: {
+  onLogout: () => Promise<void>;
+  onBackToProjects?: () => void;
+}) {
   const {
     state,
     t,
@@ -40,21 +45,19 @@ export function AccountMenu({ onLogout }: { onLogout: () => Promise<void> }) {
   return (
     <>
       <Popover isOpen={open} onOpenChange={setOpen}>
-        <HeroButton
+        <Button
           variant="ghost"
           className="judex-account-trigger"
           data-testid="account-menu-button"
           aria-label={t("accountMenu")}
         >
-          <span className="judex-chat-avatar">
-            {state.currentUser.slice(0, 1)}
-          </span>
+          <PersonAvatar name={state.currentUser} />
           <span>
             <strong>{state.currentUser}</strong>
             {dataMode === "demo" && <small>{t("chatDemoPerson")}</small>}
           </span>
           <ChevronUp size={16} />
-        </HeroButton>
+        </Button>
         <Popover.Content
           placement="top start"
           className="judex-account-popover"
@@ -72,7 +75,7 @@ export function AccountMenu({ onLogout }: { onLogout: () => Promise<void> }) {
                 <small>{project.title[locale === "en" ? "en" : "zh"]}</small>
               </div>
             </div>
-            <HeroButton
+            <Button
               variant="ghost"
               className="judex-account-menu-action"
               data-testid="account-invite"
@@ -84,13 +87,13 @@ export function AccountMenu({ onLogout }: { onLogout: () => Promise<void> }) {
             >
               <UserPlus size={17} />
               {t("accountInvite")}
-            </HeroButton>
+            </Button>
             {!management && (
               <small className="judex-account-permission">
                 {t("accountInviteScope")}
               </small>
             )}
-            <HeroButton
+            <Button
               variant="ghost"
               className="judex-account-menu-action"
               data-testid="account-settings"
@@ -104,23 +107,23 @@ export function AccountMenu({ onLogout }: { onLogout: () => Promise<void> }) {
             >
               <Settings2 size={17} />
               {t("accountSettings")}
-            </HeroButton>
-            {dataMode === "api" && (
-              <HeroButton
+            </Button>
+            {onBackToProjects && (
+              <Button
                 variant="ghost"
                 className="judex-account-menu-action"
                 data-testid="account-projects"
                 onPress={() => {
                   setOpen(false);
-                  location.assign("/");
+                  onBackToProjects();
                 }}
               >
                 <FolderOpen size={17} />
                 {t("accountProjects")}
-              </HeroButton>
+              </Button>
             )}
             <div className="judex-account-menu-divider" />
-            <HeroButton
+            <Button
               variant="ghost"
               className="judex-account-menu-action"
               data-testid="next-language"
@@ -129,8 +132,8 @@ export function AccountMenu({ onLogout }: { onLogout: () => Promise<void> }) {
               <Globe size={17} />
               <span>{t("accountLanguage")}</span>
               <small>{locale === "en" ? "English" : "简体中文"}</small>
-            </HeroButton>
-            <HeroButton
+            </Button>
+            <Button
               variant="ghost"
               className="judex-account-menu-action"
               data-testid="next-theme"
@@ -141,7 +144,7 @@ export function AccountMenu({ onLogout }: { onLogout: () => Promise<void> }) {
               <small>
                 {t(theme === "dark" ? "accountDark" : "accountLight")}
               </small>
-            </HeroButton>
+            </Button>
             {dataMode === "demo" && (
               <UIDisclosure
                 className="judex-account-preview"
@@ -164,7 +167,7 @@ export function AccountMenu({ onLogout }: { onLogout: () => Promise<void> }) {
               </UIDisclosure>
             )}
             <div className="judex-account-menu-divider" />
-            <HeroButton
+            <Button
               variant="ghost"
               className="judex-account-menu-action"
               data-testid="account-logout"
@@ -182,7 +185,7 @@ export function AccountMenu({ onLogout }: { onLogout: () => Promise<void> }) {
             >
               <LogOut size={17} />
               {t("accountLogout")}
-            </HeroButton>
+            </Button>
             {error && <UIWarning role="alert">{error}</UIWarning>}
           </Popover.Dialog>
         </Popover.Content>

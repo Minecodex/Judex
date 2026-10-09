@@ -17,9 +17,10 @@ async function read(context: BrowserContext, route: string) {
   const response = await context.request.get("/api/v1" + route); expect(response.ok()).toBeTruthy(); return (await response.json()).data;
 }
 // 统一工作区（ChatWorkspace 树）：议题内的提案卡 = 提案决定入口。
-async function openProposal(page: Page, project: string, topic: string) {
+async function openProposal(page: Page, project: string, topic: string, proposal: string) {
   await page.goto(`/?project=${project}&view=topic&item=${topic}&chat=${topic}`);
-  await expect(page.getByText("核对计划", { exact: true }).first()).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText('核对计划',{exact:true}).first()).toBeVisible({timeout:20000});
+  await page.getByTestId('proposal-'+proposal).getByRole('button',{name:'查看并决定',exact:true}).click();
 }
 
 test("R11/R12 双用户邀请、职责会签、交付与固定成果验收", async ({ browser }) => {
@@ -45,7 +46,7 @@ test("R11/R12 双用户邀请、职责会签、交付与固定成果验收", asy
     await expect(bp.getByText("真实协作闭环", { exact: true })).toBeVisible();
     await bp.getByRole("button", { name: "接受邀请", exact: true }).click();
     // 接受后进入统一工作区
-    await expect(bp.getByTestId("project-switcher")).toBeVisible({ timeout: 20000 });
+    await expect(bp.getByTestId('hub-tab-plans')).toBeVisible({timeout:20000});
     const identities = (await read(a, prefix + "/identities")).items;
     const developer = identities.find((i: any) => i.currentBinding?.userId === worker.id);
     // 提案挂到项目主会场议题，双方在同一会话里决定
@@ -56,10 +57,11 @@ test("R11/R12 双用户邀请、职责会签、交付与固定成果验收", asy
     ] });
     const draft = await read(a, `${prefix}/proposals/${proposal.id}/review`);
     await command(a, `${prefix}/proposals/${proposal.id}/submit`, { expectedVersion: 1, draftHash: draft.reviewHash });
-    const ap = await a.newPage(); await openProposal(ap, p.id, room.id);
+    const ap = await a.newPage(); await openProposal(ap, p.id, room.id, proposal.id);
+    await expect(ap.getByRole('button',{name:'同意此版本',exact:true})).toBeEnabled();
     await ap.getByRole("button", { name: "同意此版本", exact: true }).click();
     await expect.poll(async () => (await read(a, `${prefix}/proposals/${proposal.id}/review`)).status).toBe("pending");
-    await openProposal(bp, p.id, room.id); await bp.getByRole("button", { name: "同意此版本", exact: true }).click();
+    await openProposal(bp, p.id, room.id, proposal.id); await bp.getByRole("button", { name: "同意此版本", exact: true }).click();
     await expect.poll(async () => (await read(a, `${prefix}/proposals/${proposal.id}/review`)).status).toBe("approved");
     const task = (await read(a, prefix + "/tasks")).items[0];
     await command(b, `${prefix}/tasks/${task.id}/start`, { expectedVersion: task.version, identityId: developer.id });
@@ -69,15 +71,15 @@ test("R11/R12 双用户邀请、职责会签、交付与固定成果验收", asy
     await expect.poll(async () => (await read(a, `${prefix}/tasks/${task.id}/reports`)).items.map((r: any) => r.text).join("|")).toContain("已通过八个并发请求，数据库只有一条成果记录。");
     expect((await read(a, `${prefix}/tasks/${task.id}`)).status).toBe("delivered");
     // 统一工作区：验收人打开任务页 → 验收 → 确认
-    await ap.goto(`/?project=${p.id}&view=task&item=${task.id}`);
-    await expect(ap.getByTestId("task-detail")).toBeVisible({ timeout: 20000 });
+    await ap.goto(`/projects/${p.id}?tab=deliveries&view=task&item=${task.id}`);
+    await expect(ap.getByTestId('task-inspector')).toBeVisible({timeout:20000});
     await ap.getByTestId("accept-task").click();
     await ap.getByTestId("confirm-final-acceptance").click();
     await expect.poll(async () => (await read(a, `${prefix}/tasks/${task.id}`)).status).toBe("accepted");
     // 计划整体验收
     const plan = (await read(a, prefix + "/plans")).items[0];
     await ap.goto(`/?project=${p.id}&view=plan&item=${plan.id}`);
-    await expect(ap.getByText("核对计划", { exact: true }).first()).toBeVisible({ timeout: 20000 });
+    await expect(ap.getByTestId("accept-plan")).toBeVisible({ timeout: 20000 });
     await ap.getByTestId("accept-plan").click();
     await ap.getByTestId("confirm-final-acceptance").click();
     await expect.poll(async () => (await read(a, prefix + "/plans")).items[0].status).toBe("accepted");
@@ -88,14 +90,12 @@ test("R09 真实 S3 多分片上传下载保持 SHA256", async ({ browser }) => 
   const ctx = await browser.newContext();
   try {
     await register(ctx, "材料验收"); const p = await command(ctx, "/projects", { title: "材料完整性" });
-    const page = await ctx.newPage(); await page.goto(`/?project=${p.id}`);
-    await expect(page.getByTestId("project-switcher")).toBeVisible({ timeout: 20000 });
-    // 统一工作区：共享资料 → 登记资料（附件经 web 分片上传通道）
-    await page.getByTestId("work-nav-resources").click();
-    await page.getByRole("button", { name: "登记资料", exact: true }).click();
+    const page = await ctx.newPage(); await page.goto(`/projects/${p.id}?tab=materials`);
+    await expect(page.locator(".judex-material-library")).toBeVisible({timeout:20000});
+    await page.getByRole("button", { name: "上传资料", exact: true }).click();
     const content = Buffer.alloc(9 * 1024 * 1024 + 19, 65); content.write("最后一片也必须保留", content.length - 40);
-    await page.locator('input[data-testid="work-files"]').setInputFiles({ name: "完整报告.txt", mimeType: "text/plain", buffer: content });
-    await page.locator(".judex-dialog-content").getByRole("button", { name: "登记资料", exact: true }).click();
+    await page.locator('input[type="file"]').setInputFiles({ name: "完整报告.txt", mimeType: "text/plain", buffer: content });
+    await page.getByRole("textbox",{name:"材料用途",exact:true}).fill("R09 原件完整性核对");await page.locator(".judex-dialog-content").getByRole("button", { name: "登记资料", exact: true }).click();
     await expect.poll(async () => (await read(ctx, `/projects/${p.id}/materials`)).items.length, { timeout: 30000 }).toBe(1);
     const material = (await read(ctx, `/projects/${p.id}/materials`)).items[0];
     const response = await ctx.request.get(`/api/v1/projects/${p.id}/material-versions/${material.currentVersionId}/content`);

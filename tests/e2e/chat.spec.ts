@@ -1,4 +1,5 @@
-import {openTool,openSettings,selectPerson,toggleTheme,toggleLanguage} from './workspace-helpers';
+import {propose} from "./cooperation-helpers";
+import {chooseValue,openTool,openSettings,selectPerson,toggleTheme,toggleLanguage} from './workspace-helpers';
 import { test, expect, type Page } from "@playwright/test";
 const state = async (page: Page) => {
   // 演示工作区为懒加载分块：seed 在挂载后写入，直接等其就绪
@@ -20,19 +21,13 @@ test("chat remains in place while exploring settings and execution order, with b
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/?project=leaf&view=topic&item=labels");
+  await page.goto("/projects/leaf/plans/leaf-first/chat/labels");
   await page.getByTestId("work-discussion-input").fill("保留这个草稿");
   await openTool(page,"plans");
   await expect(page.getByTestId("work-discussion-input")).toHaveValue(
     "保留这个草稿",
   );
-  const build = page.getByTestId("execution-task-build"),
-    sub = page.getByTestId("execution-task-empty-state"),
-    pack = page.getByTestId("execution-task-package");
-  await expect(build).toHaveAttribute("data-rank", "0");
-  await expect(sub).toHaveAttribute("data-rank", "0");
-  await expect(pack).toHaveAttribute("data-rank", "1");
-  await page.getByTestId("execution-task-build").click();
+  await page.locator('.judex-co-context-task').filter({hasText:'让任务创建和列表顺畅可用'}).click();
   await expect(page.locator(".judex-chat-panel-body")).toContainText(
     "让任务创建和列表顺畅可用",
   );
@@ -53,11 +48,7 @@ test("chat remains in place while exploring settings and execution order, with b
   await toggleTheme(page);
   await toggleLanguage(page);
   await page.setViewportSize({ width: 1120, height: 900 });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
+  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({
     path: test.info().outputPath("chat-dark-en.png"),
     fullPage: true,
@@ -74,7 +65,7 @@ test("new project can configure workflows, roles, an existing member and persona
     .getByLabel("项目目标", { exact: true })
     .fill("一起完成一个更轻松的小店");
   await page.getByTestId("project-create-project").click();
-  await expect(page.getByTestId("workspace-launcher")).toBeVisible();
+  await expect(page.getByTestId("hub-tab-plans")).toBeVisible();
   await openTool(page,"flows");
   await page.getByRole("button", { name: "新增协作流程", exact: true }).click();
   await page.getByRole("dialog").getByLabel("这件事叫什么").fill("小店日常");
@@ -95,16 +86,17 @@ test("new project can configure workflows, roles, an existing member and persona
   await page.getByTestId("position-name").fill("小店伙伴");
   await page.getByTestId("position-prompt").fill("准备方案并说明成果依据");
   await page.getByTestId("save-position").click();
-  await page.getByRole("button", { name: "分配职位", exact: true }).click();
-  await page
-    .getByRole("dialog")
-    .getByRole("checkbox", { name: "小店伙伴" })
-    .press("Space");
+  await page.locator('.judex-position-card').filter({has: page.getByRole('heading', {name: '小店伙伴', exact: true})}).getByRole('button', {name: '分配成员', exact: true}).click();
+  const viewer = await page.evaluate(() => JSON.parse(localStorage.getItem('judex.web.preview.v1')!).currentUser);
+  await chooseValue(page, 'position-assignment-member', viewer);
   await page.getByTestId("assign-existing-position").click();
   await openTool(page,"preferences");
   await page.getByTestId("next-personal-prompt").fill("先给我简洁结论");
   await page.getByTestId("next-save-preference").click();
-  await page.getByTestId("settings-back").click();
+  await page.keyboard.press("Escape");await page.getByTestId("settings-back").click();
+  await page.getByRole("button",{name:"项目讨论记录",exact:true}).click();await page.getByTestId("new-discussion").click();
+  await page.getByTestId("discussion-title").fill("小店工作讨论");
+  await page.getByTestId("create-discussion").click();
   await page
     .getByTestId("work-discussion-input")
     .fill("我们从第一个小目标开始");
@@ -132,7 +124,7 @@ test("conversation proposal freezes recipients and creates dependency-linked wor
   await expect(page.getByTestId("chat-thread")).toContainText(
     "本轮已整理职责意见",
   );
-  await page.getByTestId("chat-propose").click();
+  await propose(page);
   await page.getByTestId("proposal-title").fill("从聊天到执行");
   await page.getByTestId("proposal-criteria").fill("交付证据经过人工核对");
   await page
@@ -151,14 +143,12 @@ test("conversation proposal freezes recipients and creates dependency-linked wor
   for (const name of p.approvers) {
     await selectPerson(page,name);
     await page.goto("/?project=leaf&view=topic&item=labels");
-    await page.getByTestId("approve-proposal-" + p.id).click();
+    await page.getByTestId("proposal-"+p.id).getByRole("button",{name:"查看并决定",exact:true}).click();await page.getByTestId("approve-proposal-" + p.id).click();await page.keyboard.press("Escape");
   }
   s = await state(page);
   expect(s.proposals.at(-1).status).toBe("approved");
   expect(s.plans.length).toBe(before.plans.length + 1);
   expect(s.tasks.slice(-3)[1].requirements).toHaveLength(1);
-  await page
-    .getByRole("button", { name: "打开已生效的计划", exact: true })
-    .click();
+  await page.goto('/projects/leaf/plans/'+s.proposals.at(-1).planId+'/route');
   await expect(page.getByTestId("execution-map")).toBeVisible();
 });

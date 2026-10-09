@@ -21,7 +21,7 @@ export function ProposalDialog({
 }) {
   const { state, project, t, text, act, go } = useWork();
   const topic = state.topics.find((v) => v.id === topicId)!;
-  const flows = state.flows.filter((f) => f.projectId === project.id),
+  const flows = state.flows.filter((f) => f.projectId === project.id && f.status !== "draft"),
     seats = state.seats.filter((s) =>
       state.positions.some(
         (p) => p.id === s.positionId && p.projectId === project.id,

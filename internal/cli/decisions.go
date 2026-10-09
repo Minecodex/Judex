@@ -117,7 +117,40 @@ func contextCommand() *cobra.Command {
 		}
 		var data map[string]any
 		err = c.Do(cmd.Context(), "GET", path, nil, &data, "")
-		return emit(data, err)
+		if err != nil {
+			return emit(nil, err)
+		}
+		if task != "" {
+			data["discussionPath"] = "/projects/" + project + "/tasks/" + task + "/chat"
+			if main, ok := data["mainTopicId"].(string); ok && main != "" {
+				data["discussionPath"] = data["discussionPath"].(string) + "/" + main
+			}
+			var activities map[string]any
+			if err = c.Do(cmd.Context(), "GET", path+"/activity?limit=20", nil, &activities, ""); err != nil {
+				return emit(nil, err)
+			}
+			data["activities"] = activities
+			var suggestions map[string]any
+			if err = c.Do(cmd.Context(), "GET", "/projects/"+project+"/discussion-suggestions?taskId="+task, nil, &suggestions, ""); err != nil {
+				return emit(nil, err)
+			}
+			data["discussionSuggestions"] = suggestions
+			if plan, ok := data["planId"].(string); ok && plan != "" {
+				var planValue map[string]any
+				if err = c.Do(cmd.Context(), "GET", "/projects/"+project+"/plans/"+plan, nil, &planValue, ""); err != nil {
+					return emit(nil, err)
+				}
+				data["mainTopicId"] = planValue["mainTopicId"]
+			}
+		} else {
+			var history map[string]any
+			if err = c.Do(cmd.Context(), "GET", path+"/messages?limit=50", nil, &history, ""); err != nil {
+				return emit(nil, err)
+			}
+			data["discussionPath"] = "/projects/" + project + "/chat/" + topic
+			data["history"] = history
+		}
+		return emit(data, nil)
 	}}
 	cmd.Flags().StringVar(&task, "task", "", "任务 ID")
 	cmd.Flags().StringVar(&topic, "topic", "", "议题 ID")

@@ -264,20 +264,26 @@ func (e ConfirmationIntentState) Valid() bool {
 
 // Defines values for ConfirmationIntentRequestOperation.
 const (
-	ConfirmationIntentRequestOperationHandoffDecision  ConfirmationIntentRequestOperation = "handoff.decision"
-	ConfirmationIntentRequestOperationHandoffSend      ConfirmationIntentRequestOperation = "handoff.send"
-	ConfirmationIntentRequestOperationPlanAcceptance   ConfirmationIntentRequestOperation = "plan.acceptance"
-	ConfirmationIntentRequestOperationPlanReopen       ConfirmationIntentRequestOperation = "plan.reopen"
-	ConfirmationIntentRequestOperationProjectCreate    ConfirmationIntentRequestOperation = "project.create"
-	ConfirmationIntentRequestOperationProposalDecision ConfirmationIntentRequestOperation = "proposal.decision"
-	ConfirmationIntentRequestOperationTaskAcceptance   ConfirmationIntentRequestOperation = "task.acceptance"
-	ConfirmationIntentRequestOperationTaskReopen       ConfirmationIntentRequestOperation = "task.reopen"
-	ConfirmationIntentRequestOperationWorkflowPublish  ConfirmationIntentRequestOperation = "workflow.publish"
+	ConfirmationIntentRequestOperationDiscussionSuggestionResolve ConfirmationIntentRequestOperation = "discussion_suggestion.resolve"
+	ConfirmationIntentRequestOperationHandoffDecision             ConfirmationIntentRequestOperation = "handoff.decision"
+	ConfirmationIntentRequestOperationHandoffSend                 ConfirmationIntentRequestOperation = "handoff.send"
+	ConfirmationIntentRequestOperationPlanAcceptance              ConfirmationIntentRequestOperation = "plan.acceptance"
+	ConfirmationIntentRequestOperationPlanReopen                  ConfirmationIntentRequestOperation = "plan.reopen"
+	ConfirmationIntentRequestOperationProjectCreate               ConfirmationIntentRequestOperation = "project.create"
+	ConfirmationIntentRequestOperationProposalDecision            ConfirmationIntentRequestOperation = "proposal.decision"
+	ConfirmationIntentRequestOperationTaskAcceptance              ConfirmationIntentRequestOperation = "task.acceptance"
+	ConfirmationIntentRequestOperationTaskReopen                  ConfirmationIntentRequestOperation = "task.reopen"
+	ConfirmationIntentRequestOperationTaskRestore                 ConfirmationIntentRequestOperation = "task.restore"
+	ConfirmationIntentRequestOperationTaskSkip                    ConfirmationIntentRequestOperation = "task.skip"
+	ConfirmationIntentRequestOperationTopicFork                   ConfirmationIntentRequestOperation = "topic.fork"
+	ConfirmationIntentRequestOperationWorkflowPublish             ConfirmationIntentRequestOperation = "workflow.publish"
 )
 
 // Valid indicates whether the value is a known member of the ConfirmationIntentRequestOperation enum.
 func (e ConfirmationIntentRequestOperation) Valid() bool {
 	switch e {
+	case ConfirmationIntentRequestOperationDiscussionSuggestionResolve:
+		return true
 	case ConfirmationIntentRequestOperationHandoffDecision:
 		return true
 	case ConfirmationIntentRequestOperationHandoffSend:
@@ -294,7 +300,34 @@ func (e ConfirmationIntentRequestOperation) Valid() bool {
 		return true
 	case ConfirmationIntentRequestOperationTaskReopen:
 		return true
+	case ConfirmationIntentRequestOperationTaskRestore:
+		return true
+	case ConfirmationIntentRequestOperationTaskSkip:
+		return true
+	case ConfirmationIntentRequestOperationTopicFork:
+		return true
 	case ConfirmationIntentRequestOperationWorkflowPublish:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConversationSourceRefType.
+const (
+	ConversationSourceRefTypeMessage    ConversationSourceRefType = "message"
+	ConversationSourceRefTypeReport     ConversationSourceRefType = "report"
+	ConversationSourceRefTypeSubmission ConversationSourceRefType = "submission"
+)
+
+// Valid indicates whether the value is a known member of the ConversationSourceRefType enum.
+func (e ConversationSourceRefType) Valid() bool {
+	switch e {
+	case ConversationSourceRefTypeMessage:
+		return true
+	case ConversationSourceRefTypeReport:
+		return true
+	case ConversationSourceRefTypeSubmission:
 		return true
 	default:
 		return false
@@ -355,6 +388,24 @@ func (e CreateUploadRequestKind) Valid() bool {
 	}
 }
 
+// Defines values for DeliveryCardObjectType.
+const (
+	DeliveryCardObjectTypeHandoff DeliveryCardObjectType = "handoff"
+	DeliveryCardObjectTypeTask    DeliveryCardObjectType = "task"
+)
+
+// Valid indicates whether the value is a known member of the DeliveryCardObjectType enum.
+func (e DeliveryCardObjectType) Valid() bool {
+	switch e {
+	case DeliveryCardObjectTypeHandoff:
+		return true
+	case DeliveryCardObjectTypeTask:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DeviceConfirmResultState.
 const (
 	DeviceConfirmResultStateApproved DeviceConfirmResultState = "approved"
@@ -385,6 +436,45 @@ func (e DeviceTokenPendingStatus) Valid() bool {
 	case DeviceTokenPendingStatusPending:
 		return true
 	case DeviceTokenPendingStatusSlowDown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DiscussionSuggestionState.
+const (
+	DiscussionSuggestionStateDismissed DiscussionSuggestionState = "dismissed"
+	DiscussionSuggestionStateHandled   DiscussionSuggestionState = "handled"
+	DiscussionSuggestionStatePending   DiscussionSuggestionState = "pending"
+)
+
+// Valid indicates whether the value is a known member of the DiscussionSuggestionState enum.
+func (e DiscussionSuggestionState) Valid() bool {
+	switch e {
+	case DiscussionSuggestionStateDismissed:
+		return true
+	case DiscussionSuggestionStateHandled:
+		return true
+	case DiscussionSuggestionStatePending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DraftDiscardReviewTargetType.
+const (
+	DraftDiscardReviewTargetTypePlan DraftDiscardReviewTargetType = "plan"
+	DraftDiscardReviewTargetTypeTask DraftDiscardReviewTargetType = "task"
+)
+
+// Valid indicates whether the value is a known member of the DraftDiscardReviewTargetType enum.
+func (e DraftDiscardReviewTargetType) Valid() bool {
+	switch e {
+	case DraftDiscardReviewTargetTypePlan:
+		return true
+	case DraftDiscardReviewTargetTypeTask:
 		return true
 	default:
 		return false
@@ -481,6 +571,30 @@ func (e ErrorCode) Valid() bool {
 	}
 }
 
+// Defines values for ExecutionExceptionPreviousStatus.
+const (
+	ExecutionExceptionPreviousStatusDelivered ExecutionExceptionPreviousStatus = "delivered"
+	ExecutionExceptionPreviousStatusReady     ExecutionExceptionPreviousStatus = "ready"
+	ExecutionExceptionPreviousStatusRework    ExecutionExceptionPreviousStatus = "rework"
+	ExecutionExceptionPreviousStatusWorking   ExecutionExceptionPreviousStatus = "working"
+)
+
+// Valid indicates whether the value is a known member of the ExecutionExceptionPreviousStatus enum.
+func (e ExecutionExceptionPreviousStatus) Valid() bool {
+	switch e {
+	case ExecutionExceptionPreviousStatusDelivered:
+		return true
+	case ExecutionExceptionPreviousStatusReady:
+		return true
+	case ExecutionExceptionPreviousStatusRework:
+		return true
+	case ExecutionExceptionPreviousStatusWorking:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ExecutionMapEdgesKind.
 const (
 	Advisory ExecutionMapEdgesKind = "advisory"
@@ -517,6 +631,69 @@ func (e ExecutionMapEdgesPhase) Valid() bool {
 	case ExecutionMapEdgesPhaseBoth:
 		return true
 	case ExecutionMapEdgesPhaseStart:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExecutionReviewOperation.
+const (
+	ExecutionReviewOperationRestore ExecutionReviewOperation = "restore"
+	ExecutionReviewOperationSkip    ExecutionReviewOperation = "skip"
+)
+
+// Valid indicates whether the value is a known member of the ExecutionReviewOperation enum.
+func (e ExecutionReviewOperation) Valid() bool {
+	switch e {
+	case ExecutionReviewOperationRestore:
+		return true
+	case ExecutionReviewOperationSkip:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FilePreviewStatus.
+const (
+	FilePreviewStatusFailed       FilePreviewStatus = "failed"
+	FilePreviewStatusNotRequested FilePreviewStatus = "not_requested"
+	FilePreviewStatusPending      FilePreviewStatus = "pending"
+	FilePreviewStatusReady        FilePreviewStatus = "ready"
+	FilePreviewStatusUnsupported  FilePreviewStatus = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the FilePreviewStatus enum.
+func (e FilePreviewStatus) Valid() bool {
+	switch e {
+	case FilePreviewStatusFailed:
+		return true
+	case FilePreviewStatusNotRequested:
+		return true
+	case FilePreviewStatusPending:
+		return true
+	case FilePreviewStatusReady:
+		return true
+	case FilePreviewStatusUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForkTopicRequestLinksObjectType.
+const (
+	ForkTopicRequestLinksObjectTypePlan ForkTopicRequestLinksObjectType = "plan"
+	ForkTopicRequestLinksObjectTypeTask ForkTopicRequestLinksObjectType = "task"
+)
+
+// Valid indicates whether the value is a known member of the ForkTopicRequestLinksObjectType enum.
+func (e ForkTopicRequestLinksObjectType) Valid() bool {
+	switch e {
+	case ForkTopicRequestLinksObjectTypePlan:
+		return true
+	case ForkTopicRequestLinksObjectTypeTask:
 		return true
 	default:
 		return false
@@ -658,6 +835,42 @@ func (e IdentityStatus) Valid() bool {
 	}
 }
 
+// Defines values for ImportPositionPresetsRequestLocale.
+const (
+	ImportPositionPresetsRequestLocaleEn   ImportPositionPresetsRequestLocale = "en"
+	ImportPositionPresetsRequestLocaleZhCN ImportPositionPresetsRequestLocale = "zh-CN"
+)
+
+// Valid indicates whether the value is a known member of the ImportPositionPresetsRequestLocale enum.
+func (e ImportPositionPresetsRequestLocale) Valid() bool {
+	switch e {
+	case ImportPositionPresetsRequestLocaleEn:
+		return true
+	case ImportPositionPresetsRequestLocaleZhCN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportWorkflowPresetsRequestLocale.
+const (
+	ImportWorkflowPresetsRequestLocaleEn   ImportWorkflowPresetsRequestLocale = "en"
+	ImportWorkflowPresetsRequestLocaleZhCN ImportWorkflowPresetsRequestLocale = "zh-CN"
+)
+
+// Valid indicates whether the value is a known member of the ImportWorkflowPresetsRequestLocale enum.
+func (e ImportWorkflowPresetsRequestLocale) Valid() bool {
+	switch e {
+	case ImportWorkflowPresetsRequestLocaleEn:
+		return true
+	case ImportWorkflowPresetsRequestLocaleZhCN:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InvitationState.
 const (
 	InvitationStateAccepted InvitationState = "accepted"
@@ -685,36 +898,24 @@ func (e InvitationState) Valid() bool {
 	}
 }
 
-// Defines values for MaterialKind.
+// Defines values for MaterialThumbnailKind.
 const (
-	MaterialKindFile       MaterialKind = "file"
-	MaterialKindHtmlBundle MaterialKind = "html_bundle"
-	MaterialKindText       MaterialKind = "text"
+	MaterialThumbnailKindArchive MaterialThumbnailKind = "archive"
+	MaterialThumbnailKindImage   MaterialThumbnailKind = "image"
+	MaterialThumbnailKindPdf     MaterialThumbnailKind = "pdf"
+	MaterialThumbnailKindText    MaterialThumbnailKind = "text"
 )
 
-// Valid indicates whether the value is a known member of the MaterialKind enum.
-func (e MaterialKind) Valid() bool {
+// Valid indicates whether the value is a known member of the MaterialThumbnailKind enum.
+func (e MaterialThumbnailKind) Valid() bool {
 	switch e {
-	case MaterialKindFile:
+	case MaterialThumbnailKindArchive:
 		return true
-	case MaterialKindHtmlBundle:
+	case MaterialThumbnailKindImage:
 		return true
-	case MaterialKindText:
+	case MaterialThumbnailKindPdf:
 		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for MaterialVisibility.
-const (
-	MaterialVisibilityProject MaterialVisibility = "project"
-)
-
-// Valid indicates whether the value is a known member of the MaterialVisibility enum.
-func (e MaterialVisibility) Valid() bool {
-	switch e {
-	case MaterialVisibilityProject:
+	case MaterialThumbnailKindText:
 		return true
 	default:
 		return false
@@ -1354,6 +1555,87 @@ func (e RemoveMemberResultAffectedResponsibilitiesResolution) Valid() bool {
 	}
 }
 
+// Defines values for ReplaceTopicLinksRequestTargetRefsObjectType.
+const (
+	ReplaceTopicLinksRequestTargetRefsObjectTypePlan ReplaceTopicLinksRequestTargetRefsObjectType = "plan"
+	ReplaceTopicLinksRequestTargetRefsObjectTypeTask ReplaceTopicLinksRequestTargetRefsObjectType = "task"
+)
+
+// Valid indicates whether the value is a known member of the ReplaceTopicLinksRequestTargetRefsObjectType enum.
+func (e ReplaceTopicLinksRequestTargetRefsObjectType) Valid() bool {
+	switch e {
+	case ReplaceTopicLinksRequestTargetRefsObjectTypePlan:
+		return true
+	case ReplaceTopicLinksRequestTargetRefsObjectTypeTask:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResolveDiscussionSuggestionRequestLinksObjectType.
+const (
+	ResolveDiscussionSuggestionRequestLinksObjectTypePlan ResolveDiscussionSuggestionRequestLinksObjectType = "plan"
+	ResolveDiscussionSuggestionRequestLinksObjectTypeTask ResolveDiscussionSuggestionRequestLinksObjectType = "task"
+)
+
+// Valid indicates whether the value is a known member of the ResolveDiscussionSuggestionRequestLinksObjectType enum.
+func (e ResolveDiscussionSuggestionRequestLinksObjectType) Valid() bool {
+	switch e {
+	case ResolveDiscussionSuggestionRequestLinksObjectTypePlan:
+		return true
+	case ResolveDiscussionSuggestionRequestLinksObjectTypeTask:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResolveDiscussionSuggestionRequestMode.
+const (
+	Create  ResolveDiscussionSuggestionRequestMode = "create"
+	Dismiss ResolveDiscussionSuggestionRequestMode = "dismiss"
+	Link    ResolveDiscussionSuggestionRequestMode = "link"
+	Main    ResolveDiscussionSuggestionRequestMode = "main"
+)
+
+// Valid indicates whether the value is a known member of the ResolveDiscussionSuggestionRequestMode enum.
+func (e ResolveDiscussionSuggestionRequestMode) Valid() bool {
+	switch e {
+	case Create:
+		return true
+	case Dismiss:
+		return true
+	case Link:
+		return true
+	case Main:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubmissionDiscussionIntent.
+const (
+	SubmissionDiscussionIntentAuto     SubmissionDiscussionIntent = "auto"
+	SubmissionDiscussionIntentQuestion SubmissionDiscussionIntent = "question"
+	SubmissionDiscussionIntentReply    SubmissionDiscussionIntent = "reply"
+)
+
+// Valid indicates whether the value is a known member of the SubmissionDiscussionIntent enum.
+func (e SubmissionDiscussionIntent) Valid() bool {
+	switch e {
+	case SubmissionDiscussionIntentAuto:
+		return true
+	case SubmissionDiscussionIntentQuestion:
+		return true
+	case SubmissionDiscussionIntentReply:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SubmissionPurpose.
 const (
 	SubmissionPurposeDelivery SubmissionPurpose = "delivery"
@@ -1414,6 +1696,27 @@ func (e SubmissionStatus) Valid() bool {
 	case SubmissionStatusPreparing:
 		return true
 	case SubmissionStatusReady:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubmissionRequestDiscussionIntent.
+const (
+	SubmissionRequestDiscussionIntentAuto     SubmissionRequestDiscussionIntent = "auto"
+	SubmissionRequestDiscussionIntentQuestion SubmissionRequestDiscussionIntent = "question"
+	SubmissionRequestDiscussionIntentReply    SubmissionRequestDiscussionIntent = "reply"
+)
+
+// Valid indicates whether the value is a known member of the SubmissionRequestDiscussionIntent enum.
+func (e SubmissionRequestDiscussionIntent) Valid() bool {
+	switch e {
+	case SubmissionRequestDiscussionIntentAuto:
+		return true
+	case SubmissionRequestDiscussionIntentQuestion:
+		return true
+	case SubmissionRequestDiscussionIntentReply:
 		return true
 	default:
 		return false
@@ -1489,305 +1792,4 @@ const (
 	TaskStatusReady     TaskStatus = "ready"
 	TaskStatusRework    TaskStatus = "rework"
 	TaskStatusWorking   TaskStatus = "working"
-)
-
-// Valid indicates whether the value is a known member of the TaskStatus enum.
-func (e TaskStatus) Valid() bool {
-	switch e {
-	case TaskStatusAccepted:
-		return true
-	case TaskStatusCancelled:
-		return true
-	case TaskStatusDelivered:
-		return true
-	case TaskStatusDraft:
-		return true
-	case TaskStatusReady:
-		return true
-	case TaskStatusRework:
-		return true
-	case TaskStatusWorking:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for TaskDraftRequestKind.
-const (
-	TaskDraftRequestKindBug  TaskDraftRequestKind = "bug"
-	TaskDraftRequestKindTask TaskDraftRequestKind = "task"
-)
-
-// Valid indicates whether the value is a known member of the TaskDraftRequestKind enum.
-func (e TaskDraftRequestKind) Valid() bool {
-	switch e {
-	case TaskDraftRequestKindBug:
-		return true
-	case TaskDraftRequestKindTask:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for TaskDraftRequestRequirementsKind.
-const (
-	TaskDraftRequestRequirementsKindHandoffReceipt TaskDraftRequestRequirementsKind = "handoff_receipt"
-	TaskDraftRequestRequirementsKindMaterialReady  TaskDraftRequestRequirementsKind = "material_ready"
-	TaskDraftRequestRequirementsKindTaskAcceptance TaskDraftRequestRequirementsKind = "task_acceptance"
-)
-
-// Valid indicates whether the value is a known member of the TaskDraftRequestRequirementsKind enum.
-func (e TaskDraftRequestRequirementsKind) Valid() bool {
-	switch e {
-	case TaskDraftRequestRequirementsKindHandoffReceipt:
-		return true
-	case TaskDraftRequestRequirementsKindMaterialReady:
-		return true
-	case TaskDraftRequestRequirementsKindTaskAcceptance:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for TaskDraftRequestRequirementsPhase.
-const (
-	TaskDraftRequestRequirementsPhaseAccept TaskDraftRequestRequirementsPhase = "accept"
-	TaskDraftRequestRequirementsPhaseBoth   TaskDraftRequestRequirementsPhase = "both"
-	TaskDraftRequestRequirementsPhaseStart  TaskDraftRequestRequirementsPhase = "start"
-)
-
-// Valid indicates whether the value is a known member of the TaskDraftRequestRequirementsPhase enum.
-func (e TaskDraftRequestRequirementsPhase) Valid() bool {
-	switch e {
-	case TaskDraftRequestRequirementsPhaseAccept:
-		return true
-	case TaskDraftRequestRequirementsPhaseBoth:
-		return true
-	case TaskDraftRequestRequirementsPhaseStart:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for TaskReportRequestKind.
-const (
-	TaskReportRequestKindDelivery TaskReportRequestKind = "delivery"
-	TaskReportRequestKindProgress TaskReportRequestKind = "progress"
-)
-
-// Valid indicates whether the value is a known member of the TaskReportRequestKind enum.
-func (e TaskReportRequestKind) Valid() bool {
-	switch e {
-	case TaskReportRequestKindDelivery:
-		return true
-	case TaskReportRequestKindProgress:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for TaskRequirementKind.
-const (
-	TaskRequirementKindHandoffReceipt TaskRequirementKind = "handoff_receipt"
-	TaskRequirementKindMaterialReady  TaskRequirementKind = "material_ready"
-	TaskRequirementKindTaskAcceptance TaskRequirementKind = "task_acceptance"
-)
-
-// Valid indicates whether the value is a known member of the TaskRequirementKind enum.
-func (e TaskRequirementKind) Valid() bool {
-	switch e {
-	case TaskRequirementKindHandoffReceipt:
-		return true
-	case TaskRequirementKindMaterialReady:
-		return true
-	case TaskRequirementKindTaskAcceptance:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for TaskRequirementPhase.
-const (
-	TaskRequirementPhaseAccept TaskRequirementPhase = "accept"
-	TaskRequirementPhaseBoth   TaskRequirementPhase = "both"
-	TaskRequirementPhaseStart  TaskRequirementPhase = "start"
-)
-
-// Valid indicates whether the value is a known member of the TaskRequirementPhase enum.
-func (e TaskRequirementPhase) Valid() bool {
-	switch e {
-	case TaskRequirementPhaseAccept:
-		return true
-	case TaskRequirementPhaseBoth:
-		return true
-	case TaskRequirementPhaseStart:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for TopicKind.
-const (
-	TopicKindDiscussion  TopicKind = "discussion"
-	TopicKindHandoff     TopicKind = "handoff"
-	TopicKindProjectRoom TopicKind = "project_room"
-)
-
-// Valid indicates whether the value is a known member of the TopicKind enum.
-func (e TopicKind) Valid() bool {
-	switch e {
-	case TopicKindDiscussion:
-		return true
-	case TopicKindHandoff:
-		return true
-	case TopicKindProjectRoom:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for TopicLinksObjectType.
-const (
-	TopicLinksObjectTypePlan TopicLinksObjectType = "plan"
-	TopicLinksObjectTypeTask TopicLinksObjectType = "task"
-)
-
-// Valid indicates whether the value is a known member of the TopicLinksObjectType enum.
-func (e TopicLinksObjectType) Valid() bool {
-	switch e {
-	case TopicLinksObjectTypePlan:
-		return true
-	case TopicLinksObjectTypeTask:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for TopicLinkRequestTargetRefsObjectType.
-const (
-	TopicLinkRequestTargetRefsObjectTypePlan TopicLinkRequestTargetRefsObjectType = "plan"
-	TopicLinkRequestTargetRefsObjectTypeTask TopicLinkRequestTargetRefsObjectType = "task"
-)
-
-// Valid indicates whether the value is a known member of the TopicLinkRequestTargetRefsObjectType enum.
-func (e TopicLinkRequestTargetRefsObjectType) Valid() bool {
-	switch e {
-	case TopicLinkRequestTargetRefsObjectTypePlan:
-		return true
-	case TopicLinkRequestTargetRefsObjectTypeTask:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for UpdateMeRequestLocale.
-const (
-	UpdateMeRequestLocaleEn   UpdateMeRequestLocale = "en"
-	UpdateMeRequestLocaleZhCN UpdateMeRequestLocale = "zh-CN"
-)
-
-// Valid indicates whether the value is a known member of the UpdateMeRequestLocale enum.
-func (e UpdateMeRequestLocale) Valid() bool {
-	switch e {
-	case UpdateMeRequestLocaleEn:
-		return true
-	case UpdateMeRequestLocaleZhCN:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for UpdateMemberRequestRole.
-const (
-	UpdateMemberRequestRoleManager UpdateMemberRequestRole = "manager"
-	UpdateMemberRequestRoleMember  UpdateMemberRequestRole = "member"
-)
-
-// Valid indicates whether the value is a known member of the UpdateMemberRequestRole enum.
-func (e UpdateMemberRequestRole) Valid() bool {
-	switch e {
-	case UpdateMemberRequestRoleManager:
-		return true
-	case UpdateMemberRequestRoleMember:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for UploadSessionKind.
-const (
-	UploadSessionKindFile       UploadSessionKind = "file"
-	UploadSessionKindHtmlBundle UploadSessionKind = "html_bundle"
-)
-
-// Valid indicates whether the value is a known member of the UploadSessionKind enum.
-func (e UploadSessionKind) Valid() bool {
-	switch e {
-	case UploadSessionKindFile:
-		return true
-	case UploadSessionKindHtmlBundle:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for UploadSessionState.
-const (
-	UploadSessionStateCancelled UploadSessionState = "cancelled"
-	UploadSessionStateCompleted UploadSessionState = "completed"
-	UploadSessionStateExpired   UploadSessionState = "expired"
-	UploadSessionStateOpen      UploadSessionState = "open"
-)
-
-// Valid indicates whether the value is a known member of the UploadSessionState enum.
-func (e UploadSessionState) Valid() bool {
-	switch e {
-	case UploadSessionStateCancelled:
-		return true
-	case UploadSessionStateCompleted:
-		return true
-	case UploadSessionStateExpired:
-		return true
-	case UploadSessionStateOpen:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for WorkReportReportKind.
-const (
-	WorkReportReportKindDelivery WorkReportReportKind = "delivery"
-	WorkReportReportKindProgress WorkReportReportKind = "progress"
-)
-
-// Valid indicates whether the value is a known member of the WorkReportReportKind enum.
-func (e WorkReportReportKind) Valid() bool {
-	switch e {
-	case WorkReportReportKindDelivery:
-		return true
-	case WorkReportReportKindProgress:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for WorkflowDraftBodyApprovalPolicies.
-const (
-	WorkflowDraftBodyApprovalPoliciesAll  WorkflowDraftBodyApprovalPolicies = "all"
-	WorkflowDraftBodyApprovalPoliciesNone WorkflowDraftBodyApprovalPolicies = "none"
 )

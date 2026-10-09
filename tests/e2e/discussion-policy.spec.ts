@@ -17,7 +17,7 @@ test("project round limit persists, applies per submission, and never disables c
   await page.getByTestId("settings-back").click();
   await page
     .locator(".judex-chat-conversation-list")
-    .getByRole("button", { name: "首版需要标签吗？", exact: true })
+    .getByRole("button", { name: /首版需要标签吗/ })
     .click();
   await expect(page.getByTestId("close-pure-topic")).toHaveCount(0);
   await page.getByTestId("work-discussion-input").fill("请核对这个新提交");
@@ -27,7 +27,7 @@ test("project round limit persists, applies per submission, and never disables c
   await expect(page.getByTestId("discussion-budget")).toContainText("2 / 2");
   await expect(page.getByTestId("chat-discuss")).toBeDisabled();
   await expect(page.getByTestId("work-discussion-input")).toBeEnabled();
-  await expect(page.getByTestId("chat-propose")).toBeEnabled();
+  await page.getByTestId("conversation-menu").click();await expect(page.getByTestId("chat-propose")).toBeEnabled();await page.keyboard.press("Escape");
   await openSettings(page,"project");
   await field.fill("4");
   await page.getByTestId("save-discussion-limit").click();

@@ -25,6 +25,11 @@ func NewMaterialHandlers(svc *material.Service) *MaterialHandlers {
 }
 
 func (h *MaterialHandlers) Register(spec *SpecRouter) {
+	spec.Register("listMaterialUsages", withAuth(h.usages))
+	spec.Register("getFilePreview", withAuth(h.filePreview(false)))
+	spec.Register("prepareFilePreview", withAuth(h.filePreview(true)))
+	spec.Register("downloadFilePreview", withAuth(h.previewContent))
+	spec.Register("deleteMaterial", withAuth(h.deleteLibrary))
 	spec.Register("getMaterialVersionById", withAuth(h.versionByID(false)))
 	spec.Register("downloadMaterialVersionById", withAuth(h.versionByID(true)))
 	spec.Register("listUploadSessions", withAuth(h.listSessions))
@@ -96,13 +101,14 @@ func (h *MaterialHandlers) createSession(c *gin.Context) {
 		Mime       string `json:"mime"`
 		Kind       string `json:"kind" binding:"required"`
 		Entrypoint string `json:"entrypoint"`
+		Purpose    string `json:"purpose"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
 		return
 	}
 	session, err := h.Materials.CreateUpload(c.Request.Context(), p.UserID, projectID,
-		req.Name, req.Kind, req.Mime, req.Size, req.SHA256, req.Entrypoint)
+		req.Name, req.Kind, req.Mime, req.Size, req.SHA256, req.Entrypoint, req.Purpose)
 	if err != nil {
 		respond{}.error(c, err)
 		return
@@ -226,12 +232,25 @@ func (h *MaterialHandlers) listMaterials(c *gin.Context) {
 		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
 		return
 	}
-	materials, err := h.Materials.ListMaterials(c.Request.Context(), p.UserID, projectID, c.Query("kind"))
+	object, e := optionalUUID(c.Query("linkedObjectId"))
+	if e != nil {
+		respond{}.error(c, e)
+		return
+	}
+	filter := material.LibraryFilter{Kind: c.Query("kind"), Query: c.Query("q"), Group: c.Query("formatGroup"), Sort: c.Query("sort"), ObjectType: c.Query("linkedObjectType"), ObjectID: object}
+	materials, err := h.Materials.Library(c.Request.Context(), p.UserID, projectID, filter)
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(c, materials, nil))
+	count, err := h.Materials.LibraryTotal(c.Request.Context(), p.UserID, projectID, filter)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	data := respond{}.list(c, materials, nil)
+	data["totalCount"] = count
+	respond{}.ok(c, data)
 }
 
 func (h *MaterialHandlers) listVersions(c *gin.Context) {
@@ -279,20 +298,20 @@ func (h *MaterialHandlers) download(c *gin.Context) {
 	} else {
 		body, version, err = h.Materials.VersionObject(c.Request.Context(), p.UserID, projectID, materialID, versionID, entry)
 	}
-	_ = version
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
 	defer body.Close()
-	if entry == "" {
-		c.Header("Content-Length", strconv.FormatInt(version.Size, 10))
+	size := version.Size
+	if entry != "" {
+		for _, e := range version.Entries {
+			if e.RelativePath == entry {
+				size = e.Size
+			}
+		}
 	}
-	c.Header("Content-Type", version.Mime)
-	c.Header("Content-Disposition", "attachment")
-	c.Header("X-Content-Type-Options", "nosniff")
-	c.Status(200)
-	_, _ = io.Copy(c.Writer, body)
+	serveMaterialStream(c, body, size, version.Mime, "attachment")
 }
 
 func (h *MaterialHandlers) versionByID(download bool) Handler {
@@ -308,21 +327,29 @@ func (h *MaterialHandlers) versionByID(download bool) Handler {
 			return
 		}
 		user := principalFrom(c).UserID
-		material, err := h.Materials.MaterialForVersion(c.Request.Context(), user, project, version)
+		materialID, err := h.Materials.MaterialForVersion(c.Request.Context(), user, project, version)
 		if err != nil {
 			respond{}.error(c, err)
 			return
 		}
 		if download {
-			c.Params = append(c.Params, gin.Param{Key: "materialId", Value: material.String()})
+			c.Params = append(c.Params, gin.Param{Key: "materialId", Value: materialID.String()})
 			h.download(c)
 			return
 		}
-		value, _, err := h.Materials.OpenVersion(c.Request.Context(), user, project, material, version)
+		value, _, err := h.Materials.OpenVersion(c.Request.Context(), user, project, materialID, version)
 		if err != nil {
 			respond{}.error(c, err)
 			return
 		}
-		respond{}.ok(c, value)
+		info, e := h.Materials.LibraryVersion(c.Request.Context(), user, project, version)
+		if e != nil {
+			respond{}.error(c, e)
+			return
+		}
+		respond{}.ok(c, struct {
+			material.MaterialVersion
+			Library material.LibraryItem `json:"library"`
+		}{value, info})
 	}
 }

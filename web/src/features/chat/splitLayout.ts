@@ -6,7 +6,7 @@ export type SplitLimits = {
   divider: number;
 };
 export const DEFAULT_SPLIT: SplitRatio = { left: 0.2, right: 0.3 };
-export const SPLIT_KEY = "judex.chat.layout.v1";
+export const SPLIT_KEY = "judex.chat.layout.v2";
 export function readSplit(value: unknown): SplitRatio {
   const v = value as SplitRatio;
   return v &&

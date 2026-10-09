@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/kakj-go/Judex/internal/collaboration"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -105,6 +107,8 @@ func validateNewWork(ctx context.Context, tx pgx.Tx, project uuid.UUID, c Change
 	if c.Operation == "create_plan" {
 		allowed["goal"] = true
 		allowed["ownerIdentityId"] = true
+		allowed["sourceTopicId"] = true
+		allowed["forkAfterSeq"] = true
 	} else {
 		for _, key := range []string{"expectedOutput", "reviewerIdentityId", "participantIdentityIds", "planId", "parentTaskId", "nodeId", "kind", "requirements", "bugDetails"} {
 			allowed[key] = true
@@ -120,6 +124,9 @@ func validateNewWork(ctx context.Context, tx pgx.Tx, project uuid.UUID, c Change
 		return apierrors.Fields("title", "length")
 	}
 	if c.Operation == "create_plan" {
+		if _, err := ForkOriginFromFields(ctx, tx, project, c.Fields); err != nil {
+			return err
+		}
 		return identityExists(ctx, tx, project, c.Fields["ownerIdentityId"])
 	}
 	if err := identityExists(ctx, tx, project, c.Fields["reviewerIdentityId"]); err != nil {
@@ -327,7 +334,7 @@ func applyExisting(ctx context.Context, tx pgx.Tx, project, actor, target uuid.U
 		if !ok {
 			return apierrors.New(apierrors.InvalidReference, "topic not found")
 		}
-		if _, err = tx.Exec(ctx, `INSERT INTO topic_work_links(project_id,topic_id,object_type,object_id) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`, project, id, c.TargetType, target); err != nil {
+		if err = collaboration.ChangeTopicLinks(ctx, tx, project, id, nil, []collaboration.Link{{ObjectType: c.TargetType, ObjectID: target}}, false, time.Now().UTC()); err != nil {
 			return err
 		}
 	case "reference_task":

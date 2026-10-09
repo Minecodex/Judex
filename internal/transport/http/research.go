@@ -41,12 +41,19 @@ func (h *ResearchHandlers) myActions(c *gin.Context) {
 		}
 		projectFilter = &id
 	}
-	actions, err := h.Work.MyActions(c.Request.Context(), p.UserID, projectFilter)
+	actions, err := h.Work.MyActions(c.Request.Context(), p.UserID, projectFilter, work.ActionFilter{Kind: c.Query("kind"), Category: c.Query("category")})
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(c, actions, nil))
+	count, e := h.Work.CountMyActions(c.Request.Context(), p.UserID, projectFilter, work.ActionFilter{Kind: c.Query("kind"), Category: c.Query("category")})
+	if e != nil {
+		respond{}.error(c, e)
+		return
+	}
+	page := respond{}.list(c, actions, nil)
+	page["totalCount"] = count
+	respond{}.ok(c, page)
 }
 
 func (h *ResearchHandlers) listRepos(c *gin.Context) {

@@ -18,26 +18,37 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/kakj-go/Judex/internal/audit"
+	"github.com/kakj-go/Judex/internal/collaboration"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 )
 
 // Plan is the API projection (06 §5).
 type Plan struct {
-	ID                 uuid.UUID  `json:"id"`
-	Title              string     `json:"title"`
-	Goal               string     `json:"goal"`
-	AcceptanceCriteria string     `json:"acceptanceCriteria"`
-	Status             string     `json:"status"`
-	OwnerIdentityID    *uuid.UUID `json:"ownerIdentityId"`
-	WorkflowID         *uuid.UUID `json:"workflowId"`
-	LatestAcceptanceID *uuid.UUID `json:"latestAcceptanceId"`
-	TaskStats          TaskStats  `json:"taskStats"`
-	Version            int64      `json:"version"`
-	CreatedAt          time.Time  `json:"createdAt"`
+	Capabilities       WorkCapabilities `json:"capabilities"`
+	DiscardedAt        *time.Time       `json:"discardedAt"`
+	ReferenceTaskIDs   []uuid.UUID      `json:"referenceTaskIds"`
+	MyTaskCount        int              `json:"myTaskCount"`
+	OwnerName          string           `json:"ownerName"`
+	UpdatedAt          time.Time        `json:"updatedAt"`
+	MainTopicID        *uuid.UUID       `json:"mainTopicId"`
+	ID                 uuid.UUID        `json:"id"`
+	Title              string           `json:"title"`
+	Goal               string           `json:"goal"`
+	AcceptanceCriteria string           `json:"acceptanceCriteria"`
+	Status             string           `json:"status"`
+	OwnerIdentityID    *uuid.UUID       `json:"ownerIdentityId"`
+	WorkflowID         *uuid.UUID       `json:"workflowId"`
+	LatestAcceptanceID *uuid.UUID       `json:"latestAcceptanceId"`
+	TaskStats          TaskStats        `json:"taskStats"`
+	Version            int64            `json:"version"`
+	CreatedAt          time.Time        `json:"createdAt"`
 }
 
 type TaskStats struct {
+	Required  int `json:"required"`
+	Draft     int `json:"draft"`
+	Skipped   int `json:"skipped"`
 	Total     int `json:"total"`
 	Accepted  int `json:"accepted"`
 	Active    int `json:"active"`
@@ -46,24 +57,28 @@ type TaskStats struct {
 
 // Task is the API projection (06 §5).
 type Task struct {
-	BugDetails         *BugDetails   `json:"bugDetails,omitempty"`
-	ID                 uuid.UUID     `json:"id"`
-	PlanID             *uuid.UUID    `json:"planId"`
-	ParentTaskID       *uuid.UUID    `json:"parentTaskId"`
-	Title              string        `json:"title"`
-	ExpectedOutput     string        `json:"expectedOutput"`
-	AcceptanceCriteria string        `json:"acceptanceCriteria"`
-	Kind               string        `json:"kind"`
-	Status             string        `json:"status"`
-	Participants       []Participant `json:"participants"`
-	ReviewerIdentityID *uuid.UUID    `json:"reviewerIdentityId"`
-	WorkflowID         *uuid.UUID    `json:"workflowId"`
-	NodeID             *string       `json:"nodeId"`
-	Requirements       []Requirement `json:"requirements"`
-	LatestReportID     *uuid.UUID    `json:"latestReportId"`
-	LatestAcceptanceID *uuid.UUID    `json:"latestAcceptanceId"`
-	Version            int64         `json:"version"`
-	CreatedAt          time.Time     `json:"createdAt"`
+	Capabilities       WorkCapabilities    `json:"capabilities"`
+	DiscardedAt        *time.Time          `json:"discardedAt"`
+	ExecutionException *ExecutionException `json:"executionException"`
+	MainTopicID        *uuid.UUID          `json:"mainTopicId"`
+	BugDetails         *BugDetails         `json:"bugDetails,omitempty"`
+	ID                 uuid.UUID           `json:"id"`
+	PlanID             *uuid.UUID          `json:"planId"`
+	ParentTaskID       *uuid.UUID          `json:"parentTaskId"`
+	Title              string              `json:"title"`
+	ExpectedOutput     string              `json:"expectedOutput"`
+	AcceptanceCriteria string              `json:"acceptanceCriteria"`
+	Kind               string              `json:"kind"`
+	Status             string              `json:"status"`
+	Participants       []Participant       `json:"participants"`
+	ReviewerIdentityID *uuid.UUID          `json:"reviewerIdentityId"`
+	WorkflowID         *uuid.UUID          `json:"workflowId"`
+	NodeID             *string             `json:"nodeId"`
+	Requirements       []Requirement       `json:"requirements"`
+	LatestReportID     *uuid.UUID          `json:"latestReportId"`
+	LatestAcceptanceID *uuid.UUID          `json:"latestAcceptanceId"`
+	Version            int64               `json:"version"`
+	CreatedAt          time.Time           `json:"createdAt"`
 }
 
 type Participant struct {
@@ -73,6 +88,12 @@ type Participant struct {
 }
 
 type Requirement struct {
+	Satisfied         *bool      `json:"satisfied,omitempty"`
+	SourceTaskID      uuid.UUID  `json:"sourceTaskId"`
+	Waived            bool       `json:"waived"`
+	InheritedFrom     *uuid.UUID `json:"inheritedFrom,omitempty"`
+	Fingerprint       string     `json:"fingerprint,omitempty"`
+	originalPhase     string
 	ID                uuid.UUID  `json:"id"`
 	Phase             string     `json:"phase"`
 	Kind              string     `json:"kind"`
@@ -108,7 +129,7 @@ func memberTx(ctx context.Context, q interface {
 }
 
 // CreatePlanDraft creates a draft plan (03 §2 计划 draft: 项目成员可建)。
-func (s *Service) CreatePlanDraft(ctx context.Context, requester, projectID uuid.UUID, title, goal, criteria string, ownerIdentityID, workflowID *uuid.UUID) (Plan, error) {
+func (s *Service) CreatePlanDraft(ctx context.Context, requester, projectID uuid.UUID, title, goal, criteria string, ownerIdentityID, workflowID *uuid.UUID, origins ...collaboration.Origin) (Plan, error) {
 	title = strings.TrimSpace(title)
 	if l := utf8.RuneCountInString(title); l < 1 || l > 200 {
 		return Plan{}, apierrors.Fields("title", "length")
@@ -136,9 +157,17 @@ func (s *Service) CreatePlanDraft(ctx context.Context, requester, projectID uuid
 		}); err != nil {
 			return err
 		}
+		origin := collaboration.Origin{}
+		if len(origins) > 0 {
+			origin = origins[0]
+		}
+		main, err := collaboration.EnsurePlanTopic(ctx, tx.Tx, projectID, id, requester, title, origin.TopicID, origin.AfterSeq, now)
+		if err != nil {
+			return err
+		}
 		out = Plan{ID: id, Title: title, Goal: goal, AcceptanceCriteria: criteria,
 			Status: "draft", OwnerIdentityID: ownerIdentityID, WorkflowID: workflowID,
-			Version: 1, CreatedAt: now}
+			Version: 1, CreatedAt: now, MainTopicID: &main}
 		return nil
 	})
 	return out, err
@@ -146,22 +175,17 @@ func (s *Service) CreatePlanDraft(ctx context.Context, requester, projectID uuid
 
 // ListPlans returns plans with task stats.
 func (s *Service) ListPlans(ctx context.Context, requester, projectID uuid.UUID, planIDs ...uuid.UUID) ([]Plan, error) {
-	if _, err := memberTx(ctx, s.pool, projectID, requester); err != nil {
-		return nil, err
-	}
 	var selected *uuid.UUID
 	if len(planIDs) > 0 {
 		selected = &planIDs[0]
 	}
-	rows, err := paging.Query(ctx, s.pool, `
-		SELECT p.id, p.title, p.goal, p.acceptance_criteria, p.status, p.owner_identity_id,
-		       p.workflow_id, p.latest_acceptance_id, p.version, p.created_at,
-		       count(t.id), count(t.id) FILTER (WHERE t.status='accepted'),
-		       count(t.id) FILTER (WHERE t.status NOT IN ('accepted','cancelled')),
-		       count(t.id) FILTER (WHERE t.status='cancelled') /*keys*/
-		FROM plans p LEFT JOIN tasks t ON t.project_id=p.project_id AND (t.plan_id=p.id OR EXISTS(SELECT 1 FROM plan_task_references r WHERE r.plan_id=p.id AND r.task_id=t.id))
-		WHERE p.project_id=$1 AND ($2::uuid IS NULL OR p.id=$2)
-		/*page*/ GROUP BY p.id`, "p.created_at", "p.id", projectID, selected)
+	return s.listPlans(ctx, requester, projectID, selected, PlanFilter{})
+}
+func (s *Service) listPlans(ctx context.Context, requester, projectID uuid.UUID, selected *uuid.UUID, f PlanFilter) ([]Plan, error) {
+	if _, err := memberTx(ctx, s.pool, projectID, requester); err != nil {
+		return nil, err
+	}
+	rows, err := paging.Query(ctx, s.pool, planCardsSQL, "p.created_at", "p.id", projectID, selected, strings.TrimSpace(f.Query), f.Status, f.Mine, requester)
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "plans failed").Wrap(err)
 	}
@@ -170,13 +194,21 @@ func (s *Service) ListPlans(ctx context.Context, requester, projectID uuid.UUID,
 	for rows.Next() {
 		var p Plan
 		if err := rows.Scan(&p.ID, &p.Title, &p.Goal, &p.AcceptanceCriteria, &p.Status, &p.OwnerIdentityID,
-			&p.WorkflowID, &p.LatestAcceptanceID, &p.Version, &p.CreatedAt,
-			&p.TaskStats.Total, &p.TaskStats.Accepted, &p.TaskStats.Active, &p.TaskStats.Cancelled); err != nil {
+			&p.WorkflowID, &p.LatestAcceptanceID, &p.Version, &p.CreatedAt, &p.MainTopicID,
+			&p.TaskStats.Total, &p.TaskStats.Accepted, &p.TaskStats.Active, &p.TaskStats.Cancelled, &p.MyTaskCount, &p.OwnerName, &p.UpdatedAt, &p.ReferenceTaskIDs); err != nil {
 			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
 		}
 		out = append(out, p)
 	}
-	return out, rows.Err()
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	if err = s.decoratePlans(ctx, requester, projectID, out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // TaskDraft carries the create-task payload.
@@ -371,14 +403,14 @@ func checkRequirementCycle(ctx context.Context, tx pgx.Tx, projectID uuid.UUID, 
 }
 
 // ListTasks pages tasks by plan/status (06 §5).
-func (s *Service) ListTasks(ctx context.Context, requester, projectID uuid.UUID, planID *uuid.UUID) ([]Task, error) {
+func (s *Service) ListTasks(ctx context.Context, requester, projectID uuid.UUID, planID *uuid.UUID, includeReferences ...bool) ([]Task, error) {
 	if _, err := memberTx(ctx, s.pool, projectID, requester); err != nil {
 		return nil, err
 	}
 	rows, err := paging.Query(ctx, s.pool, `
-		SELECT id, plan_id, parent_task_id, title, kind, status, version, created_at /*keys*/
-		FROM tasks WHERE project_id=$1 AND ($2::uuid IS NULL OR plan_id=$2)
-		/*page*/`, "created_at", "id", projectID, planID)
+		SELECT id, plan_id, parent_task_id, title, kind, status, version, created_at,main_topic_id,expected_output,acceptance_criteria,reviewer_identity_id,workflow_id,node_id /*keys*/
+		FROM tasks WHERE project_id=$1 AND discarded_at IS NULL AND ($2::uuid IS NULL OR plan_id=$2 OR ($3 AND EXISTS(SELECT 1 FROM plan_task_references r WHERE r.project_id=tasks.project_id AND r.plan_id=$2 AND r.task_id=tasks.id)))
+		/*page*/`, "created_at", "id", projectID, planID, len(includeReferences) > 0 && includeReferences[0])
 	if err != nil {
 		return nil, apierrors.New(apierrors.Internal, "tasks failed").Wrap(err)
 	}
@@ -386,12 +418,28 @@ func (s *Service) ListTasks(ctx context.Context, requester, projectID uuid.UUID,
 	var out []Task
 	for rows.Next() {
 		var t Task
-		if err := rows.Scan(&t.ID, &t.PlanID, &t.ParentTaskID, &t.Title, &t.Kind, &t.Status, &t.Version, &t.CreatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.PlanID, &t.ParentTaskID, &t.Title, &t.Kind, &t.Status, &t.Version, &t.CreatedAt, &t.MainTopicID, &t.ExpectedOutput, &t.AcceptanceCriteria, &t.ReviewerIdentityID, &t.WorkflowID, &t.NodeID); err != nil {
 			return nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
 		}
 		out = append(out, t)
 	}
-	return out, rows.Err()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	if err = s.taskParticipants(ctx, projectID, out); err != nil {
+		return nil, err
+	}
+	if err = s.decorateTasks(ctx, requester, projectID, out); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].Requirements, _, err = s.RequirementsFor(ctx, poolAsQuery{s.pool}, projectID, out[i].ID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
 }
 
 func nullableUUID(id *uuid.UUID) any {

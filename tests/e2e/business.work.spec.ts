@@ -24,10 +24,11 @@ async function registerAndCreateProject(page: import("@playwright/test").Page, n
   await page.getByRole("button", { name: /创建账号|Create account/ }).click();
   await expect(page.getByTestId("workspace-new-project")).toBeVisible({ timeout: 10000 });
   await page.getByTestId("workspace-new-project").click();
-  await page.getByLabel(/新建项目|New project/).fill(`提案项目-${name}`);
+  await page.getByTestId("new-project-title").fill(`提案项目-${name}`);
   await page.locator("form button[type=submit]").first().click();
   // 创建后自动进入统一工作区
-  await expect(page.getByTestId("project-switcher")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByTestId("hub-tab-plans")).toBeVisible({ timeout: 20000 });
+  await page.getByRole('button',{name:'项目讨论记录',exact:true}).click();
   const projects = await api(page, "get", "/projects");
   const project = projects.items.find((p: any) => p.title === `提案项目-${name}`);
   const workflow = await api(page, "post", `/projects/${project.id}/workflows`, {
@@ -59,6 +60,7 @@ async function proposeInTopic(page: import("@playwright/test").Page, title: stri
   await page.getByTestId("discussion-title").fill(title);
   await page.getByTestId("create-discussion").click();
   await expect(page.getByTestId("work-discussion-input")).toBeVisible({ timeout: 10000 });
+  await page.getByTestId('conversation-menu').click();
   await page.getByTestId("chat-propose").click();
   await page.getByTestId("proposal-title").fill(title);
   await page.getByTestId("proposal-criteria").fill("结果可核对");
@@ -66,11 +68,13 @@ async function proposeInTopic(page: import("@playwright/test").Page, title: stri
   // 提案卡出现在议题会话里
   await expect(page.getByText(/等待确认|Awaiting decisions/).first()).toBeVisible({ timeout: 15000 });
   const proposals = await api(page, "get", `/projects/${await currentProjectId(page)}/proposals`);
-  return proposals.items[0].id as string;
+  const id=proposals.items[0].id as string;
+  await page.getByTestId('proposal-'+id).getByRole('button',{name:'查看并决定',exact:true}).click();
+  return id;
 }
 
 async function currentProjectId(page: import("@playwright/test").Page) {
-  return new URL(page.url()).searchParams.get("project")!;
+  const url=new URL(page.url());return decodeURIComponent(url.pathname.match(/^\/projects\/([^/]+)/)?.[1]??url.searchParams.get('project')!);
 }
 
 test("B03/B06 提案创建→提交→唯一审批人同意→计划生效", async ({ page }) => {
@@ -80,6 +84,7 @@ test("B03/B06 提案创建→提交→唯一审批人同意→计划生效", asy
   await expect
     .poll(async () => (await api(page, "get", `/projects/${projectId}/proposals/${proposalId}/review`)).status, { timeout: 15000 })
     .toBe("pending");
+  await expect(page.getByRole('button',{name:'同意此版本',exact:true})).toBeEnabled();
   await page.getByRole("button", { name: /同意此版本|Approve this version/ }).click();
   await expect
     .poll(async () => (await api(page, "get", `/projects/${projectId}/proposals/${proposalId}/review`)).status, { timeout: 15000 })
@@ -88,7 +93,7 @@ test("B03/B06 提案创建→提交→唯一审批人同意→计划生效", asy
   await expect
     .poll(async () => (await api(page, "get", `/projects/${projectId}/plans`)).items.map((p: any) => p.status).join(","), { timeout: 15000 })
     .toContain("active");
-  await page.getByTestId("work-nav-plans").click();
+  await page.getByTestId('workspace-back-projects').click();
   await expect(page.getByText("正式计划-甲").first()).toBeVisible();
 });
 
@@ -99,11 +104,11 @@ test("B16 已审批提案不可重复决定", async ({ page }) => {
     .poll(async () => (await api(page, "get", `/projects/${projectId}/proposals/${proposalId}/review`)).status, { timeout: 15000 })
     .toBe("pending");
   // 退回需要理由
-  await page.getByRole("button", { name: /退回并说明|Return with feedback/ }).first().click();
-  await page.getByLabel(/需要修改的内容|What needs to change/).fill("范围不清晰");
+  // Rejection is made against the frozen proposal review already opened above.
+  await page.getByRole('textbox',{name:'需要发送人补充什么？',exact:true}).fill('范围不清晰');
   await page
     .locator(".judex-dialog-content")
-    .getByRole("button", { name: /退回并说明|Return with feedback/ })
+    .getByRole("button", { name: /拒收并说明|Return with a reason/ })
     .click();
   await expect
     .poll(async () => (await api(page, "get", `/projects/${projectId}/proposals/${proposalId}/review`)).status, { timeout: 15000 })

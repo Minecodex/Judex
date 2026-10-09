@@ -1,179 +1,18 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-import { Button } from "@heroui/react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { seedWork, WORK_KEY } from "./seed";
-import { normalizeWork } from "./normalize";
-import { allPeople, manage, member } from "./selectors";
-import type { View, WorkState } from "./types";
-import { demoActions } from "./actionRegistry";
-import type { ActFn, WorkStore } from "./storeTypes";
-import { readRoute, useWorkbenchBase } from "./storeBase";
-import { useApiWorkbench } from "./apiStore";
-import { translate, type Key } from "../../i18n";
-import { usePreferences } from "../../stores/preferences";
-import {
-  loadWorkspace,
-  persistPreview,
-  workspaceKey,
-} from "../../lib/api/workspace";
-import { dataMode } from "../../lib/api/client";
-
-function initialPreview() {
-  try {
-    return (
-      normalizeWork(JSON.parse(localStorage.getItem(WORK_KEY) || "null")) ||
-      seedWork()
-    );
-  } catch {
-    return seedWork();
-  }
-}
-function useDemoWorkbench(): WorkStore {
-  const client = useQueryClient();
-  const query = useQuery({
-    queryKey: workspaceKey,
-    queryFn: loadWorkspace,
-    initialData: initialPreview,
-    staleTime: Infinity,
-  });
-  const state = query.data;
-  const ref = useRef(state);
-  ref.current = state;
-  const {
-    route,
-    go,
-    toast,
-    setToast,
-    locale,
-    setLocale,
-    theme,
-    setTheme,
-    t,
-    text,
-  } = useWorkbenchBase();
-  const [storageError, setStorageError] = useState(false);
-  const commit = (next: WorkState) => {
-    try {
-      persistPreview(next);
-      ref.current = next;
-      client.setQueryData(workspaceKey, next);
-      setStorageError(false);
-      return true;
-    } catch {
-      setStorageError(true);
-      return false;
-    }
-  };
-  useEffect(() => {
-    if (dataMode === "demo") {
-      try {
-        if (!localStorage.getItem(WORK_KEY)) persistPreview(ref.current);
-      } catch {
-        setStorageError(true);
-      }
-    }
-  }, []);
-  useEffect(() => {
-    const sync = (e: StorageEvent) => {
-      if (e.key !== WORK_KEY || !e.newValue) return;
-      try {
-        const next = normalizeWork(JSON.parse(e.newValue));
-        if (next)
-          client.setQueryData(workspaceKey, {
-            ...next,
-            currentUser: ref.current.currentUser,
-          });
-      } catch {
-        /* Ignore invalid preview snapshots. */
-      }
-    };
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
-  }, [client]);
-  const act: ActFn = async (name, payload, opts) => {
-    if (dataMode !== "demo") {
-      setToast(t("shellUnavailable"));
-      return { ok: false };
-    }
-    const result = demoActions[name](ref.current, payload as never);
-    if (result.error) {
-      setToast(
-        t(
-          ("workError" +
-            result.error[0].toUpperCase() +
-            result.error.slice(1)) as Key,
-        ),
-      );
-      return { ok: false };
-    }
-    if (!commit(result.state!)) return { ok: false };
-    if (opts?.toast !== false) setToast(t("workSaved"));
-    return { ok: true, id: result.id };
-  };
-  const switchPerson = (name: string) => {
-    if (commit({ ...ref.current, currentUser: name }))
-      go({ view: "home", id: undefined });
-  };
-  const reset = () => {
-    if (commit(seedWork())) {
-      go({ projectId: "leaf", view: "home", id: undefined });
-      setToast(t("resetDone"));
-    }
-  };
-  const project =
-    state.projects.find((p) => p.id === route.projectId) || state.projects[0];
-  return {
-    state,
-    route,
-    go,
-    locale,
-    setLocale,
-    theme,
-    setTheme,
-    toast,
-    setToast,
-    storageError,
-    text,
-    t,
-    act,
-    switchPerson,
-    reset,
-    project,
-    membership: member(state, project.id),
-    management: manage(state, project.id),
-    people: allPeople(state),
-  };
-}
-const Context = createContext<WorkStore | null>(null);
-export function WorkProvider({
-  children,
-  mode,
-  projectId,
-}: {
-  children: ReactNode;
-  mode?: "demo" | "api";
-  projectId?: string;
-}) {
-  const resolved = mode ?? dataMode;
-  if (resolved === "api")
-    return (
-      <ApiWorkProvider projectId={projectId ?? readRoute().projectId}>
-        {children}
-      </ApiWorkProvider>
-    );
-  return <DemoWorkProvider>{children}</DemoWorkProvider>;
-}
-function DemoWorkProvider({ children }: { children: ReactNode }) {
-  return (
-    <Context.Provider value={useDemoWorkbench()}>{children}</Context.Provider>
-  );
+import {createContext,useContext,lazy,Suspense,type ReactNode} from "react";
+import {Button} from "../../components/ui/Button";
+import {useApiWorkbench} from "./apiStore";
+import {readRoute} from "./storeBase";
+import {usePreferences} from "../../stores/preferences";
+import {translate} from "../../i18n";
+import {dataMode} from "../../lib/api/client";
+import type {WorkStore} from "./storeTypes";
+import type {View} from "./types";
+export const WorkContext=createContext<WorkStore|null>(null);
+const Context=WorkContext;
+const DemoProvider=import.meta.env.VITE_DATA_MODE==="demo"?lazy(()=>import("./demoStore")):null;
+export function WorkProvider({children,mode,projectId}:{children:ReactNode;mode?:"demo"|"api";projectId?:string}){
+ if((mode??dataMode)==="api"||!DemoProvider)return <ApiWorkProvider projectId={projectId??readRoute().projectId}>{children}</ApiWorkProvider>;
+ return <Suspense fallback={<main className="judex-entry"/>}><DemoProvider>{children}</DemoProvider></Suspense>;
 }
 function ApiWorkProvider({
   projectId,
@@ -208,15 +47,17 @@ export function useWork() {
 export function WorkView({
   view,
   id,
+  section,
   children,
 }: {
   view: View;
   id?: string;
+  section?:import('./runtimeTypes').TaskSection;
   children: ReactNode;
 }) {
   const base = useWork();
   return (
-    <Context.Provider value={{ ...base, route: { ...base.route, view, id } }}>
+    <Context.Provider value={{ ...base, route: { ...base.route, view, id,taskSection:section??base.route.taskSection } }}>
       {children}
     </Context.Provider>
   );

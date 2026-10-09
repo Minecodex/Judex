@@ -1,3 +1,6 @@
+import {Button} from "../../components/ui/Button";
+import {ProposalReviewDialog} from "../cooperation/FrozenReview";
+import {CardActions} from '../../components/ui/ActionGroup';
 import {
   UIDisclosure,
   UIWarning,
@@ -10,7 +13,9 @@ import { useWork } from "../work/store";
 import { Btn, Dialog, Field, Person } from "../work/ui";
 import { proposalIsCurrent, type WorkProposal } from "./proposalModel";
 import { ProposalDialog } from "./ProposalDialog";
-export function ProposalCard({ proposal: p }: { proposal: WorkProposal }) {
+export function ProposalCard({proposal:p}:{proposal:WorkProposal}){const {mode}=useWork();return mode==="api"?<ApiProposalCard proposal={p}/>:<DemoProposalCard proposal={p}/>;}
+function ApiProposalCard({proposal:p}:{proposal:WorkProposal}){const {t}=useWork();const [open,setOpen]=useState(false);return <UICard className="judex-chat-proposal" data-testid={"proposal-"+p.id}><header><span><GitBranch size={16}/>{t("coopArrangement")} · v{p.revision}</span></header><h3>{p.title}</h3><p>{p.goal}</p><Button variant="primary" size="sm" data-testid={"review-proposal-"+p.id} onPress={()=>setOpen(true)}>{t("coopReview")}</Button>{open&&<ProposalReviewDialog id={p.id} onClose={()=>setOpen(false)}/>}</UICard>;}
+function DemoProposalCard({ proposal: p }: { proposal: WorkProposal }) {
   const { state, t, act, go, text } = useWork();
   const [reject, setReject] = useState(false),
     [reason, setReason] = useState(""),
@@ -89,7 +94,7 @@ export function ProposalCard({ proposal: p }: { proposal: WorkProposal }) {
         <UIWarning className="judex-work-warning">{t("chatStale")}</UIWarning>
       )}
       {mine && (
-        <footer>
+        <CardActions>
           <Btn
             testId={"approve-proposal-" + p.id}
             disabled={stale}
@@ -106,7 +111,7 @@ export function ProposalCard({ proposal: p }: { proposal: WorkProposal }) {
           <Btn secondary onClick={() => setReject(true)}>
             {t("chatReject")}
           </Btn>
-        </footer>
+        </CardActions>
       )}
       {p.status === "pending" && p.votes[state.currentUser] && (
         <p>{t("chatAlreadyVoted")}</p>

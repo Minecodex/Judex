@@ -1,214 +1,141 @@
-/* 认证页面与工作区壳（项目列表）。仅 judex-* 前缀 + 统一 design token；
-   暗色由 :root[data-theme="dark"] 的 token 覆盖驱动，无需局部覆盖。 */
+/* Authentication: a calm brand panel and one uncluttered form. */
+.judex-entry-split { min-height: 100dvh; display: grid; grid-template-columns: 49% 51%; }
+.judex-entry-story { background: var(--story-surface); padding: var(--s12) clamp(var(--s10), 5vw, var(--s24)); display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+.judex-entry-story-content { padding-top: var(--s10); max-width: var(--entry-story-width); margin: auto 0; }
+.judex-entry-story-content h1 { font-size: var(--entry-hero-size); line-height: 1.3; letter-spacing: var(--tracking-title); margin: var(--s6) 0; font-weight: var(--weight-medium); }
+.judex-entry-story-content h1 > span { color: var(--accent); }
+.judex-entry-story-description { max-width: var(--entry-form-width); font-size: var(--text-md); color: var(--muted); line-height: 1.9; }
+.judex-entry-story-footer { font-size: var(--text-sm); color: var(--muted); margin-top: var(--s6) !important; }
+.judex-entry-art { position: relative; width: min(100%, var(--entry-art-width)); height: var(--entry-art-height); margin-top: var(--s12); }
+.judex-entry-art-orbit { width: var(--entry-orbit-size); height: var(--entry-orbit-size); position: absolute; top: calc(-1 * var(--s12)); left: var(--s8); border: var(--stroke) solid var(--story-orbit); border-radius: 50%; }
+.judex-entry-art-orbit::after { content: ''; position: absolute; inset: var(--s8); border: var(--stroke) solid var(--story-orbit); border-radius: 50%; }
+.judex-entry-art-conversation { width: calc(100% - var(--s8)); position: relative; transform: rotate(-3deg); box-shadow: var(--shadow-floating); padding: var(--s6); border: var(--stroke) solid var(--line); border-radius: var(--r-lg); gap: var(--s5); background: var(--surface); }
+.judex-entry-art-topic { display: flex; align-items: center; gap: var(--s2); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+.judex-entry-art-conversation > .judex-row > svg { color: var(--faint); }
+.judex-entry-art-message { display: flex; align-items: start; gap: var(--s3); }
+.judex-entry-art-message > div { flex: 1; }
+.judex-entry-art-message strong { display: block; font-size: var(--text-sm); font-weight: var(--weight-medium); margin-bottom: var(--s3); }
+.judex-entry-art-line { display: block; height: var(--s1); width: 96%; border-radius: var(--r-pill); margin-top: var(--s2); background: var(--line); }
+.judex-entry-art-line-short { width: 70%; }
+.judex-entry-art-ai { display: flex; gap: var(--s2); padding: var(--s3); border-radius: var(--r-sm); background: var(--ai-surface); color: var(--accent); font-size: var(--text-sm); }
+.judex-entry-art-decision { position: absolute; left: var(--s14); right: 0; bottom: var(--s6); transform: rotate(2deg); display: flex; flex-direction: row; align-items: center; gap: var(--s3); padding: var(--s5); border: var(--stroke) solid var(--line); background: var(--surface); box-shadow: var(--shadow-floating); border-radius: var(--r-md); }
+.judex-entry-art-check { width: var(--s8); height: var(--s8); border-radius: var(--r-pill); background: var(--green-bg); color: var(--green-ink); display: grid; place-items: center; flex-shrink: 0; }
+.judex-entry-art-decision strong { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+.judex-entry-art-decision p { font-size: var(--text-xs); color: var(--muted); margin-top: var(--s1); }
+.judex-entry-form-area { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--s16) var(--s12) var(--s6); background: var(--surface); }
+.judex-entry-form-wrap { width: min(100%, var(--entry-form-width)); margin: auto 0; }
+.judex-entry-form-wrap h2 { margin-top: var(--s6); font-size: var(--text-3xl); letter-spacing: var(--tracking-title); line-height: var(--leading-tight); }
+.judex-entry-subtitle { font-size: var(--text-base); color: var(--muted); margin-top: var(--s3) !important; line-height: var(--leading-base); }
+.judex-entry-form-wrap .judex-auth-form { margin-top: var(--s10); }
+.judex-entry-form-wrap .judex-auth-form > .judex-control { margin-top: var(--s2); }
+.judex-field-heading { display: flex; align-items: center; justify-content: space-between; }
+.judex-field-heading .judex-control { min-height: var(--s6); }
+.judex-password-field { position: relative; }
+.judex-password-field > .input { width: 100%; padding-right: var(--s12); }
+.judex-password-field > .judex-control { position: absolute; right: var(--s1); top: 50%; transform: translateY(-50%); color: var(--muted); min-height: var(--control-sm); width: var(--control-sm); }
+.judex-auth-registration { display: flex; justify-content: center; align-items: center; gap: var(--s1); margin-top: var(--s5); font-size: var(--text-sm); color: var(--muted); }
+.judex-auth-divider { display: flex; align-items: center; gap: var(--s4); margin: var(--s6) 0; color: var(--faint); font-size: var(--text-xs); }
+.judex-auth-divider > span { flex: 1; height: var(--stroke); background: var(--line); }
+.judex-auth-note { margin-top: var(--s3) !important; text-align: center; font-size: var(--text-xs); color: var(--muted); }
+.judex-entry-footer { padding-top: var(--s10); color: var(--faint); font-size: var(--text-xs); }
 
-.judex-entry {
-  background: var(--bg);
-  color: var(--ink);
-}
+/* Project entry: content uses the desktop width without becoming a dashboard. */
+.judex-workspace-header { display: flex; align-items: center; justify-content: space-between; height: var(--project-header-height); background: var(--surface); border-bottom: var(--stroke) solid var(--line); padding: 0 var(--s10); }
+.judex-workspace-header > div:first-child { display: flex; align-items: center; gap: var(--s5); }
+.judex-workspace-header > div:first-child > span:last-child { color: var(--muted); font-size: var(--text-sm); }
+.judex-header-divider { height: var(--s5); width: var(--stroke); background: var(--line); }
+.judex-workspace-main { width: min(var(--project-page-width), calc(100% - var(--s24))); margin: 0 auto; padding: var(--s14) 0 var(--s8); }
+.judex-page-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--s6); }
+.judex-page-heading h1 { font-size: var(--text-3xl); letter-spacing: var(--tracking-title); margin: var(--s3) 0; line-height: var(--leading-tight); }
+.judex-page-heading p:last-child { color: var(--muted); line-height: var(--leading-base); font-size: var(--text-md); }
+.judex-project-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); margin-top: var(--s10); margin-bottom: var(--s6); }
+.judex-project-filters { display: flex; align-items: center; gap: var(--s1); padding: var(--s1); background: var(--surface-soft); border-radius: var(--r-md); }
+.judex-project-filters .judex-control { color: var(--muted); padding: var(--s1) var(--s4); }
+.judex-project-filters .judex-filter-selected, .judex-task-filters .judex-filter-selected { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-card); }
+.judex-project-filters .judex-control > span { font-size: var(--text-xs); background: var(--surface-soft); padding: 0 var(--s1); border-radius: var(--r-xs); }
+.judex-project-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s5); }
+.judex-project-card { background: var(--surface); border: var(--stroke) solid var(--line); padding: var(--s6); border-radius: var(--r-lg); box-shadow: var(--shadow-card); transition: box-shadow var(--transition-fast), border-color var(--transition-fast); gap: var(--s5); min-width: 0; }
+.judex-project-card:hover { border-color: var(--focus-ring); box-shadow: var(--shadow-floating); }
+.judex-project-card .card__header { gap: var(--s3); }
+.judex-project-mark { width: var(--card-mark); height: var(--card-mark); border-radius: var(--r-md); display: grid; place-items: center; flex-shrink: 0; }
+.judex-project-mark svg { width: var(--icon-lg); height: var(--icon-lg); }
+.judex-project-card .card__title { font-size: var(--text-lg); font-weight: var(--weight-semibold); margin-top: var(--s2); white-space: normal; overflow-wrap: anywhere; }
+.judex-project-card .card__description { display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; color: var(--muted); font-size: var(--text-sm); line-height: var(--leading-base); min-height: calc(var(--text-sm) * var(--leading-base) * 2); }
+.judex-project-metadata { display: flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: var(--text-xs); }
+.judex-project-metadata > span { display: inline-flex; align-items: center; gap: var(--s1); }
+.judex-project-metadata svg { width: var(--icon-sm); height: var(--icon-sm); }
+.judex-meta-dot { width: var(--stroke-bold); height: var(--stroke-bold); background: var(--faint); border-radius: var(--r-pill); }
+.judex-project-card .card__footer { justify-content: space-between; margin-top: auto; padding-top: var(--s4); border-top: var(--stroke) solid var(--line); gap: var(--s2); }
+.judex-project-enter { color: var(--accent); padding-right: 0; }
+.judex-project-create-strip { grid-column: 1 / -1; display: flex; width: 100%; align-items: center; justify-content: flex-start; gap: var(--s4); border: var(--stroke) dashed var(--line); border-radius: var(--r-lg); background: transparent; padding: var(--s5) var(--s6); min-height: var(--s24); text-align: left; white-space: normal; }
+.judex-new-project-icon { width: var(--card-mark); height: var(--card-mark); border-radius: var(--r-pill); border: var(--stroke) solid var(--line); display: grid; place-items: center; color: var(--muted); }
+.judex-new-project-copy { display: flex; flex-direction: column; gap: var(--s2); }
+.judex-new-project-copy strong { font-size: var(--text-base); font-weight: var(--weight-medium); }
+.judex-new-project-copy > span { font-size: var(--text-sm); color: var(--muted); }
+.judex-new-project-link { display: flex; align-items: center; gap: var(--s2); color: var(--accent); font-size: var(--text-sm); margin-left: auto; }
+.judex-project-recent { margin-top: var(--s10); }
+.judex-section-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--s4); }
+.judex-section-heading h2 { font-size: var(--text-md); }
+.judex-section-heading > span { color: var(--faint); font-size: var(--text-xs); }
+.judex-recent-list { border: var(--stroke) solid var(--line); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; }
+.judex-recent-row { display: flex; width: 100%; justify-content: flex-start; padding: var(--s4) var(--s5); gap: var(--s4); border-radius: 0; }
+.judex-recent-row + .judex-recent-row { border-top: var(--stroke) solid var(--line); }
+.judex-recent-icon { width: var(--button-height); height: var(--button-height); border-radius: var(--r-md); display: grid; place-items: center; }
+.judex-recent-title { display: flex; flex-direction: column; gap: var(--s1); align-items: flex-start; text-align: left; min-width: 0; }
+.judex-recent-title strong { font-size: var(--text-base); font-weight: var(--weight-medium); }
+.judex-recent-title > span { font-size: var(--text-xs); color: var(--muted); }
+.judex-recent-date { margin-left: auto; color: var(--faint); font-size: var(--text-xs); }
+.judex-recent-row > svg:last-child { color: var(--faint); }
+.judex-project-footer { display: flex; justify-content: space-between; align-items: center; padding-top: var(--s10); color: var(--faint); font-size: var(--text-xs); }
+.judex-project-footer > span:last-child { display: flex; align-items: center; gap: var(--s2); }
+.judex-project-footer svg { width: var(--icon-sm); height: var(--icon-sm); }
 
-.judex-auth-card {
-  width: min(440px, calc(100vw - 48px));
-}
 
-.judex-auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 8px;
-}
-
-.judex-auth-reveal {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-sm);
-  color: var(--muted);
-}
-
-.judex-auth-hint {
-  font-size: var(--text-sm);
-  color: var(--muted);
-}
-
-.judex-workspace-shell {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-  color: var(--ink);
-}
-
-.judex-workspace-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 10px 20px;
-  border-bottom: 1px solid var(--line);
-}
-
-.judex-workspace-user {
-  font-size: var(--text-sm);
-  color: var(--muted);
-}
-
-.judex-workspace-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 8px;
-}
-
-.judex-workspace-main {
-  flex: 1;
-  width: min(880px, 100% - 48px);
-  margin: 0 auto;
-  padding: 28px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.judex-workspace-section {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.judex-workspace-create {
-  width: 100%;
-}
-
-.judex-workspace-input {
-  flex: 1;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  color: inherit;
-  font-size: var(--text-base);
-}
-
-.judex-workspace-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 0;
-}
-
-.judex-workspace-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  transition: border-color 0.15s ease;
-}
-.judex-workspace-item:hover {
-  border-color: var(--muted);
-}
-.judex-workspace-item .judex-workspace-item-main {
-  flex: 1;
-  min-width: 0;
-  justify-content: flex-start;
-}
-.judex-workspace-item-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: var(--weight-medium);
-}
-
-.judex-workspace-empty {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: center;
-  text-align: center;
-  padding: 56px 24px;
-  border: 1px dashed var(--line);
-  border-radius: var(--r-md);
-  color: var(--muted);
-}
-.judex-workspace-empty strong {
-  color: var(--ink);
-  font-size: var(--text-lg);
-}
-.judex-workspace-empty-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 46px;
-  border-radius: var(--r-pill);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  color: var(--muted);
-}
-.judex-workspace-empty-steps {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px 18px;
-  margin: 10px 0 0;
-  padding: 0;
-  font-size: var(--text-sm);
-}
-.judex-workspace-empty-steps li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.judex-workspace-status {
-  color: var(--muted);
-}
-
-.judex-workspace-tabs {
-  display: flex;
-  gap: 8px;
-}
-
-.judex-account-card {
-  width: 100%;
-}
-
-.judex-session-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 0;
-}
-
-.judex-session-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--surface);
-}
-
-.judex-session-item small {
-  display: block;
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-
-.judex-panel-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.judex-inline-form {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
+.judex-entry { color: var(--ink); background: var(--bg); font-family: var(--font-ui); }
+.judex-entry-split { position: relative; min-width: var(--desktop-min); }
+.judex-entry-controls { position: absolute; right: var(--s6); top: var(--s5); z-index: 2; }
+.judex-entry-review { min-height: 100dvh; padding: var(--s20) var(--s6); position: relative; }
+.judex-entry-review-content { width: min(var(--content-max),100%); max-width: var(--review-content-width); margin: 0 auto; }
+.judex-entry-review-content > .card { padding: var(--s8); border: var(--stroke) solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-card); }
+.judex-entry-split .judex-auth-card { width:100%; padding:0; background:transparent; border:0; box-shadow:none; border-radius:0; gap:0; }
+.judex-auth-card .card__header { gap: var(--s3); }
+.judex-entry-split .card__title { margin-top:var(--s6); font-size:var(--text-3xl); font-weight:var(--weight-semibold); letter-spacing:var(--tracking-title); }
+.judex-entry-split .card__description { font-size:var(--text-base); color:var(--muted); line-height:var(--leading-base); }
+.judex-entry-split .card__content { margin-top:var(--s8); padding:0; }
+.judex-entry-split .card__footer { justify-content:center; flex-wrap:wrap; gap:var(--s1); padding:0; margin-top:var(--s5); color:var(--muted); font-size:var(--text-sm); }
+.judex-entry-badge { align-self:flex-start; padding:var(--s1) var(--s2); border-radius:var(--r-xs); color:var(--green-ink); background:var(--green-bg); font-size:var(--text-xs); }
+.judex-auth-form { display:flex; flex-direction:column; gap:var(--s5); margin:0; }
+.judex-auth-form .textfield { gap:var(--s2); }
+.judex-auth-form .input,.judex-auth-form .textarea { min-height:var(--control-lg); box-shadow:none; font-size:var(--text-base); }
+.judex-auth-form .label { font-size:var(--text-base); font-weight:var(--weight-medium); color:var(--ink); }
+.judex-auth-form > .judex-control[type=submit] { margin-top:var(--s2); width:100%; }
+.judex-auth-reveal { display:flex; align-items:center; gap:var(--s2); font-size:var(--text-sm); color:var(--muted); }
+.judex-auth-hint { font-size:var(--text-sm); line-height:var(--leading-base); color:var(--muted); }
+.judex-entry-art-top { display:flex; align-items:center; justify-content:space-between; gap:var(--s2); }
+.judex-entry-art-top > span { display:flex;align-items:center;gap:var(--s2);font-size:var(--text-sm);font-weight:var(--weight-semibold); }
+.judex-entry-art-decision > span { width:var(--s8);height:var(--s8);display:grid;place-items:center;background:var(--green-bg);color:var(--green-ink);border-radius:var(--r-pill);flex-shrink:0; }
+.judex-entry-art-line-short { width:70%; }
+.judex-workspace-shell { min-height:100dvh; background:var(--bg); color:var(--ink); }
+.judex-workspace-actions { display:flex;align-items:center;gap:var(--s2); }
+.judex-project-card-top { display:flex; align-items:center; justify-content:space-between; gap:var(--s2); }
+.judex-project-create-strip { margin-top:var(--s5); }
+.judex-project-create-strip > span:first-child { width:var(--card-mark);height:var(--card-mark);border:var(--stroke) solid var(--line);border-radius:var(--r-pill);display:grid;place-items:center;color:var(--muted); }
+.judex-project-create-strip > span:nth-child(2) { display:flex;flex-direction:column;gap:var(--s2); }
+.judex-project-create-strip strong { font-size:var(--text-base);font-weight:var(--weight-medium); }
+.judex-project-create-strip small { font-size:var(--text-sm);color:var(--muted); }
+.judex-project-create-strip > span:last-child { display:flex;align-items:center;gap:var(--s2);margin-left:auto;color:var(--accent);font-size:var(--text-sm); }
+.judex-recent-row > span:nth-child(2) { display:flex;flex-direction:column;align-items:start;text-align:left;gap:var(--s1);min-width:0; }
+.judex-recent-row strong { font-size:var(--text-base);font-weight:var(--weight-medium); }
+.judex-recent-row small { font-size:var(--text-xs);color:var(--muted); }
+.judex-recent-row time { margin-left:auto;color:var(--faint);font-size:var(--text-xs); }
+.judex-recent-empty { background:var(--surface);border:var(--stroke) solid var(--line);border-radius:var(--r-lg);padding:var(--s6);color:var(--muted); }
+.judex-recent-empty p { font-size:var(--text-base);margin:0 0 var(--s2); }
+.judex-recent-empty span { font-size:var(--text-sm); }
+.judex-workspace-status { color:var(--muted);font-size:var(--text-base); }
+.judex-panel-stack { display:flex;flex-direction:column;gap:var(--s5); }
+.judex-inline-form { display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap; }
+.judex-account-card { width:100%; }
+.judex-session-list { display:flex;flex-direction:column;gap:var(--s3);list-style:none;padding:0; }
+.judex-session-item { display:flex;justify-content:space-between;align-items:center;gap:var(--s4);padding:var(--s4);border:var(--stroke) solid var(--line);border-radius:var(--r-md);background:var(--surface); }
+.judex-session-item small { display:block; color:var(--muted);font-size:var(--text-sm); }
+@media (max-width:1250px) { .judex-workspace-main { width:calc(100% - var(--s16)); } }

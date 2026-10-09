@@ -25,15 +25,16 @@ const (
 )
 
 type Config struct {
-	RegisterPerIP   int64
-	Environment     string
-	HTTPAddress     string
-	WebDirectory    string
-	ShutdownTimeout time.Duration
-	Mode            Mode
-	DatabaseURL     string
-	WorkerCount     int
-	LogLevel        string
+	MaterialConverterURL string
+	RegisterPerIP        int64
+	Environment          string
+	HTTPAddress          string
+	WebDirectory         string
+	ShutdownTimeout      time.Duration
+	Mode                 Mode
+	DatabaseURL          string
+	WorkerCount          int
+	LogLevel             string
 	// AllowedOrigins lists exact browser origins accepted for writes
 	// (02 §2); production must include the public origin.
 	AllowedOrigins []string

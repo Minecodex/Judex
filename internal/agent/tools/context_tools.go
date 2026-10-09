@@ -6,6 +6,7 @@ import (
 )
 
 func registerContextTools(r *Registry) {
+	registerTaskAnalysis(r)
 	r.Register(Tool{Name: "read_context", Description: "按 runId 和 toolCallId 分段读取本职责会话的原始工具结果；不会读取其他岗位私有记录。", InputSchema: objectSchema([]string{"runId", "toolCallId"}, map[string]any{"runId": map[string]any{"type": "string"}, "toolCallId": map[string]any{"type": "string"}, "offset": map[string]any{"type": "integer", "minimum": 0}, "limit": map[string]any{"type": "integer", "minimum": 1, "maximum": 16000}}), Effect: EffectRead, Execute: func(ctx context.Context, args map[string]any, env Env) (Result, error) {
 		if env.ReadContext == nil {
 			return Result{}, fmt.Errorf("context reader unavailable")

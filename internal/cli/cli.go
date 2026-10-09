@@ -286,7 +286,10 @@ func Root() *cobra.Command {
 	materialCmd.AddCommand(materialListCommand(), materialUploadCommand(), materialDownloadCommand())
 	root.AddCommand(materialCmd, bundleCommand())
 
-	root.AddCommand(submitCommand(), reportCommand())
+	root.AddCommand(submitCommand(), reportCommand(), discussionSuggestionCommands(), taskAnalysisCommands())
+	topicCmd := &cobra.Command{Use: "topic", Short: "讨论会话"}
+	topicCmd.AddCommand(topicForkCommand())
+	root.AddCommand(topicCmd)
 
 	proposalCmd := &cobra.Command{Use: "proposal", Short: "提案"}
 	proposalCmd.AddCommand(proposalDraftCommand(), proposalSubmitCommand())
@@ -300,7 +303,8 @@ func Root() *cobra.Command {
 	root.AddCommand(decisionCmd)
 
 	taskCmd := &cobra.Command{Use: "task", Short: "任务"}
-	taskCmd.AddCommand(taskAcceptCommand(), taskReopenCommand())
+	taskCmd.AddCommand(taskAcceptCommand(), taskReopenCommand(), taskActivityCommand())
+	taskCmd.AddCommand(taskExecutionCommand("skip"), taskExecutionCommand("restore"))
 	root.AddCommand(taskCmd)
 
 	handoffCmd := &cobra.Command{Use: "handoff", Short: "交接"}
@@ -455,23 +459,7 @@ func materialListCommand() *cobra.Command {
 	})
 }
 
-func materialUploadCommand() *cobra.Command {
-	return &cobra.Command{Use: "upload PATH", Short: "分片上传并登记版本", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		projectID, err := currentProject()
-		if err != nil {
-			return emit(nil, err)
-		}
-		c, err := NewClient()
-		if err != nil {
-			return emit(nil, err)
-		}
-		version, err := UploadFile(cmd.Context(), c, projectID, args[0])
-		if err != nil {
-			return emit(nil, err)
-		}
-		return emit(version, nil)
-	}}
-}
+func materialUploadCommand() *cobra.Command { return materialUploadWithContext() }
 
 func submitCommand() *cobra.Command {
 	var file string

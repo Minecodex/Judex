@@ -36,7 +36,18 @@ func TestEveryModelCallRefreshesPrivateContextAndKeepsItPrivate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = pool.Exec(ctx, `INSERT INTO personal_project_preferences(project_id,user_id,prompt,updated_at) VALUES($1,$2,'PRIVATE-OLD-PROMPT',now())`, p.ID, user.ID); err != nil {
+	if _, err = projects.UpdateMyPreferences(ctx, user.ID, p.ID, role.ID, 0, "PRIVATE-OLD-PROMPT"); err != nil {
+		t.Fatal(err)
+	}
+	otherRole, err := projects.CreatePosition(ctx, user.ID, p.ID, project.PositionDraft{Name: "Design", Prompt: "runtime-other-duty"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherIdentity, err := projects.CreateIdentity(ctx, user.ID, p.ID, otherRole.ID, user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = projects.UpdateMyPreferences(ctx, user.ID, p.ID, otherRole.ID, 0, "PRIVATE-OTHER-POSITION-PROMPT"); err != nil {
 		t.Fatal(err)
 	}
 	var topic uuid.UUID
@@ -53,17 +64,21 @@ func TestEveryModelCallRefreshesPrivateContextAndKeepsItPrivate(t *testing.T) {
 		t.Fatal(err)
 	}
 	childCalls := 0
+	otherCalls := 0
 	parentCalls := 0
 	provider := contextProvider(func(ctx context.Context, r model.Request) (<-chan model.Event, error) {
 		events := make(chan model.Event, 4)
 		system := r.Messages[0].Content
 		if strings.Contains(system, "runtime-refresh-duty") {
 			childCalls++
+			if strings.Contains(system, "PRIVATE-OTHER-POSITION-PROMPT") {
+				t.Error("another position's preference entered the review context")
+			}
 			if childCalls == 1 {
 				if !strings.Contains(system, "PRIVATE-OLD-PROMPT") {
 					t.Error("missing initial preference")
 				}
-				if _, err := pool.Exec(ctx, `UPDATE personal_project_preferences SET prompt='PRIVATE-NEW-PROMPT',revision=revision+1 WHERE project_id=$1 AND user_id=$2`, p.ID, user.ID); err != nil {
+				if _, err := projects.UpdateMyPreferences(ctx, user.ID, p.ID, role.ID, 1, "PRIVATE-NEW-PROMPT"); err != nil {
 					return nil, err
 				}
 				events <- model.Event{Type: "toolCallReady", ToolCallID: "refresh-read", ToolName: "query_work", ArgsJSON: `{"objectType":"task"}`}
@@ -73,6 +88,12 @@ func TestEveryModelCallRefreshesPrivateContextAndKeepsItPrivate(t *testing.T) {
 				}
 				events <- model.Event{Type: "textDelta", TextDelta: "岗位公开意见：仍有反对，等待人工核对"}
 			}
+		} else if strings.Contains(system, "runtime-other-duty") {
+			otherCalls++
+			if !strings.Contains(system, "PRIVATE-OTHER-POSITION-PROMPT") || strings.Contains(system, "PRIVATE-OLD-PROMPT") || strings.Contains(system, "PRIVATE-NEW-PROMPT") {
+				t.Error("design context did not isolate its own preference")
+			}
+			events <- model.Event{Type: "textDelta", TextDelta: "设计岗位的公开意见"}
 		} else {
 			parentCalls++
 			raw, _ := json.Marshal(r.Messages)
@@ -82,6 +103,8 @@ func TestEveryModelCallRefreshesPrivateContextAndKeepsItPrivate(t *testing.T) {
 			if parentCalls == 1 {
 				args, _ := json.Marshal(map[string]string{"position": identity.ID.String(), "question": "审阅"})
 				events <- model.Event{Type: "toolCallReady", ToolCallID: "position-review", ToolName: "call_agent", ArgsJSON: string(args)}
+				args, _ = json.Marshal(map[string]string{"position": otherIdentity.ID.String(), "question": "设计"})
+				events <- model.Event{Type: "toolCallReady", ToolCallID: "position-design", ToolName: "call_agent", ArgsJSON: string(args)}
 			} else {
 				events <- model.Event{Type: "textDelta", TextDelta: "保留岗位异议，待人确认"}
 			}
@@ -95,8 +118,8 @@ func TestEveryModelCallRefreshesPrivateContextAndKeepsItPrivate(t *testing.T) {
 	if err = executor.ExecuteBatch(ctx, p.ID, bid); err != nil {
 		t.Fatal(err)
 	}
-	if childCalls != 2 || parentCalls != 2 {
-		t.Fatalf("unexpected calls: parent=%d child=%d", parentCalls, childCalls)
+	if childCalls != 2 || otherCalls != 1 || parentCalls != 2 {
+		t.Fatalf("unexpected calls: parent=%d child=%d other=%d", parentCalls, childCalls, otherCalls)
 	}
 	var leaked bool
 	if err = pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM context_checkpoints WHERE project_id=$1 AND manifest::text LIKE '%PRIVATE-%') OR EXISTS(SELECT 1 FROM agent_runs WHERE project_id=$1 AND manifest::text LIKE '%PRIVATE-%')`, p.ID).Scan(&leaked); err != nil || leaked {

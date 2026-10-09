@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/kakj-go/Judex/internal/collaboration"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/kakj-go/Judex/internal/work"
 )
@@ -26,6 +27,13 @@ func (h *WorkHandlers) Register(spec *SpecRouter) {
 	spec.Register("getPlan", withAuth(h.getPlan))
 	spec.Register("discardPlan", withAuth(h.discardPlan))
 	spec.Register("discardTask", withAuth(h.discardTask))
+	spec.Register("updatePlanDraft", withAuth(h.updateDraft))
+	spec.Register("updateTaskDraft", withAuth(h.updateDraft))
+	spec.Register("getPlanDiscardReview", withAuth(h.draftDiscardReview))
+	spec.Register("getTaskDiscardReview", withAuth(h.draftDiscardReview))
+	spec.Register("getTaskExecutionReview", withAuth(h.executionReview))
+	spec.Register("skipTask", withAuth(h.executionSkip))
+	spec.Register("restoreTask", withAuth(h.executionRestore))
 	spec.Register("startTask", withAuth(h.startTask))
 	spec.Register("getExecutionMap", withAuth(h.executionMap))
 	spec.Register("getTaskAcceptanceReview", withAuth(h.taskReview))
@@ -270,7 +278,7 @@ func (h *WorkHandlers) executionMap(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	m, err := h.Work.ExecutionMap(c.Request.Context(), p.UserID, projectID, planID)
+	m, err := h.Work.ExecutionMap(c.Request.Context(), p.UserID, projectID, planID, c.Query("includeDrafts") == "true", c.Query("includeReferences") == "true")
 	if err != nil {
 		respond{}.error(c, err)
 		return
@@ -285,12 +293,19 @@ func (h *WorkHandlers) listPlans(c *gin.Context) {
 		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
 		return
 	}
-	plans, err := h.Work.ListPlans(c.Request.Context(), p.UserID, projectID)
+	plans, err := h.Work.ListPlanCards(c.Request.Context(), p.UserID, projectID, work.PlanFilter{Query: c.Query("q"), Status: c.Query("status"), Mine: c.Query("mine") == "true"})
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, respond{}.list(c, plans, nil))
+	count, e := h.Work.CountPlanCards(c.Request.Context(), p.UserID, projectID, work.PlanFilter{Query: c.Query("q"), Status: c.Query("status"), Mine: c.Query("mine") == "true"})
+	if e != nil {
+		respond{}.error(c, e)
+		return
+	}
+	page := respond{}.list(c, plans, nil)
+	page["totalCount"] = count
+	respond{}.ok(c, page)
 }
 
 func optionalUUID(raw string) (*uuid.UUID, error) {
@@ -317,6 +332,8 @@ func (h *WorkHandlers) createPlan(c *gin.Context) {
 		AcceptanceCriteria string `json:"acceptanceCriteria"`
 		OwnerIdentityID    string `json:"ownerIdentityId"`
 		WorkflowID         string `json:"workflowId"`
+		SourceTopicID      string `json:"sourceTopicId"`
+		ForkAfterSeq       *int64 `json:"forkAfterSeq"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
@@ -332,8 +349,16 @@ func (h *WorkHandlers) createPlan(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
+	source := uuid.Nil
+	if req.SourceTopicID != "" {
+		source, err = uuid.Parse(req.SourceTopicID)
+		if err != nil {
+			respond{}.error(c, apierrors.Fields("sourceTopicId", "invalid"))
+			return
+		}
+	}
 	plan, err := h.Work.CreatePlanDraft(c.Request.Context(), p.UserID, projectID,
-		req.Title, req.Goal, req.AcceptanceCriteria, owner, workflow)
+		req.Title, req.Goal, req.AcceptanceCriteria, owner, workflow, collaboration.Origin{TopicID: source, AfterSeq: req.ForkAfterSeq})
 	if err != nil {
 		respond{}.error(c, err)
 		return
@@ -353,7 +378,7 @@ func (h *WorkHandlers) listTasks(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	tasks, err := h.Work.ListTasks(c.Request.Context(), p.UserID, projectID, planID)
+	tasks, err := h.Work.ListTasks(c.Request.Context(), p.UserID, projectID, planID, c.Query("includeReferences") == "true")
 	if err != nil {
 		respond{}.error(c, err)
 		return
@@ -504,17 +529,18 @@ func (h *WorkHandlers) discard(c *gin.Context, kind, param string) {
 		return
 	}
 	var req struct {
-		ExpectedVersion int64 `json:"expectedVersion"`
+		ExpectedVersion int64  `json:"expectedVersion"`
+		ReviewHash      string `json:"reviewHash" binding:"required"`
 	}
 	if err = bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	if err = h.Work.Discard(c.Request.Context(), principalFrom(c).UserID, projectID, target, kind, req.ExpectedVersion); err != nil {
+	if err = h.Work.Discard(c.Request.Context(), principalFrom(c).UserID, projectID, target, kind, req.ExpectedVersion, req.ReviewHash); err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, gin.H{"id": target, "status": "cancelled", "version": req.ExpectedVersion + 1})
+	respond{}.ok(c, gin.H{"discarded": true, "id": target, "status": "cancelled", "version": req.ExpectedVersion + 1})
 }
 
 func (h *WorkHandlers) respondTask(c *gin.Context, projectID, taskID uuid.UUID) {

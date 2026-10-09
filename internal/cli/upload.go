@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -25,7 +26,7 @@ func UploadFile(ctx context.Context, c *client.Client, projectID, path string) (
 	return uploadFile(ctx, c, projectID, path, "file", "", "")
 }
 
-func uploadFile(ctx context.Context, c *client.Client, projectID, path, kind, entrypoint, name string) (map[string]any, error) {
+func uploadFile(ctx context.Context, c *client.Client, projectID, path, kind, entrypoint, name string, purposes ...string) (map[string]any, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -58,8 +59,11 @@ func uploadFile(ctx context.Context, c *client.Client, projectID, path, kind, en
 		"name":   name,
 		"size":   info.Size(),
 		"sha256": checksum,
-		"mime":   "application/octet-stream",
+		"mime":   uploadMime(name),
 		"kind":   kind,
+	}
+	if len(purposes) > 0 && purposes[0] != "" {
+		body["purpose"] = purposes[0]
 	}
 	if kind == "html_bundle" {
 		body["entrypoint"] = entrypoint
@@ -158,4 +162,15 @@ func uploadFile(ctx context.Context, c *client.Client, projectID, path, kind, en
 		_ = os.Remove(receipt)
 	}
 	return version, nil
+}
+
+func UploadFileWithPurpose(ctx context.Context, c *client.Client, project, path, purpose string) (map[string]any, error) {
+	return uploadFile(ctx, c, project, path, "file", "", "", purpose)
+}
+func uploadMime(name string) string {
+	value := mime.TypeByExtension(filepath.Ext(name))
+	if value == "" {
+		return "application/octet-stream"
+	}
+	return value
 }

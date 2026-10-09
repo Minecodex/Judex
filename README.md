@@ -1,12 +1,35 @@
 # Judex
 
-当前前端是以项目与聊天为中心的协作工作区：中央讨论与人工决定、右侧任务执行图和设置。运行与边界见 [聊天协作前端重构](docs/聊天协作前端重构.md)。旧独立原型 `docs/demo` 已删除，前端统一在 `web/` 维护。
+Judex 是面向团队的项目协同平台。成员在本地完成实际工作，平台负责记录成果、共享资料、分析和提醒；正式安排、交接和验收由有权人员确认。
+
+当前桌面 Web 入口按“项目列表 → 项目协同与计划 → 任务路线／计划或任务讨论”组织。讨论区保留会话、分叉和附件草稿，右栏通过标签查看计划、任务概览、记录、流程参考和共享资料；项目设置使用独立页面。正式模式与示例预览共用组件和主题，支持中英文、深浅配色。
+
+仓库：[Minecodex/Judex](https://github.com/Minecodex/Judex)。主分支 `main` 使用保护规则，修改应提交到工作分支并通过 PR 合并。
+
+## 当前能力
+
+- 项目、计划和任务：依赖图、路线全屏与只读预览，多参与职责、交接、人工验收和重开。
+- 工作安排：版本化草稿编辑和丢弃，正式变更提案及逐人确认；管理员可审阅影响后跳过／恢复任务，保留原阶段和依据。
+- 讨论与记录：对象范围会话、共享历史分叉、原始报告与独立 AI 分析、来源定位及阅读位置恢复。
+- 共享资料：上传、固定版本、内容预览、用途关联和历史；支持 PDF、图片、文本／源码、目录和压缩包等场景，权限由真实 API 校验。
+- 配置与本地接入：职位与流程场景模板、人工发布、个人职位工作偏好、CLI／Skill 上报及需要人工决定的确认入口。
+
+对应实现与验收见 [Demo4 逐项复核](docs/plans/demo4/REVIEW5-20261009.md)、[共享资料体验收尾](docs/共享资料体验收尾-20261009.md)及[文档索引](docs/README.md)。各记录说明自身范围与制品，整套 V1 的运行门槛另见实施计划。
 
 ## 正式工程入口
 
 工程组成：`cmd/` 放 server 与 CLI 入口（Agent harness 位于 `internal/agent`，随 server 进程运行）；`internal/` 放 Go + Gin 模块化单体；`web/` 放 React + HeroUI + Tailwind + Zustand + TanStack Query；`tests/` 集中测试；`deploy/` 放 Docker / Helm；根目录提供 Makefile 和 Apache-2.0 LICENSE / NOTICE。
 
-需要 Go 1.25+、Node.js 22.12+、npm。在根目录执行 `go mod download`、`npm ci`，然后分别在两个终端运行：
+需要 Go **1.26+**、Node.js **22.12+**、npm；正式前端构建还需要 Python 3（可通过 `JUDEX_PYTHON` 指定），用于 CLI／Skill 下载包生成。
+
+```sh
+git clone https://github.com/Minecodex/Judex.git
+cd Judex
+go mod download
+npm ci
+```
+
+启动前按 [.env.example](.env.example) 设置进程环境变量。程序不会自动读取 `.env`：业务服务需要 PostgreSQL，资料功能需要 S3 兼容对象存储，平台 Agent 需要模型目录或网关；沙箱能力使用 OpenSandbox。依赖部署与 Secret 配置见 [部署说明](deploy/README.md)。在两个终端分别运行：
 
 ```sh
 # API http://127.0.0.1:8080
@@ -26,7 +49,7 @@ go vet ./...
 npm run test:web
 npm run build
 npm run test:e2e
-go run ./cmd/judex -server http://127.0.0.1:8080 status
+go run ./cmd/judex --server http://127.0.0.1:8080 status
 ```
 
 安装 GNU Make 后可使用 `make deps`、`make api`、`make web`、`make check`、`make image`。API 配置见 [.env.example](.env.example)，程序不自动加载 .env。
@@ -41,7 +64,9 @@ go run ./cmd/judex -server http://127.0.0.1:8080 status
 
 ## 设计与实现边界
 
-独立原型及其 4173 预览入口已移除。当前唯一前端工程为 `web/`，历史设计文档仅供理解决策背景。
+正式前端工程统一在 `web/`。历史 `docs/demo` 已删除；交互决策原型保存在 [项目协同](docs/plans/cooperation-ui/demo.html)、[共享资料 Demo3](docs/plans/cooperation-ui/demo3.html)和[计划任务 Demo4](docs/plans/cooperation-ui/demo4.html)，其示例人物和模拟数据只用于对照。
+
+原型源代码位于 `web/cooperation-preview`、`web/material-preview` 和 `web/task-route-preview`。例如执行 `node web/task-route-preview/build.mjs` 生成本地 `demo4.html` 后，运行 `node tests/task-route-preview/server.mjs`，可在 `http://127.0.0.1:5396/demo4.html` 查看交互原型。
 
 - [文档索引](docs/README.md)
 - [详细设计总览与技术基线](docs/详细设计/README.md)

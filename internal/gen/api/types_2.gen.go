@@ -4,8 +4,1136 @@ package apigen
 import "time"
 import openapi_types "github.com/oapi-codegen/runtime/types"
 
+// Notification defines model for Notification.
+type Notification struct {
+	CreatedAt time.Time               `json:"createdAt"`
+	EventId   *openapi_types.UUID     `json:"eventId,omitempty"`
+	Id        openapi_types.UUID      `json:"id"`
+	ObjectRef *map[string]interface{} `json:"objectRef,omitempty"`
+	ReadAt    *time.Time              `json:"readAt"`
+	Type      string                  `json:"type"`
+}
+
+// OwnerTransfer defines model for OwnerTransfer.
+type OwnerTransfer struct {
+	ConfirmedAt    *time.Time         `json:"confirmedAt,omitempty"`
+	ExpiresAt      time.Time          `json:"expiresAt"`
+	FromUserId     openapi_types.UUID `json:"fromUserId"`
+	Id             openapi_types.UUID `json:"id"`
+	ProjectVersion *int               `json:"projectVersion,omitempty"`
+	State          OwnerTransferState `json:"state"`
+	ToUserId       openapi_types.UUID `json:"toUserId"`
+}
+
+// OwnerTransferState defines model for OwnerTransfer.State.
+type OwnerTransferState string
+
+// OwnerTransferDecisionRequest defines model for OwnerTransferDecisionRequest.
+type OwnerTransferDecisionRequest struct {
+	Decision        OwnerTransferDecisionRequestDecision `json:"decision"`
+	ExpectedVersion int                                  `json:"expectedVersion"`
+}
+
+// OwnerTransferDecisionRequestDecision defines model for OwnerTransferDecisionRequest.Decision.
+type OwnerTransferDecisionRequestDecision string
+
+// OwnerTransferRequest defines model for OwnerTransferRequest.
+type OwnerTransferRequest struct {
+	ExpectedVersion int                `json:"expectedVersion"`
+	TargetUserId    openapi_types.UUID `json:"targetUserId"`
+}
+
+// PendingAction defines model for PendingAction.
+type PendingAction struct {
+	CreatedAt  time.Time               `json:"createdAt"`
+	DueAt      *time.Time              `json:"dueAt,omitempty"`
+	Id         openapi_types.UUID      `json:"id"`
+	Kind       PendingActionKind       `json:"kind"`
+	ObjectId   openapi_types.UUID      `json:"objectId"`
+	ObjectType PendingActionObjectType `json:"objectType"`
+	ProjectId  *openapi_types.UUID     `json:"projectId,omitempty"`
+	ReviewId   *openapi_types.UUID     `json:"reviewId,omitempty"`
+	Summary    *string                 `json:"summary,omitempty"`
+}
+
+// PendingActionKind defines model for PendingAction.Kind.
+type PendingActionKind string
+
+// PendingActionObjectType defines model for PendingAction.ObjectType.
+type PendingActionObjectType string
+
+// PersonalPreferences defines model for PersonalPreferences.
+type PersonalPreferences struct {
+	PositionId openapi_types.UUID `json:"positionId"`
+	Prompt     string             `json:"prompt"`
+	Revision   int                `json:"revision"`
+}
+
+// Plan defines model for Plan.
+type Plan struct {
+	AcceptanceCriteria *string               `json:"acceptanceCriteria,omitempty"`
+	Capabilities       *WorkCapabilities     `json:"capabilities,omitempty"`
+	CreatedAt          *time.Time            `json:"createdAt,omitempty"`
+	DiscardedAt        *time.Time            `json:"discardedAt,omitempty"`
+	Goal               *string               `json:"goal,omitempty"`
+	Id                 openapi_types.UUID    `json:"id"`
+	LatestAcceptanceId *openapi_types.UUID   `json:"latestAcceptanceId,omitempty"`
+	MainTopicId        *openapi_types.UUID   `json:"mainTopicId,omitempty"`
+	MyTaskCount        *int                  `json:"myTaskCount,omitempty"`
+	OwnerIdentityId    *openapi_types.UUID   `json:"ownerIdentityId"`
+	OwnerName          *string               `json:"ownerName,omitempty"`
+	ReferenceTaskIds   *[]openapi_types.UUID `json:"referenceTaskIds,omitempty"`
+	Status             PlanStatus            `json:"status"`
+	TaskStats          *struct {
+		Accepted  int  `json:"accepted"`
+		Active    int  `json:"active"`
+		Cancelled int  `json:"cancelled"`
+		Draft     *int `json:"draft,omitempty"`
+		Required  *int `json:"required,omitempty"`
+		Skipped   *int `json:"skipped,omitempty"`
+		Total     int  `json:"total"`
+	} `json:"taskStats,omitempty"`
+	Title      string              `json:"title"`
+	UpdatedAt  *time.Time          `json:"updatedAt,omitempty"`
+	Version    int                 `json:"version"`
+	WorkflowId *openapi_types.UUID `json:"workflowId"`
+}
+
+// PlanStatus defines model for Plan.Status.
+type PlanStatus string
+
+// PlanDiscussionSummary defines model for PlanDiscussionSummary.
+type PlanDiscussionSummary struct {
+	MainTopicId *openapi_types.UUID    `json:"mainTopicId"`
+	PlanId      openapi_types.UUID     `json:"planId"`
+	Suggestions []DiscussionSuggestion `json:"suggestions"`
+	Tasks       []struct {
+		ActivityCount  int                `json:"activityCount"`
+		LatestActivity *TaskActivity      `json:"latestActivity"`
+		TaskId         openapi_types.UUID `json:"taskId"`
+	} `json:"tasks"`
+}
+
+// PlanDraftRequest defines model for PlanDraftRequest.
+type PlanDraftRequest struct {
+	AcceptanceCriteria *string             `json:"acceptanceCriteria,omitempty"`
+	ForkAfterSeq       *int                `json:"forkAfterSeq,omitempty"`
+	Goal               *string             `json:"goal,omitempty"`
+	OwnerIdentityId    *openapi_types.UUID `json:"ownerIdentityId,omitempty"`
+	SourceTopicId      *openapi_types.UUID `json:"sourceTopicId,omitempty"`
+	Title              string              `json:"title"`
+	WorkflowId         *openapi_types.UUID `json:"workflowId,omitempty"`
+}
+
+// Position defines model for Position.
+type Position struct {
+	CurrentVersion int                 `json:"currentVersion"`
+	Id             openapi_types.UUID  `json:"id"`
+	ModelId        *openapi_types.UUID `json:"modelId,omitempty"`
+	Name           string              `json:"name"`
+	NodeBindings   []struct {
+		NodeId     string             `json:"nodeId"`
+		WorkflowId openapi_types.UUID `json:"workflowId"`
+	} `json:"nodeBindings"`
+
+	// PresetId 创建时复制的内置模板 ID；内容独立编辑，来源保持。
+	PresetId *string `json:"presetId,omitempty"`
+
+	// Prompt 公开职责提示词（所有人可见）。
+	Prompt        string         `json:"prompt"`
+	PublicSummary *string        `json:"publicSummary,omitempty"`
+	Revision      int            `json:"revision"`
+	Status        PositionStatus `json:"status"`
+}
+
+// PositionStatus defines model for Position.Status.
+type PositionStatus string
+
+// PositionDraftRequest defines model for PositionDraftRequest.
+type PositionDraftRequest struct {
+	ModelId      *openapi_types.UUID `json:"modelId,omitempty"`
+	Name         string              `json:"name"`
+	NodeBindings *[]struct {
+		NodeId     string             `json:"nodeId"`
+		WorkflowId openapi_types.UUID `json:"workflowId"`
+	} `json:"nodeBindings,omitempty"`
+	Prompt        *string `json:"prompt,omitempty"`
+	PublicSummary *string `json:"publicSummary,omitempty"`
+}
+
+// PositionPreset defines model for PositionPreset.
+type PositionPreset struct {
+	Id      string     `json:"id"`
+	Name    PresetText `json:"name"`
+	Prompt  PresetText `json:"prompt"`
+	Summary PresetText `json:"summary"`
+}
+
+// PositionPresetCatalog defines model for PositionPresetCatalog.
+type PositionPresetCatalog struct {
+	Roles     []PositionPreset   `json:"roles"`
+	Scenarios []PositionScenario `json:"scenarios"`
+	Version   string             `json:"version"`
+}
+
+// PositionScenario defines model for PositionScenario.
+type PositionScenario struct {
+	Description PresetText `json:"description"`
+	Id          string     `json:"id"`
+	Name        PresetText `json:"name"`
+	RoleIds     []string   `json:"roleIds"`
+}
+
+// PositionSummary defines model for PositionSummary.
+type PositionSummary struct {
+	CurrentVersion int                   `json:"currentVersion"`
+	Id             openapi_types.UUID    `json:"id"`
+	Name           string                `json:"name"`
+	PublicSummary  *string               `json:"publicSummary,omitempty"`
+	Status         PositionSummaryStatus `json:"status"`
+}
+
+// PositionSummaryStatus defines model for PositionSummary.Status.
+type PositionSummaryStatus string
+
+// PresetText defines model for PresetText.
+type PresetText struct {
+	En string `json:"en"`
+	Zh string `json:"zh"`
+}
+
+// PreviewSession defines model for PreviewSession.
+type PreviewSession struct {
+	ExpiresAt time.Time `json:"expiresAt"`
+
+	// PreviewUrl 隔离 preview origin 的短时 URL。
+	PreviewUrl string `json:"previewUrl"`
+}
+
+// Project defines model for Project.
+type Project struct {
+	ApprovalTimeoutSeconds *int                `json:"approvalTimeoutSeconds,omitempty"`
+	CreatedAt              time.Time           `json:"createdAt"`
+	DefaultModelId         *openapi_types.UUID `json:"defaultModelId,omitempty"`
+	Description            *string             `json:"description,omitempty"`
+	Id                     openapi_types.UUID  `json:"id"`
+	Kind                   ProjectKind         `json:"kind"`
+	MaxDiscussionRounds    *int                `json:"maxDiscussionRounds,omitempty"`
+
+	// Role 当前用户在该项目中的角色（owner/manager/member）；非成员为 null。
+	Role             ProjectRole     `json:"role"`
+	RoleVersion      *int            `json:"roleVersion,omitempty"`
+	SandboxProfileId *string         `json:"sandboxProfileId,omitempty"`
+	Status           ProjectStatus   `json:"status"`
+	Summary          *ProjectSummary `json:"summary,omitempty"`
+	Title            string          `json:"title"`
+	UpdatedAt        *time.Time      `json:"updatedAt,omitempty"`
+	Version          int             `json:"version"`
+}
+
+// ProjectKind defines model for Project.Kind.
+type ProjectKind string
+
+// ProjectRole 当前用户在该项目中的角色（owner/manager/member）；非成员为 null。
+type ProjectRole string
+
+// ProjectStatus defines model for Project.Status.
+type ProjectStatus string
+
+// ProjectBootstrap defines model for ProjectBootstrap.
+type ProjectBootstrap struct {
+	EventCursor int64 `json:"eventCursor"`
+
+	// Identities 当前用户在本项目的身份与当前绑定。
+	Identities          []Identity              `json:"identities"`
+	PendingActionsCount *int                    `json:"pendingActionsCount,omitempty"`
+	Project             Project                 `json:"project"`
+	Summary             *map[string]interface{} `json:"summary,omitempty"`
+}
+
+// ProjectMember defines model for ProjectMember.
+type ProjectMember struct {
+	DisplayName string             `json:"displayName"`
+	Email       string             `json:"email"`
+	Identities  *[]Identity        `json:"identities,omitempty"`
+	JoinedAt    time.Time          `json:"joinedAt"`
+	Role        ProjectMemberRole  `json:"role"`
+	State       ProjectMemberState `json:"state"`
+	UserId      openapi_types.UUID `json:"userId"`
+}
+
+// ProjectMemberRole defines model for ProjectMember.Role.
+type ProjectMemberRole string
+
+// ProjectMemberState defines model for ProjectMember.State.
+type ProjectMemberState string
+
+// ProjectSummary defines model for ProjectSummary.
+type ProjectSummary struct {
+	MemberCount   int `json:"memberCount"`
+	MemberPreview []struct {
+		DisplayName string             `json:"displayName"`
+		UserId      openapi_types.UUID `json:"userId"`
+	} `json:"memberPreview"`
+	TopicCount int `json:"topicCount"`
+}
+
+// Proposal defines model for Proposal.
+type Proposal struct {
+	CreatedAt       time.Time           `json:"createdAt"`
+	CurrentReviewId *openapi_types.UUID `json:"currentReviewId,omitempty"`
+	Id              openapi_types.UUID  `json:"id"`
+	Kind            ProposalKind        `json:"kind"`
+	Revision        *int                `json:"revision,omitempty"`
+	SenderUserId    *openapi_types.UUID `json:"senderUserId,omitempty"`
+	Status          ProposalStatus      `json:"status"`
+	TopicId         *openapi_types.UUID `json:"topicId,omitempty"`
+	Version         int                 `json:"version"`
+}
+
+// ProposalKind defines model for Proposal.Kind.
+type ProposalKind string
+
+// ProposalStatus defines model for Proposal.Status.
+type ProposalStatus string
+
+// ProposalChange defines model for ProposalChange.
+type ProposalChange struct {
+	// ClientRef 新对象临时引用；服务端分配真实 ID 后在结果中映射。
+	ClientRef *string   `json:"clientRef,omitempty"`
+	DependsOn *[]string `json:"dependsOn,omitempty"`
+
+	// ExpectedVersion 已有对象的版本校验；新对象省略。
+	ExpectedVersion *int                    `json:"expectedVersion,omitempty"`
+	Fields          *map[string]interface{} `json:"fields,omitempty"`
+	Operation       ProposalChangeOperation `json:"operation"`
+	TargetId        *openapi_types.UUID     `json:"targetId,omitempty"`
+	TargetType      string                  `json:"targetType"`
+}
+
+// ProposalChangeOperation defines model for ProposalChange.Operation.
+type ProposalChangeOperation string
+
+// ProposalDecisionRequest defines model for ProposalDecisionRequest.
+type ProposalDecisionRequest struct {
+	ActingBindingVersions *[]struct {
+		BindingVersion int                `json:"bindingVersion"`
+		IdentityId     openapi_types.UUID `json:"identityId"`
+	} `json:"actingBindingVersions,omitempty"`
+	Decision        ProposalDecisionRequestDecision `json:"decision"`
+	ExpectedVersion int                             `json:"expectedVersion"`
+	Reason          *string                         `json:"reason,omitempty"`
+	ReviewHash      string                          `json:"reviewHash"`
+	ReviewId        openapi_types.UUID              `json:"reviewId"`
+	SlotIds         []openapi_types.UUID            `json:"slotIds"`
+}
+
+// ProposalDecisionRequestDecision defines model for ProposalDecisionRequest.Decision.
+type ProposalDecisionRequestDecision string
+
+// ProposalDraftRequest defines model for ProposalDraftRequest.
+type ProposalDraftRequest struct {
+	Changes []ProposalChange         `json:"changes"`
+	Kind    ProposalDraftRequestKind `json:"kind"`
+	Reason  *string                  `json:"reason,omitempty"`
+	TopicId *openapi_types.UUID      `json:"topicId,omitempty"`
+}
+
+// ProposalDraftRequestKind defines model for ProposalDraftRequest.Kind.
+type ProposalDraftRequestKind string
+
+// ProposalReview defines model for ProposalReview.
+type ProposalReview struct {
+	CanAct              *bool                          `json:"canAct,omitempty"`
+	Changes             []ProposalChange               `json:"changes"`
+	CreatedIds          *map[string]openapi_types.UUID `json:"createdIds,omitempty"`
+	DeadlineAt          *time.Time                     `json:"deadlineAt,omitempty"`
+	FirstApprovalAt     *time.Time                     `json:"firstApprovalAt,omitempty"`
+	ProposalId          openapi_types.UUID             `json:"proposalId"`
+	ReviewHash          string                         `json:"reviewHash"`
+	ReviewId            openapi_types.UUID             `json:"reviewId"`
+	Slots               []ApprovalSlot                 `json:"slots"`
+	Status              ProposalReviewStatus           `json:"status"`
+	SubmittedAt         *time.Time                     `json:"submittedAt,omitempty"`
+	UnmetRequirements   *[]map[string]interface{}      `json:"unmetRequirements,omitempty"`
+	Version             *int                           `json:"version,omitempty"`
+	WorkflowConstraints *[]map[string]interface{}      `json:"workflowConstraints,omitempty"`
+}
+
+// ProposalReviewStatus defines model for ProposalReview.Status.
+type ProposalReviewStatus string
+
+// ProposalRevisionRequest defines model for ProposalRevisionRequest.
+type ProposalRevisionRequest struct {
+	Changes          []ProposalChange   `json:"changes"`
+	PreviousReviewId openapi_types.UUID `json:"previousReviewId"`
+	Reason           string             `json:"reason"`
+}
+
+// ProposalSubmitRequest defines model for ProposalSubmitRequest.
+type ProposalSubmitRequest struct {
+	DraftHash       string `json:"draftHash"`
+	ExpectedVersion int    `json:"expectedVersion"`
+}
+
+// PublicUser defines model for PublicUser.
+type PublicUser struct {
+	CreatedAt   time.Time `json:"createdAt"`
+	DisplayName string    `json:"displayName"`
+
+	// Email 登录邮箱（未验证的登录标识，非已验证企业身份）。
+	Email   string             `json:"email"`
+	Id      openapi_types.UUID `json:"id"`
+	Locale  PublicUserLocale   `json:"locale"`
+	Status  PublicUserStatus   `json:"status"`
+	Version int                `json:"version"`
+}
+
+// PublicUserLocale defines model for PublicUser.Locale.
+type PublicUserLocale string
+
+// PublicUserStatus defines model for PublicUser.Status.
+type PublicUserStatus string
+
+// PublishWorkflowRequest defines model for PublishWorkflowRequest.
+type PublishWorkflowRequest struct {
+	// DraftHash SHA256 十六进制；服务端重新计算校验。
+	DraftHash       string `json:"draftHash"`
+	ExpectedVersion int    `json:"expectedVersion"`
+}
+
+// RecentTopic defines model for RecentTopic.
+type RecentTopic struct {
+	LastActivityAt time.Time          `json:"lastActivityAt"`
+	ProjectId      openapi_types.UUID `json:"projectId"`
+	ProjectTitle   string             `json:"projectTitle"`
+	Title          string             `json:"title"`
+	TopicId        openapi_types.UUID `json:"topicId"`
+}
+
+// RecoverRequest defines model for RecoverRequest.
+type RecoverRequest struct {
+	NewPassword  string `json:"newPassword"`
+	RecoveryCode string `json:"recoveryCode"`
+}
+
+// RefreshRequest defines model for RefreshRequest.
+type RefreshRequest struct {
+	RefreshToken string `json:"refreshToken"`
+}
+
+// RegisterRequest defines model for RegisterRequest.
+type RegisterRequest struct {
+	DisplayName string `json:"displayName"`
+	Email       string `json:"email"`
+
+	// Password 允许粘贴与密码管理器，不限制字符类别。
+	Password string `json:"password"`
+}
+
+// ReleaseReport defines model for ReleaseReport.
+type ReleaseReport struct {
+	CreatedAt         time.Time          `json:"createdAt"`
+	Environment       string             `json:"environment"`
+	Id                openapi_types.UUID `json:"id"`
+	ReportedBy        openapi_types.UUID `json:"reportedBy"`
+	RepositoryCommits *[]struct {
+		Branch       *string            `json:"branch,omitempty"`
+		Commit       string             `json:"commit"`
+		RepositoryId openapi_types.UUID `json:"repositoryId"`
+	} `json:"repositoryCommits,omitempty"`
+	Status       ReleaseReportStatus `json:"status"`
+	SubmissionId *openapi_types.UUID `json:"submissionId,omitempty"`
+	Url          *string             `json:"url,omitempty"`
+	VersionLabel string              `json:"versionLabel"`
+}
+
+// ReleaseReportStatus defines model for ReleaseReport.Status.
+type ReleaseReportStatus string
+
+// ReleaseReportRequest defines model for ReleaseReportRequest.
+type ReleaseReportRequest struct {
+	Environment       string `json:"environment"`
+	RepositoryCommits *[]struct {
+		Branch       *string            `json:"branch,omitempty"`
+		Commit       string             `json:"commit"`
+		RepositoryId openapi_types.UUID `json:"repositoryId"`
+	} `json:"repositoryCommits,omitempty"`
+	Status       ReleaseReportRequestStatus `json:"status"`
+	SubmissionId *openapi_types.UUID        `json:"submissionId,omitempty"`
+	Url          *string                    `json:"url,omitempty"`
+	VersionLabel string                     `json:"versionLabel"`
+}
+
+// ReleaseReportRequestStatus defines model for ReleaseReportRequest.Status.
+type ReleaseReportRequestStatus string
+
+// RemoveMemberRequest defines model for RemoveMemberRequest.
+type RemoveMemberRequest struct {
+	ExpectedVersion int    `json:"expectedVersion"`
+	Reason          string `json:"reason"`
+}
+
+// RemoveMemberResult defines model for RemoveMemberResult.
+type RemoveMemberResult struct {
+	AffectedResponsibilities []struct {
+		IdentityId openapi_types.UUID                                   `json:"identityId"`
+		Resolution RemoveMemberResultAffectedResponsibilitiesResolution `json:"resolution"`
+	} `json:"affectedResponsibilities"`
+}
+
+// RemoveMemberResultAffectedResponsibilitiesResolution defines model for RemoveMemberResult.AffectedResponsibilities.Resolution.
+type RemoveMemberResultAffectedResponsibilitiesResolution string
+
+// ReopenRequest defines model for ReopenRequest.
+type ReopenRequest struct {
+	AcceptanceId    *openapi_types.UUID `json:"acceptanceId,omitempty"`
+	ExpectedVersion int                 `json:"expectedVersion"`
+	Reason          string              `json:"reason"`
+}
+
+// ReplaceIdentityRequest defines model for ReplaceIdentityRequest.
+type ReplaceIdentityRequest struct {
+	ExpectedBindingVersion int                `json:"expectedBindingVersion"`
+	NewUserId              openapi_types.UUID `json:"newUserId"`
+	Reason                 string             `json:"reason"`
+}
+
+// ReplaceTopicLinksRequest defines model for ReplaceTopicLinksRequest.
+type ReplaceTopicLinksRequest struct {
+	ExpectedLinksVersion int64 `json:"expectedLinksVersion"`
+	TargetRefs           []struct {
+		ObjectId   openapi_types.UUID                           `json:"objectId"`
+		ObjectType ReplaceTopicLinksRequestTargetRefsObjectType `json:"objectType"`
+	} `json:"targetRefs"`
+}
+
+// ReplaceTopicLinksRequestTargetRefsObjectType defines model for ReplaceTopicLinksRequest.TargetRefs.ObjectType.
+type ReplaceTopicLinksRequestTargetRefsObjectType string
+
+// RepositoryDraftRequest defines model for RepositoryDraftRequest.
+type RepositoryDraftRequest struct {
+	DefaultBranch *string `json:"defaultBranch,omitempty"`
+	DisplayName   string  `json:"displayName"`
+	Provider      *string `json:"provider,omitempty"`
+	Url           string  `json:"url"`
+}
+
+// RepositoryLink defines model for RepositoryLink.
+type RepositoryLink struct {
+	ArchivedAt    *time.Time         `json:"archivedAt"`
+	DefaultBranch string             `json:"defaultBranch"`
+	DisplayName   string             `json:"displayName"`
+	Id            openapi_types.UUID `json:"id"`
+	Provider      string             `json:"provider"`
+	Url           string             `json:"url"`
+	Version       *int               `json:"version,omitempty"`
+}
+
+// RepositoryUpdateRequest defines model for RepositoryUpdateRequest.
+type RepositoryUpdateRequest struct {
+	DefaultBranch   *string `json:"defaultBranch,omitempty"`
+	DisplayName     *string `json:"displayName,omitempty"`
+	ExpectedVersion int     `json:"expectedVersion"`
+	Provider        *string `json:"provider,omitempty"`
+	Url             *string `json:"url,omitempty"`
+}
+
+// RequestMeta defines model for RequestMeta.
+type RequestMeta struct {
+	// EventCursor 当前项目事件序列游标，仅项目资源响应返回。
+	EventCursor *int64    `json:"eventCursor,omitempty"`
+	RequestId   string    `json:"requestId"`
+	ServerTime  time.Time `json:"serverTime"`
+}
+
+// ResolveDiscussionSuggestionRequest defines model for ResolveDiscussionSuggestionRequest.
+type ResolveDiscussionSuggestionRequest struct {
+	ExpectedVersion int `json:"expectedVersion"`
+	Links           *[]struct {
+		ObjectId   openapi_types.UUID                                `json:"objectId"`
+		ObjectType ResolveDiscussionSuggestionRequestLinksObjectType `json:"objectType"`
+	} `json:"links,omitempty"`
+	Mode    ResolveDiscussionSuggestionRequestMode `json:"mode"`
+	Title   *string                                `json:"title,omitempty"`
+	TopicId *openapi_types.UUID                    `json:"topicId,omitempty"`
+}
+
+// ResolveDiscussionSuggestionRequestLinksObjectType defines model for ResolveDiscussionSuggestionRequest.Links.ObjectType.
+type ResolveDiscussionSuggestionRequestLinksObjectType string
+
+// ResolveDiscussionSuggestionRequestMode defines model for ResolveDiscussionSuggestionRequest.Mode.
+type ResolveDiscussionSuggestionRequestMode string
+
+// RevokeInvitationRequest defines model for RevokeInvitationRequest.
+type RevokeInvitationRequest struct {
+	ExpectedVersion int `json:"expectedVersion"`
+}
+
+// SessionInfo defines model for SessionInfo.
+type SessionInfo struct {
+	// CsrfToken 与会话绑定的 CSRF token；写请求必须以 X-CSRF-Token 头回传。
+	CsrfToken string     `json:"csrfToken"`
+	ExpiresAt time.Time  `json:"expiresAt"`
+	User      PublicUser `json:"user"`
+}
+
+// SessionSummary defines model for SessionSummary.
+type SessionSummary struct {
+	CreatedAt  time.Time          `json:"createdAt"`
+	Current    bool               `json:"current"`
+	ExpiresAt  time.Time          `json:"expiresAt"`
+	Id         openapi_types.UUID `json:"id"`
+	LastSeenAt time.Time          `json:"lastSeenAt"`
+}
+
+// StartRunRequest defines model for StartRunRequest.
+type StartRunRequest struct {
+	ExpectedContextVersion *int               `json:"expectedContextVersion,omitempty"`
+	Reason                 *string            `json:"reason,omitempty"`
+	SourceSubmissionId     openapi_types.UUID `json:"sourceSubmissionId"`
+}
+
+// StartTaskRequest defines model for StartTaskRequest.
+type StartTaskRequest struct {
+	ExpectedVersion int                 `json:"expectedVersion"`
+	IdentityId      *openapi_types.UUID `json:"identityId,omitempty"`
+}
+
+// Submission defines model for Submission.
+type Submission struct {
+	ActorUserId        *openapi_types.UUID         `json:"actorUserId,omitempty"`
+	ClientSubmissionId openapi_types.UUID          `json:"clientSubmissionId"`
+	CodeRefs           *[]CodeRef                  `json:"codeRefs,omitempty"`
+	CreatedAt          time.Time                   `json:"createdAt"`
+	DiscussionIntent   *SubmissionDiscussionIntent `json:"discussionIntent,omitempty"`
+	Id                 openapi_types.UUID          `json:"id"`
+	IdentityId         *openapi_types.UUID         `json:"identityId,omitempty"`
+	MaterialVersionIds *[]openapi_types.UUID       `json:"materialVersionIds,omitempty"`
+	MessageId          *openapi_types.UUID         `json:"messageId,omitempty"`
+	PlanId             *openapi_types.UUID         `json:"planId,omitempty"`
+	Purpose            SubmissionPurpose           `json:"purpose"`
+	ReportId           *openapi_types.UUID         `json:"reportId,omitempty"`
+	Source             SubmissionSource            `json:"source"`
+	Status             SubmissionStatus            `json:"status"`
+	TaskId             *openapi_types.UUID         `json:"taskId,omitempty"`
+	Text               *string                     `json:"text,omitempty"`
+	TopicId            *openapi_types.UUID         `json:"topicId,omitempty"`
+}
+
+// SubmissionDiscussionIntent defines model for Submission.DiscussionIntent.
+type SubmissionDiscussionIntent string
+
+// SubmissionPurpose defines model for Submission.Purpose.
+type SubmissionPurpose string
+
+// SubmissionSource defines model for Submission.Source.
+type SubmissionSource string
+
+// SubmissionStatus defines model for Submission.Status.
+type SubmissionStatus string
+
+// SubmissionRequest defines model for SubmissionRequest.
+type SubmissionRequest struct {
+	ClientSubmissionId  openapi_types.UUID                 `json:"clientSubmissionId"`
+	CodeRefs            *[]CodeRef                         `json:"codeRefs,omitempty"`
+	DiscussionIntent    *SubmissionRequestDiscussionIntent `json:"discussionIntent,omitempty"`
+	ExpectedTaskVersion *int                               `json:"expectedTaskVersion,omitempty"`
+	IdentityId          *openapi_types.UUID                `json:"identityId,omitempty"`
+	MaterialVersionIds  *[]openapi_types.UUID              `json:"materialVersionIds,omitempty"`
+	PlanId              *openapi_types.UUID                `json:"planId,omitempty"`
+	Purpose             SubmissionRequestPurpose           `json:"purpose"`
+	TaskId              *openapi_types.UUID                `json:"taskId,omitempty"`
+	Text                string                             `json:"text"`
+	TopicId             *openapi_types.UUID                `json:"topicId,omitempty"`
+}
+
+// SubmissionRequestDiscussionIntent defines model for SubmissionRequest.DiscussionIntent.
+type SubmissionRequestDiscussionIntent string
+
+// SubmissionRequestPurpose defines model for SubmissionRequest.Purpose.
+type SubmissionRequestPurpose string
+
+// SystemInfo defines model for SystemInfo.
+type SystemInfo struct {
+	Capabilities    *map[string]interface{} `json:"capabilities,omitempty"`
+	Commit          *string                 `json:"commit,omitempty"`
+	Name            string                  `json:"name"`
+	ProtocolVersion string                  `json:"protocolVersion"`
+	SchemaRange     string                  `json:"schemaRange"`
+	Version         string                  `json:"version"`
+}
+
+// Task defines model for Task.
+type Task struct {
+	AcceptanceCriteria *string `json:"acceptanceCriteria,omitempty"`
+
+	// Blockers 当前阻塞当前置（由服务端计算）。
+	Blockers *[]struct {
+		ObjectId   string            `json:"objectId"`
+		ObjectType string            `json:"objectType"`
+		Phase      TaskBlockersPhase `json:"phase"`
+		Reason     string            `json:"reason"`
+	} `json:"blockers,omitempty"`
+	BugDetails         *BugDetails         `json:"bugDetails,omitempty"`
+	Capabilities       *WorkCapabilities   `json:"capabilities,omitempty"`
+	DiscardedAt        *time.Time          `json:"discardedAt,omitempty"`
+	ExecutionException *ExecutionException `json:"executionException,omitempty"`
+	ExpectedOutput     *string             `json:"expectedOutput,omitempty"`
+	Id                 openapi_types.UUID  `json:"id"`
+	Kind               TaskKind            `json:"kind"`
+	LatestAcceptanceId *openapi_types.UUID `json:"latestAcceptanceId,omitempty"`
+	LatestReportId     *openapi_types.UUID `json:"latestReportId,omitempty"`
+	MainTopicId        *openapi_types.UUID `json:"mainTopicId,omitempty"`
+	NodeId             *string             `json:"nodeId,omitempty"`
+	ParentTaskId       *openapi_types.UUID `json:"parentTaskId,omitempty"`
+	Participants       *[]struct {
+		DisplayName    *string            `json:"displayName,omitempty"`
+		IdentityId     openapi_types.UUID `json:"identityId"`
+		Responsibility string             `json:"responsibility"`
+	} `json:"participants,omitempty"`
+	PlanId             *openapi_types.UUID `json:"planId,omitempty"`
+	Requirements       *[]TaskRequirement  `json:"requirements,omitempty"`
+	ReviewerIdentityId *openapi_types.UUID `json:"reviewerIdentityId"`
+	Status             TaskStatus          `json:"status"`
+	Title              string              `json:"title"`
+	Version            int                 `json:"version"`
+	WorkflowId         *openapi_types.UUID `json:"workflowId,omitempty"`
+}
+
+// TaskBlockersPhase defines model for Task.Blockers.Phase.
+type TaskBlockersPhase string
+
+// TaskKind defines model for Task.Kind.
+type TaskKind string
+
+// TaskStatus defines model for Task.Status.
+type TaskStatus string
+
+// TaskActivity defines model for TaskActivity.
+type TaskActivity struct {
+	ActorName          string               `json:"actorName"`
+	ActorUserId        *openapi_types.UUID  `json:"actorUserId"`
+	Analysis           *TaskAnalysis        `json:"analysis"`
+	CreatedAt          time.Time            `json:"createdAt"`
+	Id                 openapi_types.UUID   `json:"id"`
+	IdentityId         *openapi_types.UUID  `json:"identityId"`
+	Kind               TaskActivityKind     `json:"kind"`
+	MaterialVersionIds []openapi_types.UUID `json:"materialVersionIds"`
+	Materials          []struct {
+		Name      string             `json:"name"`
+		VersionId openapi_types.UUID `json:"versionId"`
+	} `json:"materials"`
+	Source     string               `json:"source"`
+	SourceType string               `json:"sourceType"`
+	TaskId     openapi_types.UUID   `json:"taskId"`
+	Text       string               `json:"text"`
+	TopicIds   []openapi_types.UUID `json:"topicIds"`
+}
+
+// TaskActivityKind defines model for TaskActivity.Kind.
+type TaskActivityKind string
+
+// TaskAnalysis defines model for TaskAnalysis.
+type TaskAnalysis struct {
+	Basis         []string               `json:"basis"`
+	BatchId       *openapi_types.UUID    `json:"batchId"`
+	Disagreements []string               `json:"disagreements"`
+	ErrorCode     *string                `json:"errorCode"`
+	Id            openapi_types.UUID     `json:"id"`
+	SourceId      openapi_types.UUID     `json:"sourceId"`
+	SourceType    TaskAnalysisSourceType `json:"sourceType"`
+	State         string                 `json:"state"`
+	Summary       string                 `json:"summary"`
+	TaskId        openapi_types.UUID     `json:"taskId"`
+	UpdatedAt     time.Time              `json:"updatedAt"`
+}
+
+// TaskAnalysisSourceType defines model for TaskAnalysis.SourceType.
+type TaskAnalysisSourceType string
+
+// TaskDraftRequest defines model for TaskDraftRequest.
+type TaskDraftRequest struct {
+	AcceptanceCriteria     *string               `json:"acceptanceCriteria,omitempty"`
+	BugDetails             *BugDetails           `json:"bugDetails,omitempty"`
+	ExpectedOutput         *string               `json:"expectedOutput,omitempty"`
+	Kind                   *TaskDraftRequestKind `json:"kind,omitempty"`
+	NodeId                 *string               `json:"nodeId,omitempty"`
+	ParentTaskId           *openapi_types.UUID   `json:"parentTaskId,omitempty"`
+	ParticipantIdentityIds *[]openapi_types.UUID `json:"participantIdentityIds,omitempty"`
+	PlanId                 *openapi_types.UUID   `json:"planId,omitempty"`
+	Requirements           *[]struct {
+		Hard              bool                              `json:"hard"`
+		Kind              TaskDraftRequestRequirementsKind  `json:"kind"`
+		Label             *string                           `json:"label,omitempty"`
+		MaterialVersionId *openapi_types.UUID               `json:"materialVersionId,omitempty"`
+		Phase             TaskDraftRequestRequirementsPhase `json:"phase"`
+		TargetId          openapi_types.UUID                `json:"targetId"`
+	} `json:"requirements,omitempty"`
+	ReviewerIdentityId *openapi_types.UUID `json:"reviewerIdentityId,omitempty"`
+	Title              string              `json:"title"`
+	WorkflowId         *openapi_types.UUID `json:"workflowId,omitempty"`
+}
+
+// TaskDraftRequestKind defines model for TaskDraftRequest.Kind.
+type TaskDraftRequestKind string
+
+// TaskDraftRequestRequirementsKind defines model for TaskDraftRequest.Requirements.Kind.
+type TaskDraftRequestRequirementsKind string
+
+// TaskDraftRequestRequirementsPhase defines model for TaskDraftRequest.Requirements.Phase.
+type TaskDraftRequestRequirementsPhase string
+
+// TaskMainTopicResult defines model for TaskMainTopicResult.
+type TaskMainTopicResult struct {
+	MainTopicId openapi_types.UUID `json:"mainTopicId"`
+	Topic       Topic              `json:"topic"`
+}
+
+// TaskReportRequest defines model for TaskReportRequest.
+type TaskReportRequest struct {
+	CodeRefs            *[]CodeRef            `json:"codeRefs,omitempty"`
+	ExpectedTaskVersion *int                  `json:"expectedTaskVersion,omitempty"`
+	IdentityId          *openapi_types.UUID   `json:"identityId,omitempty"`
+	Kind                TaskReportRequestKind `json:"kind"`
+	MaterialVersionIds  *[]openapi_types.UUID `json:"materialVersionIds,omitempty"`
+
+	// SubmissionId 引用已 finalize 的 ready 提交；同提交只生成一份报告。
+	SubmissionId *openapi_types.UUID `json:"submissionId,omitempty"`
+	Text         *string             `json:"text,omitempty"`
+}
+
+// TaskReportRequestKind defines model for TaskReportRequest.Kind.
+type TaskReportRequestKind string
+
+// TaskRequirement defines model for TaskRequirement.
+type TaskRequirement struct {
+	Fingerprint       *string              `json:"fingerprint,omitempty"`
+	Hard              bool                 `json:"hard"`
+	Id                openapi_types.UUID   `json:"id"`
+	InheritedFrom     *openapi_types.UUID  `json:"inheritedFrom,omitempty"`
+	Kind              TaskRequirementKind  `json:"kind"`
+	Label             *string              `json:"label,omitempty"`
+	MaterialVersionId *openapi_types.UUID  `json:"materialVersionId,omitempty"`
+	Phase             TaskRequirementPhase `json:"phase"`
+	Satisfied         *bool                `json:"satisfied,omitempty"`
+	SourceTaskId      *openapi_types.UUID  `json:"sourceTaskId,omitempty"`
+	TargetId          openapi_types.UUID   `json:"targetId"`
+	Waived            *bool                `json:"waived,omitempty"`
+}
+
+// TaskRequirementKind defines model for TaskRequirement.Kind.
+type TaskRequirementKind string
+
+// TaskRequirementPhase defines model for TaskRequirement.Phase.
+type TaskRequirementPhase string
+
+// TokenPair defines model for TokenPair.
+type TokenPair struct {
+	AccessExpiresAt  time.Time `json:"accessExpiresAt"`
+	AccessToken      string    `json:"accessToken"`
+	RefreshExpiresAt time.Time `json:"refreshExpiresAt"`
+	RefreshToken     string    `json:"refreshToken"`
+	Scopes           []string  `json:"scopes"`
+}
+
+// Topic defines model for Topic.
+type Topic struct {
+	ContextId      *openapi_types.UUID `json:"contextId,omitempty"`
+	ContextType    *string             `json:"contextType,omitempty"`
+	CreatedAt      time.Time           `json:"createdAt"`
+	ForkAfterSeq   *int                `json:"forkAfterSeq,omitempty"`
+	Id             openapi_types.UUID  `json:"id"`
+	Kind           TopicKind           `json:"kind"`
+	LastMessageSeq *int                `json:"lastMessageSeq,omitempty"`
+	Links          *[]struct {
+		ObjectId   openapi_types.UUID   `json:"objectId"`
+		ObjectType TopicLinksObjectType `json:"objectType"`
+	} `json:"links,omitempty"`
+	LinksVersion  *int64                   `json:"linksVersion,omitempty"`
+	ParentTopicId *openapi_types.UUID      `json:"parentTopicId,omitempty"`
+	SourceRefs    *[]ConversationSourceRef `json:"sourceRefs,omitempty"`
+	Title         string                   `json:"title"`
+}
+
+// TopicKind defines model for Topic.Kind.
+type TopicKind string
+
+// TopicLinksObjectType defines model for Topic.Links.ObjectType.
+type TopicLinksObjectType string
+
+// TopicLinkRequest defines model for TopicLinkRequest.
+type TopicLinkRequest struct {
+	ExpectedVersion int `json:"expectedVersion"`
+	TargetRefs      []struct {
+		ObjectId   openapi_types.UUID                   `json:"objectId"`
+		ObjectType TopicLinkRequestTargetRefsObjectType `json:"objectType"`
+	} `json:"targetRefs"`
+}
+
+// TopicLinkRequestTargetRefsObjectType defines model for TopicLinkRequest.TargetRefs.ObjectType.
+type TopicLinkRequestTargetRefsObjectType string
+
+// UpdateMeRequest defines model for UpdateMeRequest.
+type UpdateMeRequest struct {
+	DisplayName     *string                `json:"displayName,omitempty"`
+	ExpectedVersion int                    `json:"expectedVersion"`
+	Locale          *UpdateMeRequestLocale `json:"locale,omitempty"`
+}
+
+// UpdateMeRequestLocale defines model for UpdateMeRequest.Locale.
+type UpdateMeRequestLocale string
+
+// UpdateMemberRequest defines model for UpdateMemberRequest.
+type UpdateMemberRequest struct {
+	ExpectedVersion int                     `json:"expectedVersion"`
+	Role            UpdateMemberRequestRole `json:"role"`
+}
+
+// UpdateMemberRequestRole defines model for UpdateMemberRequest.Role.
+type UpdateMemberRequestRole string
+
+// UpdatePersonalPreferencesRequest defines model for UpdatePersonalPreferencesRequest.
+type UpdatePersonalPreferencesRequest struct {
+	ExpectedRevision int                `json:"expectedRevision"`
+	PositionId       openapi_types.UUID `json:"positionId"`
+	Prompt           string             `json:"prompt"`
+}
+
+// UpdatePositionRequest defines model for UpdatePositionRequest.
+type UpdatePositionRequest struct {
+	ExpectedVersion int                 `json:"expectedVersion"`
+	ModelId         *openapi_types.UUID `json:"modelId,omitempty"`
+	Name            *string             `json:"name,omitempty"`
+	NodeBindings    *[]struct {
+		NodeId     string             `json:"nodeId"`
+		WorkflowId openapi_types.UUID `json:"workflowId"`
+	} `json:"nodeBindings,omitempty"`
+	Prompt        *string `json:"prompt,omitempty"`
+	PublicSummary *string `json:"publicSummary,omitempty"`
+}
+
+// UpdateProjectRequest defines model for UpdateProjectRequest.
+type UpdateProjectRequest struct {
+	ApprovalTimeoutSeconds *int                `json:"approvalTimeoutSeconds,omitempty"`
+	DefaultModelId         *openapi_types.UUID `json:"defaultModelId,omitempty"`
+	Description            *string             `json:"description,omitempty"`
+	ExpectedVersion        int                 `json:"expectedVersion"`
+	MaxDiscussionRounds    *int                `json:"maxDiscussionRounds,omitempty"`
+	Title                  *string             `json:"title,omitempty"`
+}
+
+// UploadLimits defines model for UploadLimits.
+type UploadLimits struct {
+	MaxBundleBytes        int `json:"maxBundleBytes"`
+	MaxFileBytes          int `json:"maxFileBytes"`
+	MaxFilesPerSubmission int `json:"maxFilesPerSubmission"`
+	MaxTextBytes          int `json:"maxTextBytes"`
+	PartSizeBytes         int `json:"partSizeBytes"`
+}
+
+// UploadSession defines model for UploadSession.
+type UploadSession struct {
+	// Checksum 完整文件 SHA256 十六进制。
+	Checksum     string              `json:"checksum"`
+	ExpectedSize int                 `json:"expectedSize"`
+	ExpiresAt    time.Time           `json:"expiresAt"`
+	Id           openapi_types.UUID  `json:"id"`
+	Kind         UploadSessionKind   `json:"kind"`
+	MaterialId   *openapi_types.UUID `json:"materialId,omitempty"`
+	Mime         *string             `json:"mime,omitempty"`
+	Name         *string             `json:"name,omitempty"`
+	PartCount    *int                `json:"partCount,omitempty"`
+
+	// PartSize 分片大小字节数（推荐 8MiB）。
+	PartSize        int                 `json:"partSize"`
+	ResultVersionId *openapi_types.UUID `json:"resultVersionId,omitempty"`
+	State           UploadSessionState  `json:"state"`
+}
+
+// UploadSessionKind defines model for UploadSession.Kind.
+type UploadSessionKind string
+
+// UploadSessionState defines model for UploadSession.State.
+type UploadSessionState string
+
+// WorkBlocker defines model for WorkBlocker.
+type WorkBlocker struct {
+	ObjectId   string `json:"objectId"`
+	ObjectType string `json:"objectType"`
+	Phase      string `json:"phase"`
+	Reason     string `json:"reason"`
+}
+
+// WorkCapabilities defines model for WorkCapabilities.
+type WorkCapabilities struct {
+	DiscardDraft  bool `json:"discardDraft"`
+	EditDraft     bool `json:"editDraft"`
+	ProposeChange bool `json:"proposeChange"`
+	Restore       bool `json:"restore"`
+	Skip          bool `json:"skip"`
+}
+
+// WorkDraftUpdate defines model for WorkDraftUpdate.
+type WorkDraftUpdate struct {
+	ExpectedVersion int                    `json:"expectedVersion"`
+	Fields          map[string]interface{} `json:"fields"`
+}
+
+// WorkReport defines model for WorkReport.
+type WorkReport struct {
+	BindingVersion  int                       `json:"bindingVersion"`
+	CodeRefs        *[]CodeRef                `json:"codeRefs,omitempty"`
+	CreatedAt       time.Time                 `json:"createdAt"`
+	EnvironmentRefs *[]map[string]interface{} `json:"environmentRefs,omitempty"`
+	Id              openapi_types.UUID        `json:"id"`
+	IdentityId      openapi_types.UUID        `json:"identityId"`
+	ProgressHint    *string                   `json:"progressHint,omitempty"`
+	ReportKind      WorkReportReportKind      `json:"reportKind"`
+	SubmissionId    *openapi_types.UUID       `json:"submissionId,omitempty"`
+	TaskId          openapi_types.UUID        `json:"taskId"`
+}
+
+// WorkReportReportKind defines model for WorkReport.ReportKind.
+type WorkReportReportKind string
+
+// Workflow defines model for Workflow.
+type Workflow struct {
+	HasDraft *bool              `json:"hasDraft,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
+	Name     string             `json:"name"`
+
+	// PresetId 内置流程模板的稳定来源 ID，项目独立编辑后仍保留。
+	PresetId           *string             `json:"presetId,omitempty"`
+	PublishedVersionId *openapi_types.UUID `json:"publishedVersionId"`
+	Version            *int                `json:"version,omitempty"`
+}
+
+// WorkflowDraftBody defines model for WorkflowDraftBody.
+type WorkflowDraftBody struct {
+	AdvisoryEdges *[]struct {
+		From string `json:"from"`
+
+		// Kind sequence 保持无环；feedback 为评审节点返回前序节点的协作参考。
+		Kind *WorkflowDraftBodyAdvisoryEdgesKind `json:"kind,omitempty"`
+
+		// Label 人工阅读的条件说明，不是可执行表达式。
+		Label *string `json:"label,omitempty"`
+		To    string  `json:"to"`
+	} `json:"advisoryEdges,omitempty"`
+	ApprovalPolicies *map[string]WorkflowDraftBodyApprovalPolicies `json:"approvalPolicies,omitempty"`
+	HardRules        *[]WorkflowHardRule                           `json:"hardRules,omitempty"`
+	Instructions     *string                                       `json:"instructions,omitempty"`
+	Name             string                                        `json:"name"`
+	Nodes            []WorkflowNode                                `json:"nodes"`
+}
+
+// WorkflowDraftBodyAdvisoryEdgesKind sequence 保持无环；feedback 为评审节点返回前序节点的协作参考。
+type WorkflowDraftBodyAdvisoryEdgesKind string
+
+// WorkflowDraftBodyApprovalPolicies defines model for WorkflowDraftBody.ApprovalPolicies.
+type WorkflowDraftBodyApprovalPolicies string
+
+// WorkflowHardRule defines model for WorkflowHardRule.
+type WorkflowHardRule struct {
+	Kind WorkflowHardRuleKind `json:"kind"`
+
+	// NodeId 缺省适用于整个流程；指定时仅约束该节点。
+	NodeId   *string                `json:"nodeId,omitempty"`
+	Phase    *WorkflowHardRulePhase `json:"phase,omitempty"`
+	TargetId *string                `json:"targetId,omitempty"`
+}
+
+// WorkflowHardRuleKind defines model for WorkflowHardRule.Kind.
+type WorkflowHardRuleKind string
+
+// WorkflowHardRulePhase defines model for WorkflowHardRule.Phase.
+type WorkflowHardRulePhase string
+
+// WorkflowNode defines model for WorkflowNode.
+type WorkflowNode struct {
+	AllowedPositionIds    []openapi_types.UUID              `json:"allowedPositionIds"`
+	DefaultApprovalPolicy WorkflowNodeDefaultApprovalPolicy `json:"defaultApprovalPolicy"`
+
+	// DelegationUserIds 项目 owner 发布的节点代批授权；不扩大其他节点权限。
+	DelegationUserIds *[]openapi_types.UUID `json:"delegationUserIds,omitempty"`
+
+	// Id 稳定节点 ID，发布后不可复用为不同含义。
+	Id string `json:"id"`
+
+	// Kind 图中的活动或评审形状，不构成审批授权。
+	Kind *WorkflowNodeKind `json:"kind,omitempty"`
+	Name string            `json:"name"`
+
+	// Phase 只读图的阶段分组说明。
+	Phase          *string `json:"phase,omitempty"`
+	Responsibility string  `json:"responsibility"`
+}
+
 // WorkflowNodeDefaultApprovalPolicy defines model for WorkflowNode.DefaultApprovalPolicy.
 type WorkflowNodeDefaultApprovalPolicy string
+
+// WorkflowNodeKind 图中的活动或评审形状，不构成审批授权。
+type WorkflowNodeKind string
+
+// WorkflowPreset defines model for WorkflowPreset.
+type WorkflowPreset struct {
+	Complexity *WorkflowPresetComplexity `json:"complexity,omitempty"`
+	Edges      []struct {
+		From  string                   `json:"from"`
+		Kind  *WorkflowPresetEdgesKind `json:"kind,omitempty"`
+		Label *PresetText              `json:"label,omitempty"`
+		To    string                   `json:"to"`
+	} `json:"edges"`
+	Id           string               `json:"id"`
+	Instructions PresetText           `json:"instructions"`
+	Name         PresetText           `json:"name"`
+	Nodes        []WorkflowPresetNode `json:"nodes"`
+	RoleIds      []string             `json:"roleIds"`
+	ScenarioIds  []string             `json:"scenarioIds"`
+	Sources      *[]struct {
+		Title PresetText `json:"title"`
+		Url   string     `json:"url"`
+	} `json:"sources,omitempty"`
+	Summary PresetText `json:"summary"`
+}
+
+// WorkflowPresetComplexity defines model for WorkflowPreset.Complexity.
+type WorkflowPresetComplexity string
+
+// WorkflowPresetEdgesKind defines model for WorkflowPreset.Edges.Kind.
+type WorkflowPresetEdgesKind string
+
+// WorkflowPresetCatalog defines model for WorkflowPresetCatalog.
+type WorkflowPresetCatalog struct {
+	Roles []struct {
+		Id   string     `json:"id"`
+		Name PresetText `json:"name"`
+	} `json:"roles"`
+	Scenarios []WorkflowScenario `json:"scenarios"`
+	Version   string             `json:"version"`
+	Workflows []WorkflowPreset   `json:"workflows"`
+}
+
+// WorkflowPresetNode defines model for WorkflowPresetNode.
+type WorkflowPresetNode struct {
+	Id             string                  `json:"id"`
+	Kind           *WorkflowPresetNodeKind `json:"kind,omitempty"`
+	Name           PresetText              `json:"name"`
+	Phase          *PresetText             `json:"phase,omitempty"`
+	Responsibility PresetText              `json:"responsibility"`
+}
+
+// WorkflowPresetNodeKind defines model for WorkflowPresetNode.Kind.
+type WorkflowPresetNodeKind string
+
+// WorkflowScenario defines model for WorkflowScenario.
+type WorkflowScenario struct {
+	Description PresetText `json:"description"`
+	Id          string     `json:"id"`
+	Name        PresetText `json:"name"`
+	WorkflowIds []string   `json:"workflowIds"`
+}
 
 // WorkflowVersion defines model for WorkflowVersion.
 type WorkflowVersion struct {
@@ -50,6 +1178,12 @@ type RateLimited = ErrorResponse
 
 // RequirementUnmet defines model for RequirementUnmet.
 type RequirementUnmet = ErrorResponse
+
+// TaskMainTopicResponse defines model for TaskMainTopicResponse.
+type TaskMainTopicResponse struct {
+	Data TaskMainTopicResult `json:"data"`
+	Meta CommandMeta         `json:"meta"`
+}
 
 // TooLarge defines model for TooLarge.
 type TooLarge = ErrorResponse
@@ -117,13 +1251,17 @@ type ListMyActionsParams struct {
 	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Cursor 不透明分页游标，编码范围与过滤条件。
-	Cursor    *CursorParam             `form:"cursor,omitempty" json:"cursor,omitempty"`
-	ProjectId *openapi_types.UUID      `form:"projectId,omitempty" json:"projectId,omitempty"`
-	Kind      *ListMyActionsParamsKind `form:"kind,omitempty" json:"kind,omitempty"`
+	Cursor    *CursorParam                 `form:"cursor,omitempty" json:"cursor,omitempty"`
+	ProjectId *openapi_types.UUID          `form:"projectId,omitempty" json:"projectId,omitempty"`
+	Kind      *ListMyActionsParamsKind     `form:"kind,omitempty" json:"kind,omitempty"`
+	Category  *ListMyActionsParamsCategory `form:"category,omitempty" json:"category,omitempty"`
 }
 
 // ListMyActionsParamsKind defines parameters for ListMyActions.
 type ListMyActionsParamsKind string
+
+// ListMyActionsParamsCategory defines parameters for ListMyActions.
+type ListMyActionsParamsCategory string
 
 // ListClientGrantsParams defines parameters for ListClientGrants.
 type ListClientGrantsParams struct {
@@ -144,6 +1282,12 @@ type ListNotificationsParams struct {
 	UnreadOnly *bool        `form:"unreadOnly,omitempty" json:"unreadOnly,omitempty"`
 }
 
+// ListRecentTopicsParams defines parameters for ListRecentTopics.
+type ListRecentTopicsParams struct {
+	// Limit 分页大小，范围 1-100，默认 50。
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ListSessionsParams defines parameters for ListSessions.
 type ListSessionsParams struct {
 	// Limit 分页大小，范围 1-100，默认 50。
@@ -160,7 +1304,20 @@ type ListProjectsParams struct {
 
 	// Cursor 不透明分页游标，编码范围与过滤条件。
 	Cursor *CursorParam `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Q 项目名称和简介的字面搜索。
+	Q         *string                      `form:"q,omitempty" json:"q,omitempty"`
+	Ownership *ListProjectsParamsOwnership `form:"ownership,omitempty" json:"ownership,omitempty"`
+
+	// Include 整页批量返回活跃成员和讨论摘要。
+	Include *ListProjectsParamsInclude `form:"include,omitempty" json:"include,omitempty"`
 }
+
+// ListProjectsParamsOwnership defines parameters for ListProjects.
+type ListProjectsParamsOwnership string
+
+// ListProjectsParamsInclude defines parameters for ListProjects.
+type ListProjectsParamsInclude string
 
 // CreateProjectParams defines parameters for CreateProject.
 type CreateProjectParams struct {
@@ -209,6 +1366,40 @@ type ConfirmIntentParams struct {
 	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
 }
 
+// ListDeliveriesParams defines parameters for ListDeliveries.
+type ListDeliveriesParams struct {
+	// Limit 分页大小，范围 1-100，默认 50。
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor 不透明分页游标，编码范围与过滤条件。
+	Cursor *CursorParam                `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Type   *ListDeliveriesParamsType   `form:"type,omitempty" json:"type,omitempty"`
+	Filter *ListDeliveriesParamsFilter `form:"filter,omitempty" json:"filter,omitempty"`
+}
+
+// ListDeliveriesParamsType defines parameters for ListDeliveries.
+type ListDeliveriesParamsType string
+
+// ListDeliveriesParamsFilter defines parameters for ListDeliveries.
+type ListDeliveriesParamsFilter string
+
+// ListDiscussionSuggestionsParams defines parameters for ListDiscussionSuggestions.
+type ListDiscussionSuggestionsParams struct {
+	// Limit 分页大小，范围 1-100，默认 50。
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor 不透明分页游标，编码范围与过滤条件。
+	Cursor *CursorParam        `form:"cursor,omitempty" json:"cursor,omitempty"`
+	PlanId *openapi_types.UUID `form:"planId,omitempty" json:"planId,omitempty"`
+	TaskId *openapi_types.UUID `form:"taskId,omitempty" json:"taskId,omitempty"`
+}
+
+// ResolveDiscussionSuggestionParams defines parameters for ResolveDiscussionSuggestion.
+type ResolveDiscussionSuggestionParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
 // SubscribeProjectEventsParams defines parameters for SubscribeProjectEvents.
 type SubscribeProjectEventsParams struct {
 	After *int64 `form:"after,omitempty" json:"after,omitempty"`
@@ -217,6 +1408,12 @@ type SubscribeProjectEventsParams struct {
 // GetExecutionMapParams defines parameters for GetExecutionMap.
 type GetExecutionMapParams struct {
 	PlanId *openapi_types.UUID `form:"planId,omitempty" json:"planId,omitempty"`
+
+	// IncludeDrafts 只读展示草稿与已取消节点，不改变正式状态。
+	IncludeDrafts *bool `form:"includeDrafts,omitempty" json:"includeDrafts,omitempty"`
+
+	// IncludeReferences 只读纳入计划正式引用的任务，保留原所属计划。
+	IncludeReferences *bool `form:"includeReferences,omitempty" json:"includeReferences,omitempty"`
 }
 
 // ListHandoffsParams defines parameters for ListHandoffs.
@@ -321,6 +1518,28 @@ type DownloadMaterialVersionByIdParams struct {
 	Range *string `json:"Range,omitempty"`
 }
 
+// PrepareFilePreviewParams defines parameters for PrepareFilePreview.
+type PrepareFilePreviewParams struct {
+	Retry *bool `form:"retry,omitempty" json:"retry,omitempty"`
+
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// DownloadFilePreviewParams defines parameters for DownloadFilePreview.
+type DownloadFilePreviewParams struct {
+	Range *string `json:"Range,omitempty"`
+}
+
+// ListMaterialUsagesParams defines parameters for ListMaterialUsages.
+type ListMaterialUsagesParams struct {
+	// Limit 分页大小，范围 1-100，默认 50。
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor 不透明分页游标，编码范围与过滤条件。
+	Cursor *CursorParam `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // ListMaterialsParams defines parameters for ListMaterials.
 type ListMaterialsParams struct {
 	// Limit 分页大小，范围 1-100，默认 50。
@@ -331,10 +1550,24 @@ type ListMaterialsParams struct {
 	Kind             *ListMaterialsParamsKind `form:"kind,omitempty" json:"kind,omitempty"`
 	LinkedObjectType *string                  `form:"linkedObjectType,omitempty" json:"linkedObjectType,omitempty"`
 	LinkedObjectId   *openapi_types.UUID      `form:"linkedObjectId,omitempty" json:"linkedObjectId,omitempty"`
+	Q                *string                  `form:"q,omitempty" json:"q,omitempty"`
+	FormatGroup      *string                  `form:"formatGroup,omitempty" json:"formatGroup,omitempty"`
+	Sort             *string                  `form:"sort,omitempty" json:"sort,omitempty"`
 }
 
 // ListMaterialsParamsKind defines parameters for ListMaterials.
 type ListMaterialsParamsKind string
+
+// DeleteMaterialJSONBody defines parameters for DeleteMaterial.
+type DeleteMaterialJSONBody struct {
+	ExpectedCurrentVersionId openapi_types.UUID `json:"expectedCurrentVersionId"`
+}
+
+// DeleteMaterialParams defines parameters for DeleteMaterial.
+type DeleteMaterialParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
 
 // DownloadMaterialContentParams defines parameters for DownloadMaterialContent.
 type DownloadMaterialContentParams struct {
@@ -396,6 +1629,8 @@ type ListPlansParams struct {
 	// Cursor 不透明分页游标，编码范围与过滤条件。
 	Cursor *CursorParam           `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Status *ListPlansParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	Q      *string                `form:"q,omitempty" json:"q,omitempty"`
+	Mine   *bool                  `form:"mine,omitempty" json:"mine,omitempty"`
 }
 
 // ListPlansParamsStatus defines parameters for ListPlans.
@@ -419,6 +1654,15 @@ type DiscardPlanParams struct {
 	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
 }
 
+// DiscardPlan200JSONResponseBodyDataStatus defines parameters for DiscardPlan.
+type DiscardPlan200JSONResponseBodyDataStatus string
+
+// UpdatePlanDraftParams defines parameters for UpdatePlanDraft.
+type UpdatePlanDraftParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
 // ReopenPlanParams defines parameters for ReopenPlan.
 type ReopenPlanParams struct {
 	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
@@ -427,6 +1671,12 @@ type ReopenPlanParams struct {
 
 // CreatePositionParams defines parameters for CreatePosition.
 type CreatePositionParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// ImportPositionPresetsParams defines parameters for ImportPositionPresets.
+type ImportPositionPresetsParams struct {
 	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
 	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
 }
@@ -544,361 +1794,11 @@ type CreateSubmissionParams struct {
 	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
 }
 
-// ListTasksParams defines parameters for ListTasks.
-type ListTasksParams struct {
-	// Limit 分页大小，范围 1-100，默认 50。
-	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+// RetryTaskAnalysisJSONBody defines parameters for RetryTaskAnalysis.
+type RetryTaskAnalysisJSONBody = map[string]interface{}
 
-	// Cursor 不透明分页游标，编码范围与过滤条件。
-	Cursor     *CursorParam           `form:"cursor,omitempty" json:"cursor,omitempty"`
-	PlanId     *openapi_types.UUID    `form:"planId,omitempty" json:"planId,omitempty"`
-	Status     *ListTasksParamsStatus `form:"status,omitempty" json:"status,omitempty"`
-	IdentityId *openapi_types.UUID    `form:"identityId,omitempty" json:"identityId,omitempty"`
-}
-
-// ListTasksParamsStatus defines parameters for ListTasks.
-type ListTasksParamsStatus string
-
-// CreateTaskParams defines parameters for CreateTask.
-type CreateTaskParams struct {
+// RetryTaskAnalysisParams defines parameters for RetryTaskAnalysis.
+type RetryTaskAnalysisParams struct {
 	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
 	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
 }
-
-// DecideTaskAcceptanceParams defines parameters for DecideTaskAcceptance.
-type DecideTaskAcceptanceParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// DiscardTaskParams defines parameters for DiscardTask.
-type DiscardTaskParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// CreateFixPropagationParams defines parameters for CreateFixPropagation.
-type CreateFixPropagationParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// ReopenTaskParams defines parameters for ReopenTask.
-type ReopenTaskParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// ListTaskReportsParams defines parameters for ListTaskReports.
-type ListTaskReportsParams struct {
-	// Limit 分页大小，范围 1-100，默认 50。
-	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Cursor 不透明分页游标，编码范围与过滤条件。
-	Cursor *CursorParam `form:"cursor,omitempty" json:"cursor,omitempty"`
-}
-
-// CreateTaskReportParams defines parameters for CreateTaskReport.
-type CreateTaskReportParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// StartTaskParams defines parameters for StartTask.
-type StartTaskParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// ListTopicsParams defines parameters for ListTopics.
-type ListTopicsParams struct {
-	// Limit 分页大小，范围 1-100，默认 50。
-	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Cursor 不透明分页游标，编码范围与过滤条件。
-	Cursor *CursorParam          `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Kind   *ListTopicsParamsKind `form:"kind,omitempty" json:"kind,omitempty"`
-}
-
-// ListTopicsParamsKind defines parameters for ListTopics.
-type ListTopicsParamsKind string
-
-// CreateTopicParams defines parameters for CreateTopic.
-type CreateTopicParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// LinkTopicParams defines parameters for LinkTopic.
-type LinkTopicParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// ListMessagesParams defines parameters for ListMessages.
-type ListMessagesParams struct {
-	// Limit 分页大小，范围 1-100，默认 50。
-	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Cursor 不透明分页游标，编码范围与过滤条件。
-	Cursor    *CursorParam `form:"cursor,omitempty" json:"cursor,omitempty"`
-	BeforeSeq *int         `form:"beforeSeq,omitempty" json:"beforeSeq,omitempty"`
-	AfterSeq  *int         `form:"afterSeq,omitempty" json:"afterSeq,omitempty"`
-}
-
-// StartAgentRunParams defines parameters for StartAgentRun.
-type StartAgentRunParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// CompleteUploadParams defines parameters for CompleteUpload.
-type CompleteUploadParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// UploadPartParams defines parameters for UploadPart.
-type UploadPartParams struct {
-	XJudexPartSHA256 string `json:"X-Judex-Part-SHA256"`
-}
-
-// CreateWorkflowParams defines parameters for CreateWorkflow.
-type CreateWorkflowParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// UpdateWorkflowDraftJSONBody defines parameters for UpdateWorkflowDraft.
-type UpdateWorkflowDraftJSONBody struct {
-	Body            WorkflowDraftBody `json:"body"`
-	ExpectedVersion int               `json:"expectedVersion"`
-}
-
-// UpdateWorkflowDraftParams defines parameters for UpdateWorkflowDraft.
-type UpdateWorkflowDraftParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// PublishWorkflowParams defines parameters for PublishWorkflow.
-type PublishWorkflowParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// ListWorkflowVersionsParams defines parameters for ListWorkflowVersions.
-type ListWorkflowVersionsParams struct {
-	// Limit 分页大小，范围 1-100，默认 50。
-	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Cursor 不透明分页游标，编码范围与过滤条件。
-	Cursor *CursorParam `form:"cursor,omitempty" json:"cursor,omitempty"`
-}
-
-// CreateDeviceAuthorizationJSONRequestBody defines body for CreateDeviceAuthorization for application/json ContentType.
-type CreateDeviceAuthorizationJSONRequestBody = DeviceAuthorizationRequest
-
-// ConfirmDeviceAuthorizationJSONRequestBody defines body for ConfirmDeviceAuthorization for application/json ContentType.
-type ConfirmDeviceAuthorizationJSONRequestBody = DeviceConfirmRequest
-
-// PollDeviceTokenJSONRequestBody defines body for PollDeviceToken for application/json ContentType.
-type PollDeviceTokenJSONRequestBody = DeviceTokenRequest
-
-// LoginJSONRequestBody defines body for Login for application/json ContentType.
-type LoginJSONRequestBody = LoginRequest
-
-// LogoutAllJSONRequestBody defines body for LogoutAll for application/json ContentType.
-type LogoutAllJSONRequestBody LogoutAllJSONBody
-
-// RecoverPasswordJSONRequestBody defines body for RecoverPassword for application/json ContentType.
-type RecoverPasswordJSONRequestBody = RecoverRequest
-
-// RegisterJSONRequestBody defines body for Register for application/json ContentType.
-type RegisterJSONRequestBody = RegisterRequest
-
-// RefreshTokenJSONRequestBody defines body for RefreshToken for application/json ContentType.
-type RefreshTokenJSONRequestBody = RefreshRequest
-
-// CreateGlobalConfirmationIntentJSONRequestBody defines body for CreateGlobalConfirmationIntent for application/json ContentType.
-type CreateGlobalConfirmationIntentJSONRequestBody = ConfirmationIntentRequest
-
-// ConfirmGlobalIntentJSONRequestBody defines body for ConfirmGlobalIntent for application/json ContentType.
-type ConfirmGlobalIntentJSONRequestBody = ConfirmIntentRequest
-
-// AcceptInvitationJSONRequestBody defines body for AcceptInvitation for application/json ContentType.
-type AcceptInvitationJSONRequestBody = InvitationDecisionRequest
-
-// DeclineInvitationJSONRequestBody defines body for DeclineInvitation for application/json ContentType.
-type DeclineInvitationJSONRequestBody = InvitationDecisionRequest
-
-// UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
-type UpdateMeJSONRequestBody = UpdateMeRequest
-
-// MarkNotificationsReadJSONRequestBody defines body for MarkNotificationsRead for application/json ContentType.
-type MarkNotificationsReadJSONRequestBody = MarkNotificationsRequest
-
-// ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
-type ChangePasswordJSONRequestBody = ChangePasswordRequest
-
-// CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
-type CreateProjectJSONRequestBody = CreateProjectRequest
-
-// UpdateProjectJSONRequestBody defines body for UpdateProject for application/json ContentType.
-type UpdateProjectJSONRequestBody = UpdateProjectRequest
-
-// ArchiveProjectJSONRequestBody defines body for ArchiveProject for application/json ContentType.
-type ArchiveProjectJSONRequestBody = ArchiveRequest
-
-// ExtendDiscussionBatchJSONRequestBody defines body for ExtendDiscussionBatch for application/json ContentType.
-type ExtendDiscussionBatchJSONRequestBody = BatchExtensionRequest
-
-// CreateConfirmationIntentJSONRequestBody defines body for CreateConfirmationIntent for application/json ContentType.
-type CreateConfirmationIntentJSONRequestBody = ConfirmationIntentRequest
-
-// ConfirmIntentJSONRequestBody defines body for ConfirmIntent for application/json ContentType.
-type ConfirmIntentJSONRequestBody = ConfirmIntentRequest
-
-// CreateHandoffJSONRequestBody defines body for CreateHandoff for application/json ContentType.
-type CreateHandoffJSONRequestBody = HandoffDraftRequest
-
-// SendHandoffReminderJSONRequestBody defines body for SendHandoffReminder for application/json ContentType.
-type SendHandoffReminderJSONRequestBody SendHandoffReminderJSONBody
-
-// DecideHandoffSourceJSONRequestBody defines body for DecideHandoffSource for application/json ContentType.
-type DecideHandoffSourceJSONRequestBody = HandoffDecisionRequest
-
-// CreateHandoffSourceRevisionJSONRequestBody defines body for CreateHandoffSourceRevision for application/json ContentType.
-type CreateHandoffSourceRevisionJSONRequestBody = HandoffSourceRevisionRequest
-
-// SendHandoffSourceJSONRequestBody defines body for SendHandoffSource for application/json ContentType.
-type SendHandoffSourceJSONRequestBody = HandoffSendRequest
-
-// CreateIdentityJSONRequestBody defines body for CreateIdentity for application/json ContentType.
-type CreateIdentityJSONRequestBody = CreateIdentityRequest
-
-// ReplaceIdentityBindingJSONRequestBody defines body for ReplaceIdentityBinding for application/json ContentType.
-type ReplaceIdentityBindingJSONRequestBody = ReplaceIdentityRequest
-
-// CreateInvitationJSONRequestBody defines body for CreateInvitation for application/json ContentType.
-type CreateInvitationJSONRequestBody = CreateInvitationRequest
-
-// RevokeInvitationJSONRequestBody defines body for RevokeInvitation for application/json ContentType.
-type RevokeInvitationJSONRequestBody = RevokeInvitationRequest
-
-// LeaveProjectJSONRequestBody defines body for LeaveProject for application/json ContentType.
-type LeaveProjectJSONRequestBody LeaveProjectJSONBody
-
-// UpdateMyPreferencesJSONRequestBody defines body for UpdateMyPreferences for application/json ContentType.
-type UpdateMyPreferencesJSONRequestBody = UpdatePersonalPreferencesRequest
-
-// UpdateMemberRoleJSONRequestBody defines body for UpdateMemberRole for application/json ContentType.
-type UpdateMemberRoleJSONRequestBody = UpdateMemberRequest
-
-// RemoveMemberJSONRequestBody defines body for RemoveMember for application/json ContentType.
-type RemoveMemberJSONRequestBody = RemoveMemberRequest
-
-// RequestOwnerTransferJSONRequestBody defines body for RequestOwnerTransfer for application/json ContentType.
-type RequestOwnerTransferJSONRequestBody = OwnerTransferRequest
-
-// DecideOwnerTransferJSONRequestBody defines body for DecideOwnerTransfer for application/json ContentType.
-type DecideOwnerTransferJSONRequestBody = OwnerTransferDecisionRequest
-
-// CreatePlanJSONRequestBody defines body for CreatePlan for application/json ContentType.
-type CreatePlanJSONRequestBody = PlanDraftRequest
-
-// AcceptPlanJSONRequestBody defines body for AcceptPlan for application/json ContentType.
-type AcceptPlanJSONRequestBody = AcceptanceRequest
-
-// DiscardPlanJSONRequestBody defines body for DiscardPlan for application/json ContentType.
-type DiscardPlanJSONRequestBody = DiscardDraftRequest
-
-// ReopenPlanJSONRequestBody defines body for ReopenPlan for application/json ContentType.
-type ReopenPlanJSONRequestBody = ReopenRequest
-
-// CreatePositionJSONRequestBody defines body for CreatePosition for application/json ContentType.
-type CreatePositionJSONRequestBody = PositionDraftRequest
-
-// UpdatePositionJSONRequestBody defines body for UpdatePosition for application/json ContentType.
-type UpdatePositionJSONRequestBody = UpdatePositionRequest
-
-// CreateProposalJSONRequestBody defines body for CreateProposal for application/json ContentType.
-type CreateProposalJSONRequestBody = ProposalDraftRequest
-
-// DecideProposalJSONRequestBody defines body for DecideProposal for application/json ContentType.
-type DecideProposalJSONRequestBody = ProposalDecisionRequest
-
-// DelegateProposalDecisionJSONRequestBody defines body for DelegateProposalDecision for application/json ContentType.
-type DelegateProposalDecisionJSONRequestBody = DelegateDecisionRequest
-
-// UpdateProposalDraftJSONRequestBody defines body for UpdateProposalDraft for application/json ContentType.
-type UpdateProposalDraftJSONRequestBody UpdateProposalDraftJSONBody
-
-// CreateProposalRevisionJSONRequestBody defines body for CreateProposalRevision for application/json ContentType.
-type CreateProposalRevisionJSONRequestBody = ProposalRevisionRequest
-
-// SubmitProposalJSONRequestBody defines body for SubmitProposal for application/json ContentType.
-type SubmitProposalJSONRequestBody = ProposalSubmitRequest
-
-// CreateReleaseReportJSONRequestBody defines body for CreateReleaseReport for application/json ContentType.
-type CreateReleaseReportJSONRequestBody = ReleaseReportRequest
-
-// CreateRepositoryJSONRequestBody defines body for CreateRepository for application/json ContentType.
-type CreateRepositoryJSONRequestBody = RepositoryDraftRequest
-
-// UpdateRepositoryJSONRequestBody defines body for UpdateRepository for application/json ContentType.
-type UpdateRepositoryJSONRequestBody = RepositoryUpdateRequest
-
-// RestoreProjectJSONRequestBody defines body for RestoreProject for application/json ContentType.
-type RestoreProjectJSONRequestBody = ArchiveRequest
-
-// CancelAgentRunJSONRequestBody defines body for CancelAgentRun for application/json ContentType.
-type CancelAgentRunJSONRequestBody = CancelRunRequest
-
-// CreateSubmissionJSONRequestBody defines body for CreateSubmission for application/json ContentType.
-type CreateSubmissionJSONRequestBody = SubmissionRequest
-
-// CreateTaskJSONRequestBody defines body for CreateTask for application/json ContentType.
-type CreateTaskJSONRequestBody = TaskDraftRequest
-
-// DecideTaskAcceptanceJSONRequestBody defines body for DecideTaskAcceptance for application/json ContentType.
-type DecideTaskAcceptanceJSONRequestBody = AcceptanceRequest
-
-// DiscardTaskJSONRequestBody defines body for DiscardTask for application/json ContentType.
-type DiscardTaskJSONRequestBody = DiscardDraftRequest
-
-// CreateFixPropagationJSONRequestBody defines body for CreateFixPropagation for application/json ContentType.
-type CreateFixPropagationJSONRequestBody = FixPropagationRequest
-
-// ReopenTaskJSONRequestBody defines body for ReopenTask for application/json ContentType.
-type ReopenTaskJSONRequestBody = ReopenRequest
-
-// CreateTaskReportJSONRequestBody defines body for CreateTaskReport for application/json ContentType.
-type CreateTaskReportJSONRequestBody = TaskReportRequest
-
-// StartTaskJSONRequestBody defines body for StartTask for application/json ContentType.
-type StartTaskJSONRequestBody = StartTaskRequest
-
-// CreateTopicJSONRequestBody defines body for CreateTopic for application/json ContentType.
-type CreateTopicJSONRequestBody = CreateTopicRequest
-
-// LinkTopicJSONRequestBody defines body for LinkTopic for application/json ContentType.
-type LinkTopicJSONRequestBody = TopicLinkRequest
-
-// StartAgentRunJSONRequestBody defines body for StartAgentRun for application/json ContentType.
-type StartAgentRunJSONRequestBody = StartRunRequest
-
-// CreateUploadSessionJSONRequestBody defines body for CreateUploadSession for application/json ContentType.
-type CreateUploadSessionJSONRequestBody = CreateUploadRequest
-
-// CompleteUploadJSONRequestBody defines body for CompleteUpload for application/json ContentType.
-type CompleteUploadJSONRequestBody = CompleteUploadRequest
-
-// CreateWorkflowJSONRequestBody defines body for CreateWorkflow for application/json ContentType.
-type CreateWorkflowJSONRequestBody = WorkflowDraftBody
-
-// UpdateWorkflowDraftJSONRequestBody defines body for UpdateWorkflowDraft for application/json ContentType.
-type UpdateWorkflowDraftJSONRequestBody UpdateWorkflowDraftJSONBody
-
-// PublishWorkflowJSONRequestBody defines body for PublishWorkflow for application/json ContentType.
-type PublishWorkflowJSONRequestBody = PublishWorkflowRequest

@@ -1,0 +1,197 @@
+paths:
+  /projects/{projectId}/material-versions/{versionId}/usages:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: versionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listMaterialUsages
+      summary: listMaterialUsages
+      tags:
+        - materials
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                      - nextCursor
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: ../components/materials.yaml#/components/schemas/MaterialUsage
+                      nextCursor:
+                        type:
+                          - string
+                          - 'null'
+                  meta:
+                    type: object
+                    additionalProperties: true
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/LimitParam
+        - $ref: ../components/common.yaml#/components/parameters/CursorParam
+  /projects/{projectId}/material-versions/{versionId}/preview:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: versionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getFilePreview
+      summary: getFilePreview
+      tags:
+        - materials
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/materials.yaml#/components/schemas/FilePreview
+                  meta:
+                    type: object
+                    additionalProperties: true
+    post:
+      operationId: prepareFilePreview
+      summary: prepareFilePreview
+      tags:
+        - materials
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/IdempotencyKeyParam
+        - name: retry
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    $ref: ../components/materials.yaml#/components/schemas/FilePreview
+                  meta:
+                    type: object
+                    additionalProperties: true
+  /projects/{projectId}/material-versions/{versionId}/preview/content:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: versionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: downloadFilePreview
+      summary: 鉴权预览内容
+      tags:
+        - materials
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - name: Range
+          in: header
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 预览流
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: 范围内容
+        '416':
+          description: 范围无效
+  /projects/{projectId}/materials/{materialId}:
+    parameters:
+      - $ref: ../components/common.yaml#/components/parameters/ProjectIdParam
+      - name: materialId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: deleteMaterial
+      summary: deleteMaterial
+      tags:
+        - materials
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: ../components/common.yaml#/components/parameters/IdempotencyKeyParam
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - meta
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - deleted
+                    properties:
+                      deleted:
+                        type: boolean
+                  meta:
+                    type: object
+                    additionalProperties: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - expectedCurrentVersionId
+              properties:
+                expectedCurrentVersionId:
+                  type: string
+                  format: uuid

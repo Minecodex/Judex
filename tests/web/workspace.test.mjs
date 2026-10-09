@@ -16,6 +16,7 @@ test("sse invalidation covers every known project event type", () => {
 
 test("sse invalidation: message events refresh messages/topics/runs; unknown events invalidate nothing", () => {
   assert.deepEqual(invalidationRoots("message.committed"), [
+    "materials",
     "messages",
     "topics",
     "runs",

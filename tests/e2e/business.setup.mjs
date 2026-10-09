@@ -17,7 +17,7 @@ const password = randomBytes(18).toString("hex");
 const run = (command, args, options = {}) => String(execFileSync(command, args, { cwd: root, encoding: "utf8", windowsHide: true, ...options }) ?? "").trim();
 const docker = (...args) => run("docker", args);
 const npm = process.env.npm_execpath || path.join(path.dirname(process.execPath), "node_modules/npm/bin/npm-cli.js");
-let server;
+let server, gateway;
 async function waitFor(url) {
   const deadline = Date.now() + 60000;
   while (Date.now() < deadline) {
@@ -46,11 +46,20 @@ try {
   const listener = net.createServer(); await new Promise((resolve) => listener.listen(0, "127.0.0.1", resolve));
   const port = listener.address().port; await new Promise((resolve) => listener.close(resolve));
   const base = `http://127.0.0.1:${port}`;
-  const env = { ...process.env, GIN_MODE: "release", JUDEX_ENV: "development", JUDEX_MODE: "all", JUDEX_HTTP_ADDR: `127.0.0.1:${port}`, JUDEX_WEB_DIR: "web/dist",
+  const env = { ...process.env, JUDEX_MATERIAL_CONVERTER_URL: process.env.JUDEX_MATERIAL_CONVERTER_URL??"", GIN_MODE: "release", JUDEX_ENV: "development", JUDEX_MODE: "all", JUDEX_HTTP_ADDR: `127.0.0.1:${port}`, JUDEX_WEB_DIR: "web/dist",
     JUDEX_DATABASE_URL: `postgres://postgres:${password}@127.0.0.1:${pgPort}/judex?sslmode=disable`, JUDEX_ALLOWED_ORIGINS: base, JUDEX_PREVIEW_ORIGIN: `http://localhost:${port}`,
     JUDEX_S3_ENDPOINT: `http://127.0.0.1:${s3Port}`, JUDEX_S3_ACCESS_KEY: "judex", JUDEX_S3_SECRET_KEY: password, JUDEX_S3_BUCKET: "judex", JUDEX_S3_PATH_STYLE: "true",
     JUDEX_REGISTER_PER_IP: "1000", JUDEX_MODEL_CATALOG_FILE: "", JUDEX_MODEL_PROTOCOL: "", JUDEX_OPENSANDBOX_ENDPOINT: "",
   };
+  if(process.env.JUDEX_E2E_COLLABORATION_GATEWAY==="1"){
+    const reservation=net.createServer();await new Promise(resolve=>reservation.listen(0,"127.0.0.1",resolve));
+    const gatewayPort=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));
+    const gatewayExe=path.join(artifact,process.platform==="win32"?"gateway.exe":"gateway");
+    run("go",["build","-o",gatewayExe,"./tests/fixtures/gateway"]);
+    const gatewayLog=fs.openSync(path.join(artifact,"gateway.log"),"w");
+    gateway=spawn(gatewayExe,[],{windowsHide:true,env:{...process.env,JUDEX_FIXTURE_MODE:"collaboration",JUDEX_FIXTURE_ADDR:"127.0.0.1:"+gatewayPort},stdio:["ignore",gatewayLog,gatewayLog]});
+    Object.assign(env,{JUDEX_MODEL_PROTOCOL:"openai-compatible",JUDEX_MODEL_BASE_URL:"http://127.0.0.1:"+gatewayPort+"/v1",JUDEX_MODEL_API_KEY:"controlled-fixture-key",JUDEX_MODEL_NAME:"collaboration-fixture"});
+  }
   execFileSync(executable, ["objects", "init"], { env, windowsHide: true });
   const log = fs.openSync(path.join(artifact, "server.log"), "w");
   server = spawn(executable, [], { cwd: root, env, windowsHide: true, stdio: ["ignore", log, log] });
@@ -79,6 +88,7 @@ try {
   console.error(`Evidence: ${artifact}`);
 } finally {
   if (server && server.exitCode == null) server.kill();
+  if(gateway&&gateway.exitCode==null)gateway.kill();
   for (const name of [pg, s3]) {
     try { const info = JSON.parse(docker("inspect", name))[0]; if (info.Config.Labels?.["judex.test-run"] === runId) docker("rm", "-f", name); } catch {}
   }

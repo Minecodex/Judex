@@ -41,13 +41,13 @@ export const agentsZh = {
   personalPlaceholder:
     "例如：先给结论和待我决定的内容，再给依据。技术建议附验证方式，不确定的地方明确标注。",
   personalHint:
-    "适用于你在当前项目中绑定的所有机器人。其他项目独立设置；前任的私人配置不会展示给继任者。",
+    "仅适用于你在当前项目所选职位的机器人。每个职位和项目独立设置；前任的私人配置不会展示给继任者。",
   personalPrivate: "本人可见",
   personalSave: "保存我的提示词",
-  personalSaved: "你的项目提示词已保存",
+  personalSaved: "你的职位提示词已保存",
   personalClearHint: "留空保存即可清除个人偏好，继续按项目职责工作。",
   personalAppliesTo: "在此项目中为你工作",
-  personalNoRobot: "你暂未绑定本项目的机器人。偏好可以先保存，绑定后才会应用。",
+  personalNoRobot: "你暂未承担本项目的职位，分配职位后可以设置对应的提示词。",
   personalExample: "填入一个示例",
   personalExampleText:
     "先给结论和需要我决定的事项，再列依据。方案尽量给出一个推荐选择及其取舍；技术结论附验证方法。未验证的内容明确标注，不擅自扩大工作范围。",
@@ -123,15 +123,15 @@ export const agentsEn: Record<keyof typeof agentsZh, string> = {
   personalPlaceholder:
     "e.g. Lead with the conclusion and decisions I need to make, then evidence. Include verification steps for technical advice and label uncertainty.",
   personalHint:
-    "Applies to all robots bound to you in this project. Other projects have separate settings; successors never see a predecessor's private configuration.",
+    "Applies only to your robots for the selected position in this project. Each position and project has separate settings; successors never see a predecessor's private configuration.",
   personalPrivate: "Visible to me",
   personalSave: "Save my prompt",
-  personalSaved: "Your project prompt is saved",
+  personalSaved: "Your position prompt is saved",
   personalClearHint:
     "Save an empty prompt to clear preferences and follow project responsibilities.",
   personalAppliesTo: "Working with you here",
   personalNoRobot:
-    "You have no bound robot in this project yet. Save preferences now; they apply after binding.",
+    "You have no positions in this project yet. Set a prompt after a position is assigned.",
   personalExample: "Use an example",
   personalExampleText:
     "Start with the conclusion and decisions I need to make, then evidence. Recommend one option and explain its tradeoffs. Include verification steps for technical claims. Label unverified information and never expand scope without approval.",

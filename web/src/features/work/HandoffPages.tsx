@@ -1,10 +1,11 @@
+import {CardActions} from '../../components/ui/ActionGroup';
 import {
   UICard,
   UIWarning,
   UIDisclosure,
 } from "../../components/ui/FormControls";
 import { Button } from "../../components/ui/Button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -35,7 +36,7 @@ export function HandoffList({ compact = false }: { compact?: boolean }) {
           h.sources.some((v) => ownsSeat(state, v.senderSeatId)))),
   );
   return (
-    <>
+    <section className="judex-handoff-view">
       {!compact && (
         <Heading
           eyebrow="WORK, PASSED WITH CARE"
@@ -100,7 +101,7 @@ export function HandoffList({ compact = false }: { compact?: boolean }) {
       ) : (
         <EmptyState text={t("workNoActions")} />
       )}
-    </>
+    </section>
   );
 }
 function Contribution({
@@ -110,14 +111,14 @@ function Contribution({
   source: Source;
   handoff: Handoff;
 }) {
-  const { state, t, text, act } = useWork(),
+  const { state, t, text, act, route } = useWork(),
     [modal, setModal] = useState<"reject" | "revise" | null>(null);
   const task = state.tasks.find((t) => t.id === source.taskId)!,
     sender = ownsSeat(state, source.senderSeatId),
     receiver = ownsSeat(state, handoff.receiverSeatId);
   return (
     <UICard
-      className={"judex-contribution judex-contribution-" + source.status}
+      className={"judex-contribution judex-contribution-" + source.status + (route.sourceId === source.id ? ' judex-contribution-focused' : '')}
       data-testid={"contribution-" + source.id}
       data-status={source.status}
     >
@@ -163,7 +164,7 @@ function Contribution({
         <p className="judex-work-small-note">{t("workReopenBeforeRevision")}</p>
       )}
       {!handoff.stale && (
-        <div className="judex-contribution-actions">
+        <CardActions className="judex-contribution-actions">
           {receiver && source.status === "pending" && (
             <>
               <Btn
@@ -218,7 +219,7 @@ function Contribution({
               </Btn>
             </>
           )}
-        </div>
+        </CardActions>
       )}
       {modal === "reject" && (
         <ReasonDialog
@@ -245,8 +246,13 @@ export function HandoffPage({
   handoff: Handoff;
   embedded?: boolean;
 }) {
-  const { t, text, go, state, act } = useWork(),
-    flow = state.flows.find((f) => f.id === handoff.flowId)!;
+  const { t, text, go, state, act, route } = useWork(),
+    flow = state.flows.find((f) => f.id === handoff.flowId);
+  useEffect(() => {
+    if (!route.sourceId) return;
+    const frame = requestAnimationFrame(() => document.querySelector('[data-testid="contribution-' + CSS.escape(route.sourceId!) + '"]')?.scrollIntoView({block: 'nearest'}));
+    return () => cancelAnimationFrame(frame);
+  }, [handoff.id, handoff.sources.length, route.sourceId]);
   return (
     <div className="judex-handoff-page" data-testid="handoff-detail">
       {!embedded && (
@@ -259,7 +265,7 @@ export function HandoffPage({
           }
         >
           <ArrowLeft />
-          {t("workHandoffs")}
+          {t("coopDeliveries")}
         </Button>
       )}
       <Heading
@@ -285,7 +291,7 @@ export function HandoffPage({
           <span>{t("workReceiver")}</span>
           <Person seatId={handoff.receiverSeatId} />
         </div>
-        <Button
+        {flow&&        <Button
           onClick={() =>
             go({
               view: "flows",
@@ -300,7 +306,7 @@ export function HandoffPage({
               {text(flow.name)} · v{handoff.flowVersion}
             </strong>
           </span>
-        </Button>
+        </Button>}
       </div>
       {handoff.stale && (
         <UIWarning className="judex-work-warning" data-testid="handoff-stale">

@@ -29,6 +29,8 @@ var publicOperations = map[string]bool{
 // CLI grants narrow both the user's authority and channel. Unlisted writes
 // require a browser, even if that user's normal web session could perform them.
 var cliWrites = map[string]string{
+	"prepareFilePreview":  auth.ScopeMaterialsRead,
+	"retryTaskAnalysis":   auth.ScopeAgentRequest,
 	"createUploadSession": auth.ScopeMaterialsWrite, "uploadPart": auth.ScopeMaterialsWrite,
 	"completeUpload": auth.ScopeMaterialsWrite, "cancelUpload": auth.ScopeMaterialsWrite,
 	"createReleaseReport": auth.ScopeReportsWrite, "cancelAgentRun": auth.ScopeAgentRequest,
@@ -68,7 +70,7 @@ func authorizeOperation(c *gin.Context, op string) error {
 	if op == "revokeClientGrant" && c.Param("grantId") == p.GrantID.String() {
 		return nil
 	}
-	if strings.HasPrefix(c.FullPath(), "/api/v1/me/") && op != "listMyActions" {
+	if strings.HasPrefix(c.FullPath(), "/api/v1/me/") && op != "listMyActions" && op != "listRecentTopics" {
 		return apierrors.New(apierrors.Forbidden, "account operation requires browser session")
 	}
 	if op == "resolveInvitation" {
@@ -276,6 +278,8 @@ func projectScopeParam(c *gin.Context) string {
 }
 
 var pagedOperations = map[string]bool{
-	"listProjects": true, "listModels": true, "listMyActions": true, "listNotifications": true,
+	"listMaterialUsages": true,
+	"listTaskActivity":   true, "listDiscussionSuggestions": true,
+	"listDeliveries": true, "listProjects": true, "listRecentTopics": true, "listModels": true, "listMyActions": true, "listNotifications": true,
 	"listPlans": true, "listTasks": true, "listProposals": true, "listTopics": true, "listHandoffs": true, "listMaterials": true, "listMaterialVersions": true, "listUploadSessions": true, "listPositions": true, "listProjectMembers": true, "listMembers": true, "listIdentities": true, "listInvitations": true, "listMyInvitations": true, "listSessions": true, "listClientGrants": true, "listRepositories": true, "listReleaseReports": true, "listAudit": true, "listTaskReports": true, "listWorkflows": true, "listWorkflowVersions": true,
 }

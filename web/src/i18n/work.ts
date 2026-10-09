@@ -196,7 +196,11 @@ export const workZh = {
   workReplaceHint:
     "工作身份和历史继续存在，个人偏好使用接替者自己的配置。此操作不复制任务，也不改写过去的决定。",
   workMyPrompt: "我在这个项目的工作提示词",
-  workMyPromptHint: "应用于你在本项目承担的职位；属于本人，不随人员替换转移。",
+  workMyPromptHint: "选择你在本项目承担的职位，分别设置工作提示词；属于本人，不随人员替换转移。",
+  workMyPosition: "我承担的职位",
+  workMyPositionPrompt: "我在这个职位的工作提示词",
+  workNoMyPositions: "你暂未承担本项目的职位",
+  workNoMyPositionsHint: "管理者分配职位后，你可以为每个职位分别设置工作提示词。",
   workPromptExample:
     "先给结论与待我决定的事项，再列出依据。把不确定的内容明确标注。",
   workFlowHint:
@@ -453,7 +457,11 @@ export const workEn: Record<keyof typeof workZh, string> = {
     "Work identity and history remain. Preferences come from the new person. Tasks and past decisions are not copied or rewritten.",
   workMyPrompt: "My project work prompt",
   workMyPromptHint:
-    "Applies to your positions in this project. It belongs to you and never transfers with a replacement.",
+    "Choose a position you hold in this project and set its own work prompt. Your prompts never transfer with a replacement.",
+  workMyPosition: "My position",
+  workMyPositionPrompt: "My work prompt for this position",
+  workNoMyPositions: "You have no positions in this project yet",
+  workNoMyPositionsHint: "Once a manager assigns positions, you can set a separate work prompt for each one.",
   workPromptExample:
     "Lead with the conclusion and decisions I need to make, then evidence. Label uncertainty clearly.",
   workFlowHint:

@@ -18,6 +18,14 @@
 @import "./chat-tabs.css";
 @import "./settings.css";
 @import "./controls.css";
+@import "./presentation.css";
+@import "./workspace-system.css";
+@import "./connection.css";
+@import "./position-presets.css";
+@import "./workflow-presets.css";
+@import "./team.css";
+@import "./position-preferences.css";
+@import "./collaboration.css";
 
 @theme inline {
  --color-judex-background: var(--bg);
@@ -25,3 +33,8 @@
  --color-judex-ink: var(--ink);
  --color-judex-accent: var(--accent);
 }
+
+@import "./cooperation-tokens.css";
+@import "./cooperation.css";
+@import './task-details.css';
+@import "./materials.css";

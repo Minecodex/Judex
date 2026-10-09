@@ -6,7 +6,7 @@ const bounds = async (page: Page, selector: string) =>
 test("tab bars start at the top and only one new conversation entry remains", async ({
   page,
 }) => {
-  await page.goto("/?project=leaf&view=topic&item=labels");
+  await page.goto("/projects/leaf/plans/leaf-first/chat/labels");
   await expect(page.locator(".judex-preview-banner")).toHaveCount(0);
   await expect(page.locator(".judex-chat-topline")).toHaveCount(0);
   await expect(page.locator(".judex-chat-panel-top")).toHaveCount(0);
@@ -15,8 +15,8 @@ test("tab bars start at the top and only one new conversation entry remains", as
       ".judex-chat-main .judex-conversation-tabstrip",
     ),
     right = await bounds(page, ".judex-workspace-tabstrip");
-  expect(center.y).toBeCloseTo(0, 0);
-  expect(right.y).toBeCloseTo(0, 0);
+  expect(center.y).toBeCloseTo((await bounds(page,".judex-co-header")).height,0);
+  expect(right.y).toBeCloseTo(center.y,0);
   await expect(page.getByTestId("chat-new-tab")).toHaveCount(0);
   await expect(page.getByTestId("chat-pane-toggle")).toBeVisible();
   expect(
@@ -30,15 +30,15 @@ test("tab bars start at the top and only one new conversation entry remains", as
 test("maximizing takes over the conversation area and restores original sizes and drafts", async ({
   page,
 }) => {
-  await page.goto("/?project=leaf&view=topic&item=labels");
+  await page.goto("/projects/leaf/plans/leaf-first/chat/labels");
   await page.getByTestId("work-discussion-input").fill("中间的草稿保持");
   await openTool(page, "plans");
-  await chooseValue(page,"work-map-plan-filter","leaf-first");
+  await expect(page.locator(".judex-co-context-task")).not.toHaveCount(0);
   const center = await bounds(page, ".judex-chat-main"),
     right = await bounds(page, ".judex-chat-inspector"),
     left = await bounds(page, ".judex-chat-sidebar");
   const preferences = await page.evaluate(() =>
-    localStorage.getItem("judex.chat.layout.v1"),
+    localStorage.getItem("judex.chat.layout.v2"),
   );
   await page.getByTestId("workspace-maximize").click();
   await expect(page.locator(".judex-chat-main")).toBeHidden();
@@ -49,14 +49,12 @@ test("maximizing takes over the conversation area and restores original sizes an
   );
   const expanded = await bounds(page, ".judex-chat-inspector");
   expect(expanded.x).toBeCloseTo(center.x, 0);
-  expect(expanded.width).toBeCloseTo(center.width + right.width + 8, 0);
+  expect(expanded.width).toBeCloseTo(center.width + right.width + 1, 0);
   expect((await bounds(page, ".judex-chat-sidebar")).width).toBeCloseTo(
     left.width,
     0,
   );
-  await expect(page.getByTestId("work-map-plan-filter")).toHaveAttribute("data-value",
-    "leaf-first",
-  );
+  await expect(page.locator(".judex-co-context-task")).not.toHaveCount(0);
   await page.screenshot({
     path: test.info().outputPath("maximized-workspace.png"),
     animations: "disabled",
@@ -75,7 +73,7 @@ test("maximizing takes over the conversation area and restores original sizes an
     "中间的草稿保持",
   );
   expect(
-    await page.evaluate(() => localStorage.getItem("judex.chat.layout.v1")),
+    await page.evaluate(() => localStorage.getItem("judex.chat.layout.v2")),
   ).toBe(preferences);
   await page.getByTestId("workspace-maximize").click();
   await page.getByRole("button", { name: "收起工作区", exact: true }).click();

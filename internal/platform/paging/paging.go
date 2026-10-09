@@ -19,6 +19,7 @@ import (
 
 type key struct{}
 type cursor struct {
+	Text    string    `json:"o,omitempty"`
 	Scope   string    `json:"s"`
 	Created time.Time `json:"t"`
 	ID      uuid.UUID `json:"i"`
@@ -107,6 +108,7 @@ func Query(ctx context.Context, q queryer, sql, timeColumn, idColumn string, arg
 }
 
 type pageRows struct {
+	textOrder bool
 	pgx.Rows
 	page  *Page
 	count int
@@ -127,9 +129,14 @@ func (r *pageRows) Next() bool {
 func (r *pageRows) Scan(dest ...any) error {
 	var created time.Time
 	var id uuid.UUID
-	err := r.Rows.Scan(append(dest, &created, &id)...)
+	var text string
+	keys := []any{&created, &id}
+	if r.textOrder {
+		keys = append(keys, &text)
+	}
+	err := r.Rows.Scan(append(dest, keys...)...)
 	if err == nil {
-		r.page.last = cursor{Scope: r.page.scope, Created: created, ID: id}
+		r.page.last = cursor{Scope: r.page.scope, Created: created, ID: id, Text: text}
 	}
 	return err
 }

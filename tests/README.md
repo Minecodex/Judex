@@ -3,9 +3,9 @@
 | 范围 | 命令 | 覆盖 |
 | --- | --- | --- |
 | Go | `go test ./...`、`go vet ./...` | 领域、HTTP 契约、真实 PG、模型/沙箱受控测试；live 测试另需真实配置 |
-| Web | `npm run test:web` | 40 条状态、认证及布局单测 |
+| Web | `npm run test:web` | 状态、认证、布局、工作权限、资料与模板逻辑；数量以当前输出为准 |
 | 浏览器全套 | `npm run test:e2e` | 桌面 demo 与真实生产业务两套入口 |
-| 生产浏览器 | `node tests/e2e/business.setup.mjs` | 真实 PG/S3、18 条生产 E2E、CLI、全表/对象恢复校验 |
+| 生产浏览器 | `node tests/e2e/business.setup.mjs` | 真实 PG/S3、双用户业务、CLI、全表／对象恢复校验；可传入 spec 或 grep 限定场景 |
 | 部署模板 | `go test ./tests/deploy` | 四种 PG/S3 配置、资源边界和无效配置 |
 | K8s 探针 | `node tests/k8s/smoke.mjs` | 指定 JUDEX_TEST_IMAGE，临时 namespace 部署与生产 capability 检查 |
 | K8s 矩阵 | `node tests/k8s/matrix.mjs` | 包含 mock-gateway 的 JUDEX_TEST_IMAGE，四存储组合及组件故障；真实模型使用 live.mjs |

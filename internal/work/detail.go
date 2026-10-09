@@ -11,7 +11,7 @@ func (s *Service) GetTask(ctx context.Context, user, project, task uuid.UUID) (T
 	if _, err := memberTx(ctx, s.pool, project, user); err != nil {
 		return out, err
 	}
-	err := s.pool.QueryRow(ctx, `SELECT id,plan_id,parent_task_id,title,expected_output,acceptance_criteria,kind,status,reviewer_identity_id,workflow_id,node_id,latest_report_id,latest_acceptance_id,version,created_at FROM tasks WHERE id=$1 AND project_id=$2`, task, project).Scan(&out.ID, &out.PlanID, &out.ParentTaskID, &out.Title, &out.ExpectedOutput, &out.AcceptanceCriteria, &out.Kind, &out.Status, &out.ReviewerIdentityID, &out.WorkflowID, &out.NodeID, &out.LatestReportID, &out.LatestAcceptanceID, &out.Version, &out.CreatedAt)
+	err := s.pool.QueryRow(ctx, `SELECT id,plan_id,parent_task_id,title,expected_output,acceptance_criteria,kind,status,reviewer_identity_id,workflow_id,node_id,latest_report_id,latest_acceptance_id,version,created_at,main_topic_id FROM tasks WHERE id=$1 AND project_id=$2`, task, project).Scan(&out.ID, &out.PlanID, &out.ParentTaskID, &out.Title, &out.ExpectedOutput, &out.AcceptanceCriteria, &out.Kind, &out.Status, &out.ReviewerIdentityID, &out.WorkflowID, &out.NodeID, &out.LatestReportID, &out.LatestAcceptanceID, &out.Version, &out.CreatedAt, &out.MainTopicID)
 	if err != nil {
 		return out, apierrors.New(apierrors.NotFound, "task not found")
 	}
@@ -36,5 +36,10 @@ func (s *Service) GetTask(ctx context.Context, user, project, task uuid.UUID) (T
 	}
 	rows.Close()
 	out.Requirements, _, err = s.RequirementsFor(ctx, poolAsQuery{s.pool}, project, task)
+	if err == nil {
+		all := []Task{out}
+		err = s.decorateTasks(ctx, user, project, all)
+		out = all[0]
+	}
 	return out, err
 }

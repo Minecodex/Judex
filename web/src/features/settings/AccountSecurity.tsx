@@ -1,5 +1,6 @@
 import { UIWarning } from "../../components/ui/FormControls";
-import { Button, Card } from "@heroui/react";
+import { Card } from "@heroui/react";
+import { Button } from "../../components/ui/Button";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { usePreferences } from "../../stores/preferences";

@@ -5,6 +5,7 @@ package work
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -28,32 +29,42 @@ type dbQuery interface {
 }
 
 func (s *Service) RequirementsFor(ctx context.Context, q dbQuery, projectID, taskID uuid.UUID) ([]Requirement, []Blocker, error) {
-	rows, err := q.Query(ctx, `
-		SELECT id, phase, kind, target_id, material_version_id, hard, label
-		FROM task_requirements WHERE project_id=$1 AND task_id=$2 ORDER BY id`, projectID, taskID)
+	reqs, err := s.effectiveRequirements(ctx, q, projectID, taskID)
 	if err != nil {
-		return nil, nil, apierrors.New(apierrors.Internal, "requirements failed").Wrap(err)
+		return nil, nil, err
 	}
-	defer rows.Close()
-	var reqs []Requirement
-	for rows.Next() {
-		var r Requirement
-		if err := rows.Scan(&r.ID, &r.Phase, &r.Kind, &r.TargetID, &r.MaterialVersionID, &r.Hard, &r.Label); err != nil {
-			return nil, nil, apierrors.New(apierrors.Internal, "scan failed").Wrap(err)
+	checked := append([]Requirement(nil), reqs...)
+	for i := range checked {
+		checked[i].Hard = true
+	}
+	failed, err := s.evaluateBlockers(ctx, q, projectID, checked)
+	if err != nil {
+		return nil, nil, err
+	}
+	key := func(kind, id, phase string) string { return kind + ":" + id + ":" + phase }
+	missing, hard := map[string]bool{}, map[string]bool{}
+	for _, b := range failed {
+		missing[key(b.ObjectType, b.ObjectID, b.Phase)] = true
+	}
+	for i, r := range reqs {
+		kind := map[string]string{"task_acceptance": "task", "material_ready": "material", "handoff_receipt": "handoff"}[r.Kind]
+		k := key(kind, r.TargetID.String(), r.Phase)
+		met := r.Waived || !missing[k]
+		reqs[i].Satisfied = &met
+		if r.Hard && !r.Waived {
+			hard[k] = true
 		}
-		reqs = append(reqs, r)
 	}
-	rows.Close()
-	if err = rows.Err(); err != nil {
-		return nil, nil, err
+	blockers := []Blocker{}
+	seen := map[string]bool{}
+	for _, b := range failed {
+		k := key(b.ObjectType, b.ObjectID, b.Phase)
+		if hard[k] && !seen[k] {
+			blockers = append(blockers, b)
+			seen[k] = true
+		}
 	}
-	workflowReqs, err := TaskWorkflowRequirements(ctx, q, projectID, taskID)
-	if err != nil {
-		return nil, nil, err
-	}
-	reqs = append(reqs, workflowReqs...)
-	blockers, err := s.evaluateBlockers(ctx, q, projectID, reqs)
-	return reqs, blockers, err
+	return reqs, blockers, nil
 }
 
 // evaluateBlockers computes hard precondition satisfaction (03 §2):
@@ -62,7 +73,7 @@ func (s *Service) RequirementsFor(ctx context.Context, q dbQuery, projectID, tas
 func (s *Service) evaluateBlockers(ctx context.Context, q dbQuery, projectID uuid.UUID, reqs []Requirement) ([]Blocker, error) {
 	var blockers []Blocker
 	for _, req := range reqs {
-		if !req.Hard {
+		if !req.Hard || req.Waived {
 			continue
 		}
 		switch req.Kind {
@@ -117,6 +128,9 @@ func (s *Service) Start(ctx context.Context, requester, projectID, taskID uuid.U
 			return err
 		}
 		if _, err := memberTx(ctx, tx, projectID, requester); err != nil {
+			return err
+		}
+		if err := ensureTaskExecutable(ctx, tx, projectID, taskID); err != nil {
 			return err
 		}
 		var (
@@ -178,18 +192,23 @@ func (s *Service) Start(ctx context.Context, requester, projectID, taskID uuid.U
 
 // MapNode / MapEdge compose the execution map (06 §5).
 type MapNode struct {
-	TaskID   string    `json:"taskId"`
-	Title    string    `json:"title"`
-	Status   string    `json:"status"`
-	Column   int       `json:"column"`
-	Blockers []Blocker `json:"blockers"`
+	Capabilities       WorkCapabilities    `json:"capabilities"`
+	DiscardedAt        *time.Time          `json:"discardedAt"`
+	ExecutionException *ExecutionException `json:"executionException"`
+	TaskID             string              `json:"taskId"`
+	Title              string              `json:"title"`
+	Status             string              `json:"status"`
+	Column             int                 `json:"column"`
+	Blockers           []Blocker           `json:"blockers"`
 }
 
 type MapEdge struct {
-	FromTaskID string `json:"fromTaskId"`
-	ToTaskID   string `json:"toTaskId"`
-	Phase      string `json:"phase"`
-	Kind       string `json:"kind"`
+	Original   bool     `json:"original"`
+	ViaTaskIDs []string `json:"viaTaskIds,omitempty"`
+	FromTaskID string   `json:"fromTaskId"`
+	ToTaskID   string   `json:"toTaskId"`
+	Phase      string   `json:"phase"`
+	Kind       string   `json:"kind"`
 }
 
 type ExecutionMap struct {
@@ -201,14 +220,14 @@ type ExecutionMap struct {
 // ExecutionMap builds the left-to-right execution graph (08 §8): columns
 // follow hard precondition depth; advisory edges display only; parent links
 // are ownership, never ordering.
-func (s *Service) ExecutionMap(ctx context.Context, requester, projectID uuid.UUID, planID *uuid.UUID) (ExecutionMap, error) {
+func (s *Service) ExecutionMap(ctx context.Context, requester, projectID uuid.UUID, planID *uuid.UUID, includeDrafts ...bool) (ExecutionMap, error) {
 	if _, err := memberTx(ctx, s.pool, projectID, requester); err != nil {
 		return ExecutionMap{}, err
 	}
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, plan_id, parent_task_id, title, status FROM tasks
-		WHERE project_id=$1 AND status<>'draft' AND status<>'cancelled'
-		  AND ($2::uuid IS NULL OR plan_id=$2)`, projectID, planID)
+		WHERE project_id=$1 AND discarded_at IS NULL AND ($3 OR (status<>'draft' AND status<>'cancelled'))
+		  AND ($2::uuid IS NULL OR plan_id=$2 OR ($4 AND EXISTS(SELECT 1 FROM plan_task_references r WHERE r.project_id=tasks.project_id AND r.plan_id=$2 AND r.task_id=tasks.id)))`, projectID, planID, len(includeDrafts) > 0 && includeDrafts[0], len(includeDrafts) > 1 && includeDrafts[1])
 	if err != nil {
 		return ExecutionMap{}, apierrors.New(apierrors.Internal, "map failed").Wrap(err)
 	}
@@ -272,9 +291,10 @@ func (s *Service) ExecutionMap(ctx context.Context, requester, projectID uuid.UU
 		n := nodes[id]
 		node := MapNode{TaskID: id, Title: n.title, Status: n.status, Column: depth(id, map[string]bool{})}
 		_, blockers, err := s.RequirementsFor(ctx, poolAsQuery{s.pool}, projectID, parseUUID(id))
-		if err == nil {
-			node.Blockers = blockers
+		if err != nil {
+			return ExecutionMap{}, err
 		}
+		node.Blockers = blockers
 		out.Nodes = append(out.Nodes, node)
 		if n.parent != nil {
 			out.Edges = append(out.Edges, MapEdge{FromTaskID: *n.parent, ToTaskID: id, Phase: "both", Kind: "parent"})
@@ -282,6 +302,9 @@ func (s *Service) ExecutionMap(ctx context.Context, requester, projectID uuid.UU
 	}
 	for _, meta := range edgeMeta {
 		out.Edges = append(out.Edges, meta)
+	}
+	if err := s.decorateExecutionMap(ctx, requester, projectID, &out); err != nil {
+		return out, err
 	}
 	return out, nil
 }

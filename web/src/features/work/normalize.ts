@@ -1,3 +1,4 @@
+import {ensureDemoMainTopics} from "../chat/demoCollaboration.ts";
 import type { WorkState } from "./types.ts";
 export function normalizeWork(value: unknown): WorkState | null {
   const state = value as WorkState;
@@ -18,7 +19,7 @@ export function normalizeWork(value: unknown): WorkState | null {
     ].every((key) => Array.isArray(state[key as keyof WorkState]))
   )
     return null;
-  return {
+  return ensureDemoMainTopics({
     ...state,
     proposals: state.proposals ?? [],
     tasks: state.tasks.map((task) => ({
@@ -30,5 +31,5 @@ export function normalizeWork(value: unknown): WorkState | null {
           : r,
       ),
     })),
-  };
+  });
 }

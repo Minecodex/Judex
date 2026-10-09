@@ -23,7 +23,7 @@ test("A01/A04 双用户注册、建项目、隔离", async ({ browser }) => {
   await expect(pageA).toHaveURL(/\/$|\/\?/);
   // Create project via workspace shell.
   await pageA.getByTestId("workspace-new-project").click();
-  await pageA.getByLabel(/新建项目|New project/).fill("双用户验收项目");
+  await pageA.getByTestId("new-project-title").fill("双用户验收项目");
   await pageA.locator("form button[type=submit]").first().click();
   // 创建后自动进入工作区：项目名出现在侧栏/标签多处，取其一断言。
   await expect(pageA.getByText("双用户验收项目").first()).toBeVisible({ timeout: 20000 });

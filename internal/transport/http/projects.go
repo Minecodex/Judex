@@ -29,6 +29,7 @@ func NewProjectHandlers(svc *project.Service, modelCheck func(ctx context.Contex
 
 func (h *ProjectHandlers) Register(spec *SpecRouter) {
 	spec.Register("listProjects", withAuth(h.list))
+	spec.Register("listRecentTopics", withAuth(h.recentTopics))
 	spec.Register("createProject", withAuth(h.create))
 	spec.Register("getProject", withAuth(h.get))
 	spec.Register("getProjectBootstrap", withAuth(h.bootstrap))
@@ -41,7 +42,12 @@ func (h *ProjectHandlers) Register(spec *SpecRouter) {
 func (h *ProjectHandlers) list(c *gin.Context) {
 	p := principalFrom(c)
 	limit, afterTime, afterID := paging.Params(c.Request.Context())
-	projects, more, err := h.Projects.ListForUser(c.Request.Context(), p.UserID, limit, afterTime, afterID)
+	include := c.Query("include")
+	if include != "" && include != "summary" {
+		respond{}.error(c, apierrors.Fields("include", "invalid"))
+		return
+	}
+	projects, more, total, err := h.Projects.ListOverview(c.Request.Context(), p.UserID, limit, afterTime, afterID, project.ListOptions{Query: c.Query("q"), Ownership: c.Query("ownership"), Summary: include == "summary"})
 	if err != nil {
 		respond{}.error(c, err)
 		return
@@ -50,7 +56,19 @@ func (h *ProjectHandlers) list(c *gin.Context) {
 		last := projects[len(projects)-1]
 		paging.SetNext(c.Request.Context(), last.CreatedAt, last.ID)
 	}
-	respond{}.ok(c, respond{}.list(c, projects, nil))
+	data := respond{}.list(c, projects, nil)
+	data["totalCount"] = total
+	respond{}.ok(c, data)
+}
+
+func (h *ProjectHandlers) recentTopics(c *gin.Context) {
+	limit, _, _ := paging.Params(c.Request.Context())
+	topics, err := h.Projects.RecentTopics(c.Request.Context(), principalFrom(c).UserID, limit)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, gin.H{"items": topics})
 }
 
 func (h *ProjectHandlers) create(c *gin.Context) {

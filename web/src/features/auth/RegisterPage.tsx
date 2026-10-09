@@ -1,4 +1,4 @@
-import { UINotice, UIWarning } from "../../components/ui/FormControls";
+import { UINotice, UIWarning, UICheckbox } from "../../components/ui/FormControls";
 import { Card, FieldError, Input, Label, TextField } from "@heroui/react";
 import { Button } from "../../components/ui/Button";
 import { useEffect, useState } from "react";
@@ -114,16 +114,9 @@ export function RegisterPage() {
             <Input autoComplete="new-password" />
             <FieldError>{fieldErrors.confirm ? t(fieldErrors.confirm) : ""}</FieldError>
           </TextField>
-          <label className="judex-auth-reveal">
-            <input
-              type="checkbox"
-              checked={reveal}
-              onChange={(event) => setReveal(event.target.checked)}
-            />
-            {reveal ? t("hidePassword") : t("showPassword")}
-          </label>
+          <UICheckbox checked={reveal} onChange={() => setReveal(!reveal)}>{reveal ? t("hidePassword") : t("showPassword")}</UICheckbox>
           <small className="judex-auth-hint" aria-live="polite">{t("passwordRule")}</small>
-          <Button type="submit" isPending={mutation.isPending}>
+          <Button variant="primary" fullWidth size="lg" type="submit" isPending={mutation.isPending}>
             {mutation.isPending ? t("submitting") : t("submitRegister")}
           </Button>
           {mutation.isError && (

@@ -1,12 +1,12 @@
 :root { --entry-width:480px; --preview-height:38px; --control-radius:10px; }
 body { background:var(--bg);color:var(--ink); }
-.judex-control { min-width:0; height:auto; border-radius:inherit; font:inherit; white-space:normal; justify-content:inherit; }
+
 .judex-entry { font-family:var(--font-ui);background:var(--bg);color:var(--ink); }
 .judex-entry-card { width:min(100%,var(--entry-width));padding:var(--s6);background:var(--surface);border:var(--stroke) solid var(--line);border-radius:var(--r-xl); }
 .judex-entry-card p { margin:var(--s3) 0;color:var(--muted);font-size:var(--text-sm); }
-.judex-entry-controls { display:flex;gap:var(--s2);align-self:flex-end; }
+
 .judex-entry-actions { display:flex;gap:var(--s3);margin-top:var(--s5); }
-.judex-auth-form { display:grid;gap:var(--s4);margin-top:var(--s5); }
+
 .judex-auth-form [role="alert"] { color:var(--danger); }
 .judex-connection { border:var(--stroke) solid var(--line);border-radius:var(--r-md);padding:var(--s3);font-size:var(--text-sm);color:var(--muted);margin:var(--s4) 0; }
 .judex-app .judex-button { border-radius:var(--control-radius); }

@@ -3,8 +3,11 @@ package work
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/kakj-go/Judex/internal/collaboration"
+	"github.com/kakj-go/Judex/internal/platform/auth"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"time"
 )
@@ -22,7 +25,18 @@ type Change struct {
 // ApplyChanges is the only formal work mutation entry used by approval.
 // The caller owns the project lock and transaction.
 func ApplyChanges(ctx context.Context, tx pgx.Tx, projectID, actor uuid.UUID, changes []Change) (map[string]string, error) {
+	return applyChanges(ctx, tx, projectID, actor, changes, uuid.Nil)
+}
+
+// ApplyReviewedChanges excludes only the frozen review being committed. All
+// other reviews affected by a draft revision are withdrawn in this transaction.
+func ApplyReviewedChanges(ctx context.Context, tx pgx.Tx, projectID, actor uuid.UUID, changes []Change, reviewID uuid.UUID) (map[string]string, error) {
+	return applyChanges(ctx, tx, projectID, actor, changes, reviewID)
+}
+
+func applyChanges(ctx context.Context, tx pgx.Tx, projectID, actor uuid.UUID, changes []Change, reviewID uuid.UUID) (map[string]string, error) {
 	created := map[string]string{}
+	revisedDrafts := map[uuid.UUID]bool{}
 	now := time.Now().UTC()
 	ordered, err := orderChanges(changes)
 	if err != nil {
@@ -45,6 +59,17 @@ func ApplyChanges(ctx context.Context, tx pgx.Tx, projectID, actor uuid.UUID, ch
 				strOrDefault(change.Fields, "goal"), strOrDefault(change.Fields, "acceptanceCriteria"),
 				optionalUUIDField(change.Fields, "ownerIdentityId"), optionalUUIDField(change.Fields, "workflowId"), now); err != nil {
 				return nil, apierrors.New(apierrors.Internal, "plan apply failed").Wrap(err)
+			}
+			origin, err := ForkOriginFromFields(ctx, tx, projectID, change.Fields)
+			if err != nil {
+				return nil, err
+			}
+			actor := uuid.Nil
+			if p := auth.FromContext(ctx); p != nil {
+				actor = p.UserID
+			}
+			if _, err := collaboration.EnsurePlanTopic(ctx, tx, projectID, id, actor, title, origin.TopicID, origin.AfterSeq, now); err != nil {
+				return nil, err
 			}
 			if change.ClientRef != "" {
 				created[change.ClientRef] = id.String()
@@ -120,12 +145,30 @@ func ApplyChanges(ctx context.Context, tx pgx.Tx, projectID, actor uuid.UUID, ch
 			}
 		case "reference_task", "activate_object", "cancel_task", "cancel_plan", "update_scope", "set_assignment", "set_requirements", "link_material", "link_topic":
 			target := resolveTarget(change.TargetID, created)
+			// Read before applying: activation and cancellation change the phase.
+			// The project lock is already held, and applyExisting locks the row.
+			if table := map[string]string{"plan": "plans", "task": "tasks"}[change.TargetType]; table != "" {
+				var draft bool
+				if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT EXISTS(SELECT 1 FROM %s WHERE project_id=$1 AND id=$2 AND status='draft')`, table), projectID, target).Scan(&draft); err != nil {
+					return nil, err
+				}
+				if draft {
+					revisedDrafts[target] = true
+				}
+			}
 			if err := applyExisting(ctx, tx, projectID, actor, target, change, created); err != nil {
 				return nil, err
 			}
 		default:
 			return nil, apierrors.Newf(apierrors.Validation, "unknown operation %s", change.Operation)
 		}
+	}
+	ids := make([]uuid.UUID, 0, len(revisedDrafts))
+	for id := range revisedDrafts {
+		ids = append(ids, id)
+	}
+	if err := withdrawDraftReviews(ctx, tx, projectID, ids, reviewID, now); err != nil {
+		return nil, err
 	}
 	return created, nil
 }

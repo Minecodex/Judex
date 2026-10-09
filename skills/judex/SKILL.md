@@ -21,6 +21,9 @@ description: Use the judex CLI to read project tasks, report selected local work
 - 提交本地成果：核对任务 → 明确列出要上传的文件清单并让用户确认 → `judex material upload <每个文件>` → `judex report --task <ID> --kind delivery --file report.json`
 - 同意提案：`judex decision review <ID>` → 向用户复述变化清单与审批人 → `judex decision approve ID --review HASH` 创建确认意图 → 用户浏览器确认 → 你通过 `judex decision result INTENT` 查询结果并汇报
 - 交接：`judex handoff send <SOURCE> --version N`（经确认意图）
+- 运行例外：`judex task skip TASK` 只读影响；用户明确要求跳过时加 `--reason` 和逐项 `--waive TASK:REQUIREMENT` 准备确认意图。恢复使用 `task restore TASK --reason ...`；后继已开展时需 `--acknowledge-started`。仅项目管理员可确认，保留原阶段，跳过不等于验收，模型不得自行点击批准。
+- 任务分析与讨论：`judex context get TASK` → `judex task activity TASK` 核对原记录和真实分析状态；问题/回复使用带 taskId、discussionIntent 的 submission，不冒充正式进展或交付。常规上报不自动建会话。
+- 人已要求另建或续接讨论时：`judex discussion-suggestion resolve ID --mode create|main|link`（link 必须明确选 topic），或 `judex topic fork TOPIC --title TITLE --after-seq N`；用户本人浏览器确认一次，读取同一 intent 结果。共享历史不复制材料、投票、工具执行或私有上下文。
 
 详细命令表、报告格式与错误恢复见 references/。
 

@@ -1,7 +1,9 @@
 # Web is built on the host (`npm run build`) so the image build stays
 # platform-independent; CI may swap this for a full node stage later.
 FROM alpine:3.22 AS web
+ARG VERSION=0.1.0-dev
 COPY web/dist /dist
+RUN test -f /dist/downloads/manifest.json && grep -Fq "\"version\": \"${VERSION}\"" /dist/downloads/manifest.json
 
 FROM golang:1.26.0-alpine AS backend
 WORKDIR /source

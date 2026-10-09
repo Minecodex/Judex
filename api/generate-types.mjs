@@ -21,25 +21,31 @@ const names = ast.statements.filter(ts.isInterfaceDeclaration).map((node) => nod
 const rootImports = [];
 const declarations = [];
 const outputs = new Map();
+const pendingParts=[];
+function partition(name,input){
+ const groups=[];let members=[],lines=0;
+ for(const member of input){let text=member.getFullText(ast),size=text.split("\n").length;
+  if(size>1800&&ts.isPropertySignature(member)&&member.type&&ts.isTypeLiteralNode(member.type)){
+   const key=member.name.getText(ast).replace(/[^a-zA-Z0-9]/g,"");
+   const nested=`Schema${name[0].toUpperCase()}${name.slice(1)}${key[0].toUpperCase()}${key.slice(1)}`;
+   const parts=partition(nested,member.type.members);names.push(nested);
+   declarations.push(`export interface ${nested} extends ${parts.join(", ")} {}`);
+   const start=member.getFullStart();text=text.slice(0,member.type.getStart(ast)-start)+nested+text.slice(member.type.getEnd()-start);size=text.split("\n").length;
+  }
+  if(size>1800)throw new Error(`Generated member ${name} exceeds line limit`);
+  if(lines+size>1800&&members.length){groups.push(members);members=[];lines=0}
+  members.push(text);lines+=size;
+ }
+ if(members.length)groups.push(members);
+ return groups.map((group,index)=>{const type=`Schema${name[0].toUpperCase()}${name.slice(1)}${index}`,file=`schema-${name}-${index}`;pendingParts.push({file,type,group});rootImports.push(`import type { ${type} } from "./${file}";`);return type;});
+}
 for (const node of ast.statements) {
   if (!ts.isInterfaceDeclaration(node)) { declarations.push(node.getText(ast)); continue; }
   const name = node.name.text;
-  const groups = []; let members = []; let lines = 0;
-  for (const member of node.members) {
-    const text = member.getFullText(ast); const size = text.split("\n").length;
-    if (size > 1800) throw new Error(`Generated member ${name} exceeds line limit`);
-    if (lines + size > 1800 && members.length) { groups.push(members); members = []; lines = 0; }
-    members.push(text); lines += size;
-  }
-  if (members.length) groups.push(members);
-  const parts = groups.map((group, index) => {
-    const type = `Schema${name[0].toUpperCase()}${name.slice(1)}${index}`;
-    const file = `schema-${name}-${index}`;
-    outputs.set(file + ".d.ts", banner + `import type { ${names.join(", ")} } from "./schema";\nexport interface ${type} {\n${group.join("\n")}\n}\n`);
-    rootImports.push(`import type { ${type} } from "./${file}";`); return type;
-  });
+  const parts=partition(name,node.members);
   declarations.push(`export interface ${name}${parts.length ? ` extends ${parts.join(", ")}` : ""} {}`);
 }
+for(const {file,type,group} of pendingParts)outputs.set(file+".d.ts",banner+`import type { ${names.join(", ")} } from "./schema";\nexport interface ${type} {\n${group.join("\n")}\n}\n`);
 outputs.set("schema.d.ts", banner + rootImports.join("\n") + "\n" + declarations.join("\n") + "\n");
 for (const file of fs.readdirSync(directory)) {
   if (/^schema-.*\.d\.ts$/.test(file) && !outputs.has(file)) fs.unlinkSync(path.join(directory, file));

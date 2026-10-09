@@ -19,8 +19,8 @@ function sourceFingerprint(){
 const sourceTreeHash=sourceFingerprint();
 fs.mkdirSync(out, {recursive: true});
 const npm = process.env.npm_execpath;
-if (npm) run(process.execPath, [npm, 'run', 'build']);
-else run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build'], {shell: process.platform === 'win32'});
+if (npm) run(process.execPath, [npm, 'run', 'build'], {env:{...process.env,JUDEX_RELEASE_VERSION:version}});
+else run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build'], {shell: process.platform === 'win32',env:{...process.env,JUDEX_RELEASE_VERSION:version}});
 const entries = [];
 const skillStage=path.join(out,'skill');fs.cpSync('skills/judex',skillStage,{recursive:true});
 const skillManifest=JSON.parse(fs.readFileSync(path.join(skillStage,'manifest.json'),'utf8'));skillManifest.version=version;fs.writeFileSync(path.join(skillStage,'manifest.json'),JSON.stringify(skillManifest,null,2)+'\n');

@@ -1,3 +1,4 @@
+import type {ForkTopicInput,TaskActivityInput,ResolveSuggestionInput} from "../chat/collaborationTypes";
 import type { Key, Locale } from "../../i18n";
 import type { ProposalInput } from "../chat/proposalModel";
 import type {
@@ -10,7 +11,7 @@ import type {
   WorkState,
 } from "./types";
 
-export type ActResult = { ok: boolean; id?: string; inviteUrl?: string };
+export type ActResult = { ok: boolean; errorCode?: string; id?: string; inviteUrl?: string; createdCount?: number; skippedCount?: number };
 export type ActOptions = { toast?: boolean };
 export type ActFn = <K extends keyof ActionPayloads>(
   name: K,
@@ -32,11 +33,22 @@ export type PositionValue = {
   id?: string;
   name: string;
   prompt: string;
+  publicSummary?: string;
   flowId: string;
   nodeId: string;
 };
 
 export interface ActionPayloads {
+ updateWorkDraft:{kind:'task'|'plan';id:string;expectedVersion:number;fields:Record<string,unknown>};
+ discardWork:{kind:'task'|'plan';id:string;expectedVersion:number;reviewHash:string};
+ executionException:{taskId:string;operation:'skip'|'restore';expectedVersion:number;reviewHash:string;reason:string;waivers:import('./runtimeTypes').ExceptionWaiver[];acknowledgeStarted:boolean};
+ proposeWorkChange:{kind:'task'|'plan';id:string;expectedVersion:number;fields:Record<string,unknown>;reason:string};
+ ensureTaskMainTopic:{taskId:string};
+ replaceTopicLinks:{topicId:string;expectedLinksVersion:number;planIds:string[];taskIds:string[]};
+ forkTopic:ForkTopicInput;
+ recordTaskActivity:TaskActivityInput;
+ resolveDiscussionSuggestion:ResolveSuggestionInput;
+ retryTaskAnalysis:{analysisId:string};
   sourceDecision: {
     handoffId: string;
     sourceId: string;
@@ -45,6 +57,7 @@ export interface ActionPayloads {
     reason?: string;
   };
   reviseSource: {
+    identityId?:string;
     handoffId: string;
     sourceId: string;
     revision: number;
@@ -52,14 +65,17 @@ export interface ActionPayloads {
     files: Evidence[];
   };
   sendSource: { handoffId: string; sourceId: string; revision: number };
-  reportTask: { taskId: string; summary: string; files: Evidence[] };
+  reportTask: { taskId: string; summary: string; files: Evidence[];identityId?:string };
   taskAction: {
+    identityId?:string;
+ frozenReview?:{reviewId:string;reviewHash:string;targetVersion:number};decision?:"accept"|"reject";
     taskId: string;
     op: "start" | "accept" | "reopen";
     reason?: string;
     revision?: number;
   };
   planAction: {
+ frozenReview?:{reviewId:string;reviewHash:string;targetVersion:number};
     planId: string;
     op: "resume" | "activate" | "accept";
     key?: string;
@@ -67,7 +83,7 @@ export interface ActionPayloads {
   };
   decideDraft: { taskId: string };
   createWork: { projectId: string; draft: WorkDraft };
-  topicMessage: { topicId: string; body: string; files?: Evidence[] };
+  topicMessage: { topicId: string; body: string; files?: Evidence[];taskId?:string;planId?:string };
   publishFlow: {
     projectId: string;
     flowId: string;
@@ -76,12 +92,16 @@ export interface ActionPayloads {
     material: boolean;
   };
   refreshHandoff: { handoffId: string };
-  personalPrompt: { projectId: string; prompt: string };
+  personalPrompt: { projectId: string; positionId: string; expectedRevision: number; prompt: string };
   savePosition: { projectId: string; value: PositionValue };
+  importPositionPresets: {projectId: string; catalogVersion: string; scenarioId: string; roleIds: string[]; locale: Locale};
+  importWorkflowPresets: {projectId: string; catalogVersion: string; scenarioId: string; workflowIds: string[]; locale: Locale};
+  saveFlowDraft: {projectId: string; flowId: string; expectedVersion: number; body: import('./types').FlowBody};
+  publishFlowDraft: {projectId: string; flowId: string; expectedVersion: number; draftHash: string};
   invitePerson: { projectId: string; name: string; positionIds: string[] };
-  assignPositions: { projectId: string; person: string; ids: string[] };
+  assignPositions: { projectId: string; person: string; userId?: string; ids: string[] };
   acceptInvite: { invitationId: string };
-  replaceSeat: { seatId: string; from: string; to: string };
+  replaceSeat: { seatId: string; from: string; to: string; userId?: string };
   createFlow: {
     projectId: string;
     name: string;
@@ -95,6 +115,7 @@ export interface ActionPayloads {
     previousId?: string;
   };
   decideProposal: {
+ frozenReview?:import("../../lib/api/schema").components["schemas"]["ProposalReview"];
     proposalId: string;
     revision: number;
     accept: boolean;
@@ -103,6 +124,7 @@ export interface ActionPayloads {
   discussTopic: { topicId: string };
   setDiscussionLimit: { projectId: string; limit: number };
   proposeHandoff: {
+    senderIdentityIds?:Record<string,string>;
     projectId: string;
     target: string;
     receiver: string;
@@ -116,13 +138,14 @@ export interface ActionPayloads {
     taskIds: string[];
   };
   sendTopicMessage: {
+    taskId?:string;planId?:string;
     projectId: string;
     topicId?: string;
     title: string;
     body: string;
     files: Evidence[];
   };
-  registerResource: { projectId: string; purpose: string; files: Evidence[] };
+  registerResource: { projectId: string; purpose: string; files: Evidence[];taskId?:string;planId?:string };
   createProject: {
     name: string;
     goal: string;
@@ -132,6 +155,8 @@ export interface ActionPayloads {
 }
 
 export interface WorkStore {
+ dataPending?:boolean;dataFailed?:boolean;dataRetry?:()=>void;
+ mode:"demo"|"api";
   state: WorkState;
   route: Route;
   go(next: Partial<Route>): void;

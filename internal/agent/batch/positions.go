@@ -43,6 +43,7 @@ func (e *Executor) watchCancellation(ctx context.Context, cancel context.CancelF
 }
 
 type positionCaller struct {
+	task                          *uuid.UUID
 	mu                            sync.Mutex
 	failures                      []string
 	localSessions                 sync.Map
@@ -67,8 +68,8 @@ func (c *positionCaller) CallPositionAgent(ctx context.Context, project, positio
   JOIN position_versions v ON v.template_id=t.id AND v.revision=t.current_version
   JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version AND b.valid_until IS NULL
   JOIN project_members m ON m.project_id=i.project_id AND m.user_id=b.user_id AND m.state='active'
-  LEFT JOIN personal_project_preferences pref ON pref.project_id=i.project_id AND pref.user_id=b.user_id
-  WHERE i.project_id=$1 AND i.status='active' AND (i.id::text=$2 OR t.name=$2)`, c.project, position)
+  LEFT JOIN personal_position_preferences pref ON pref.project_id=i.project_id AND pref.user_id=b.user_id AND pref.position_id=i.template_id
+  WHERE i.project_id=$1 AND i.status='active' AND t.status='active' AND (i.id::text=$2 OR t.name=$2)`, c.project, position)
 	if err != nil {
 		return "", err
 	}
@@ -87,11 +88,25 @@ func (c *positionCaller) CallPositionAgent(ctx context.Context, project, positio
 	if count != 1 {
 		return "", fmt.Errorf("position must resolve to one active identity; use identityId")
 	}
+	if c.task != nil {
+		allowed, err := taskAllowsIdentity(ctx, e.Pool, c.project, *c.task, identity)
+		if err != nil {
+			return "", err
+		}
+		if !allowed {
+			return "", fmt.Errorf("identity is not assigned or allowed at the current task node")
+		}
+	}
 	provider, name, maxIn, maxOut, err := e.resolve(ctx, c.project, identity)
 	if err != nil {
 		return "", err
 	}
-	session, err := e.ensureSession(ctx, c.project, c.topic, identity)
+	var session uuid.UUID
+	if c.task != nil && c.topic == uuid.Nil {
+		session, err = e.ensureTaskSession(ctx, c.project, *c.task, identity)
+	} else {
+		session, err = e.ensureSession(ctx, c.project, c.topic, identity)
+	}
 	if err != nil {
 		return "", err
 	}

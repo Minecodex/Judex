@@ -22,12 +22,14 @@ export function ProjectSwitcher({
   return (
     <header className="judex-project-switcher">
       <Button
+        isIconOnly
+        size="sm"
         className="judex-new-project-top"
         aria-label={t("chatNewProject")}
         onClick={onCreate}
       >
         <Plus size={17} />
-        <span>{t("chatNewProject")}</span>
+
       </Button>
       <Select
         aria-label={t("chatSwitchProject")}
@@ -53,7 +55,7 @@ export function ProjectSwitcher({
         </Label>
         <Select.Trigger data-testid="project-switcher">
           <FolderOpen size={18} />
-          <Select.Value />
+          <span className="judex-project-select-summary"><Select.Value /><small>{t("portalMembers",{count:project.members.length})}</small></span>
           <Select.Indicator />
         </Select.Trigger>
         <Select.Popover className="judex-project-select-popover">

@@ -7,7 +7,7 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 // 前置（由 tests/e2e/business.setup.mjs 准备）：Docker PG + MinIO + 生产
 // web 构建由 judex-server 托管。此配置只启动 Playwright。
 export default defineConfig({
-  testDir: root,
+  testDir: fileURLToPath(new URL("./",import.meta.url)),
   testMatch: /business\..*\.spec\.ts/,
   timeout: 60000,
   retries: 0,
@@ -17,6 +17,8 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  outputDir: `${root}tests/results/business`,
+  outputDir: process.env.JUDEX_E2E_ARTIFACT
+    ? `${process.env.JUDEX_E2E_ARTIFACT}/${process.env.JUDEX_REAL_MODEL_SMOKE === '1' ? 'real-model-results' : 'business-results'}`
+    : `${root}tests/results/business`,
   reporter: [["list"]],
 });

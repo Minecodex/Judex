@@ -3,7 +3,14 @@ import type {Change,EvidenceReview} from "../work/ReviewDetails";
 type Intent={operation:string;objectId:string;reviewHash:string;payload:Record<string,unknown>};
 export type IntentReview={reviewHash:string;changes?:Change[];evidence?:EvidenceReview};
 export async function loadIntentReview(project:string,value:Intent,receiptHint:string):Promise<IntentReview>{
+ if(value.operation==="topic.fork"||value.operation==="discussion_suggestion.resolve"){
+  const resource=value.operation==="topic.fork"?"topics":"discussion-suggestions";
+  const item=await request<Record<string,unknown>>("/projects/"+project+"/"+resource+"/"+value.objectId);
+  const current=value.operation==="topic.fork"||item.version===value.payload.expectedVersion;
+  return {reviewHash:current?value.reviewHash:"changed",changes:[{operation:value.operation,targetType:resource,fields:{sourceTitle:item.title,...value.payload}}]};
+ }
  const prefix=`/projects/${project}`;
+ if(value.operation==='task.skip'||value.operation==='task.restore'){const operation=value.operation.slice(5);const review=await request<import('../work/runtimeTypes').ExecutionReview>(`${prefix}/tasks/${value.objectId}/execution-review?operation=${operation}`);return {reviewHash:review.reviewHash,changes:[{operation:value.operation,targetType:'task',fields:{title:review.title,...value.payload,affectedTasks:review.affectedTasks,referencingPlanIds:review.referencingPlanIds}}]};}
  if(value.operation.startsWith("proposal."))return request<IntentReview>(`${prefix}/proposals/${value.objectId}/review`);
  if(value.operation==="task.acceptance"||value.operation==="plan.acceptance"){const evidence=await request<EvidenceReview>(`${prefix}/${value.operation.startsWith("task")?"tasks":"plans"}/${value.objectId}/acceptance-review`);return {reviewHash:evidence.reviewHash,evidence};}
  if(value.operation==="workflow.publish"){

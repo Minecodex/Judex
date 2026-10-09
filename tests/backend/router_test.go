@@ -22,14 +22,37 @@ func newTestRouter(t *testing.T, draining *atomic.Bool) *gin.Engine {
 		Logger:   slog.New(slog.NewTextHandler(io.Discard, nil)),
 		Draining: draining,
 		Assets: fstest.MapFS{
-			"index.html":    {Data: []byte("<!doctype html><title>Judex</title>")},
-			"assets/app.js": {Data: []byte("export const ready=true")},
+			"index.html":                       {Data: []byte("<!doctype html><title>Judex</title>")},
+			"assets/app.js":                    {Data: []byte("export const ready=true")},
+			"downloads/judex-windows-test.zip": {Data: []byte("PK\x03\x04download bytes")},
+			"downloads/manifest.json":          {Data: []byte(`{"version":"test"}`)},
 		},
 	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return router
+}
+
+func TestClientDownloadsAreAttachmentsAndMissingFilesStay404(t *testing.T) {
+	router := newTestRouter(t, &atomic.Bool{})
+	for _, method := range []string{"GET", "HEAD"} {
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, httptest.NewRequest(method, "/downloads/judex-windows-test.zip", nil))
+		if response.Code != 200 || response.Header().Get("Content-Disposition") != `attachment; filename="judex-windows-test.zip"` || response.Header().Get("X-Content-Type-Options") != "nosniff" {
+			t.Fatalf("download response: %d %v", response.Code, response.Header())
+		}
+	}
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest("GET", "/downloads/missing.zip", nil))
+	if response.Code != 404 || strings.Contains(response.Body.String(), "<!doctype") {
+		t.Fatal("download miss returned the SPA")
+	}
+	response = httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest("GET", "/downloads/missing", nil))
+	if response.Code != 404 {
+		t.Fatal("download directory miss returned the SPA")
+	}
 }
 
 func TestRoutingAndScaffoldBoundaries(t *testing.T) {

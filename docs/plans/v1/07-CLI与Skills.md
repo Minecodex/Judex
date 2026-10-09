@@ -1,5 +1,7 @@
 # 07 CLI 与 Skills
 
+2026-10-07 补充：context get TASK 返回计划主讨论、近期活动分页和讨论建议；task activity TASK 提供 cursor 分页完整原记录。question/reply 用 submit，正式报告 kind 仍只有 progress/delivery。topic fork 与 discussion-suggestion resolve 通过一次浏览器确认意图，CLI 用 decision result 读取同一结果。task-analysis show/retry 查询真实状态或恢复原批次，不重置预算。命令及示例见 [Skill 命令表](../../../skills/judex/references/commands.md) 和 [报告格式](../../../skills/judex/references/reporting.md)。
+
 ## 1. 最新确认与实现边界
 
 用户本轮明确：说的是 **CLI**，沿用 `judex`。正式审批由 CLI／Skill 发起，**浏览器审阅并确认一次，CLI 接收结果**。该答复覆盖旧 D10 中“不重复 Web 确认”的未解决实现条件；不是用户先在 CLI 批一次再去 Web 批第二次。
@@ -7,6 +9,8 @@
 CLI 是公共业务 API 的客户端，不另开绕权限接口；Skill 是调用规范，不是持权服务。成员手动调用本地 AI/Skill 拉取工作和上报，平台不向电脑推可执行指令，不安装常驻远控 Agent。
 
 ## 2. 工程与发布目录
+
+2026-10-07 门户接入：设置 → 本地 AI 接入提供 Windows CLI、macOS CLI 与 Skills ZIP 三个真实下载入口。平台压缩包分别包含 amd64/arm64 二进制和架构选择启动文件，CLI 包附带匹配版本 Skills，独立 ZIP 供宿主直接安装。前端 postbuild 从当前源码构建并生成 SHA256 清单，经同版本服务端的静态资源通道提供。详细构建与验证约定见 [统一界面组件规范](../../统一界面组件规范.md)。
 
 ```text
 cmd/judex/main.go             小入口、信号、exit code
@@ -124,3 +128,7 @@ Skill 流程：
 Codex 默认目录 ~/.agents/skills/judex，Claude Code 为 ~/.claude/skills/judex；SKILL.md 包含 name/description frontmatter。安装收据只拥有发行清单内五个文件，拒绝覆盖修改文件，卸载保留用户额外文件。实际 Codex app-server 发现/卸载已验证，额外 AI 宿主会话尚未运行。
 
 npm run release:build -- VERSION 生成六平台 CLI、双架构 Linux server、web、Chart、OpenAPI 和 Skill。构建记录源树指纹，制品/Skill 版本一致，全文件校验和可由 node tests/release.mjs dist/release/VERSION 复核。Windows amd64 包已实际运行，其余架构仅构建。
+
+## 2026-10-09 资料用途登记
+
+material upload 支持可选 --purpose 与互斥的 --task/--plan，单独登记不会产生进度报告。失败返回已上传版本，源摘要和关联上下文的持久收据支持固定版本与提交键重试；报告仍明确引用 materialVersionIds，计划从任务解析。详见 [共享资料正式重构](../../共享资料正式重构.md)。

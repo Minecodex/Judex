@@ -6,7 +6,9 @@ import {
   Routes,
   useLocation,
 } from "react-router";
-import { Button, Card } from "@heroui/react";
+import { Card } from "@heroui/react";
+import { Button } from "../components/ui/Button";
+import { AuthStory, Brand, PreferenceControls } from "../components/ui/Presentation";
 // Demo workspace is code-split: the production bundle never ships the
 // simulated business tree (docs/plans/v1/08 §9).
 const DemoPreviewApp = import.meta.env.VITE_DATA_MODE === "demo" ? lazy(() => import("./DemoPreviewApp")) : null;
@@ -34,14 +36,7 @@ export default function App() {
       <BrowserRouter>
         <AuthRoutes
           controls={
-            <div className="judex-entry-controls">
-              <Button variant="ghost" onClick={() => setLocale(locale === "en" ? "zh-CN" : "en")}>
-                {locale === "en" ? "中文" : "EN"}
-              </Button>
-              <Button variant="ghost" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-                {theme === "dark" ? "☀" : "☾"}
-              </Button>
-            </div>
+            <PreferenceControls />
           }
         />
       </BrowserRouter>
@@ -72,7 +67,7 @@ function AuthRoutes({ controls }: { controls: React.ReactNode }) {
             <Card.Description>{t("errServer")}</Card.Description>
           </Card.Header>
           <Card.Content>
-            <Button onClick={() => refresh()}>{t("shellNetwork")}</Button>
+            <Button variant="primary" onClick={() => refresh()}>{t("shellNetwork")}</Button>
           </Card.Content>
         </Card>
       </main>
@@ -148,16 +143,13 @@ function EntryLayout({
 }) {
   const { locale } = usePreferences();
   const t = (key: Key) => translate(locale, key);
+  const location = useLocation();
+  const split = ["/login", "/register", "/recover"].includes(location.pathname);
+  if (split) return <main className="judex-entry judex-entry-split">
+    <div className="judex-entry-controls">{controls}</div>
+    <AuthStory /><section className="judex-entry-form-area"><div className="judex-entry-form-wrap">{children}</div><p className="judex-entry-footer">{t("portalFooter")}</p></section>
+  </main>;
   return (
-    <main className="judex-entry min-h-screen flex flex-col items-center justify-center gap-6 p-8">
-      {controls}
-      <Card className="judex-auth-card judex-entry-card">
-        <Card.Header>
-          <Card.Title>{t("authEntryTitle")}</Card.Title>
-          <Card.Description>{t("authEntryHint")}</Card.Description>
-        </Card.Header>
-        <Card.Content>{children}</Card.Content>
-      </Card>
-    </main>
+    <main className="judex-entry judex-entry-review"><header className="judex-review-header"><Brand small />{controls}</header><div className="judex-entry-review-content">{children}</div></main>
   );
 }

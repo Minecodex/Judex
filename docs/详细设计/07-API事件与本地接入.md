@@ -19,7 +19,7 @@
 | 注册登录 | POST /auth/register、/auth/login、/auth/logout | 内网邮箱＋密码自由注册，首版不依赖邮件验证（2026-09-27 确认） |
 | 项目 | GET/POST /projects | 返回可见项目；创建当前人的项目成员关系 |
 | 团队 | /projects/{id}/members、/positions、/identities、/invitations | 管理动作受项目权限限制 |
-| 我的偏好 | /projects/{id}/me/preferences | 个人项目提示词，不作为可公开团队字段 |
+| 我的偏好 | /projects/{id}/me/preferences | GET 返回本人当前任职的独立提示词列表；PUT 指定 positionId/expectedRevision，只修改该职位，不作为可公开团队字段 |
 | 工作安排 | /projects/{id}/plans、/tasks、/proposals | 创建 / 修改正式安排使用草稿与决定路径 |
 | 任务执行 | POST /tasks/{id}/reports、/acceptances、/reopens | 区分本人上报、最终验收与重开 |
 | 计划验收 | POST /plans/{id}/acceptances | 计划负责人按快照整体验收 |
