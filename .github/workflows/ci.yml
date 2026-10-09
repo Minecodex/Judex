@@ -57,7 +57,7 @@ jobs:
       - run: npm run test:web
       - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - run: npx playwright test --config tests/e2e/chat.config.ts
       - name: Upload browser failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
@@ -66,13 +66,44 @@ jobs:
           path: |
             tests/reports/chat
             tests/results/chat
-            .cache/e2e/**/business-results
+          if-no-files-found: ignore
+
+  business:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.10.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Pull isolated storage images
+        run: |
+          docker pull postgres:17-alpine
+          docker pull chrislusf/seaweedfs:4.47
+      - run: node tests/e2e/business.setup.mjs
+      - name: Upload business failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: judex-business-evidence
+          path: .cache/e2e/**/business-results
           if-no-files-found: ignore
 
   ci-gate:
     name: CI
     if: ${{ always() }}
-    needs: ["backend", "web"]
+    needs: ["backend", "web", "business"]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

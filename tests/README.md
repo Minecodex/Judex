@@ -21,4 +21,6 @@
 
 生产浏览器入口默认构建并启动独立 Office 转换容器，按源文件摘要复用构建镜像；可用 JUDEX_TEST_CONVERTER_IMAGE 指定已有镜像，或用 JUDEX_MATERIAL_CONVERTER_URL 指定测试转换服务。数据库 SQL 夹具在 Docker 和 Kubernetes 两种入口都先校验本次运行的所有权，测试结束只清理所属容器／namespace。
 
+生产浏览器使用固定 `chrislusf/seaweedfs:4.47`，与 Helm 默认对象存储一致；每次运行生成独立 S3 凭据，认证接口就绪后再初始化 bucket，并完成真实上传、Range、分片和对象恢复核对。GitHub CI 分别运行 `backend`、`web`、`business`，三项均通过才允许汇总检查通过；本地 `npm run test:e2e` 仍顺序执行界面和业务两套测试。
+
 K8s 测试需要已存在的兼容 Operator/CRD，不部署第二个 Controller，不停止业务服务；finally 按所有权清理。当前证据及剩余边界见 [验收报告](../docs/plans/v1/FINAL-REPORT.md)。

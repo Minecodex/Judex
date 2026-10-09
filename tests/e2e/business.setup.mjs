@@ -20,11 +20,11 @@ const run = (command, args, options = {}) => String(execFileSync(command, args, 
 const docker = (...args) => run("docker", args);
 const npm = process.env.npm_execpath || path.join(path.dirname(process.execPath), "node_modules/npm/bin/npm-cli.js");
 let server, gateway;
-async function waitFor(url) {
+async function waitFor(url, ready = response => response.ok) {
   const deadline = Date.now() + 60000;
   while (Date.now() < deadline) {
     if (server?.exitCode != null) throw new Error("Acceptance server exited; inspect server.log");
-    try { if ((await fetch(url)).ok) return; } catch {}
+    try { if (ready(await fetch(url))) return; } catch {}
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   throw new Error(`Readiness timed out: ${url}`);
@@ -36,15 +36,19 @@ try {
   const cli = path.join(artifact, process.platform === "win32" ? "judex.exe" : "judex");
   run("go", ["build", "-o", cli, "./cmd/judex"]);
   docker("run", "-d", "--rm", "--name", pg, "--label", `judex.test-run=${runId}`, "-e", `POSTGRES_PASSWORD=${password}`, "-e", "POSTGRES_DB=judex", "-p", "127.0.0.1::5432", "postgres:17-alpine");
-  docker("run", "-d", "--rm", "--name", s3, "--label", `judex.test-run=${runId}`, "-e", "MINIO_ROOT_USER=judex", "-e", `MINIO_ROOT_PASSWORD=${password}`, "-p", "127.0.0.1::9000", "quay.io/minio/minio:RELEASE.2025-06-13T11-33-47Z", "server", "/data");
+  const s3Auth = path.join(artifact, "s3-auth.json");
+  fs.writeFileSync(s3Auth, JSON.stringify({ identities: [{ name: "judex", credentials: [{ accessKey: "judex", secretKey: password }], actions: ["Admin", "Read", "Write", "List", "Tagging"] }] }), { mode: 0o600 });
+  docker("run", "-d", "--rm", "--name", s3, "--label", `judex.test-run=${runId}`, "-e", "WEED_MASTER_VOLUME_GROWTH_COPY_1=1", "-e", "WEED_LEVELDB2_ENABLED=true", "-e", "WEED_LEVELDB2_DIR=/data/filer", "-v", `${s3Auth}:/etc/seaweedfs/s3.json:ro`, "-p", "127.0.0.1::8333", "-p", "127.0.0.1::9333", "chrislusf/seaweedfs:4.47", "server", "-dir=/data", "-ip=127.0.0.1", "-ip.bind=0.0.0.0", "-master.volumeSizeLimitMB=1024", "-volume.max=16", "-filer", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json");
   const pgDeadline=Date.now()+60000;
   for (;;) {
     try { docker("exec",pg,"pg_isready","-h","127.0.0.1","-U","postgres","-d","judex"); break; }
     catch { if(Date.now()>pgDeadline) throw new Error("PostgreSQL readiness timed out"); await new Promise((resolve)=>setTimeout(resolve,250)); }
   }
   const pgPort = docker("port", pg, "5432").split(":").at(-1);
-  const s3Port = docker("port", s3, "9000").split(":").at(-1);
-  await waitFor(`http://127.0.0.1:${s3Port}/minio/health/ready`);
+  const s3Port = docker("port", s3, "8333").split(":").at(-1);
+  const masterPort = docker("port", s3, "9333").split(":").at(-1);
+  await waitFor(`http://127.0.0.1:${masterPort}/cluster/status`);
+  await waitFor(`http://127.0.0.1:${s3Port}/`, response => response.status === 403);
   let converterUrl = process.env.JUDEX_MATERIAL_CONVERTER_URL;
   if (!converterUrl) {
     const source = path.join(root, "deploy/material-converter");

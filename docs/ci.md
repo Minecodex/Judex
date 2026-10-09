@@ -14,7 +14,9 @@ git push -u origin feature/your-change
 
 ## 自动检查范围
 
-Go vet、race 单元与 HTTP/部署契约测试、CLI/server 编译；安装 Helm，避免部署测试因缺少 Helm 而跳过。前端状态测试、TypeScript/生产构建以及既有 Playwright 桌面端全套 E2E，使用 Chromium 并保留失败证据。生产业务测试使用独立 PostgreSQL/S3、Office 转换容器与受控模型网关；真实模型调用另行显式验收。
+`backend` 检查 Go vet、race 单元与 HTTP/部署契约测试、CLI/server 编译；安装 Helm，避免部署测试因缺少 Helm 而跳过。`web` 检查前端状态测试、TypeScript/生产构建以及 Playwright 桌面全套回归，使用 Chromium 并保留失败证据。`business` 独立执行真实业务回归、CLI 与恢复校验，使用 PostgreSQL、与 Helm 默认一致的 SeaweedFS 4.47 S3、Office 转换容器和受控模型网关；真实模型调用另行显式验收。三项都属于 `CI` 汇总的必需任务。
+
+业务 job 在测试前显式拉取固定存储镜像，避免本地镜像缓存掩盖公共仓库授权或可用性问题。原 MinIO 镜像匿名拉取返回拒绝，测试改用项目既有 SeaweedFS；应用继续通过同一 S3 API 读写、分片与恢复，不改变业务存储接口。
 
 工作流也支持主分支 push 和手动运行。手动运行使用 Actions 页面的 Run workflow，选择待检查的分支；功能分支首次引入新工作流时，先创建 PR 触发检查。
 
