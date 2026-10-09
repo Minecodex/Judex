@@ -219,20 +219,22 @@ test("性能样本：千任务首屏分页与万消息范围查询",async({brows
  const ctx=await browser.newContext();try{
   const user=await register(ctx,"分页样本");const p=await command(ctx,"/projects",{title:"分页性能样本"});const prefix=`/projects/${p.id}`;
   const role=await command(ctx,prefix+"/positions",{name:"分页职责",prompt:"样本"});const identity=await command(ctx,prefix+"/identities",{positionId:role.id,userId:user.id});const topic=(await read(ctx,prefix+"/topics")).items[0];
-  for(const id of [p.id,identity.id,topic.id,user.id]) expect(id).toMatch(/^[0-9a-f-]{36}$/);
+  const plan=await command(ctx,prefix+"/plans",{title:"千任务汇总计划",ownerIdentityId:identity.id});
+  for(const id of [p.id,plan.id,identity.id,topic.id,user.id]) expect(id).toMatch(/^[0-9a-f-]{36}$/);
   fixtureSQL(`
-   INSERT INTO tasks(project_id,id,title,kind,status,reviewer_identity_id,created_by,created_at,updated_at) SELECT '${p.id}',gen_random_uuid(),'性能任务 '||n,'task','ready','${identity.id}','${user.id}',now()-(1000-n)*interval '1 millisecond',now() FROM generate_series(1,1000)n;
+   INSERT INTO tasks(project_id,id,plan_id,title,kind,status,reviewer_identity_id,created_by,created_at,updated_at) SELECT '${p.id}',gen_random_uuid(),'${plan.id}','性能任务 '||n,'task','draft','${identity.id}','${user.id}',now()-(1000-n)*interval '1 millisecond',now() FROM generate_series(1,1000)n;
    INSERT INTO task_participants(project_id,task_id,identity_id) SELECT project_id,id,'${identity.id}' FROM tasks WHERE project_id='${p.id}';
    INSERT INTO messages(project_id,id,topic_id,seq,kind,author_user_id,content,state,created_at) SELECT '${p.id}',gen_random_uuid(),'${topic.id}',n,'human','${user.id}','第 '||n||' 条原始中文讨论','committed',now() FROM generate_series(1,10000)n;
    UPDATE topics SET last_message_seq=10000 WHERE id='${topic.id}';`);
-  // 服务端分页不变：任务第一页 50 + 游标；统一工作区首屏取前 100（含每任务详情）。
+  // 服务端仍分页读取任务；项目首屏显示计划汇总，避免千次任务详情请求。
   const tasksPage=await read(ctx,prefix+"/tasks?limit=50");expect(tasksPage.items).toHaveLength(50);expect(tasksPage.nextCursor).toBeTruthy();
-  const page=await ctx.newPage();const first=Date.now();await page.goto(`/?project=${p.id}`);await expect(page.getByTestId("project-switcher")).toBeVisible({timeout:60000});const firstPageMs=Date.now()-first;
-  await page.getByTestId("work-nav-plans").click();
-  await expect(page.locator('[data-testid^="execution-task-"]')).toHaveCount(100,{timeout:60000});
+  const page=await ctx.newPage(),details:string[]=[];page.on('request',r=>{if(r.method()==='GET'&&new URL(r.url()).pathname.startsWith('/api/v1'+prefix+'/tasks/'))details.push(r.url());});
+  const first=Date.now();await page.goto(prefix);await expect(page.getByTestId("hub-tab-plans")).toHaveAttribute('aria-selected','true');
+  await expect(page.getByTestId('plan-card-'+plan.id)).toContainText(/1000\s*任务/);const firstPageMs=Date.now()-first;
+  await expect(page.locator('[data-testid^="execution-task-"]')).toHaveCount(0);expect(details).toEqual([]);
   const messagesStart=Date.now();const messages=await read(ctx,`${prefix}/topics/${topic.id}/messages?limit=50&afterSeq=9950`);expect(messages.items).toHaveLength(50);expect(messages.items[0].seq).toBe(9951);expect(messages.items[49].seq).toBe(10000);
   const memory=await page.evaluate(()=> (performance as Performance & {memory?:{usedJSHeapSize:number}}).memory?.usedJSHeapSize??null);
-  fs.writeFileSync(path.join(process.env.JUDEX_E2E_ARTIFACT!,"performance.json"),JSON.stringify({tasks:1000,messages:10000,firstPageRows:100,firstPageMs,messagePageMs:Date.now()-messagesStart,usedJSHeapBytes:memory},null,2));
+  fs.writeFileSync(path.join(process.env.JUDEX_E2E_ARTIFACT!,"performance.json"),JSON.stringify({tasks:1000,messages:10000,firstPageRows:tasksPage.items.length,hubTaskDetailRequests:details.length,firstPageMs,messagePageMs:Date.now()-messagesStart,usedJSHeapBytes:memory},null,2));
  }finally{await ctx.close()}
 });
 
