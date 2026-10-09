@@ -1,6 +1,7 @@
 import {test, expect} from '@playwright/test';
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
+import {waitForBorderColor} from './border-helpers';
 
 test('both selected tab borders remain opaque and complete at display scales', async ({browser}, info) => {
   test.setTimeout(120000);
@@ -10,6 +11,7 @@ test('both selected tab borders remain opaque and complete at display scales', a
       const page = await context.newPage(); await page.addInitScript(theme => localStorage.setItem('judex.theme',theme),theme);
       await page.goto('/projects/leaf/chat/labels?view=workspace'); await expect(page.getByTestId('workspace-launcher')).toBeVisible(); await page.mouse.move(0,0);
       const tabs = page.locator('.judex-conversation-tab[aria-selected="true"]'); await expect(tabs).toHaveCount(2);
+      await waitForBorderColor(tabs, theme==='light'?'rgb(45, 102, 81)':'rgb(159, 197, 170)');
       const boxes = await tabs.evaluateAll(elements => elements.map(element => {
         const rect=element.getBoundingClientRect(),css=getComputedStyle(element),parent=element.parentElement!.getBoundingClientRect();
         return {x:rect.x,y:rect.y,width:rect.width,height:rect.height,border:css.borderColor,background:css.backgroundColor,

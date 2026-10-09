@@ -10,3 +10,28 @@ test('project card invitation requires management and stays separate from worksp
 test('leaving preview retains work and reload does not silently sign in again',async({page})=>{
  await page.goto('/');await expect(page.getByTestId('account-menu-button')).toBeVisible();const before=await page.evaluate(()=>localStorage.getItem('judex.web.preview.v1'));await openAccount(page);await page.getByTestId('account-logout').click();await expect(page.getByText('已退出交互预览',{exact:true})).toBeVisible();await page.reload();await expect(page.getByText('已退出交互预览',{exact:true})).toBeVisible();expect(await page.evaluate(()=>localStorage.getItem('judex.web.preview.v1'))).toBe(before);await page.getByTestId('return-preview').click();await expect(page.getByTestId('account-menu-button')).toBeVisible();
 });
+test('nested account selection releases focus and pointer input after Escape',async({page})=>{
+ // Slow frames exercise the asynchronous focus restoration of nested overlays.
+ await page.addInitScript(()=>{
+  const request=window.requestAnimationFrame.bind(window),cancel=window.cancelAnimationFrame.bind(window);
+  let next=0;const pending=new Map<number,{timer:number;frame?:number}>();
+  window.requestAnimationFrame=callback=>{
+   const id=++next,entry:{timer:number;frame?:number}={timer:0};
+   entry.timer=window.setTimeout(()=>{entry.frame=request(time=>{pending.delete(id);callback(time);});},80);
+   pending.set(id,entry);return id;
+  };
+  window.cancelAnimationFrame=id=>{
+   const entry=pending.get(id);if(!entry)return;
+   window.clearTimeout(entry.timer);if(entry.frame!==undefined)cancel(entry.frame);pending.delete(id);
+  };
+ });
+ await openChat(page);
+ await page.addStyleTag({content:'.judex-ui-select-popover[data-exiting="true"] { animation-duration: 600ms !important; }'});
+ await selectPerson(page,'林然');
+ const account=page.getByTestId('account-menu-button');
+ await expect(account).toHaveAttribute('aria-expanded','false');
+ await expect(account).toBeFocused();
+ await expect(page.locator('.judex-account-popover')).toHaveCount(0);
+ await page.getByTestId('conversation-menu').click();
+ await expect(page.getByTestId('conversation-project-settings')).toBeVisible();
+});

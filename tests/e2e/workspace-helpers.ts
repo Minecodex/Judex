@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 export async function selectRouteTask(page:Page,id:string){const url=new URL(page.url());if(url.pathname.endsWith('/route')){const hit=page.getByTestId('execution-task-'+id).locator('.judex-co-card-hit');await hit.focus();await hit.press('Enter');}else{url.searchParams.set('item',id);await page.goto(url.toString());}await page.getByTestId('task-inspector').getByTestId('task-more-'+id).waitFor({state:'visible'});}
 export async function openTaskAction(page:Page,label:string){
  const surface=page.getByTestId('task-inspector'),button=surface.getByRole('button',{name:label,exact:true});
@@ -51,18 +51,23 @@ export async function selectPerson(page: Page, name: string) {
       .getByRole("button", { name: "体验身份", exact: true })
       .click();
   await chooseValue(page, "work-person", name);
+  await expect(page.getByTestId("work-person")).toBeFocused();
+  await closeAccount(page);
+}
+async function closeAccount(page: Page) {
   await page.keyboard.press("Escape");
+  await page.locator(".judex-account-popover").waitFor({ state: "detached" });
 }
 export async function toggleTheme(page: Page) {
   await openAccount(page);
   await page.getByTestId("next-theme").click();
-  await page.keyboard.press("Escape");
+  await closeAccount(page);
 
 }
 export async function toggleLanguage(page: Page) {
   await openAccount(page);
   await page.getByTestId("next-language").click();
-  await page.keyboard.press("Escape");
+  await closeAccount(page);
 
 }
 export async function chooseValue(page: Page, testId: string, value: string) {
@@ -70,5 +75,7 @@ export async function chooseValue(page: Page, testId: string, value: string) {
   await page
     .locator("[data-option-value=" + JSON.stringify(value) + "]")
     .click();
-  await page.getByRole("listbox").waitFor({ state: "hidden" });
+  // A closing Select stays mounted through its exit animation and can still
+  // consume Escape before focus returns to an enclosing account popover.
+  await page.getByRole("listbox", { includeHidden: true }).waitFor({ state: "detached" });
 }

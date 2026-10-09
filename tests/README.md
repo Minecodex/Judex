@@ -15,6 +15,8 @@
 
 桌面 demo 浏览器默认 Microsoft Edge，可用 PLAYWRIGHT_CHANNEL=chromium；生产浏览器使用 Chromium。生产测试默认启动受控模型网关，验证真实 PG/S3、CLI 和业务调用，不把受控模型结果作为真实模型验收。设置 JUDEX_E2E_COLLABORATION_GATEWAY=0 可禁用网关，需只运行不依赖模型建议的场景；真实模型测试仍需显式配置和启用。
 
+像素检查依赖 Python 3 和 Pillow，测试前在所用 Python 环境执行 `python -m pip install -r tests/e2e/requirements.txt`；可用 JUDEX_PYTHON 指定解释器。CI 使用同一份依赖清单。桌面测试显式启用正常动效；嵌套选择器选择完成后等待退出动画、DOM 移除及焦点恢复，再操作外层弹层。像素采样先核对所有目标边框颜色稳定，避免与截图结束过渡动画后的状态不一致。
+
 测试使用独立端口、容器和带所有权标签的 namespace，日志/trace/备份放在忽略的 .cache 或 tests/results。不得将依赖缺失导致的 skip 算作实测通过。
 
 生产浏览器入口默认构建并启动独立 Office 转换容器，按源文件摘要复用构建镜像；可用 JUDEX_TEST_CONVERTER_IMAGE 指定已有镜像，或用 JUDEX_MATERIAL_CONVERTER_URL 指定测试转换服务。数据库 SQL 夹具在 Docker 和 Kubernetes 两种入口都先校验本次运行的所有权，测试结束只清理所属容器／namespace。

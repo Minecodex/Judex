@@ -2,6 +2,7 @@ import {test, expect} from '@playwright/test';
 import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import {chooseValue, openSettings, selectPerson} from './workspace-helpers';
+import {waitForBorderColor} from './border-helpers';
 
 test('card border pixels stay continuous at fractional display scales in both themes', async ({browser}, info) => {
   test.setTimeout(180000);
@@ -14,8 +15,9 @@ test('card border pixels stay continuous at fractional display scales in both th
       await page.getByTestId('open-position-presets').click(); await chooseValue(page, 'position-preset-scenario', 'software');
       await page.mouse.move(0, 0);
       const card = page.getByTestId('preset-card-product-manager');
-      await expect.poll(() => card.evaluate(element => getComputedStyle(element).borderColor)).toBe(theme === 'light' ? 'rgb(204, 214, 203)' : 'rgb(74, 93, 78)');
-      const metadata = await page.locator('.judex-preset-grid .checkbox__content').evaluateAll(elements => elements.map(element => {
+      const boxes = page.locator('.judex-preset-grid .checkbox__content');
+      await waitForBorderColor(boxes, theme === 'light' ? 'rgb(204, 214, 203)' : 'rgb(74, 93, 78)');
+      const metadata = await boxes.evaluateAll(elements => elements.map(element => {
         const rect = element.getBoundingClientRect(), css = getComputedStyle(element);
         return {x:rect.x, y:rect.y, width:rect.width, height:rect.height, border:css.borderColor, background:css.backgroundColor};
       }));

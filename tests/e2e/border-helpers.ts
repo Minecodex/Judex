@@ -1,4 +1,4 @@
-import {expect, type Page} from '@playwright/test';
+import {expect, type Locator, type Page} from '@playwright/test';
 
 export async function assertVisibleSurfaceBorders(page: Page) {
   const failures = await page.evaluate(() => {
@@ -25,4 +25,14 @@ export async function assertVisibleSurfaceBorders(page: Page) {
     return failures;
   });
   expect(failures).toEqual([]);
+}
+
+export async function waitForBorderColor(elements: Locator, color: string) {
+  const count = await elements.count();
+  expect(count).toBeGreaterThan(0);
+  // Screenshots finish CSS transitions. Measure every box after hover/focus
+  // colors settle so geometry and pixels describe the same visual state.
+  await expect.poll(() => elements.evaluateAll(boxes =>
+    boxes.map(box => getComputedStyle(box).borderColor),
+  )).toEqual(Array(count).fill(color));
 }
