@@ -2,6 +2,7 @@ import {test,expect} from '@playwright/test';
 import {seedWork} from '../../web/src/features/work/seed';
 import {ensureDemoMainTopics} from '../../web/src/features/chat/demoCollaboration';
 import {assertActionGeometry,assertPreferenceGeometry,actionGeometry,preferenceGeometry,settleOverlays} from './ui-consistency-helpers';
+import {openTaskAction} from './workspace-helpers';
 
 for(const width of [1120,1440,1920,3840])for(const locale of ['zh-CN','en'])for(const theme of ['light','dark'])for(const scale of [1,1.25]){
 test(`UI-C01 shared action sizes and private preference dialog · ${width}/${locale}/${theme}/${scale}`,async({browser},info)=>{
@@ -19,7 +20,7 @@ test(`UI-C01 shared action sizes and private preference dialog · ${width}/${loc
       ['route','/projects/leaf/plans/leaf-first/route','.judex-co-page-heading .judex-co-actions',40],
       ['team','/projects/leaf/settings/team','.judex-page-actions',40],
       ['flows','/projects/leaf/settings/flows','.judex-page-actions',40],
-      ['task','/projects/leaf?tab=deliveries&view=task&item=build','.judex-co-inspector-body > .judex-co-actions',32],
+      ['task','/projects/leaf?tab=deliveries&view=task&item=build','.judex-task-actions',32],
     ] as const){
       await page.goto(url);await expect(page.locator(group).first()).toBeVisible();await page.evaluate(()=>document.fonts.ready);await settleOverlays(page);
       const groups=page.locator(group);const geometry=[];
@@ -28,7 +29,7 @@ test(`UI-C01 shared action sizes and private preference dialog · ${width}/${loc
       for(const holder of await groups.all())await assertActionGeometry(holder,size);
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
     }
-    await page.getByTestId('simulate-local-report').click();
+    await openTaskAction(page,locale==='en'?'Simulate local submission':'模拟本地推送');
     await expect(page.getByTestId('collaboration-report-body')).toBeVisible();
     await settleOverlays(page);
     evidence.reportActions=await assertActionGeometry(page.locator('.judex-collab-dialog-actions').filter({visible:true}),40);

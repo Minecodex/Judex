@@ -2,6 +2,7 @@ import {Dropdown,Label} from '@heroui/react';
 import {Ellipsis,FileText,GitBranch,MessageCircle,Pencil,RotateCcw,SkipForward,Trash2,Upload,ArrowUpRight} from 'lucide-react';
 import type {ReactNode} from 'react';
 import {Button} from '../../components/ui/Button';
+import {useActionSize} from '../../components/ui/ActionGroup';
 import {useWork} from '../work/store';
 import {canWork,canAcceptTask,blockers} from '../work/selectors';
 import {workCapabilities} from '../work/runtime';
@@ -9,7 +10,19 @@ import type {Task,Plan} from '../work/types';
 import type {WorkMutation} from '../work/WorkMutationDialog';
 export type TaskOperation='start'|'accept'|'reopen'|'handoff'|'brief'|'approve'|'progress'|'delivery'|'question'|'local';
 type Item={id:string;label:string;icon:ReactNode;disabled?:boolean;danger?:boolean;run:()=>void};
-function More({items,label,testId}:{items:Item[];label:string;testId:string}){return <Dropdown><Button size="sm" isIconOnly aria-label={label} data-testid={testId}><Ellipsis/></Button><Dropdown.Popover><Dropdown.Menu aria-label={label} disabledKeys={items.filter(v=>v.disabled).map(v=>v.id)} onAction={key=>items.find(v=>v.id===key)?.run()}>{items.map(v=><Dropdown.Item key={v.id} id={v.id} textValue={v.label} aria-label={v.label} variant={v.danger?'danger':undefined}>{v.icon}<Label>{v.label}</Label></Dropdown.Item>)}</Dropdown.Menu></Dropdown.Popover></Dropdown>;}
+function More({items,label,testId}:{items:Item[];label:string;testId:string}){
+ const size=useActionSize();
+ return <Dropdown>
+  <Button size={size??'sm'} isIconOnly aria-label={label} data-testid={testId}><Ellipsis/></Button>
+  <Dropdown.Popover>
+   <Dropdown.Menu aria-label={label} disabledKeys={items.filter(v=>v.disabled).map(v=>v.id)} onAction={key=>items.find(v=>v.id===key)?.run()}>
+    {items.map(v=><Dropdown.Item key={v.id} id={v.id} textValue={v.label} aria-label={v.label} variant={v.danger?'danger':undefined}>
+     {v.icon}<Label>{v.label}</Label>
+    </Dropdown.Item>)}
+   </Dropdown.Menu>
+  </Dropdown.Popover>
+ </Dropdown>;
+}
 export function TaskMore({task,onMutation,onOperation,onSection,readOnly=false}:{task:Task;onMutation:(m:WorkMutation)=>void;onOperation?:(op:TaskOperation)=>void;onSection?:(s:'overview'|'records'|'flow')=>void;readOnly?:boolean}){
  const p=useWork(),caps=workCapabilities(p.state,task),status=task.businessStatus??task.status,authorized=canWork(p.state,task)&&!task.executionException&&!task.discardedAt,items:Item[]=[];
  if(onSection){items.push({id:'records',label:p.t('taskDetailsRecords'),icon:<FileText/>,run:()=>onSection('records')},{id:'flow',label:p.t('taskDetailsFlow'),icon:<GitBranch/>,run:()=>onSection('flow')});}
