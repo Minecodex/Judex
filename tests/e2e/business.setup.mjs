@@ -1,6 +1,6 @@
 // Each acceptance run owns its server, PostgreSQL and S3 containers.
 // Existing developer services and previous test containers are never reused.
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -15,7 +15,7 @@ const collaborationGateway = process.env.JUDEX_E2E_COLLABORATION_GATEWAY
 const runId = `judex-e2e-${process.pid}-${Date.now()}`;
 const pg = `${runId}-pg`, s3 = `${runId}-s3`, converter = `${runId}-converter`;
 const artifact = path.join(root, ".cache/e2e", runId);
-fs.mkdirSync(artifact, { recursive: true });
+fs.mkdirSync(artifact, { recursive: true, mode: 0o700 });
 const password = randomBytes(18).toString("hex");
 const run = (command, args, options = {}) => String(execFileSync(command, args, { cwd: root, encoding: "utf8", windowsHide: true, ...options }) ?? "").trim();
 const docker = (...args) => run("docker", args);
@@ -38,8 +38,10 @@ try {
   run("go", ["build", "-o", cli, "./cmd/judex"]);
   docker("run", "-d", "--rm", "--name", pg, "--label", `judex.test-run=${runId}`, "-e", `POSTGRES_PASSWORD=${password}`, "-e", "POSTGRES_DB=judex", "-p", "127.0.0.1::5432", "postgres:17-alpine");
   const s3Auth = path.join(artifact, "s3-auth.json");
-  fs.writeFileSync(s3Auth, JSON.stringify({ identities: [{ name: "judex", credentials: [{ accessKey: "judex", secretKey: password }], actions: ["Admin", "Read", "Write", "List", "Tagging"] }] }), { mode: 0o600 });
-  docker("run", "-d", "--rm", "--name", s3, "--label", `judex.test-run=${runId}`, "-e", "WEED_MASTER_VOLUME_GROWTH_COPY_1=1", "-e", "WEED_LEVELDB2_ENABLED=true", "-e", "WEED_LEVELDB2_DIR=/data/filer", "-v", `${s3Auth}:/etc/seaweedfs/s3.json:ro`, "-p", "127.0.0.1::8333", "-p", "127.0.0.1::9333", "chrislusf/seaweedfs:4.47", "server", "-dir=/data", "-ip=127.0.0.1", "-ip.bind=0.0.0.0", "-master.volumeSizeLimitMB=1024", "-volume.max=16", "-filer", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json");
+  // The host directory stays private; the read-only mounted file must also be
+  // readable by the image's unprivileged seaweed user on Linux.
+  fs.writeFileSync(s3Auth, JSON.stringify({ identities: [{ name: "judex", credentials: [{ accessKey: "judex", secretKey: password }], actions: ["Admin", "Read", "Write", "List", "Tagging"] }] }), { mode: 0o644 });
+  docker("run", "-d", "--name", s3, "--label", `judex.test-run=${runId}`, "-e", "WEED_MASTER_VOLUME_GROWTH_COPY_1=1", "-e", "WEED_LEVELDB2_ENABLED=true", "-e", "WEED_LEVELDB2_DIR=/data/filer", "-v", `${s3Auth}:/etc/seaweedfs/s3.json:ro`, "-p", "127.0.0.1::8333", "-p", "127.0.0.1::9333", "chrislusf/seaweedfs:4.47", "server", "-dir=/data", "-ip=127.0.0.1", "-ip.bind=0.0.0.0", "-master.volumeSizeLimitMB=1024", "-volume.max=16", "-filer", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json");
   const pgDeadline=Date.now()+60000;
   for (;;) {
     try { docker("exec",pg,"pg_isready","-h","127.0.0.1","-U","postgres","-d","judex"); break; }
@@ -105,6 +107,18 @@ try {
 } catch (error) {
   process.exitCode = 1;
   console.error(error.message.replaceAll(password, "[test credential]"));
+  const states = {};
+  for (const [service, name] of Object.entries({ pg, s3, converter })) {
+    try {
+      const info = JSON.parse(docker("inspect", name))[0];
+      if (info.Config.Labels?.["judex.test-run"] !== runId) continue;
+      states[service] = info.State;
+      const output = spawnSync("docker", ["logs", name], { cwd: root, encoding: "utf8", windowsHide: true });
+      const logs = (output.stdout ?? "") + (output.stderr ?? "");
+      fs.writeFileSync(path.join(artifact, `startup-${service}.log`), logs.replaceAll(password, "[test credential]"));
+    } catch {}
+  }
+  fs.writeFileSync(path.join(artifact, "startup-state.json"), JSON.stringify(states, null, 2).replaceAll(password, "[test credential]"));
   console.error(`Evidence: ${artifact}`);
 } finally {
   if (server && server.exitCode == null) server.kill();

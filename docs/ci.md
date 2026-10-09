@@ -20,6 +20,8 @@ git push -u origin feature/your-change
 
 业务脚本直接用 Node 启动时，也从 Windows 的 Node 目录或 Linux/macOS 的 `lib/node_modules` 定位 npm CLI，不依赖 npm 父进程注入 `npm_execpath`。
 
+每次运行的凭据目录权限为 0700，S3 认证文件只读挂载并允许镜像内非 root 用户读取；失败时保存所属容器的状态和脱敏启动日志，再按运行标签清理。CI 仅上传这些诊断及浏览器结果，不上传认证配置或数据库备份。
+
 工作流也支持主分支 push 和手动运行。手动运行使用 Actions 页面的 Run workflow，选择待检查的分支；功能分支首次引入新工作流时，先创建 PR 触发检查。
 
 此工作流验证组织仓库实际提交的代码。现有 K8s smoke 需要兼容 OpenSandbox Operator/CRD 和可拉取镜像，应在独立 namespace 按 `tests/README.md` 执行；本工作流不把该集群验收或未提交的本地改动计为通过。

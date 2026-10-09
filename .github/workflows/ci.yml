@@ -97,8 +97,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: judex-business-evidence
-          path: .cache/e2e/**/business-results
+          path: |
+            .cache/e2e/**/business-results
+            .cache/e2e/**/startup-*.log
+            .cache/e2e/**/startup-state.json
           if-no-files-found: ignore
+          include-hidden-files: true
 
   ci-gate:
     name: CI
