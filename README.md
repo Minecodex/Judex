@@ -41,7 +41,7 @@ go run ./cmd/judex-server
 npm run dev
 ```
 
-生产构建执行 `npm run build`，由 Go 服务托管，使用真实 API。开发模式也默认 API；演示需显式执行 `npm run dev:demo --workspace @judex/web`。启动业务服务前配置 PostgreSQL；材料功能需 S3，Agent 需模型目录或网关，沙箱需 OpenSandbox。当前实现和验证边界见 [修复记录](docs/plans/v1/REMEDIATION.md) 与 [验证报告](docs/plans/v1/FINAL-REPORT.md)。
+生产构建执行 `npm run build`，由 Go 服务托管，使用真实 API。开发模式也默认 API；演示需显式执行 `npm run dev:demo --workspace @judex/web`。当前实现和验证边界见 [修复记录](docs/plans/v1/REMEDIATION.md) 与 [验证报告](docs/plans/v1/FINAL-REPORT.md)。
 
 ```sh
 go test ./...

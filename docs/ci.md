@@ -14,7 +14,7 @@ git push -u origin feature/your-change
 
 ## 自动检查范围
 
-Go vet、race 单元与 HTTP/部署契约测试、CLI/server 编译；安装 Helm，避免部署测试因缺少 Helm 而跳过。前端状态测试、TypeScript/生产构建以及既有 Playwright 桌面端全套 E2E，使用 Chromium 并保留失败证据。生产业务测试使用独立 PostgreSQL/S3 与受控模型网关；真实模型调用另行显式验收。
+Go vet、race 单元与 HTTP/部署契约测试、CLI/server 编译；安装 Helm，避免部署测试因缺少 Helm 而跳过。前端状态测试、TypeScript/生产构建以及既有 Playwright 桌面端全套 E2E，使用 Chromium 并保留失败证据。生产业务测试使用独立 PostgreSQL/S3、Office 转换容器与受控模型网关；真实模型调用另行显式验收。
 
 工作流也支持主分支 push 和手动运行。手动运行使用 Actions 页面的 Run workflow，选择待检查的分支；功能分支首次引入新工作流时，先创建 PR 触发检查。
 

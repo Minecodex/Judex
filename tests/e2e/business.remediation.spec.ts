@@ -3,6 +3,7 @@ import { spawn, execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
+import { fixtureSQL } from './fixture-database';
 
 async function register(context: BrowserContext, name: string) {
   const response = await context.request.post("/api/v1/auth/register", { data: { displayName: name, email: `${randomUUID()}@judex.test`, password: "acceptance-password-123" } });
@@ -219,12 +220,11 @@ test("性能样本：千任务首屏分页与万消息范围查询",async({brows
   const user=await register(ctx,"分页样本");const p=await command(ctx,"/projects",{title:"分页性能样本"});const prefix=`/projects/${p.id}`;
   const role=await command(ctx,prefix+"/positions",{name:"分页职责",prompt:"样本"});const identity=await command(ctx,prefix+"/identities",{positionId:role.id,userId:user.id});const topic=(await read(ctx,prefix+"/topics")).items[0];
   for(const id of [p.id,identity.id,topic.id,user.id]) expect(id).toMatch(/^[0-9a-f-]{36}$/);
-  const pg=process.env.JUDEX_E2E_PG_CONTAINER!;const info=JSON.parse(execFileSync('docker',['inspect',pg],{encoding:'utf8',windowsHide:true}))[0];expect(info.Config.Labels['judex.test-run']).toBe(process.env.JUDEX_E2E_RUN_ID);
-  execFileSync('docker',['exec',pg,'psql','-U','postgres','-d','judex','-v','ON_ERROR_STOP=1','-c',`
+  fixtureSQL(`
    INSERT INTO tasks(project_id,id,title,kind,status,reviewer_identity_id,created_by,created_at,updated_at) SELECT '${p.id}',gen_random_uuid(),'性能任务 '||n,'task','ready','${identity.id}','${user.id}',now()-(1000-n)*interval '1 millisecond',now() FROM generate_series(1,1000)n;
    INSERT INTO task_participants(project_id,task_id,identity_id) SELECT project_id,id,'${identity.id}' FROM tasks WHERE project_id='${p.id}';
    INSERT INTO messages(project_id,id,topic_id,seq,kind,author_user_id,content,state,created_at) SELECT '${p.id}',gen_random_uuid(),'${topic.id}',n,'human','${user.id}','第 '||n||' 条原始中文讨论','committed',now() FROM generate_series(1,10000)n;
-   UPDATE topics SET last_message_seq=10000 WHERE id='${topic.id}';`],{encoding:'utf8',windowsHide:true});
+   UPDATE topics SET last_message_seq=10000 WHERE id='${topic.id}';`);
   // 服务端分页不变：任务第一页 50 + 游标；统一工作区首屏取前 100（含每任务详情）。
   const tasksPage=await read(ctx,prefix+"/tasks?limit=50");expect(tasksPage.items).toHaveLength(50);expect(tasksPage.nextCursor).toBeTruthy();
   const page=await ctx.newPage();const first=Date.now();await page.goto(`/?project=${p.id}`);await expect(page.getByTestId("project-switcher")).toBeVisible({timeout:60000});const firstPageMs=Date.now()-first;

@@ -1,19 +1,12 @@
 import {test,expect,type Page} from '@playwright/test';
 import {randomUUID,createHash} from 'node:crypto';
-import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {command,setupCooperation} from './cooperation-business-helpers';
 import {uploadMaterial,stableMaterialDialog,chooseMaterialContext} from './materials-business-helpers';
+import {fixtureSQL} from './fixture-database';
 test.setTimeout(240000);
 const fixtures=path.resolve('tests/fixtures/materials');
-function fixtureSQL(sql:string){
-  const namespace=path.basename(process.env.JUDEX_E2E_ARTIFACT??'');
-  expect(namespace).toMatch(/^judex-ui-[a-f0-9]{8}$/);
-  const ns=JSON.parse(execFileSync('kubectl',['get','namespace',namespace,'-o','json'],{encoding:'utf8',windowsHide:true}));
-  expect(ns.metadata.labels['judex.dev/test-run']).toBe(namespace);
-  return execFileSync('kubectl',['-n',namespace,'exec','statefulset/ui-postgresql','--','psql','-U','judex','-d','judex','-v','ON_ERROR_STOP=1','-At','-c',sql],{encoding:'utf8',windowsHide:true});
-}
 async function chooseContext(page:Page,value:string){await page.getByTestId('collaboration-compose-task').click();await page.locator('[data-option-value="'+value+'"]').click();}
 async function addExisting(page:Page){
   const choose=page.getByRole('button',{name:'选择共享资料',exact:true});
