@@ -109,6 +109,7 @@ jobs:
     env:
       JUDEX_TEST_IMAGE: judex/server:ci-${{ github.run_id }}
       JUDEX_TEST_GATEWAY_IMAGE: judex/gateway-fixture:ci-${{ github.run_id }}
+      PLAYWRIGHT_CHANNEL: chromium
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
