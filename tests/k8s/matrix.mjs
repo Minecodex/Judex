@@ -6,7 +6,9 @@ import net from 'node:net';
 import path from 'node:path';
 
 const image = process.env.JUDEX_TEST_IMAGE;
-if (!image || !/^[\w./:-]+:[\w.-]+$/.test(image)) throw new Error('Set JUDEX_TEST_IMAGE to the acceptance image containing judex-server and mock-gateway');
+const gatewayImage = process.env.JUDEX_TEST_GATEWAY_IMAGE;
+if (!image || !/^[\w./:-]+:[\w.-]+$/.test(image)) throw new Error('Set JUDEX_TEST_IMAGE to the exact release candidate server image');
+if (!gatewayImage || !/^[\w./:-]+:[\w.-]+$/.test(gatewayImage)) throw new Error('Set JUDEX_TEST_GATEWAY_IMAGE to the separate controlled gateway fixture image');
 const runId = 'judex-close-' + randomUUID().slice(0, 8), release = 'matrix';
 const artifact = path.resolve('.cache/k8s', runId); fs.mkdirSync(artifact, {recursive: true});
 const previewReservation=net.createServer();await new Promise(resolve=>previewReservation.listen(0,'127.0.0.1',resolve));const previewPort=previewReservation.address().port;
@@ -59,7 +61,7 @@ try {
   kube('get', 'crd', 'batchsandboxes.sandbox.opensandbox.io');
   const root = runId + '-ii'; createNamespace(root); createNamespace(root + '-sandboxes', root);
   apply({apiVersion: 'v1', kind: 'Secret', metadata: {namespace: root, name: 'controlled-key'}, stringData: {JUDEX_FAULT_KEY: randomBytes(16).toString('hex')}});
-  apply({apiVersion: 'apps/v1', kind: 'Deployment', metadata: {namespace: root, name: 'controlled-model'}, spec: {replicas: 1, selector: {matchLabels: {app: 'controlled-model'}}, template: {metadata: {labels: {app: 'controlled-model'}}, spec: {automountServiceAccountToken: false, containers: [{name: 'model', image, imagePullPolicy: 'Never', command: ['/app/mock-gateway'], ports: [{containerPort: 8081}], resources: {requests: {cpu: '20m', memory: '16Mi'}, limits: {cpu: '200m', memory: '64Mi'}}}]}}}});
+  apply({apiVersion: 'apps/v1', kind: 'Deployment', metadata: {namespace: root, name: 'controlled-model'}, spec: {replicas: 1, selector: {matchLabels: {app: 'controlled-model'}}, template: {metadata: {labels: {app: 'controlled-model'}}, spec: {automountServiceAccountToken: false, containers: [{name: 'model', image: gatewayImage, imagePullPolicy: 'Never', env: [{name: 'JUDEX_FIXTURE_ADDR', value: '0.0.0.0:8081'}, {name: 'JUDEX_FIXTURE_MODE', value: 'normal'}], ports: [{containerPort: 8081}], resources: {requests: {cpu: '20m', memory: '16Mi'}, limits: {cpu: '200m', memory: '64Mi'}}}]}}}});
   apply({apiVersion: 'v1', kind: 'Service', metadata: {namespace: root, name: 'controlled-model'}, spec: {selector: {app: 'controlled-model'}, ports: [{port: 8081, targetPort: 8081}]}});
   const cases = [];
   for (const combination of ['ii', 'ie', 'ei', 'ee']) {

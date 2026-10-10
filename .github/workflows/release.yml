@@ -1,0 +1,177 @@
+name: Release acceptance
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+    types: [labeled, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Candidate package version without a leading v
+        type: string
+        default: '0.1.0-ci'
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+jobs:
+  source-ci:
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci:release')
+    uses: ./.github/workflows/ci.yml
+  package:
+    needs: source-ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.10.0'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.18.4
+      - id: version
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+          RUN: ${{ github.run_id }}
+        shell: python
+        run: |
+          import os, re
+          version = os.environ['REF'].removeprefix('v') if os.environ['EVENT'] == 'push' else os.environ['INPUT_VERSION'] or '0.1.0-ci.' + os.environ['RUN']
+          if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?', version):
+              raise SystemExit('invalid release candidate version')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('version=' + version + '\n')
+      - run: npm ci
+      - name: Build the immutable candidate package set
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: node scripts/release/build.mjs "$VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: judex-candidate-${{ github.sha }}
+          path: dist/release/${{ steps.version.outputs.version }}
+          if-no-files-found: error
+  native:
+    needs: package
+    name: CLI ${{ matrix.os }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04, arch: x64}
+          - {os: ubuntu-24.04-arm, arch: arm64}
+          - {os: windows-2025, arch: x64}
+          - {os: windows-11-arm, arch: arm64}
+          - {os: macos-15-intel, arch: x64}
+          - {os: macos-15, arch: arm64}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.10.0'
+          architecture: ${{ matrix.arch }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          architecture: ${{ matrix.arch }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: judex-candidate-${{ github.sha }}
+          path: candidate
+      - run: node tests/release.mjs candidate
+  kubernetes:
+    needs: package
+    name: Storage and recovery ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04, arch: amd64, minikube_sha: b738496da01be06bbaf80c688f57ce25acd3849fbb518155f3a88e03ef555aa4}
+          - {os: ubuntu-24.04-arm, arch: arm64, minikube_sha: 202f331cb677761c5aec81c58472d16d65707358b9f66226210be3fe3275b1c3}
+    env:
+      JUDEX_TEST_IMAGE: judex/server:ci-${{ github.run_id }}
+      JUDEX_TEST_GATEWAY_IMAGE: judex/gateway-fixture:ci-${{ github.run_id }}
+      PLAYWRIGHT_CHANNEL: chromium
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.10.0'
+          cache: npm
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.18.4
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.36.1
+      - uses: actions/download-artifact@v4
+        with:
+          name: judex-candidate-${{ github.sha }}
+          path: candidate
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Build images from candidate bytes and separate test fixture
+        run: |
+          python3 -c 'import zipfile; zipfile.ZipFile("candidate/web.zip").extractall("candidate/web")'
+          docker build -f deploy/docker/server.release.Dockerfile --build-arg TARGETARCH=${{ matrix.arch }} -t "$JUDEX_TEST_IMAGE" .
+          docker build -f tests/fixtures/gateway/Dockerfile -t "$JUDEX_TEST_GATEWAY_IMAGE" .
+      - name: Create an owned disposable Kubernetes cluster
+        env:
+          MINIKUBE_SHA: ${{ matrix.minikube_sha }}
+        run: |
+          curl --fail --location --retry 3 -o /tmp/minikube https://github.com/kubernetes/minikube/releases/download/v1.39.0/minikube-linux-${{ matrix.arch }}
+          echo "$MINIKUBE_SHA  /tmp/minikube" | sha256sum --check
+          sudo install /tmp/minikube /usr/local/bin/minikube
+          minikube start -p judex-release-${{ github.run_id }} --driver=docker --cpus=4 --memory=12000 --kubernetes-version=v1.36.1
+          minikube -p judex-release-${{ github.run_id }} image load "$JUDEX_TEST_IMAGE" "$JUDEX_TEST_GATEWAY_IMAGE"
+          helm upgrade --install judex-ci-operator deploy/helm/judex/charts/opensandbox-0.2.2-judex.1.tgz --namespace judex-ci-operator --create-namespace --set opensandbox-server.server.replicaCount=0 --wait --timeout=5m
+      - name: Verify the candidate server, four storage combinations and bounded failures
+        run: |
+          node tests/k8s/smoke.mjs
+          node tests/k8s/matrix.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: judex-kubernetes-${{ matrix.arch }}-${{ github.sha }}
+          path: |
+            .cache/k8s/**/manifest.json
+            .cache/k8s/**/*.png
+          include-hidden-files: true
+      - name: Delete only this run's cluster
+        if: always()
+        run: minikube delete -p judex-release-${{ github.run_id }}
+  release-gate:
+    name: Release CI
+    if: (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci:release')) && always()
+    needs: [source-ci, package, native, kubernetes]
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          RESULTS: ${{ toJSON(needs) }}
+        shell: python
+        run: |
+          import json, os
+          failed = {k:v['result'] for k,v in json.loads(os.environ['RESULTS']).items() if v['result'] != 'success'}
+          if failed:
+              raise SystemExit(f'Complete release acceptance failed: {failed}')
