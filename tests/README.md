@@ -8,7 +8,7 @@
 | 生产浏览器 | `node tests/e2e/business.setup.mjs` | 真实 PG/S3、Office 转换、双用户业务、CLI、全表／对象恢复校验；可传入 spec 或 grep 限定场景 |
 | 部署模板 | `go test ./tests/deploy` | 四种 PG/S3 配置、资源边界和无效配置 |
 | K8s 探针 | `node tests/k8s/smoke.mjs` | 指定 JUDEX_TEST_IMAGE，临时 namespace 部署与生产 capability 检查 |
-| K8s 矩阵 | `node tests/k8s/matrix.mjs` | 包含 mock-gateway 的 JUDEX_TEST_IMAGE，四存储组合及组件故障；真实模型使用 live.mjs |
+| K8s 矩阵 | `node tests/k8s/matrix.mjs` | 真实服务 JUDEX_TEST_IMAGE 与独立 JUDEX_TEST_GATEWAY_IMAGE，四存储组合及组件故障；真实模型使用 live.mjs |
 | Skill 发现 | `node tests/skill-hosts.mjs` | 原生安装卸载、实际 Codex app-server 发现；无模型调用 |
 | AI 宿主 | `node tests/skill-agent-hosts.mjs` | 需明确授权及 JUDEX_RUN_AGENT_HOST_TESTS=1；限定隔离目录会话，尚未运行 |
 | 发行 | `node tests/release.mjs dist/release/VERSION` | 全包校验和、本机包解压/版本、附带 Skill 安装卸载 |
@@ -23,4 +23,4 @@
 
 生产浏览器使用固定 `chrislusf/seaweedfs:4.47`，与 Helm 默认对象存储一致；每次运行生成独立 S3 凭据，认证接口就绪后再初始化 bucket，并完成真实上传、Range、分片和对象恢复核对。GitHub CI 分别运行 `backend`、`web`、`business`，三项均通过才允许汇总检查通过；本地 `npm run test:e2e` 仍顺序执行界面和业务两套测试。
 
-K8s 测试需要已存在的兼容 Operator/CRD，不部署第二个 Controller，不停止业务服务；finally 按所有权清理。当前证据及剩余边界见 [验收报告](../docs/plans/v1/FINAL-REPORT.md)。
+K8s 矩阵需要 JUDEX_TEST_IMAGE 指向真实服务候选，JUDEX_TEST_GATEWAY_IMAGE 指向独立受控模型夹具。测试需要已存在的兼容 Operator/CRD，不部署第二个 Controller，不停止业务服务；finally 按所有权清理。版本 CI 在每个运行自己的临时集群中先安装 Operator，再执行同一入口并删除所属集群；本地既有集群的规则保持所有权约束。当前证据及剩余边界见 [验收报告](../docs/plans/v1/FINAL-REPORT.md)。

@@ -14,6 +14,10 @@ git push -u origin feature/your-change
 
 ## 自动检查范围
 
+每次版本标签执行 release.yml 完整发布验收：复用同一提交的 PR 基础检查，构建一批候选包，在 Linux/Windows/macOS 的 amd64/arm64 六个原生 Runner 上实际执行打包的 CLI 与 Skill 安装卸载；Linux 两种架构在独立 Minikube 集群中验证实际候选服务镜像、四种 PG/S3 组合及故障恢复。Release CI 要求每项均成功，取消、失败、意外跳过都失败。没有定时任务。手动运行或给 PR 加 ci:release 标签可在创建版本前检查完整候选；工作流只保存内部制品，不创建公开发行。
+
+集群服务镜像直接使用候选包的 server/web 字节；受控模型网关是独立测试夹具镜像，不能将包含 mock-gateway 的测试服务镜像当作发布候选。矩阵入口必须分别提供 JUDEX_TEST_IMAGE 和 JUDEX_TEST_GATEWAY_IMAGE。原生包、集群与基础检查各自保留其真实覆盖范围；受控模型不构成真实提供商质量或宿主模型验收。
+
 `backend` 检查 Go vet、race 单元与 HTTP/部署契约测试、CLI/server 编译；安装 Helm，避免部署测试因缺少 Helm 而跳过。`web` 检查前端状态测试、TypeScript/生产构建以及 Playwright 桌面全套回归，使用 Chromium 并保留失败证据。`business` 独立执行真实业务回归、CLI 与恢复校验，使用 PostgreSQL、与 Helm 默认一致的 SeaweedFS 4.47 S3、Office 转换容器和受控模型网关；真实模型调用另行显式验收。三项都属于 `CI` 汇总的必需任务。
 
 业务 job 在测试前显式拉取固定存储镜像，避免本地镜像缓存掩盖公共仓库授权或可用性问题。原 MinIO 镜像匿名拉取返回拒绝，测试改用项目既有 SeaweedFS；应用继续通过同一 S3 API 读写、分片与恢复，不改变业务存储接口。
