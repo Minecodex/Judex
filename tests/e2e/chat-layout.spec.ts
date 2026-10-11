@@ -39,7 +39,7 @@ test("both dividers resize independently, save ratios, restore on refresh and ne
   expect((await sizes(page)).left).toBeCloseTo(saved.left, 0);
   expect((await sizes(page)).right).toBeCloseTo(saved.right, 0);
   await page.setViewportSize({ width: 1120, height: 900 });
-  expect((await sizes(page)).center).toBeGreaterThanOrEqual(359);
+  await expect.poll(async () => (await sizes(page)).center).toBeGreaterThanOrEqual(359);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

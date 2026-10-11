@@ -1,9 +1,12 @@
 import { defineConfig } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../../", import.meta.url));
+const profile = process.env.JUDEX_E2E_PROFILE ?? "release";
+if (!["pr", "release"].includes(profile)) throw new Error(`Unknown desktop E2E profile: ${profile}`);
+const coreSpecs = ["chat.spec.ts", "chat-tabs.spec.ts", "cooperation.spec.ts", "work.spec.ts", "discussion-policy.spec.ts", "settings.spec.ts"];
 export default defineConfig({
   testDir: ".",
-  testMatch: ["ui-consistency.spec.ts","cooperation.spec.ts","cooperation-closure.spec.ts","cooperation-remediation.spec.ts","cooperation-scope-fixes.spec.ts","position-presets.spec.ts","workflow-presets.spec.ts","workflow-advanced.spec.ts","team-assignment.spec.ts","tab-feedback.spec.ts","surface-borders.spec.ts","work.spec.ts","chat-layout.spec.ts","workspace-maximize.spec.ts","discussion-policy.spec.ts","collaboration.spec.ts","chat.spec.ts","chat-tabs.spec.ts","workspace-tabs.spec.ts","settings.spec.ts","visual-system.spec.ts"],
+  testMatch: profile === "pr" ? coreSpecs : ["ui-consistency.spec.ts","cooperation.spec.ts","cooperation-closure.spec.ts","cooperation-remediation.spec.ts","cooperation-scope-fixes.spec.ts","position-presets.spec.ts","workflow-presets.spec.ts","workflow-advanced.spec.ts","team-assignment.spec.ts","tab-feedback.spec.ts","surface-borders.spec.ts","work.spec.ts","chat-layout.spec.ts","workspace-maximize.spec.ts","discussion-policy.spec.ts","collaboration.spec.ts","chat.spec.ts","chat-tabs.spec.ts","workspace-tabs.spec.ts","settings.spec.ts","visual-system.spec.ts"],
   timeout: 45000,
   workers: 2,
   outputDir: "../results/chat",
