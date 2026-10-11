@@ -6,7 +6,16 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      full:
+        description: Include the complete desktop browser regression matrix
+        type: boolean
+        default: false
   workflow_call:
+    inputs:
+      full:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -37,6 +46,7 @@ jobs:
     timeout-minutes: 30
     env:
       PLAYWRIGHT_CHANNEL: chromium
+      JUDEX_E2E_PROFILE: ${{ inputs.full && 'release' || 'pr' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
