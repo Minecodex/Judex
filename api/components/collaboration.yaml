@@ -56,6 +56,8 @@ components:
       required:
         - id
         - taskId
+        - scopeKind
+        - output
         - batchId
         - sourceType
         - sourceId
@@ -70,8 +72,13 @@ components:
           type: string
           format: uuid
         taskId:
-          type: string
+          type: [string, 'null']
           format: uuid
+        scopeKind:
+          type: string
+          enum: [task, project]
+        output:
+          $ref: '#/components/schemas/TaskAnalysisOutput'
         batchId:
           type:
             - string
@@ -104,6 +111,34 @@ components:
         updatedAt:
           type: string
           format: date-time
+    WorkflowNodeRef:
+      type: object
+      required: [workflowId, versionId, nodeId, reason]
+      properties:
+        workflowId: {type: string, format: uuid}
+        versionId: {type: string, format: uuid}
+        nodeId: {type: string}
+        reason: {type: string}
+    TaskAnalysisOutput:
+      type: object
+      description: 公开分析与节点建议，不改变正式工作状态或流程绑定。
+      properties:
+        summary: {type: string}
+        basis: {type: array, items: {type: string}}
+        disagreements: {type: array, items: {type: string}}
+        needsClarification: {type: boolean}
+        currentNodeCandidates:
+          type: [array, 'null']
+          items: {$ref: '#/components/schemas/WorkflowNodeRef'}
+        relatedEvidenceNodes:
+          type: [array, 'null']
+          items: {$ref: '#/components/schemas/WorkflowNodeRef'}
+        suggestedNextNodes:
+          type: [array, 'null']
+          items: {$ref: '#/components/schemas/WorkflowNodeRef'}
+        discussion:
+          type: object
+          additionalProperties: true
     TaskActivity:
       type: object
       required:

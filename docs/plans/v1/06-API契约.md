@@ -97,7 +97,7 @@ device/token 使用标准设备流程的 pending/slow_down 语义；若 endpoint
 | POST /projects/{p}/topics/{t}/links | targetRefs,expectedVersion；用户明确链接，AI 用 proposal |
 | GET/POST /projects/{p}/uploads | 本人未完成会话／file manifest → upload plan |
 | PUT /projects/{p}/uploads/{id}/parts/{n} | 二进制流、分片摘要；同编号不同摘要冲突 |
-| POST /projects/{p}/uploads/{id}/complete | parts/checksum/sourceVersion? → immutable materialVersion |
+| POST /projects/{p}/uploads/{id}/complete | parts/checksum/sourceVersion?（当前固定版本UUID） → immutable materialVersion |
 | DELETE /projects/{p}/uploads/{id} | 取消未完成会话，不删正式材料 |
 | GET /projects/{p}/materials | metadata、query、kind、关联过滤、分页 |
 | GET /projects/{p}/materials/{m}/versions | immutable 版本列表 |
@@ -133,9 +133,9 @@ device/token 使用标准设备流程的 pending/slow_down 语义；若 endpoint
 | POST /projects/{p}/proposals/{id}/revisions | previousReviewId,changes,reason → 新 draft，无旧票 |
 | GET/POST /projects/{p}/handoffs | 列表／draft sources、receiver、targetTask、kind |
 | POST /projects/{p}/handoffs/{h}/sources/{s}/revisions | 新 report/evidence/summary；sender |
-| POST /projects/{p}/handoffs/{h}/sources/{s}/send | sourceVersion,reviewHash；sender human |
+| POST /projects/{p}/handoffs/{h}/sources/{s}/send | summary,sourceVersion,reviewHash（当前交付报告ID）；sender human |
 | POST /projects/{p}/handoffs/{h}/sources/{s}/decisions | sourceVersion,reviewHash,accept/reject,reason?；receiver human |
-| POST /projects/{p}/handoffs/{h}/reminders | expectedVersion；合法成员，冷却限制 |
+| POST /projects/{p}/handoffs/{h}/reminders | expectedVersion；合法成员，同交接一分钟冷却，重复返回429 |
 | GET/POST /projects/{p}/release-reports | 真实环境与版本上报、报告引用；成员及当前职责 |
 | POST /projects/{p}/tasks/{id}/fix-propagations | 用户选 targetReleaseRefs → 目标工作提案草稿 |
 | GET /projects/{p}/audit | 可见业务审计分页，无 private prompt |

@@ -226,7 +226,11 @@ paths:
                 required: [data, meta]
                 properties:
                   data:
-                    $ref: '../components/projects.yaml#/components/schemas/Invitation'
+                    type: object
+                    required: [revoked]
+                    properties:
+                      revoked:
+                        type: boolean
                   meta:
                     $ref: '../components/common.yaml#/components/schemas/CommandMeta'
         '404':

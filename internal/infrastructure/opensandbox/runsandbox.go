@@ -47,7 +47,9 @@ func (r *RunSandbox) Exec(ctx context.Context, command string, timeoutMs int) (e
 		}
 	})
 	if r.createErr != nil {
-		return 0, nil, nil, true, r.createErr
+		// The command has not been dispatched. Provisioning/lease cleanup is
+		// separate from an unknown shell execution after an interrupted Exec.
+		return 0, nil, nil, false, r.createErr
 	}
 	res, err := r.Client.Exec(ctx, r.external, command, time.Duration(timeoutMs)*time.Millisecond)
 	return res.ExitCode, res.Stdout, res.Stderr, res.Unknown, err
@@ -81,6 +83,6 @@ func (unavailableClient) Create(context.Context, uuid.UUID, uuid.UUID) (string, 
 	return "", errors.New(errors.SandboxUnavailable, "沙箱未配置")
 }
 func (unavailableClient) Exec(context.Context, string, string, time.Duration) (SandboxResult, error) {
-	return SandboxResult{Unknown: true}, errors.New(errors.SandboxUnavailable, "沙箱未配置")
+	return SandboxResult{}, errors.New(errors.SandboxUnavailable, "沙箱未配置")
 }
 func (unavailableClient) Kill(context.Context, string) error { return nil }

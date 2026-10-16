@@ -17,9 +17,11 @@ type checkpointJournal struct {
 	Snapshots [][]model.Message
 }
 
-func (j *checkpointJournal) ModelStart(context.Context, int, model.Request) error    { return nil }
-func (j *checkpointJournal) ModelEnd(context.Context, int, int64, bool, error) error { return nil }
-func (j *checkpointJournal) ToolStart(context.Context, model.ToolCall) error         { return nil }
+func (j *checkpointJournal) ModelStart(context.Context, int, model.Request) error { return nil }
+func (j *checkpointJournal) ModelEnd(context.Context, int, model.UsageSnapshot, bool, error) error {
+	return nil
+}
+func (j *checkpointJournal) ToolStart(context.Context, model.ToolCall) error { return nil }
 func (j *checkpointJournal) ToolEnd(_ context.Context, _ model.ToolCall, raw []byte, _ bool) error {
 	j.Results = append(j.Results, raw)
 	return nil
@@ -49,7 +51,7 @@ func (p *compactProvider) Stream(_ context.Context, request model.Request) (<-ch
 		}
 		out <- model.Event{Type: "textDelta", TextDelta: "保留反对，等待核对原件"}
 	}
-	out <- model.Event{Type: "usage", InputTokens: 100, OutputTokens: 100}
+	out <- model.Event{Type: "usage", Usage: model.UsageSnapshot{InputTokens: model.TokenCount(100), OutputTokens: model.TokenCount(100)}}
 	out <- model.Event{Type: "finish"}
 	close(out)
 	return out, nil

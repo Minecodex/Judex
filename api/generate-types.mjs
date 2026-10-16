@@ -11,7 +11,7 @@ fs.mkdirSync(cache, { recursive: true });
 const generatedGo = execFileSync("go", ["tool", "oapi-codegen", "-generate", "types", "-package", "apigen", "api/openapi.yaml"], { cwd: root, encoding: "utf8", maxBuffer: 16 << 20 });
 const goInput = path.join(cache, "types.go");
 fs.writeFileSync(goInput, generatedGo);
-execFileSync("go", ["run", "./tools/split-api", goInput, "internal/gen/api"], { cwd: root, stdio: "inherit" });
+execFileSync("go", ["run", "./scripts/split-api", goInput, "internal/gen/api"], { cwd: root, stdio: "inherit" });
 
 const source = astToString(await openapiTS(new URL("./openapi.yaml", import.meta.url)));
 const ast = ts.createSourceFile("schema.d.ts", source, ts.ScriptTarget.Latest, true);

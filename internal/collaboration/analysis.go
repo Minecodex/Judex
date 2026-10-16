@@ -18,15 +18,22 @@ type DiscussionProposal struct {
 	ExistingTopicID *uuid.UUID `json:"existingTopicId,omitempty"`
 }
 type TaskAnalysisOutput struct {
-	Summary       string              `json:"summary"`
-	Disagreements []string            `json:"disagreements"`
-	Basis         []string            `json:"basis"`
-	Discussion    *DiscussionProposal `json:"discussion,omitempty"`
+	CurrentNodeCandidates []WorkflowNodeRef   `json:"currentNodeCandidates"`
+	RelatedEvidenceNodes  []WorkflowNodeRef   `json:"relatedEvidenceNodes"`
+	SuggestedNextNodes    []WorkflowNodeRef   `json:"suggestedNextNodes"`
+	NeedsClarification    bool                `json:"needsClarification"`
+	Summary               string              `json:"summary"`
+	Disagreements         []string            `json:"disagreements"`
+	Basis                 []string            `json:"basis"`
+	Discussion            *DiscussionProposal `json:"discussion,omitempty"`
 }
 
 func RecordTaskOutput(ctx context.Context, tx pgx.Tx, project, run uuid.UUID, out TaskAnalysisOutput, now time.Time) (uuid.UUID, error) {
-	if strings.TrimSpace(out.Summary) == "" || len(out.Summary) > 24000 {
-		return uuid.Nil, apierrors.Fields("summary", "length")
+	if err := validateWorkflowAnalysis(ctx, tx, project, run, out); err != nil {
+		return uuid.Nil, err
+	}
+	if err := ValidateAnalysisSummary(out.Summary); err != nil {
+		return uuid.Nil, err
 	}
 	for name, values := range map[string][]string{"basis": out.Basis, "disagreements": out.Disagreements} {
 		if len(values) > 32 {
@@ -83,7 +90,8 @@ func RecordTaskOutput(ctx context.Context, tx pgx.Tx, project, run uuid.UUID, ou
 }
 
 func FinishTaskAnalysis(ctx context.Context, tx pgx.Tx, project, batch uuid.UUID, state, summary string, now time.Time) error {
-	var id, task uuid.UUID
+	var id uuid.UUID
+	var task *uuid.UUID
 	var raw []byte
 	var parent *uuid.UUID
 	var point int64
@@ -100,7 +108,7 @@ func FinishTaskAnalysis(ctx context.Context, tx pgx.Tx, project, batch uuid.UUID
 		if err = json.Unmarshal(recorded, &output); err != nil {
 			return err
 		}
-		if strings.TrimSpace(output.Summary) == "" {
+		if ValidateAnalysisSummary(output.Summary) != nil {
 			state = "failed"
 			summary = "模型未保存结构化公开分析，原记录已保留；可重试分析。"
 		}
@@ -115,6 +123,10 @@ func FinishTaskAnalysis(ctx context.Context, tx pgx.Tx, project, batch uuid.UUID
 		return nil
 	}
 	if err != nil {
+		return err
+	}
+	if task == nil {
+		_, err := events.AppendProjectEvent(ctx, tx, project, "analysis.changed", "project", project.String(), nil, map[string]any{"analysisId": id, "state": state}, now)
 		return err
 	}
 	if state == "completed" {

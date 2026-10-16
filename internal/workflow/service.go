@@ -52,7 +52,7 @@ type HardRule struct {
 	NodeID   string `json:"nodeId,omitempty"`
 	Kind     string `json:"kind"`
 	Phase    string `json:"phase"`
-	TargetID string `json:"targetId,omitempty"`
+	TargetID string `json:"targetId"`
 }
 
 // Body is the draft/published definition payload.
@@ -143,10 +143,8 @@ func Validate(body Body) error {
 		if rule.NodeID != "" && !seen[rule.NodeID] {
 			return apierrors.Fields("hardRules.nodeId", "unknown-node")
 		}
-		if rule.TargetID != "" {
-			if _, err := uuid.Parse(rule.TargetID); err != nil {
-				return apierrors.Fields("hardRules.targetId", "uuid")
-			}
+		if id, err := uuid.Parse(rule.TargetID); err != nil || id == uuid.Nil {
+			return apierrors.Fields(fmt.Sprintf("hardRules[%d].targetId", i), "non-zero UUID required")
 		}
 		switch rule.Kind {
 		case "task_acceptance", "handoff_receipt", "material_ready":
@@ -228,10 +226,16 @@ func (s *Service) Create(ctx context.Context, requester, projectID uuid.UUID, bo
 		if err := tx.LockActiveProject(ctx, projectID.String()); err != nil {
 			return err
 		}
-		if _, err := s.membership(ctx, tx, requester, projectID); err != nil {
+		role, err := s.membership(ctx, tx, requester, projectID)
+		if err != nil {
 			return err
 		}
-		var err error
+		if err := requireManager(role); err != nil {
+			return err
+		}
+		if err := validateHardRuleReferences(ctx, tx, projectID, body.HardRules); err != nil {
+			return err
+		}
 		out, err = s.insertDefinition(ctx, tx, requester, projectID, body, nil)
 		return err
 	})
@@ -281,6 +285,18 @@ func (s *Service) UpdateDraft(ctx context.Context, requester, projectID, workflo
 			return err
 		}
 		if err := requireManager(role); err != nil {
+			return err
+		}
+		var currentVersion int64
+		if err := tx.QueryRow(ctx, `SELECT version FROM workflow_definitions WHERE project_id=$1 AND id=$2 FOR UPDATE`, projectID, workflowID).Scan(&currentVersion); errors.Is(err, pgx.ErrNoRows) {
+			return apierrors.New(apierrors.NotFound, "workflow not found")
+		} else if err != nil {
+			return apierrors.New(apierrors.Internal, "workflow lookup failed").Wrap(err)
+		}
+		if currentVersion != expectedVersion {
+			return apierrors.New(apierrors.VersionConflict, "workflow version conflict")
+		}
+		if err := validateHardRuleReferences(ctx, tx, projectID, body.HardRules); err != nil {
 			return err
 		}
 		var draftID uuid.UUID
@@ -387,6 +403,24 @@ func (s *Service) Publish(ctx context.Context, requester, projectID, workflowID 
 		}
 		if draftHash != "" && draftHash != draftReviewHash(name, instructions, nodesJSON, edgesJSON, hardJSON, policyJSON) {
 			return apierrors.New(apierrors.ReviewStale, "draft changed since review")
+		}
+		body := Body{Name: name, Instructions: instructions}
+		for _, part := range []struct {
+			raw    []byte
+			target any
+		}{
+			{nodesJSON, &body.Nodes}, {edgesJSON, &body.AdvisoryEdges},
+			{hardJSON, &body.HardRules}, {policyJSON, &body.ApprovalPolicies},
+		} {
+			if err := json.Unmarshal(part.raw, part.target); err != nil {
+				return err
+			}
+		}
+		if err := Validate(body); err != nil {
+			return err
+		}
+		if err := validateHardRuleReferences(ctx, tx, projectID, body.HardRules); err != nil {
+			return err
 		}
 		if err = validateDelegations(ctx, tx, projectID, workflowID, role, nodesJSON); err != nil {
 			return err

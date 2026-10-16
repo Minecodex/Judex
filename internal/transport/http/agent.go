@@ -132,5 +132,10 @@ func (h *AgentHandlers) extend(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, gin.H{"extended": req.ExtraRounds})
+	var maxRounds int
+	if err = h.Pool.QueryRow(c.Request.Context(), `SELECT max_rounds FROM discussion_batches WHERE id=$1 AND project_id=$2`, batchID, projectID).Scan(&maxRounds); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, gin.H{"extended": req.ExtraRounds, "extension": req.ExtraRounds, "maxRounds": maxRounds})
 }

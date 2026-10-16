@@ -1,6 +1,6 @@
 // 真实 API → demo WorkState 的只读映射（P1）：各资源 fetcher、映射函数与装配。
 // demo 的 person 一律是 displayName 字符串；REST 字符串统一转 {zh, en} 同值 Text。
-import { APIError, request } from "../../lib/api/client";
+import { APIError, request, requestAll } from "../../lib/api/client";
 import type { components } from "../../lib/api/schema";
 import {
   words,
@@ -42,22 +42,10 @@ export type ApiProposal = Schema["Proposal"];
 export type ApiProposalReview = Schema["ProposalReview"];
 export type ApiBootstrap = Schema["ProjectBootstrap"];
 
-type List<T> = { items: T[]; nextCursor?: string | null };
-
 // 列表读取；invitations/audit 等资源对普通成员可能 403，按空集合降级。
 async function list<T>(path: string): Promise<T[]> {
   try {
-    const items:T[]=[];
-    let cursor:string|null|undefined;
-    const seen=new Set<string>();
-    do {
-      const page = await request<List<T>>(path + (path.includes("?") ? "&" : "?") + "limit=100" + (cursor?"&cursor="+encodeURIComponent(cursor):""));
-      items.push(...(page.items??[]));
-      cursor=page.nextCursor;
-      if(cursor&&seen.has(cursor))throw new Error("Repeated collection cursor");
-      if(cursor)seen.add(cursor);
-    }while(cursor);
-    return items;
+    return await requestAll<T>(path);
   } catch (error) {
     if (
       error instanceof APIError &&
@@ -194,6 +182,7 @@ export function mapPosition(
     name: text(p.name),
     presetId: p.presetId,
     publicSummary: text(p.publicSummary),
+    modelId: p.modelId,
     prompt: text(p.prompt),
     tone: TONES[index % TONES.length],
     bindings: (p.nodeBindings ?? []).map((b) => ({

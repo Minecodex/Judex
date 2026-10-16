@@ -50,6 +50,9 @@ export function validFlowBody(body: FlowBody) {
     ids.size !== body.nodes.length || body.nodes.some(n => !n.id || /[\s/]/.test(n.id) || !n.name.trim() ||
       !['activity','decision'].includes(n.kind ?? 'activity') || Array.from(n.phase ?? '').length>120)) return false;
   const edges = body.advisoryEdges ?? [];
+  if ((body.hardRules ?? []).some(rule=>!['task_acceptance','handoff_receipt','material_ready'].includes(rule.kind) ||
+    !['start','accept','both'].includes(rule.phase) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rule.targetId ?? '') ||
+    rule.targetId.toLowerCase()==='00000000-0000-0000-0000-000000000000' || (rule.nodeId && !ids.has(rule.nodeId)))) return false;
   if (edges.some(e => !ids.has(e.from) || !ids.has(e.to) || e.from === e.to ||
     !['sequence','feedback'].includes(e.kind ?? 'sequence') || Array.from(e.label ?? '').length>200)) return false;
   const forward = edges.filter(e => e.kind !== 'feedback');

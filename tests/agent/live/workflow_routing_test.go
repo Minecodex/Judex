@@ -21,6 +21,9 @@ import (
 // This measures model discrimination with complete candidate context. It does
 // not implement platform routing, mutate assignments or count as its E2E proof.
 const routingPrompt = `你是项目的流程关联分析器。输入是本项目真实公开配置、当前计划/任务和本次上报。仅提出适用流程节点建议，不创建工作、不更新流程绑定、不批准、不验收。
+缺失信息不是否定事实：不能把“未提及某流程的触发条件”当作该条件不存在。指标异常、调参、缓存等现象可能属于计划试验，也可能属于生产处置；只有计划、任务或上报中的正面证据能排除其他合理解释时才 match，否则先问最少的环境/目的问题并 clarify。无需机械要求某个关键词，但不得自行补齐环境与影响范围。
+判定顺序：先检查输入 task 的正式 workflowId/nodeId 约束。只要本次上报与该绑定冲突，就必须 clarify、matches 为空，并询问是否需要改到项目范围或另一个任务；即使能够识别另一项独立活动，也只能把它列为备选，不能以“独立活动”为理由绕过当前提交的任务范围或自动切换关联。
+matches 表示本次当前推进或主要交付的环节。已完成的前序步骤、历史背景和将来打算只在 reason 说明，不重复算作当前匹配；多个明确独立的当前活动仍可多匹配。开发实现所附的本地单元测试、联调、自检和未覆盖说明是实现证据，不能仅凭这些词自动认定已进入独立的交付验证环节。已有明确任务节点且内容未冲突时，按该节点理解补测、记录缺口等职责延续；不要把辅助动作又扩成前一个实现节点。
 以本次上报事实结合当前工作背景判断适用环节。职位可以参与多个已发布流程和多个节点；候选只取该职位 nodeBindings 与已发布流程节点的交集。workflowId 与 nodeId 必须成对识别，不同流程的相同 nodeId 不是同一节点。
 信息充分且能排除其他合理解释时返回 match，matches 列出所有明确适用的节点。同一次上报包含多项独立工作时可返回多个对应关系，不能只按首项或首个流程判断。
 多个流程同样合理、背景不足、或上报内容与任务既有流程关联明显冲突时返回 clarify，matches 为空，candidates 可列出备选，question 用一个简短问题询问最少必要信息。不得凭职位名称或流程排列顺序猜测，不覆盖任务既有安排。
@@ -115,12 +118,13 @@ func TestLiveWorkflowRouting(t *testing.T) {
 		FixtureHash   string         `json:"fixtureSha256"`
 		Prompt        string         `json:"prompt"`
 		MaxOutput     int64          `json:"maxOutputTokens"`
+		Temperature   float64        `json:"temperature"`
 		SelectedCases []string       `json:"selectedCases,omitempty"`
 		Trials        []routingTrial `json:"trials"`
 		Passed        int            `json:"passed"`
 		Failed        int            `json:"failed"`
 	}{SchemaVersion: 1, Scope: "real-model candidate-context experiment; no platform route mutation", Model: modelName,
-		Protocol: cfg.Protocol, FixtureHash: fmt.Sprintf("%x", sha256.Sum256(raw)), Prompt: routingPrompt, MaxOutput: maxOutput, Trials: []routingTrial{}}
+		Protocol: cfg.Protocol, FixtureHash: fmt.Sprintf("%x", sha256.Sum256(raw)), Prompt: routingPrompt, MaxOutput: maxOutput, Temperature: 0.1, Trials: []routingTrial{}}
 	for _, sample := range fixture.Cases {
 		if len(selected) == 0 || selected[sample.ID] {
 			results.SelectedCases = append(results.SelectedCases, sample.ID)
@@ -193,7 +197,7 @@ func runRoutingTrial(provider model.Provider, name string, trial routingTrial) r
 		"decision": map[string]any{"type": "string", "enum": []string{"match", "clarify", "out_of_scope"}},
 		"matches":  map[string]any{"type": "array", "items": pair}, "candidates": map[string]any{"type": "array", "items": pair},
 		"reason": map[string]any{"type": "string"}, "question": map[string]any{"type": "string"}}}
-	stream, err := provider.Stream(ctx, model.Request{Model: name, MaxOutputTokens: trial.MaxOutput, Messages: []model.Message{
+	stream, err := provider.Stream(ctx, model.Request{Model: name, MaxOutputTokens: trial.MaxOutput, Temperature: 0.1, Messages: []model.Message{
 		{Role: "system", Content: routingPrompt}, {Role: "user", Content: string(trial.Input)}},
 		Tools: []model.ToolSchema{{Name: "record_workflow_routing", SchemaVersion: 1, Description: "记录只读流程节点判定建议，不执行任何业务变更", InputSchema: schema}}})
 	if err != nil {
@@ -223,8 +227,10 @@ func runRoutingTrial(provider model.Provider, name string, trial routingTrial) r
 				trial.Actual = &result
 			}
 		case "usage":
-			trial.UsageKnown = true
-			trial.InputTokens, trial.OutputTokens = event.InputTokens, event.OutputTokens
+			trial.UsageKnown = event.Usage.Known()
+			if trial.UsageKnown {
+				trial.InputTokens, trial.OutputTokens = *event.Usage.InputTokens, *event.Usage.OutputTokens
+			}
 		case "error":
 			trial.Error = event.Err.Error()
 		}

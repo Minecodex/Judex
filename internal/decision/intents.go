@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/kakj-go/Judex/internal/project"
 	"time"
 
 	"github.com/google/uuid"
@@ -44,11 +45,8 @@ func (s *Service) CreateIntent(ctx context.Context, requester, projectID uuid.UU
 		return nil, apierrors.Newf(apierrors.Validation, "operation %q 不在白名单", operation)
 	}
 	if operation == "project.create" {
-		allowed := map[string]bool{"title": true, "description": true, "kind": true, "maxDiscussionRounds": true, "approvalTimeoutSeconds": true}
-		for key := range payload {
-			if !allowed[key] {
-				return nil, apierrors.Fields("payload."+key, "unsupported")
-			}
+		if _, err := project.ParseCreatePayload(payload); err != nil {
+			return nil, err
 		}
 	}
 	raw, err := json.Marshal(payload)

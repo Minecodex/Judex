@@ -27,6 +27,17 @@ const (
 type Source string
 
 type sourceContextKey struct{}
+type agentActorContextKey struct{}
+type agentActorContext struct {
+	identity uuid.UUID
+	run      uuid.UUID
+}
+
+// WithAgentActor is set only by trusted domain adapters after runtime authority
+// validation. It keeps model draft writes distinct from human decisions.
+func WithAgentActor(ctx context.Context, identity, run uuid.UUID) context.Context {
+	return context.WithValue(WithSource(ctx, SourceAgent), agentActorContextKey{}, agentActorContext{identity, run})
+}
 
 func WithSource(ctx context.Context, source Source) context.Context {
 	return context.WithValue(ctx, sourceContextKey{}, source)
@@ -69,6 +80,9 @@ type Entry struct {
 // here so the row exists even if the caller later rolls back other effects —
 // the transaction guarantees all-or-nothing with the business change.
 func Append(ctx context.Context, tx pgx.Tx, e Entry) error {
+	if actor, ok := ctx.Value(agentActorContextKey{}).(agentActorContext); ok {
+		e.ActorType, e.Source, e.IdentityID, e.RequestID = ActorAgent, SourceAgent, &actor.identity, actor.run.String()
+	}
 	if e.Source == SourceWeb {
 		e.Source = ContextSource(ctx)
 	}

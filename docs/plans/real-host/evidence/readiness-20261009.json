@@ -1,0 +1,142 @@
+{
+  "checkedAt": "2026-10-09T15:11:30.720Z",
+  "deployment": {
+    "helmRevision": 21,
+    "image": "judex/server:local-materials-20261009121137-6664cc7a",
+    "serverVersion": "0.1.0-materials.20261009121137",
+    "readyzStatus": 200
+  },
+  "standardModel": {
+    "endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+    "httpStatus": 429,
+    "elapsedMs": 3492,
+    "model": null,
+    "requestId": null,
+    "usage": null,
+    "finishReason": null,
+    "errorCode": "1113",
+    "errorMessage": "余额不足或无可用资源包,请充值。"
+  },
+  "cli": {
+    "publishedVersion": "0.1.0-materials.20261009121137",
+    "downloadSha256Verified": true,
+    "sourceMissingTask": {
+      "exitCode": 0,
+      "error": null,
+      "stdout": "",
+      "stderr": ""
+    },
+    "deployedMissingTask": {
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  "kimi": {
+    "version": "0.36.1",
+    "modelAlias": "kimi-code/k3",
+    "hostProof": {
+      "skillLoaded": true,
+      "bashCommands": [
+        "./judex.exe --json version",
+        "./judex.exe --help"
+      ],
+      "onlyExpectedBashCommands": true,
+      "versionResultPresent": true,
+      "toolNames": [
+        "Skill",
+        "Glob",
+        "Bash",
+        "Read"
+      ]
+    },
+    "cache": {
+      "callCount": 5,
+      "calls": [
+        {
+          "call": 1,
+          "inputOther": 21905,
+          "output": 59,
+          "inputCacheRead": 0,
+          "inputCacheCreation": 0
+        },
+        {
+          "call": 2,
+          "inputOther": 1009,
+          "output": 122,
+          "inputCacheRead": 21760,
+          "inputCacheCreation": 0
+        },
+        {
+          "call": 3,
+          "inputOther": 472,
+          "output": 93,
+          "inputCacheRead": 22528,
+          "inputCacheCreation": 0
+        },
+        {
+          "call": 4,
+          "inputOther": 981,
+          "output": 182,
+          "inputCacheRead": 22784,
+          "inputCacheCreation": 0
+        },
+        {
+          "call": 5,
+          "inputOther": 2167,
+          "output": 447,
+          "inputCacheRead": 23552,
+          "inputCacheCreation": 0
+        }
+      ],
+      "all": {
+        "input": 117158,
+        "cached": 90624,
+        "output": 903,
+        "cacheRate": 0.773519520647331
+      },
+      "afterFirstCall": {
+        "input": 95253,
+        "cached": 90624,
+        "output": 844,
+        "cacheRate": 0.9514031054140027
+      }
+    }
+  },
+  "office": [
+    {
+      "format": "docx",
+      "pages": 1,
+      "textChars": 55,
+      "expectedMarkers": {
+        "共享资料真实文档": true,
+        "DOCX_SOURCE_UNIQUE": true
+      }
+    },
+    {
+      "format": "xlsx",
+      "pages": 2,
+      "textChars": 68,
+      "expectedMarkers": {
+        "文件卡片": true,
+        "XLSX_SECOND_SHEET_UNIQUE": true
+      }
+    },
+    {
+      "format": "pptx",
+      "pages": 2,
+      "textChars": 66,
+      "expectedMarkers": {
+        "共享资料评审": true,
+        "PPTX_SECOND_SLIDE_UNIQUE": true
+      }
+    }
+  ],
+  "tools": {
+    "repetitions": 30,
+    "distinctSerializedToolLists": 12
+  },
+  "verdict": "NOT_READY_FOR_FULL_REAL_MODEL_HOST_ACCEPTANCE",
+  "rawEvidenceDirectory": ".cache/real-host-readiness-20261009-4ccd77a9",
+  "scope": "prerequisite checks only; no business account, project, report or decision writes"
+}

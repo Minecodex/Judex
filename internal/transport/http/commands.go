@@ -278,6 +278,7 @@ func projectScopeParam(c *gin.Context) string {
 }
 
 var pagedOperations = map[string]bool{
+	"listTaskAcceptances": true, "listPlanAcceptances": true,
 	"listMaterialUsages": true,
 	"listTaskActivity":   true, "listDiscussionSuggestions": true,
 	"listDeliveries": true, "listProjects": true, "listRecentTopics": true, "listModels": true, "listMyActions": true, "listNotifications": true,

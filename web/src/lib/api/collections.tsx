@@ -2,10 +2,11 @@ import {useInfiniteQuery,type QueryKey} from "@tanstack/react-query";
 import {useEffect} from "react";
 import {Button} from "../../components/ui/Button";
 import {request} from "./client";
+import {collectionURL} from './pagination';
 import {usePreferences} from "../../stores/preferences";
 import {translate} from "../../i18n";
 export function useCollection<T>(key:QueryKey,url:string,enabled=true){
- const query=useInfiniteQuery({queryKey:[...key,"pages"],enabled,refetchOnMount:'always',initialPageParam:"",queryFn:({pageParam})=>request<{items:T[];nextCursor:string|null;totalCount?:number}>(url+(url.includes("?")?"&":"?")+"limit=50"+(pageParam?"&cursor="+encodeURIComponent(pageParam):"")),getNextPageParam:(page)=>page.nextCursor||undefined});
+ const query=useInfiniteQuery({queryKey:[...key,"pages"],enabled,refetchOnMount:'always',initialPageParam:"",queryFn:({pageParam,signal})=>request<{items:T[];nextCursor:string|null;totalCount?:number}>(collectionURL(url,pageParam,50),{signal}),getNextPageParam:(page)=>page.nextCursor||undefined});
  const storage="judex.collection.pages."+JSON.stringify(key);
  let desired=1;try{desired=Math.max(1,Math.min(100,Number(sessionStorage.getItem(storage))||1));}catch{}
  useEffect(()=>{if(!enabled||!query.data||query.isFetching||query.isError)return;const count=query.data.pages.length;if(count<desired&&query.hasNextPage){void query.fetchNextPage();return;}try{sessionStorage.setItem(storage,String(count));}catch{}},[storage,enabled,desired,query.data?.pages.length,query.isFetching,query.isError,query.hasNextPage]);

@@ -288,7 +288,7 @@ export interface SchemaOperations0 {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["ConfirmationIntent"];
+                        data: components["schemas"]["ConfirmationResult"];
                         meta: components["schemas"]["CommandMeta"];
                     };
                 };
@@ -1103,7 +1103,7 @@ export interface SchemaOperations0 {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["ConfirmationIntent"];
+                        data: components["schemas"]["ConfirmationResult"];
                         meta: components["schemas"]["CommandMeta"];
                     };
                 };
@@ -1606,13 +1606,13 @@ export interface SchemaOperations0 {
         };
         requestBody?: never;
         responses: {
-            /** @description 预览流 */
+            /** @description 预览流（采用实际预览 MIME） */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/octet-stream": string;
+                    "*/*": string;
                 };
             };
             /** @description 范围内容 */
@@ -1724,22 +1724,22 @@ export interface SchemaOperations0 {
         };
         requestBody?: never;
         responses: {
-            /** @description 内容流。 */
+            /** @description 内容流（保留固定版本实际 MIME）。 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/octet-stream": string;
+                    "*/*": string;
                 };
             };
-            /** @description 范围内容。 */
+            /** @description 范围内容（保留固定版本实际 MIME）。 */
             206: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/octet-stream": string;
+                    "*/*": string;
                 };
             };
             401: components["responses"]["Unauthorized"];

@@ -25,9 +25,10 @@ func TestMultiAgentCoordination(t *testing.T) {
 	}
 
 	provider, err := model.NewProvider(model.GatewayConfig{
-		Protocol: envOr("SCENARIO_GLM_PROTOCOL", model.ProtocolOpenAI),
-		BaseURL:  envOr("SCENARIO_GLM_BASE_URL", ""),
-		APIKey:   envOr("SCENARIO_GLM_API_KEY", ""),
+		Protocol:       envOr("SCENARIO_GLM_PROTOCOL", model.ProtocolOpenAI),
+		BaseURL:        envOr("SCENARIO_GLM_BASE_URL", ""),
+		APIKey:         envOr("SCENARIO_GLM_API_KEY", ""),
+		RequestOptions: scenarioRequestOptions(),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -77,9 +78,10 @@ func TestMultiAgentSinglePosition(t *testing.T) {
 		t.Skip("SCENARIO_GLM_* env not set")
 	}
 	provider, err := model.NewProvider(model.GatewayConfig{
-		Protocol: envOr("SCENARIO_GLM_PROTOCOL", model.ProtocolOpenAI),
-		BaseURL:  envOr("SCENARIO_GLM_BASE_URL", ""),
-		APIKey:   envOr("SCENARIO_GLM_API_KEY", ""),
+		Protocol:       envOr("SCENARIO_GLM_PROTOCOL", model.ProtocolOpenAI),
+		BaseURL:        envOr("SCENARIO_GLM_BASE_URL", ""),
+		APIKey:         envOr("SCENARIO_GLM_API_KEY", ""),
+		RequestOptions: scenarioRequestOptions(),
 	})
 	if err != nil {
 		t.Fatal(err)

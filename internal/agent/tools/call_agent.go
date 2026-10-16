@@ -19,11 +19,11 @@ type AgentCaller interface {
 func RegisterCallAgent(r *Registry, caller AgentCaller) {
 	r.Register(Tool{
 		Name:        "call_agent",
-		Description: "调用指定岗位的子Agent进行分析（仅coordinator可用）。子Agent将基于其岗位职责和提供的材料给出分析意见。",
+		Description: "调用指定岗位的子Agent进行分析（仅coordinator可用）。提供具体问题与已取得的材料，子Agent依据当前职责给出意见。失败不代表已有岗位结论；预算耗尽或超时须保留缺口，不以重复调用冒充完成。",
 		InputSchema: objectSchema([]string{"position", "question"}, map[string]any{
 			"position": map[string]any{
 				"type":        "string",
-				"description": "岗位名称，如：后端工程师、质量验收",
+				"description": "优先传 list_agent 返回的 identityId。岗位名称仅在本项目恰好一名任职人时可用；同岗多人必须分别使用各自 identityId。",
 			},
 			"question": map[string]any{
 				"type":        "string",
@@ -34,10 +34,8 @@ func RegisterCallAgent(r *Registry, caller AgentCaller) {
 				"description": "可选：附带给子Agent的材料内容",
 			},
 		}),
-		Effect: EffectRead,
-		AllowedFor: func(principalKind string) bool {
-			return principalKind == "agent" // only agents can call sub-agents
-		},
+		Effect:     EffectRead,
+		AllowedFor: CoordinatorOnly,
 		Execute: func(ctx context.Context, args map[string]any, env Env) (Result, error) {
 			if caller == nil {
 				return Result{}, fmt.Errorf("子Agent调用未接线")
@@ -53,7 +51,7 @@ func RegisterCallAgent(r *Registry, caller AgentCaller) {
 			defer cancel()
 			answer, err := caller.CallPositionAgent(callCtx, env.ProjectID, position, question, material)
 			if err != nil {
-				return Result{Data: map[string]any{"position": position, "error": err.Error()}}, nil
+				return Result{Data: map[string]any{"position": position}}, fmt.Errorf("position analysis %s failed: %w", position, err)
 			}
 			return Result{Data: map[string]any{
 				"position": position,

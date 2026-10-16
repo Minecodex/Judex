@@ -92,7 +92,7 @@ func TestAnthropicStreamTextThinkingUsage(t *testing.T) {
 	if text != "结论" {
 		t.Fatalf("text=%q (thinking must be filtered)", text)
 	}
-	if usage == nil || usage.InputTokens != 42 || usage.OutputTokens != 7 {
+	if usage == nil || !usage.Usage.Known() || *usage.Usage.InputTokens != 42 || *usage.Usage.OutputTokens != 7 {
 		t.Fatalf("usage=%+v", usage)
 	}
 }
@@ -199,8 +199,8 @@ func TestAnthropicErrorClassification(t *testing.T) {
 	provider := model.NewAnthropicProvider(model.AnthropicConfig{BaseURL: server.URL, APIKey: "test-key"})
 	_, err := provider.Stream(context.Background(), model.Request{Model: "m", MaxOutputTokens: 8,
 		Messages: []model.Message{{Role: "user", Content: "x"}}})
-	if err == nil || model.Classify(err) != model.ErrorQuota {
-		t.Fatalf("429 must classify quota, got %v", err)
+	if err == nil || model.Classify(err) != model.ErrorRateLimited {
+		t.Fatalf("ordinary 429 must classify rate limit, got %v", err)
 	}
 }
 

@@ -1,0 +1,1450 @@
+{
+  "startedAt": "2026-10-12",
+  "status": "current_release44_bounded_business_accepted_normal_upgraded_and_owned_environments_cleaned",
+  "pause": {
+    "requestedBy": "user",
+    "recordedAt": "2026-10-13T09:13:19Z",
+    "reason": "User will request resumption in about two hours after Kimi quota resets; no automatic resumption",
+    "checkpoint": "records/PAUSE-20261013.md",
+    "resumedAt": "2026-10-13T11:24:50.417Z",
+    "resumedBy": "user",
+    "state": "resumed",
+    "resumeRecord": "records/KIMI-K3-RESUME-20261013.md",
+    "lastExplicitResumeAt": "2026-10-14T01:46:04.683Z",
+    "lastExplicitResumeBy": "user"
+  },
+  "scope": "Actual APIMart GLM 5.3 Flash high in original Kimi CLI sessions and owned Judex coordinator/position runtime; old K3/Coding Plan evidence retained",
+  "target": {
+    "projects": 3,
+    "publishedWorkflows": 8,
+    "positionTemplates": 11,
+    "initialIdentities": 12,
+    "plans": 9,
+    "tasks": 30,
+    "kimiSessions": 14,
+    "maxActiveKimiSessions": 4
+  },
+  "models": {
+    "coordinator": "glm-5.3-flash",
+    "position": "glm-5.3-flash",
+    "mode": "apimart",
+    "fallbackTrigger": "none; user selected APIMart after explicit preflight",
+    "requestOptions": {
+      "thinkingType": "enabled",
+      "reasoningEffort": "high"
+    }
+  },
+  "observationTTLHours": 24,
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Prerequisite implementation",
+      "status": "completed_with_documented_scope",
+      "latestEvidence": "../v1/evidence/contract-configuration-20261015.json"
+    },
+    {
+      "id": "P1",
+      "name": "Isolated deployment and regression",
+      "status": "completed_with_documented_scope",
+      "latestEvidence": "../v1/evidence/contract-configuration-20261015.json"
+    },
+    {
+      "id": "P2",
+      "name": "Software creation and delivery",
+      "status": "completed_with_documented_scope"
+    },
+    {
+      "id": "P3",
+      "name": "Image and Office scenarios",
+      "status": "completed_with_documented_scope"
+    },
+    {
+      "id": "P4",
+      "name": "Combined delivery and role handoff",
+      "status": "completed_with_documented_scope"
+    },
+    {
+      "id": "P5",
+      "name": "Cache, failure recovery and cleanup",
+      "status": "archived_and_cleaned_with_documented_limits"
+    }
+  ],
+  "evidence": [
+    {
+      "date": "2026-10-12",
+      "kind": "controlled_contract",
+      "checks": [
+        "project submission analysis lifecycle and replay",
+        "agent workflow draft authority atomicity revision and publication boundary",
+        "quota-only fallback with per-attempt journal",
+        "published workflow candidates and formal-binding conflict",
+        "Web state tests 64 passed and typecheck"
+      ]
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "parser_runtime",
+      "image": "judex/analysis-sandbox:real-host-20261012",
+      "checks": [
+        "DOCX PPTX XLSX PDF source locations",
+        "pagination",
+        "formula cache does not claim recalculation",
+        "hash mismatch and corrupt original rejection",
+        "image metadata only"
+      ]
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "native_preparation",
+      "kimiWorkspacesCreated": 1,
+      "businessSessionsCompleted": 0,
+      "platformProjectsCreated": 0,
+      "root": "D:/workspace/judex-real-host/20261012-closure"
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "actual_registration_ui",
+      "actorsCreated": 6,
+      "accounts": "U0-U5"
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "release_validation",
+      "version": "0.1.0-realhost.20261012.1",
+      "checksumsVerified": 56,
+      "nativePlatform": "windows-amd64",
+      "installedSkillVersionMatches": true,
+      "status": "superseded_after_browser_contract_failure"
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "actual_scene_creation",
+      "project": "A",
+      "createdVia": "Kimi CLI project intent then U0 browser confirmation",
+      "projectId": "21a13532-7929-4c6c-99a7-01e044eee64e",
+      "templates": 5,
+      "identities": 6,
+      "publishedWorkflows": 4,
+      "source": "real GLM draft then U0 editor and publication UI"
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "real_provider_cache_aggregate",
+      "model": "glm-5.3",
+      "scope": "A initial workflow drafting, including failed attempts",
+      "calls": 12,
+      "cacheKnownCalls": 12,
+      "inputTokens": 115639,
+      "cacheReadTokens": 93824,
+      "retention": "raw observations rolling 24h; this record is aggregate only"
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "actual_kimi_cli_sessions",
+      "sessions": [
+        "KA01",
+        "KA02",
+        "KA03",
+        "KA04",
+        "KA05",
+        "KA06"
+      ],
+      "independentCredentials": true,
+      "maxObservedConcurrent": 4,
+      "deliveryClosed": false
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "real_model_work_arrangement",
+      "proposalId": "0fe51b39-5fae-4f9d-8d27-d910d127977e",
+      "humanApprovalSlots": 6,
+      "actors": [
+        "U0",
+        "U1",
+        "U2",
+        "U3",
+        "U4"
+      ],
+      "formalPlans": 1,
+      "formalTasks": 6,
+      "acceptance": "failed placement assertion: tasks lack owning plan; no reports or local work; actual model correction pending"
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "actual_task_delivery_and_review",
+      "tasks": {
+        "A11": "accepted",
+        "A12": "34 developer tests passed; independent 61/62; U3 browser reject; native session correcting Unicode",
+        "A13": "9 fixed originals; independent real browser/API scope passed; U4 browser accept; theme persistence remains A15"
+      },
+      "models": "Native Kimi quota exhausted; explicitly approved temporary GLM-5.3 successfully produced actual API and UI in same CLI sessions; native Kimi recovered and reviewed"
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "actual_software_rework_loop",
+      "task": "A12",
+      "stages": [
+        "fixed v4 original 61/62 independent check",
+        "U3 browser reject",
+        "same KA02 source change preserving requirements",
+        "bare ZIP and summary upload, one delivery report",
+        "U3 independently retested fixed v6 originals: 36/36 plus 62/62",
+        "U3 browser accept v7"
+      ],
+      "formalSQLRepair": false
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "actual_independent_qa_deliveries",
+      "A14": {
+        "passed": 102,
+        "failed": 0,
+        "real500Path": true,
+        "reportId": "206bdfad-6d06-4806-8a32-aea2d629bdf6"
+      },
+      "A15": {
+        "passed": 18,
+        "total": 19,
+        "realBrowserAndAPI": true,
+        "failed": "theme setting does not survive reload",
+        "reportId": "4f082fef-890a-4dd7-b3eb-e05fdf9f58ee"
+      },
+      "ownerDecisions": "pending"
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "real_provider_cache_aggregate",
+      "scope": "A platform business calls, including failures, snapshot before subsequent reports",
+      "glm53": {
+        "calls": 173,
+        "knownCalls": 171,
+        "inputTokens": 2883480,
+        "cacheReadTokens": 2358464
+      },
+      "glm53flash": {
+        "calls": 108,
+        "knownCalls": 97,
+        "inputTokens": 1419304,
+        "cacheReadTokens": 778816
+      },
+      "retention": "detail rolling 24h; aggregate only retained here"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_quota_window_and_fallback",
+      "nativeKimi": "5-hour window exhausted after recovery",
+      "codingModels": [
+        "glm-5.3",
+        "glm-5.3-flash"
+      ],
+      "providerCode": "1308",
+      "explicitMessage": "5-hour usage ceiling and reset time",
+      "resetLocal": "2026-10-13 01:01:31",
+      "freeTextProbe": "glm-4.5-flash HTTP200",
+      "freeVisionProbe": "glm-4.6v-flash HTTP429/1305 capacity, not quota",
+      "cliFallback": "Text-only model rejects retained image content; smaller context fixes inferred max_tokens ceiling; long existing session reached step cap without delivery, summary was stale; restored GLM-5.3 read actual source before modifying",
+      "codingRestoredProbe": "glm-5.3 HTTP200 after reset"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_theme_rework_loop",
+      "task": "A13",
+      "sourceVersion": "3783470a-0d17-4be8-8b1d-c151f885287d",
+      "reviewEvidenceVersion": "20985eae-57a1-45b0-8cf5-1e868deaa541",
+      "independentTests": {
+        "passed": 21,
+        "total": 21,
+        "realBrowserAndAPI": true
+      },
+      "result": "U4 browser accept v8",
+      "oldFailedA15Retained": true,
+      "formalSQLRepair": false
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "real_provider_cache_aggregate",
+      "scope": "A platform calls including failures, observed 23:47 UTC",
+      "glm53": {
+        "calls": 201,
+        "knownCalls": 199,
+        "inputTokens": 3425097,
+        "cacheReadTokens": 2818688
+      },
+      "glm53flash": {
+        "calls": 108,
+        "knownCalls": 97,
+        "inputTokens": 1419304,
+        "cacheReadTokens": 778816
+      },
+      "retention": "24-hour raw observation only; this permanent record is aggregate"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_release_package_review",
+      "task": "A16",
+      "packageVersion": "82d277ac-3b8a-45e9-b7ea-eb840e2a3679",
+      "sha256": "57153933175b3cf211d4ae900fae7a78dda3f6758467a08082e8c3f440489a69",
+      "reproducibleTwoBuilds": true,
+      "ownerIndependentChecks": {
+        "perFileSha": 26,
+        "sourceByteMatches": 23,
+        "apiTests": 36,
+        "uiTests": 20,
+        "persistenceSmoke": 6
+      },
+      "formalDecision": "U0 actual fixed-review browser accepted v5",
+      "planAccepted": false
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "coding_plan_option_admission_only",
+      "models": [
+        "glm-5.3",
+        "glm-5.3-flash"
+      ],
+      "requestedThinkingType": "disabled",
+      "bothHttp200": true,
+      "bothToolPing": true,
+      "bothInputTokens": 166,
+      "bothOutputTokens": 11,
+      "privateReasoningContentNotStored": true,
+      "platformAcceptance": false
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_second_workflow_plan_creation",
+      "planCode": "A-P2",
+      "proposalId": "204c3827-d7a9-4166-b784-5dd40f474982",
+      "workflowId": "217ef1ef-c862-5dd1-9bb1-83e5633d7fea",
+      "taskCodes": [
+        "A21",
+        "A22",
+        "A23",
+        "A24"
+      ],
+      "sameSourceRetry": true,
+      "oldSourceBudgetRetained": true,
+      "humanTestActorApprovalSlots": 5,
+      "formalSQLRepair": false,
+      "modelAnalysisState": "completed"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_position_analysis_closure",
+      "source": "new explicit focused question under verified .15 options; old f3595569 remains waiting_human",
+      "analysisId": "792afa8c-a164-4add-8f62-196be66c7798",
+      "state": "completed",
+      "modelCalls": 4,
+      "totalTokens": 55100,
+      "positionRunSucceeded": true,
+      "callAgentSucceeded": true,
+      "recordTaskAnalysisSucceeded": true,
+      "positionLimitations": "opinion based on summary/metadata; 102 suite count includes overlap, no claim of full original coverage",
+      "businessAcceptance": false
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_independent_reproduction_review",
+      "task": "A21",
+      "sourceZip": "78d6a45d-0530-465d-a8f0-8fa5fd64cbc8",
+      "threeProductFailuresReproduced": true,
+      "ownerIndependentlyReran": true,
+      "formalDecision": "U0 fixed browser accepted reproduction v4",
+      "semanticModelMisstatementRetained": "page1 is nonempty; auto summary said empty",
+      "planAccepted": false
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "native_office_read_only_prerequisite",
+      "skyRuntimeImported": true,
+      "returnedAppIds": [
+        "Microsoft.Office.EXCEL.EXE.15",
+        "Microsoft.Office.WINWORD.EXE.15"
+      ],
+      "targetWindowsAtProbe": 0,
+      "powerPointExecutablePreviouslyVerified": true,
+      "powerPointCatalogEntry": "not returned; explicit exe launch still unverified",
+      "openedEditedRecalculated": false,
+      "scope": "metadata inventory only, no existing user documents inspected"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "network_alternative_admission",
+      "directLoopback18182": 200,
+      "directLoopback18481": 200,
+      "inPodReadiness": true,
+      "proxyEnvironmentConfigured": false,
+      "globalSettingsChanged": false,
+      "externalNetworkFailures": "user suspects Codex interception but no explicit denial found; actual GLM and local platform HTTP200 verified, native Kimi quota403 and local process/path failures separately recorded",
+      "replayCountsAsControlledOnly": true
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_prefix_cache_same_task_pair",
+      "model": "glm-5.3",
+      "sameText": true,
+      "taskFactsUnchanged": true,
+      "first": {
+        "calls": 2,
+        "knownCalls": 2,
+        "inputTokens": 24050,
+        "cacheReadTokens": 11200,
+        "weightedReadRatio": 0.4656964656964657
+      },
+      "second": {
+        "calls": 2,
+        "knownCalls": 2,
+        "inputTokens": 24110,
+        "cacheReadTokens": 22272,
+        "weightedReadRatio": 0.9237660721692244
+      },
+      "ttlHours": 24,
+      "detailRetained": false,
+      "permanentAggregationOnly": true,
+      "naturalExpiryEligibleRows": 0,
+      "naturalExpiryVerified": false,
+      "kimiUsage": "unknown, excluded"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_combined_patch_regression_delivery",
+      "task": "A23",
+      "sourceBackendVersion": "f11853be-93f6-4bf2-9b11-2032b17e4e3c",
+      "sourceFrontendVersion": "3783470a-0d17-4be8-8b1d-c151f885287d",
+      "httpPassed": 31,
+      "httpTotal": 31,
+      "desktopPassed": 21,
+      "desktopTotal": 21,
+      "evidenceVersion": "b0c57ff0-984b-48f5-85af-60db1c716480",
+      "reportId": "c6196c90-c763-49ba-a6c1-3e7c56134010",
+      "taskAccepted": false,
+      "oldFailureEvidencePreserved": true
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_regression_owner_acceptance",
+      "task": "A23",
+      "httpRerun": {
+        "passed": 31,
+        "total": 31
+      },
+      "uiOriginalChecks": {
+        "passed": 21,
+        "total": 21,
+        "criticalScreensVisuallyChecked": 3
+      },
+      "decision": "U0 fixed browser accepted v5",
+      "originalGbkFailureRetained": true
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_kimi_glm_usage_observation",
+      "session": "KX01",
+      "model": "glm-5.3-flash",
+      "calls": 8,
+      "http200": 8,
+      "usageKnownCalls": 8,
+      "cacheKnownCalls": 8,
+      "inputTokens": 362046,
+      "cacheReadTokens": 165440,
+      "outputTokens": 14831,
+      "transportErrors": 0,
+      "scope": "read-only real Kimi CLI admission; native Kimi usage remains unknown",
+      "retention": "per-call counters in invocation memory only, durable aggregate"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_patch_package_owner_acceptance",
+      "task": "A24",
+      "fileSHAChecks": 29,
+      "originalByteMatches": 27,
+      "apiTests": 38,
+      "uiTests": 20,
+      "privateSmoke": 18,
+      "independentTwoRebuildsMatch": true,
+      "decision": "U0 fixed browser accepted v5",
+      "platformAnalysisState": "completed"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "early_create_fields_live_admission",
+      "release": "0.1.0-realhost.20261013.16",
+      "controlledPgRegression": "passed",
+      "integrationAgentCliRegression": "passed",
+      "originalInvalidModelReplay": "actual CLI draft rejected, exit2; current formal work remains2plans10accepted tasks"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_independent_plan_acceptance",
+      "plan": "A-P2",
+      "acceptedTaskReferences": 4,
+      "status": "accepted",
+      "version": 2,
+      "confirmedBy": "named synthetic U0 fixed browser",
+      "formalSQLRepair": false
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_original_feature_plan_closure",
+      "plan": "A-P1",
+      "acceptedOwnTasks": 6,
+      "formallyReferencedPatchTasks": 1,
+      "status": "accepted",
+      "version": 3,
+      "originalDefectsRetained": true
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_workflow_role_editor",
+      "serverRelease": "0.1.0-realhost.20261013.17",
+      "cliDuringExistingInvocation": "0.1.0-realhost.20261013.16",
+      "checks": [
+        "64 web tests and typecheck",
+        "actual U0 editor/save/publish restoration node adds backend while retaining ops",
+        "four stale draft-status instructions corrected by owner UI",
+        "old published bodies unchanged",
+        "all five position multi-flow bindings refreshed via UI"
+      ],
+      "formalBusinessTasksMoved": false
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "baseline_measurement_method_trials",
+      "task": "A31",
+      "firstCv": 0.447,
+      "intermediateCv": 0.289,
+      "finalCv": 0.0795,
+      "formalRounds": 60,
+      "finalLoad": "serial single keep-alive; recorded own-process priority/timer settings",
+      "oldFailedTrialRetained": true,
+      "optimizedSourceNotYetProduced": true
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "kimi_k3_quota_admission_resume",
+      "at": "2026-10-13T15:20:04Z",
+      "httpStatus": 200,
+      "model": "k3",
+      "requests": 1,
+      "tokens": 117,
+      "oldQuotaFailureRetained": true,
+      "namespaceUIDVerified": true,
+      "deployment": "0.1.0-realhost.20261013.19",
+      "localForwardRestored": 18182,
+      "businessAcceptedTasks": 15,
+      "closedPlans": 3,
+      "sceneSession": "KA04",
+      "sessionId": "session_6964f8aa-a459-40de-be9f-f2e4140cfeb1"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "a43_actual_recovery_acceptance",
+      "observedAt": "2026-10-13T23:45:18.501327+08:00",
+      "taskVersion": 5,
+      "preRestartChecks": 11,
+      "postRestartChecks": 11,
+      "sourceSHAFiles": 30,
+      "dbByteSHAUnchanged": true,
+      "ownerReadonlyChecks": 10,
+      "confirmedVia": "U0 actual fixed-review browser",
+      "analysisId": "705dc0ae-aa28-4c37-9162-84f8709db5b9",
+      "platformK3Calls": 6,
+      "platformCacheKnownCalls": 4,
+      "platformCacheUnknownCalls": 2,
+      "localKimiProviderCalls": 24,
+      "localKimiUsageKnownCalls": 24,
+      "localKimiInputTokens": 2495411,
+      "localKimiOutputTokens": 20074,
+      "localKimiCacheReadTokens": 2319872,
+      "scope": "controlled single-instance configuration fault, not production recovery or full scenario completion"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "controlled_office_forced_recalculation_admission",
+      "defaultConversionPassed": false,
+      "forcedProfilePassed": true,
+      "challengeCachedValue": 999,
+      "actualSum": 7,
+      "actualMean": 3.5,
+      "formulasPreserved": true,
+      "inputsPreserved": true,
+      "runtimeImage": "judex/material-converter:collaboration-realhost-0.1.0-realhost.20261013.17",
+      "network": "none",
+      "pull": "never",
+      "newPackagesInstalled": false,
+      "businessWorkbooksAuthored": 0,
+      "nativeExcelPassed": false
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "separate_a_p4_plan_acceptance",
+      "at": "2026-10-13T23:47:23.946477+08:00",
+      "planVersion": 2,
+      "owningTasksAccepted": 3,
+      "ownerReadonlyChecks": 10,
+      "confirmedVia": "actual U0 fixed plan review",
+      "closedPlans": 4,
+      "acceptedTasks": 16,
+      "controlledScopeOnly": true
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "actual_b_c_workflow_publication",
+      "at": "2026-10-14T00:18:40.251586+08:00",
+      "publishedWorkflowsTotal": 8,
+      "positionTemplatesTotal": 11,
+      "initialIdentitiesTotal": 12,
+      "models": "k3",
+      "createdThrough": "actual coordinator draft_workflow",
+      "publishedThrough": "U0 actual workflow editor/publish UI",
+      "multiWorkflowBindings": "actual UI per3templates perproject",
+      "businessArtifactTasksCreated": 0,
+      "bWorkflowK3Calls": 2,
+      "cWorkflowK3Calls": 5,
+      "cFailedDraftCallsRetained": 4
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "b_formal_plan_task_approval_after_expired_intent",
+      "observedAt": "2026-10-14T00:35:59.588403+08:00",
+      "proposalId": "35c9d848-a077-477f-90a4-343e30553fc5",
+      "plans": 2,
+      "tasks": 5,
+      "originalDraftAuthoredBy": "actual platform K3 from original KB01 submission80e95160",
+      "reviewHash": "944ae4daf986a377844d02cac72f57aa6d27004d9957d9f283bf1718381fb929",
+      "originalIntentExpired": true,
+      "renewedBy": "operator using real authorised KB01 CLI, explicitly not a Kimi action",
+      "actualBrowserActors": [
+        "U0",
+        "U2",
+        "U3"
+      ],
+      "startDependenciesPending": true,
+      "tasksStarted": 0,
+      "tasksAccepted": 0
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "quota_admission_resume_0742",
+      "observedAt": "2026-10-14T07:44:29.359149+08:00",
+      "model": "k3",
+      "httpStatus": 200,
+      "requests": 1,
+      "tokens": 142,
+      "namespaceUIDUnchanged": true,
+      "priorQuotaFailuresRetained": true,
+      "harnessCleanupRace": "Concurrent old observation deletion EPERM; exact target already absent, expired remnants0; only tolerate ENOENT/EPERM when target is absent"
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "workflow_missing_target_global_fix_actual_ui",
+      "version": "0.1.0-realhost.20261014.20",
+      "webTestsPassed": 65,
+      "typecheckPassed": true,
+      "goInternalCliAgentIntegrationPassed": true,
+      "fullIntegrationSeconds": 132.124,
+      "apiTypesRegenerated": true,
+      "releaseChecksumsVerified": true,
+      "helmRevision": 18,
+      "actualU0CWorkflowRevisions": 2,
+      "missingTargetRulesRemoved": 8,
+      "realTaskGatesPreserved": 4,
+      "oldPublishedOriginalsPreserved": true,
+      "uiLanguages": [
+        "zh-CN",
+        "en"
+      ],
+      "uiThemes": [
+        "light",
+        "dark"
+      ],
+      "liveK3NewSchemaTest": "pending quota recovery",
+      "controlledRelayTests": 6
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "bounded_k3_resume_admission",
+      "observedAt": "2026-10-14T09:42:14.710123+08:00",
+      "status": 200,
+      "returnedModel": "k3",
+      "namespaceUid": "79725dd1-d0de-4810-999c-4e1d6224a099",
+      "version": "0.1.0-realhost.20261014.20",
+      "sessionsResumed": [
+        "KB02",
+        "KC02"
+      ],
+      "acceptanceUnchangedAtStart": {
+        "tasks": 17,
+        "plans": 4
+      },
+      "scope": "Admission and original session resume only; unfinished business outputs not accepted"
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "real_c11_delivery_b12_glyph_edit_and_kc03_onboard",
+      "record": "records/KIMI-K3-CONTINUE-20261014.md",
+      "c11TaskVersion": 3,
+      "c11State": "delivered",
+      "b12State": "working",
+      "kimiSessions": 13,
+      "acceptedTasks": 17,
+      "acceptedPlans": 4,
+      "fullAcceptance": false
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "live_cli_replay_and_routing_recovery",
+      "sameSourceConcurrentReplay": true,
+      "changedPayloadExitCode": 5,
+      "sourcesBeforeAfter": 1,
+      "batchesBeforeAfter": 1,
+      "routingSources": 7,
+      "routingCompleted": 1,
+      "routingQuotaFailed": 6,
+      "completeSemanticPass": false,
+      "driverControlledTests": 6,
+      "actualDriverStoppedWithoutRetry": true
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "explicit_kimi403_quota_classification_fix",
+      "version": "0.1.0-realhost.20261014.21",
+      "agentPackagePassed": true,
+      "releaseChecksums": 56,
+      "typecheckPassed": true,
+      "helmRevision": 19,
+      "namespaceUid": "79725dd1-d0de-4810-999c-4e1d6224a099",
+      "localCliSkillAligned": true,
+      "liveNewK3ClassificationVerification": "pending quota recovery",
+      "fallbackUsed": false
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "user_requested_apimart_glm53flash_admission",
+      "record": "records/APIMART-GLM53FLASH-PROBE-20261014.md",
+      "globalModelConfigChanged": false,
+      "deployedModelsChanged": false,
+      "businessSessionsChanged": false,
+      "sharedGoAdapterActual": true,
+      "kimiCliVersion": "0.36.1",
+      "kimiCliActualTools": [
+        "Read",
+        "ReadMediaFile"
+      ],
+      "unsupportedThinkingDisabledHttp400Code1210": true
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "user_selected_apimart_high_runtime",
+      "version": "0.1.0-realhost.20261014.22",
+      "record": "records/APIMART-HIGH-RESUME-20261014.md",
+      "model": "glm-5.3-flash",
+      "thinkingType": "enabled",
+      "reasoningEffort": "high",
+      "helmRevision": 20,
+      "stableModelIdsPreserved": true,
+      "tokenCapsAndBudgetsPreserved": true,
+      "agentAndPgOptionsPassed": true,
+      "nativeRelayGuardTests": 7,
+      "originalSessionsResumed": [
+        "KB02",
+        "KC01",
+        "KX01"
+      ],
+      "normalDeploymentChanged": false
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "c11_actual_fixed_owner_acceptance",
+      "taskId": "def1e574-dd80-439c-a922-534410defcf2",
+      "version": 4,
+      "intentId": "8a7298db-1d27-47f2-832c-32aca6c3f07f",
+      "reviewerCorrectionPreserved": true,
+      "actualOperatorFourSheetRenderViewed": true,
+      "c12StartedThroughActualU2Ui": true
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "b12_actual_apimart_high_delivery",
+      "reportId": "97defe13-a870-4ffe-b847-be6a2d380e8e",
+      "previousVersion": 3,
+      "actualFiveReadyOriginals": true,
+      "reuploaded": false,
+      "originalSessionPreserved": true,
+      "independentReviewPending": true
+    },
+    {
+      "date": "2026-10-15",
+      "kind": "contract_configuration_closure",
+      "release": "0.1.0-realhost.20261015.33",
+      "successfulAPISchemas": 155,
+      "totalAPIOperations": 155,
+      "relatedK8sProductionBrowserTests": 15,
+      "record": "../v1/records/CONTRACT-CONFIGURATION-20261015.md"
+    }
+  ],
+  "failures": [
+    {
+      "date": "2026-10-12",
+      "stage": "P1",
+      "kind": "browser_contract",
+      "candidate": "0.1.0-realhost.20261012.1",
+      "failure": "POST /projects rejected defaultModelId declared by OpenAPI; project.create confirmation also did not preserve it",
+      "resolution": "fixed and passed full HTTP intent confirmation and actual Kimi/browser project creation"
+    },
+    {
+      "date": "2026-10-12",
+      "stage": "P2",
+      "kind": "api_contract",
+      "failure": "OpenAPI intent enum omitted proposal.submit",
+      "resolution": "schema and generated artifacts corrected in .8; actual CLI submit and browser confirmation passed"
+    },
+    {
+      "date": "2026-10-12",
+      "stage": "P2",
+      "kind": "semantic_acceptance",
+      "failure": "Real model omitted task fields.planId; top-level dependsOn ordered changes but did not place tasks in plan. Initial human-review driver missed placement check.",
+      "resolution": "Real model correction 498d2a8f approved; six wrong unexecuted tasks cancelled and six correct plan-bound tasks created; exact owning-plan assertion added; no SQL repair"
+    },
+    {
+      "date": "2026-10-12",
+      "stage": "P2",
+      "kind": "actual_quality",
+      "failure": "A12 SQLite lower() did not satisfy Unicode case-insensitive substring criterion",
+      "resolution": "U3 real fixed-review rejection via newly implemented task reject CLI; source fix and fresh delivery in progress"
+    },
+    {
+      "date": "2026-10-12",
+      "stage": "P2",
+      "kind": "tool_and_budget",
+      "failure": "Markdown unsupported by parser; child failures were returned as successful tools; task analyses exhausted batch budgets",
+      "resolution": "Parser v2 text/ZIP added, child errors propagate; .10 deployed; actual retest pending"
+    },
+    {
+      "date": "2026-10-12",
+      "stage": "P2",
+      "kind": "repeated_file_analysis",
+      "failure": "Context-associated individual uploads generated many automatic analyses",
+      "resolution": "U0 device grant explicitly added agent:request; supported manager CLI cancelled 7 identified redundant active runs, 3 had already ended; originals/reports/formal work retained; future uploads bare then one report"
+    },
+    {
+      "date": "2026-10-12",
+      "stage": "P2",
+      "kind": "local_transport",
+      "failure": "Helm rollout ended the owned 18182 port forward during read-only reviewer calls",
+      "resolution": "Forward restored, same fixed review re-read, pending intent recreated and confirmed; MiniIssue runtime was unaffected"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "quota_classification",
+      "failure": "Actual Coding Plan 429/1308 with explicit reset was not classified as quota",
+      "resolution": "Narrow explicit 1308+usage-ceiling+reset classification added; ambiguous 1308 and ordinary429 remain rate limits; tests passed and .13 deployed"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "cli_long_context_fallback",
+      "failure": "glm-4.5-flash failed image compaction and initial oversized max_tokens; after adaptation it repeated work statements and exited without delivery",
+      "resolution": "Failure retained, original session resumed with restored glm-5.3 and live source checked; no false delivery recorded"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_platform_analysis",
+      "A14": "binary ZIP head output contains NUL and PostgreSQL JSONB rejected it (22P05)",
+      "A13Theme": "187550 known used; conservative next request reservation exceeded remaining batch budget",
+      "fix": "binary-safe command output, shared remaining-budget context compaction and budget reminder; controlled tests passed, isolated real-model retest pending",
+      "originalFailuresRetained": true
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "real_additional_product_defect",
+      "sourceBackend": "71b001d9-3035-48ca-aa43-361ab41477b1",
+      "case": "page999999999999999999999999999999&page_size1",
+      "actual": "HTTP500/internal_error",
+      "required": "A11 integer page>=1, beyond last page HTTP200 empty items and real total",
+      "source": "operator read-only prefind, not formal A21 test contribution",
+      "planA1AcceptanceHeld": true
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "actual_reanalysis_partial",
+      "analysisId": "f3595569-47b8-4cd2-8cf1-70881692f332",
+      "state": "waiting_human",
+      "coordinatorStructuredOutputSaved": true,
+      "independentPositionOpinion": "not completed: protected context could not fit remaining per-position budget",
+      "originalFailureRetained": true
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "real_model_draft_field_contract",
+      "proposalId": "dcec678c-c3f0-496d-b352-3912c9b49dd5",
+      "field": "workflowNodeId instead of nodeId",
+      "formalCreated": false,
+      "originalModelReviewMisstatementRetained": true,
+      "resolution": "shared formal create-field validation now rejects at draft creation/revision/submission; controlled PG and integration/agent/CLI regressions passed; .16 deployment pending"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "kimi_k3_strict_tool_schema",
+      "sourceId": "3c8f2178-e363-43d8-8adb-a088443c8865",
+      "analysisId": "5d0f8cda-73e3-46cb-a96c-14c24070057c",
+      "failure": "HTTP400 properties must be an object: list_agent serialized nil properties/required",
+      "resolution": "shared objectSchema and real wire/argument-validation regression fixed; .19 built/validated; real reanalysis pending",
+      "formalTaskUnchanged": true,
+      "originalFailureRetained": true
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "kimi_k3_five_hour_quota",
+      "session": "KA04",
+      "actualStatus": 403,
+      "actualProviderMessage": "You've reached your 5-hour usage limit. Your quota will reset when the current 5-hour window ends.",
+      "deliveryCreated": false,
+      "resetTimestamp": "not supplied",
+      "resolution": "Retain .19 environment and same sessions/materials; wait for explicit user resumption after actual quota probe; no GLM fallback"
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "kc01_duplicate_pending_project_intent",
+      "duplicateIntentId": "61222db0-ba76-4b1b-bba3-f0591c01397a",
+      "confirmedIntentId": "a9c3a4aa-dd89-4b67-9b9c-297242549bbc",
+      "sameObjectId": true,
+      "formalProjectsCreated": 1,
+      "handling": "only recorded selected intent confirmed through actual browser, duplicate retained without confirmation"
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "explicit_kimi_k3_5hour_quota_again",
+      "nativeSessions": [
+        "KC01",
+        "KB01"
+      ],
+      "httpStatus": 403,
+      "message": "Reached 5-hour usage limit, reset when current window ends; no exact reset timestamp",
+      "platformSourceId": "43328507-ee25-49d7-8fea-1a45e126154d",
+      "platformAnalysisId": "7d969961-66a4-4869-a930-f34bba349842",
+      "batchId": "2e99a7fe-e676-475b-9981-3361b4197211",
+      "platformK3SucceededCalls": 1,
+      "platformK3FailedCalls": 1,
+      "fallbackUsed": false
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "explicit_kimi_5hour_quota_during_real_artifact_authoring",
+      "nativeSessions": [
+        "KB02",
+        "KC02"
+      ],
+      "httpStatus": 403,
+      "diagnosticMessage": "Reached5-hour usage limit, no reset timestamp",
+      "partialArtifactsRetained": true,
+      "reportedDeliveries": 0,
+      "fallbackUsed": false
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "explicit_five_hour_quota_after_0942_admission",
+      "nativeSessions": [
+        "KB02",
+        "KC01",
+        "KX01"
+      ],
+      "platformRoutingSourcesFailed": 6,
+      "httpStatus": 403,
+      "resetTimestamp": null,
+      "c11DeliveredNotAccepted": true,
+      "b12PartialArtifactsRetained": true,
+      "fallbackUsed": false
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "native_routing_driver_continued_after_failed_state",
+      "laterCasesStillSubmitted": 5,
+      "existingFailuresRetained": true,
+      "replacementDriverStopsAnyFailure": true,
+      "bindingGuardPassed": true,
+      "sourceRecencyAndNextSuggestionGap": true
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "high_admission_same_session_stale_read",
+      "oldMarkerReturnedWithoutTools": true,
+      "passed": false,
+      "actualHighWireVerified": true
+    },
+    {
+      "date": "2026-10-14",
+      "kind": "high_admission_120s_stream_timeout",
+      "actualHttpStatus": 200,
+      "actualHighWireVerified": true,
+      "usageKnown": false,
+      "passed": false,
+      "notBusinessAcceptance": true
+    }
+  ],
+  "actual": {
+    "projectA": 1,
+    "publishedWorkflows": 8,
+    "positionTemplates": 11,
+    "initialIdentities": 12,
+    "businessPlans": 9,
+    "currentBusinessTasks": 30,
+    "cancelledInvalidPlacementSamples": 6,
+    "kimiSessions": 14,
+    "acceptedTasks": 30,
+    "taskA12": "accepted v7 after reject/rework and independent 62/62 verification",
+    "taskA13": "accepted v8 after U4 reopen, immutable theme revision and independent real Edge/API 21/21 regression",
+    "fullBusinessLoopsClosed": 9,
+    "release": "0.1.0-realhost.20261015.31",
+    "taskA14": "accepted by U0 as independent API test contribution, 102 passed",
+    "taskA15": "acceptedv5 with original18/19 theme failure explicit; later A13 theme regression21/21 and A-P1 separate acceptance retained, old failure not rewritten",
+    "taskA16": "accepted v5 after U0 independent clean-package 36 API +20 UI +6 persistence smoke and source SHA checks",
+    "planA1": "accepted v3 by named U0 fixed browser: six original accepted tasks plus formal A24 reference, original failures preserved",
+    "planA2": "accepted v2 by named U0 fixed browser after separate four-task owner review; complete defect reproduction/fix/independent regression/immutable patch loop",
+    "taskA21": "accepted v4 after U0 independently reproduced three HTTP500 cases and correct controls from immutable release; product remains defective",
+    "taskA22": "accepted v5 after independent U4 real HTTP30/30 +fixed-package dev38/38; expired initial model intent retained, same frozen review renewed by named operator then U4 browser confirmation",
+    "taskA23": "accepted v5 after U0 fixed-original review, independent HTTP31/31 and actual fixed browser confirmation",
+    "cacheSameTaskPair": "completed, actual known provider fields:46.57% first vs92.38% second, no global cold or billing claim",
+    "taskA24": "accepted v5 by U0 fixed browser after independent file SHA29/29, original bytes27/27, two identical rebuilds, API38/UI20/private HTTP-persistence18; malformed basis-string receipt retained with operator format supplement",
+    "taskA31": "accepted v4 by U0 fixed browser:immutable scripts/data/goal contract; formal client-priority mislabel disclosed, owner correctness reproduced but CV0.1524 and drift17.9% non-comparable; auto-analysis1c2bb857 completed3GLM5.3 calls, known input54561/read33856=62.05%, naturalTTL eligible rows0",
+    "taskA32": "accepted v5 by U4 fixed browser after native Kimi independent38API/20UI+realEdge10 assertions/22x2 HTTP; same-batch p95 13.632->8.371ms(-38.6%), CV0.0819/0.0615, baseline drift0.2%, controls no regression; original5-source receipt preserved with operator task-original/upstream-reference separation supplement",
+    "taskA33": "accepted v5 by U0 fixed browser after four raw-round datasets/statistical recomputation; independent forward/reverse improvements38.6%/37.0%, all unchanged gates passed; auto-analysis534a62ed completed3GLM5.3 calls, cache known50670input/26752read",
+    "nativeKimiAvailability": "Current run uses user-supplied K3 API credential through public KimiCLI0.36.1 temporary process config; KX01 admission and KA01 review succeeded; native OAuth quota not re-probed, old native403/GLM quota failures remain in pause record",
+    "nativeOfficeAdmission": "Excel/Word actual expired licence/read-print only; offline alternative preparation assumed while optional preference pending; existing converter image95ecbc17 runs LibreOffice7.4.7.2 with pull=never/network=none; actual recalc/export still pending",
+    "planA3": "accepted v2 by U0 separate fixed-plan browser; acceptance b80493d0-1ceb-4d9b-b3c9-050ee040aad3, exact three task acceptances and unchanged goals independently checked",
+    "serverRelease": "0.1.0-realhost.20261015.31",
+    "planA4": "accepted v2 by U0 separate fixed-plan review after all3tasks accepted and owner10/10 read-only recheck; controlled fault scope only",
+    "cacheRoleComparison": "A22 backend actual opinion completed, one private controlled marker in tool answer discovered; A22 Ops denied by actual node authorization/waiting_human; separate A24 allowed Ops completed, no marker observed; paid position calls explicitly cached_tokens0, not unknown; A22/A24 formal facts unchanged",
+    "privateOutputFix": ".19 actual K3 position/opinion completed, known controlled marker scan0 in public summary/tool answer; preference hash/revision observed, raw system context intentionally not stored; literal guard tests passed, no claim about all paraphrases",
+    "taskA41": "accepted v4 through named U0 fixed browser after Kimi K3 review, same immutable originals and real operator-assisted read-only10/10 probe; original failures retained",
+    "kimiK3Resume": {
+      "api": "HTTP200/k3",
+      "cli": "public0.36.1, same KX01 restored; actual version/doctor/inbox read-only commands passed",
+      "platform": "verified completed real A42 automatic analysis6 K3 coordinator calls and original A22 same-batch reanalysis3 coordinator/2 position K3 calls; role opinion actually obtained, A22 formal fields unchanged",
+      "schemaFix": "shared strict schema fix .19 deployed/verified; original same analysis/source/batch retried once after named U1 device UI granted agent:request, actual completed; original400 and scope rejection retained",
+      "a41": "accepted v4; A42 working through same KA02/K3, A43 ready",
+      "complete": true,
+      "scope": "K3 provider/CLI/coordinator/position admission proved; full scenario blocked by subsequent5h quota"
+    },
+    "taskA42": "accepted v5 by named U4 fixed browser after same KA05/K3 independent20/20 and immutable originals; actual K3 automatic analysis completed",
+    "taskA43": "accepted v5 by named U0 fixed browser after original KA04 independent 11/11 pre/post restart, unchanged four-row DB and 30 source SHA, original KA01 owner read-only10/10; K3 auto-analysis705dc0ae completed6 calls",
+    "kimiK3Quota": {
+      "observedAt": "2026-10-13T12:16:40.989Z",
+      "reason": "Kimi explicit HTTP403 five-hour usage ceiling; reset timestamp not supplied",
+      "failedSession": "KA04",
+      "sessionId": "session_6964f8aa-a459-40de-be9f-f2e4140cfeb1",
+      "model": "k3",
+      "lastInvocationStartedAt": "2026-10-13T12:06:11.613Z",
+      "lastInvocationDurationMs": 270250,
+      "activeModelRuns": 0,
+      "ownedSessionLocks": [],
+      "a43": "working v3, no delivery or acceptance",
+      "faultInstance": "running18482, original4-row DB SHA preserved",
+      "next": "Resume same KA04 after provider quota recovery; no automatic model retry or GLM fallback",
+      "scope": "full9-plan30-task acceptance incomplete; retain owned environment and originals"
+    },
+    "naturalObservationTTL": "Actual331 expired model_call rows, temporary observation/request IDs naturally cleared by next periodic sweep, all331durable accounting retained; no clock change, no manual deletion",
+    "quotaAdmission": "2026-10-13T15:20Z: one K3 chat-only request HTTP200, returned k3; previous explicit 5-hour 403 retained",
+    "officeForcedRecalculation": "controlled LibreOffice7.4.7.2 stale-cache challenge: default conversion999/999 failed; owned temporary OOXMLRecalcMode=0 profile recalculated7/3.5 preserving formulas+inputs, networknone/pullnever; native Excel still read-only, C business not started",
+    "nativeVisionAdmission": "actual KB01 ReadMediaFile exact OCR/color/shape; synthetic capability gate only, no B image deliverables yet",
+    "projectB": 1,
+    "projectC": 1,
+    "bCFormalWork": "B/C four plans and ten tasks with eight real start dependencies approved; B11 acceptedv6; B12 acceptedv5 after independent original-file visual and numeric review; C11 acceptedv4 after independent math/recalculation/render review; B13 workingv3 and C12 deliveredv4 under independent KC01 review",
+    "quotaBlock": "This 09:42 resume admitted HTTP200/k3, then explicit five-hour403 in KB02/KC01/KX01 and six original platform routing batches; no exact reset timestamp and no fallback",
+    "planB": "All4start dependencies actual K3 proposal1f60574b and U0/U2/U3 fixed-browser approval; B11 started via U0 responsibilityUI, original KB01 producing fixed design brief",
+    "planC": "2plans5tasks approved from same original failed-source batch K3 retry, all4real task-acceptance dependencies approved; bothCflows actual U0 target-rule repair publishedrev2, 8missing-target placeholders removed, all4real gates preserved",
+    "sourceTransferC": "4source originals+SOURCES.json real CLI A→C handover, SHA preserved, actual C versions ready; A24 local build scope clarified, no production claim",
+    "pendingRuntimes": "No active tail-test services; all three owned namespaces archived/deleted, original native sessions retained",
+    "latestResume": "2026-10-14 09:42Asia/Shanghai original sessions resumed; C11 delivered, B12 glyphs fixed, KC03 initialized, real CLI replay passed; later five-hour quota403 blocked review/delivery",
+    "taskB11": "acceptedv6 after actual G1/G2 reject/rework/new immutable version+independent geometric review+U3 fixed browser; old accept/reject and stale report conflict retained",
+    "taskB12": "acceptedv5 by real U3 fixed-review after originalKB03 independently decoded actual pixels, checked80px margin/91px solid wordmark/contrast and viewed fixed originals; five immutable deliverables after genuine gvar IUP repair; original30min invocation limit retained and existing uploads reused once",
+    "taskC11": "acceptedv4 by real U0 fixed-review after original KC01 independent 24group/1440row/math/LO/render review; reviewer input description error corrected with old version retained; same intent8a7298 reused before expiry",
+    "workflowTargetFix": "global create/update/publish actual nonzero project-owned target validation, Agent schema/API/docs aligned; shared HeroUI hard-rule editor zh/en light/dark verified; .20 owned deployment, normal env untouched",
+    "currentKnownSessionIds": {
+      "KB02": "session_8e1da1b9-afe4-4591-b495-31a0c1f47a4b",
+      "KC02": "session_a19d67a9-b20e-4ab3-b8a9-79ac41056a8f",
+      "KC03": "session_59814024-99d5-405d-a70a-d6f5068c1637"
+    },
+    "remaining": "Actual vendor HTTP429 recovery not observed; controlled HTTP429 retry is independently verified",
+    "acceptedPlans": 9,
+    "providerQuotaFix": "Shared explicit typed Kimi403 five-hour limit plus reset proof recognized quota; auth/rate/network guards retained; full Agent tests and frozen.21 release/owned deploy passed; no live new K3 call after quota",
+    "routingMatrix": "7real stable-key sources; bound completed/formal binding retained but historical-source recency claims need review, other6quota failed; new driver stops at any failure, 6regressions and actual no-retry stop verified; resume original analysis/batches only",
+    "cliLiveIdempotency": "Two concurrent same-key same-body replays returned originalsource; same-key changed-body exit5; sources/analyses/batches each1 before/after",
+    "apimartCandidate": {
+      "requestedModel": "glm-5.3-flash",
+      "returnedModel": "ZHIPU/GLM-5.3-Flash",
+      "baseURL": "https://api.apimart.ai/v1",
+      "status": "selected_high_original_runtime",
+      "text": true,
+      "toolRoundtrip": true,
+      "stream": true,
+      "visionSynthetic": true,
+      "kimiCliNativeReadAndImage": true,
+      "sharedGoProvider": true,
+      "thinkingDisabled": false,
+      "thinkingEnabled": true,
+      "lowEffortDirectApi": true,
+      "cachePair": {
+        "inputTokensPerCall": 2681,
+        "firstReadTokens": 0,
+        "secondReadTokens": 2624
+      },
+      "scope": "No business objects or selected provider changed; full restored business acceptance pending"
+    },
+    "apimartSelectedHigh": true,
+    "taskC12": "acceptedv7 after genuine reject/new immutable DOCX-PDF correction/independent recheck and U0 fixed page",
+    "taskB13": "acceptedv5 by real U0 fixed-review after originalKB01 independent sources/scripts/output/limitations review; original upload stdout loss and wrong version/confidential-source UUID memory errors disclosed and corrected from actual records",
+    "taskB21": "acceptedv5 by real U3 fixed browser after originalKB03 independent all-pixel size/margin/contrast/SVG/actual both-image review;113vs114 solid-wordmark1px口径差异和run2仅maker证据等局限保留",
+    "taskB22": "acceptedv9 via real U3 fixed page after controlled new2x scope reopen, corrected model proposal and actual 13fixed-source independent originalKB03 pixel/image review; oldv5 acceptance preserved",
+    "planB1": "acceptedv2 by real U0 separate fixed plan review after originalKB01 actual visual owner inspection and three separate task acceptances",
+    "aP5Draft": "Originalsource b368f0d7/analysis638241fd/batchdb6116d8 failed at8192 final output but propose_changes had succeeded; real durable result and public owner review recovered saved proposal1f53b0c1, old no-draft inference corrected. Actual human fixed approval created4tasks/3real dependencies; coordinatoronly cap16384 and original30attempt300000token budget preserved",
+    "s04GrantScope": "OriginalKA03 actual U2 A-grant positiveA13 acceptedv8; B12/C12 context and B12 original download all forbidden exit4/projectoutsidegrantscope, no output file. Operator actual U2 membership binding in A/B/C and KB02 B-grant same original PNG verified SHA control passed; other S04 privacy/handoff subitems remain",
+    "routingContinuation": "Fresh-root guard reproduced/fixed current-run scope with realPG; original7sources completed after3explicit U0 operational extensions and originalbatch retry, no new8thstimulus, caps/history preserved; originalKX01 5semanticpass/2historicalpartial, allcompleted is not allpassed",
+    "taskC13": "acceptedv5 by U4 independent12sources/math/diff; grep wording limitation preserved; expired unchanged review renewed then actual U4 fixed page",
+    "taskC21": "acceptedv8 after actual C21 source-ID reopen/new2evidence+unchangedPPTX-PDF/independentdiff-SHA-image-source review and realU0 fixed page; old5acceptance and failed C22 delivery retained",
+    "memberOnlyInvite": "V25 source/API/i18n allows empty positionIDs: actual U5 invitation accepted UI, membership only;6A position identities preserved and originalQAalpha binding1U3 closed/binding2U5 actualUI handed over",
+    "planC1": "acceptedv2 by real U0 independent owner fixed plan review",
+    "ap5References": "All A32 A24 A33 A43 original task references individually formally approved; A-P5activev5",
+    "planB2": "acceptedv2 by actual U0 separate fixed plan page after originalKB01 independent19SHA and actual criticalimage review",
+    "sourceTransferB": "24 accepted original B files plus SOURCES.json exported with actual U2 B grant, identicalSHA imported with U2 A grant to24newversions+manifest0bae89da; one helper partial firstupload preserved, no directcrossprojectreference",
+    "handoff": "ActualUI stableQAalpha binding2U5 and historical acceptance/backlog preserved; fresh oldU3 intent allowed but actualfixedpage confirm403 currentresponsibleidentityholderrequired and A12acceptedv7 unchanged; expiredoriginalprobe onlyexpiration scope",
+    "handoffPreferences": "Actual U5 own preferences initially revision0/empty, actual UI savedown revision1; U3 no current role returned, U4 sameposition ownprivate marker unchanged; separate authenticated reads, no copiedprivateprefs",
+    "taskA51": "acceptedv4 actualU4 fixed browser after originalKA05 3SHA/34manifest/5A32backend/13Basset bytes, own38API+20UI+25CDP and4actualimage reviews; actor/archive narrative limits kept; 30min invocation boundary after valid receipt preserved",
+    "taskC22": "acceptedv7 by actualU4 fixed page after originalKC02 new2SHA/source-map-script/8cell independent re-read/diff; prior38math+2chart+8PDFpages reused as unchanged, exact reject797ec chain retained",
+    "KX02": "session_56eb410c-1606-4047-b0d7-0073943ddfea actual originalKimi14throle; U5ownAonlygrant, binding2history/readback A12accepted7/A53ready2 twoindependentparticipants and unsatisfiedA52condition; no fake regression",
+    "formerGrantRevoke": "Actual U3 own A-only grant revoked via authenticated public API; KA04 context exit3authenticationrequired, U3 B grant context and browser read positive; KX02 new own grant remains",
+    "taskA52": "acceptedv5 actualU5 binding2 fixed page after ownAgrant3SHA/19ZIP/15originalbytes/29A24manifest/structuredsources/actualOOXML+properPDFreader review; falseprecheckno-text inference corrected and no fabricatedIDs copied",
+    "s08FileBoundary": "OriginalKC02 valid samepreregisteredsource fb8916cc analysis768d935d/batch2ef2f39f completed; exact durable scan1page emptytext needsOCRorVision; octetstream corruptDOCX explicitlyunsupported MIME; no fakeOCR/no formalwork, initial invalidpurpose and nodevalidation toolfailure retained",
+    "s13DefaultSkill": "OriginalKA06 same session and actualhigh .25CLI, invocation withoutskillsdir; nativeSkill tool sourceproject .agents/skills/judex loaded inline fromdefaultcatalog; A54stillready2/A53unsatisfied, no formalwrite",
+    "planC2": "acceptedv2 actualU0 separate owner fixed plan review current C21v8+C22v7 acceptances and 6current outputs; failed old source/gates retained",
+    "sourceTransferCFinal": "15currentacceptedC originals plus manifest80e2c82f, actual C grant export/A grant import original SHA equal, explicitcrossprojecttransfer; A52 now completing full package",
+    "routingClarifiedFollowups": "2newpreregisteredsources completed: first current-vs-history pass bounded; second nativepass-annotated but operatorpartial scope deviation currentNodeCandidates aw1-int from unrelatedA52 inonlyA-P3 request, noformal/draft/callagent; original7 5pass2partial unchanged",
+    "a53Preparation": "OriginalKA05 own beta test script syntax/preflight only, actual CSS viewport and WebSocket/browser shutdown corrected, no test instance/formal contribution before A52acceptance",
+    "taskA53": "acceptedv6 actualU0fixed after originalKA01 independent4SHA/2ZIP/2currentbindingreports/execution logs; firstworking4 and2contribdelivered5 verified, twoindependent scopes and corrections documented",
+    "handoffRuntimePrivacy": "Original source/batch completed after human operational extension; 17 attempts / 225760 tokens under original 30 / 300000; alpha U5/binding2 and beta U4/binding1 remain distinct; grounded public summary 998 characters / 8 basis items; original KA01 checked 17 assertions; prior private-echo protection retained",
+    "taskA54": "acceptedv7 actualU0fixed after originalKA01 new3SHA/132ZIP+131manifest hashes/new-oldsame131bytes/twoownportable replay same66375099/currentScriptSHA andclean5smoke; actualreject5 fixedwith3newartifacts, old8025 preserved",
+    "planA5": "acceptedv6 actualU0fixed owner review exact4owned+4referenced acceptanceIDs, finalsource/replay/twoQA/explicitBCtransfer allcurrent; originalsemantic failures retained",
+    "cleanup": {
+      "first": {
+        "cleanedAt": "2026-10-15T00:34:14.878Z",
+        "namespace": "judex-ui-endurance-1d2006f4",
+        "uid": "df0d6c8b-104d-4d24-9543-bd1ae60151cb",
+        "absent": true,
+        "archivedBeforeDelete": true,
+        "backups": [
+          {
+            "file": "database-without-model-observation.sql.gz",
+            "size": 22231683,
+            "sha256": "7b3bb1768288f59ac576af5eb02800f4c805e5484f5e7c288fcdb061fa9f8f1c"
+          },
+          {
+            "file": "durable-model-accounting.jsonl.gz",
+            "size": 570,
+            "sha256": "65cf0a9521c2a3627e71ae8f03a1f80e6067ce9b85d6dd5c7a5747f46602c0da"
+          },
+          {
+            "file": "original-objects.tar.gz",
+            "size": 55954951,
+            "sha256": "fa1cc694a9f199c4e6b378dc9bb4dfd5a0fcfcfca68dfe0d3b27d8679025bbd9"
+          }
+        ],
+        "normalJudex": [
+          {
+            "name": "judex",
+            "ready": 1,
+            "desired": 1
+          },
+          {
+            "name": "judex-judex-opensandbox-server",
+            "ready": 1,
+            "desired": 1
+          },
+          {
+            "name": "judex-material-converter",
+            "ready": 1,
+            "desired": 1
+          },
+          {
+            "name": "opensandbox-controller-manager",
+            "ready": 1,
+            "desired": 1
+          }
+        ]
+      },
+      "runtime": {
+        "cleanedAt": "2026-10-15T00:33:35.148Z",
+        "namespace": "judex-ui-endurance-1d2006f4-runtime",
+        "uid": "853cda62-b9be-407a-b2cb-175abd48980e",
+        "absent": true,
+        "ownedClusterRolesRemoved": [
+          {
+            "kind": "ClusterRole",
+            "name": "judex-endurance-runtime-1d2006f4-role"
+          },
+          {
+            "kind": "ClusterRoleBinding",
+            "name": "judex-endurance-runtime-1d2006f4-rolebinding"
+          }
+        ],
+        "originalControllerChanged": false
+      },
+      "strict": {
+        "cleanedAt": "2026-10-15T01:09:02.130Z",
+        "namespace": "judex-ui-strict-3621cf1e",
+        "uid": "0fd511ef-d47f-441a-a5ff-0f85cfb414c3",
+        "absent": true,
+        "archivedBeforeDelete": true,
+        "backups": [
+          {
+            "file": "database-without-model-observation.sql.gz",
+            "size": 22233119,
+            "sha256": "b81275ac55d162aa1300d2b2cceec18377ae270f2a48e96574917c4bb6a10127"
+          },
+          {
+            "file": "durable-model-accounting.jsonl.gz",
+            "size": 20,
+            "sha256": "9e72928e7a01615b4cf090daa617b4ca9d68531748f887f323f695eb4ca3ef63"
+          },
+          {
+            "file": "original-objects.tar.gz",
+            "size": 55917823,
+            "sha256": "f7d82c576d7d68e701ce08ee767edeab0b25edd70105936e5ace5654276d687d"
+          }
+        ],
+        "normalJudex": [
+          {
+            "name": "judex",
+            "ready": 1,
+            "desired": 1
+          },
+          {
+            "name": "judex-judex-opensandbox-server",
+            "ready": 1,
+            "desired": 1
+          },
+          {
+            "name": "judex-material-converter",
+            "ready": 1,
+            "desired": 1
+          },
+          {
+            "name": "opensandbox-controller-manager",
+            "ready": 1,
+            "desired": 1
+          }
+        ],
+        "localForward": {
+          "verifiedOwnedPid": 14548,
+          "port": 18198,
+          "noListener": true,
+          "checkedAt": "2026-10-15T01:09:05.241Z"
+        }
+      },
+      "allThreeNamespacesDeleted": true,
+      "normalDeploymentUpdated": false
+    },
+    "routingFollowup": {
+      "status": "9/9 bounded real-model semantic pass",
+      "operatorAssertions": "32/32",
+      "evidence": "evidence/remediation-20261015.json",
+      "historical": "Original seven-case 5 pass / 2 failures retained as historical evidence; not overwritten"
+    },
+    "cleanupPrevious": "Primary79725dd1 and sandboxe352155e namespaces UID/test-run verified archived+deleted; 4archives hashes/gzip/tar integrity passed, local owned18182/18482/18483 stopped, no testlisteners; normalJudex4deployments1/1;216wrapper rawcaptures removed,originalsessions retained",
+    "followupEvidence": "evidence/remediation-20261015.json",
+    "enduranceFollowup": {
+      "status": "completed_bounded_scope",
+      "namespace": "judex-ui-endurance-1d2006f4",
+      "uid": "df0d6c8b-104d-4d24-9543-bd1ae60151cb",
+      "runtimeNamespace": "judex-ui-endurance-1d2006f4-runtime",
+      "runtimeUID": "853cda62-b9be-407a-b2cb-175abd48980e",
+      "context32768": "incompatible retained history, preflight blocks before paid calls",
+      "context65536": "same session actual compaction and native tools passed",
+      "workflowReadSource": "6ec747b8-ae5e-402b-8e0b-dba23bd35c1b",
+      "workerUnknownSource": "6bdad48d-99df-4d9f-8f62-4c200fc9a5d6",
+      "noWorkerReplay": true,
+      "normalDeploymentUpdated": false,
+      "firstRun": {
+        "namespace": "judex-ui-endurance-1d2006f4",
+        "unattributedFailures": 25,
+        "status": "failed_original_fixture_preserved",
+        "initialUnattributedFailures": 25,
+        "totalUnplannedFailures": 321,
+        "storagePassed": true
+      },
+      "strictRun": {
+        "namespace": "judex-ui-strict-3621cf1e",
+        "uid": "0fd511ef-d47f-441a-a5ff-0f85cfb414c3",
+        "version": "0.1.0-realhost.20261015.31",
+        "status": "passed",
+        "durationMs": 3600000,
+        "source": "tests/real-host/cli-storage-soak.mjs",
+        "elapsedMs": 3603408,
+        "files": 3258,
+        "nativeInvocations": 4011,
+        "plannedFailures": 45,
+        "unplannedFailures": 0,
+        "actualDownloadShaChecks": 708,
+        "hashFailures": 0,
+        "duplicateReadyNames": 0
+      },
+      "cli31NativeChecks": "6/6, original KX01 session; 4 actual high requests, 3 tools",
+      "controlled429Retry": "HTTP429 + real PG explicit retry passed, same source/batch and cumulative budget; actual vendor 429 absent",
+      "evidence": "evidence/endurance-20261015.json"
+    },
+    "evidenceScopeLimits": [
+      "Real vendor HTTP429 recovery not observed",
+      "32768 with this retained original history is rejected rather than silently truncated",
+      "One hour, four workers, 64KiB files and a 512-file burst are bounded evidence, not multi-day/large-file/unbounded production SLA",
+      "Cache usage is not a billing-savings or global cache-causality guarantee"
+    ],
+    "cleanupHistory": [
+      {
+        "namespace": "judex-ui-followup-ccb5d773",
+        "uid": "3e7730a4-6f01-48ed-abf3-f167197693dd",
+        "absent": true,
+        "archivedBeforeDelete": true,
+        "backups": [
+          {
+            "file": "database-without-model-observation.sql.gz",
+            "size": 19072458,
+            "sha256": "87e007c4574c9dcdbfbc21f8b5d4a4c33bb9dc0b88084a2681b0e1b181cd932f"
+          },
+          {
+            "file": "durable-model-accounting.jsonl.gz",
+            "size": 7022,
+            "sha256": "beb7d3f3e3037f631a9e0fb8d5d01d6a8a1ad9330967cc9896a1b8a616a88382"
+          },
+          {
+            "file": "original-objects.tar.gz",
+            "size": 54246112,
+            "sha256": "b003e19cdac3d03c1e6e0e1c5d9e69e7b3a91f3b11e002b53503408fc59deb19"
+          }
+        ],
+        "localForward": {
+          "stoppedOwnedPid": 20316,
+          "namespace": "judex-ui-followup-ccb5d773",
+          "listenerPorts": [
+            18192,
+            18193
+          ],
+          "noListeners": true,
+          "checkedAt": "2026-10-14T23:13:59.1938033Z"
+        },
+        "normalJudex": [
+          {
+            "name": "judex",
+            "ready": 1,
+            "desired": 1
+          },
+          {
+            "name": "judex-judex-opensandbox-server",
+            "ready": 1,
+            "desired": 1
+          },
+          {
+            "name": "judex-material-converter",
+            "ready": 1,
+            "desired": 1
+          },
+          {
+            "name": "opensandbox-controller-manager",
+            "ready": 1,
+            "desired": 1
+          }
+        ]
+      }
+    ]
+  },
+  "latestCheckpoint": "../v1/records/CONTRACT-CONFIGURATION-20261015.md",
+  "checkpointRecordedAt": "2026-10-15T04:28:39.632Z",
+  "latestProviderProbe": "records/APIMART-GLM53FLASH-PROBE-20261014.md",
+  "businessAcceptedAt": "2026-10-14T15:53:34Z",
+  "cleanupCompletedAt": "2026-10-15T04:28:39.632Z",
+  "currentAcceptance": {
+    "recordedAt": "2026-10-15T06:55:50.608Z",
+    "release": "0.1.0-realhost.20261015.34",
+    "sourceTreeHash": "d498bfac1f5602ce16a7d2749791cd4e5cbb2134c925d0f6c5e2ca527d674256",
+    "record": "records/MODEL-UPGRADE-20261015.md",
+    "evidence": "evidence/model-upgrade-20261015.json",
+    "successfulAPISchemas": 155,
+    "totalAPIOperations": 155,
+    "anonymousAPISchemas": 147,
+    "webUnitTests": 67,
+    "relatedK8sProductionBrowserTests": 15,
+    "normalDeploymentUpdated": true,
+    "gitCommittedOrPushed": false,
+    "fullV1Acceptance": false,
+    "remaining": [
+      "Actual vendor HTTP429 business recovery not naturally observed",
+      "Provider-wide cache causality and invoice savings not established",
+      "Multi-day, larger files, higher concurrency and full resource curves not executed",
+      "Only declared original-session compression/restart combinations verified",
+      "Other AI hosts not inferred from Kimi"
+    ],
+    "cleanedUp": true,
+    "normalHelmRevision": 23,
+    "modelReasoningEffort": "high",
+    "realModelRegression": true,
+    "cacheOriginalMarkers": "19/24, original failures retained",
+    "cacheExplicitTailMarkers": "24/24",
+    "nativeCompressionAndRestartCases": 6,
+    "parserRegressionTests": 7,
+    "latestKeyChain": {
+      "recordedAt": "2026-10-15T07:39:38.343Z",
+      "passed": true,
+      "record": "records/KEY-CHAIN-20261015.md",
+      "evidence": "evidence/key-chain-20261015.json",
+      "nativeCalls": 33,
+      "platformCalls": 7,
+      "newUploads": 1,
+      "newSubmissions": 2,
+      "formalTablesUnchanged": 5
+    }
+  },
+  "previousContractConfigurationAcceptance": {
+    "recordedAt": "2026-10-15T04:28:39.632Z",
+    "release": "0.1.0-realhost.20261015.33",
+    "sourceTreeHash": "add7c62f86f03844a66e8ce45411d425f8736bf849a0bb7cc5de33a52d98109f",
+    "record": "../v1/records/CONTRACT-CONFIGURATION-20261015.md",
+    "evidence": "../v1/evidence/contract-configuration-20261015.json",
+    "successfulAPISchemas": 155,
+    "totalAPIOperations": 155,
+    "anonymousAPISchemas": 147,
+    "webUnitTests": 67,
+    "relatedK8sProductionBrowserTests": 15,
+    "normalDeploymentUpdated": false,
+    "gitCommittedOrPushed": false,
+    "fullV1Acceptance": false,
+    "remaining": [
+      "Actual vendor HTTP429 business recovery has not naturally occurred",
+      "One non-marker cache sample, global cache causality and billing savings remain unproven",
+      "Multi-day, larger-file, higher-concurrency and full resource metrics not run",
+      "Only declared original-session context windows tested; 32768 rejected when history cannot fit",
+      "Other host agents not inferred from Kimi sessions",
+      "Normal deployment remains Helm revision 21; candidate not deployed; no Git commit or push"
+    ],
+    "cleanedUp": true
+  },
+  "currentRegression": {
+    "date": "2026-10-16",
+    "version": "0.1.0-realhost.20261016.44",
+    "acceptedTasks": 30,
+    "acceptedPlans": 9,
+    "normalHelmRevision": 24,
+    "normalDataPreserved": true,
+    "temporaryNamespacesCleaned": true,
+    "evidence": "evidence/full-regression-20261016.json",
+    "record": "records/FULL-REGRESSION-20261015.md",
+    "excluded": [
+      "long-term stability",
+      "scale/load",
+      "provider cache-hit and billing"
+    ],
+    "unexecuted": [
+      {
+        "scenario": "held-response in-flight workflow mutation",
+        "reason": "automatic approval rejected the experiment; exact rejection reason unavailable",
+        "testedAlternative": "ordinary sequential publication and fresh model reading of both old and new versions"
+      }
+    ]
+  }
+}

@@ -163,6 +163,15 @@ func (h *IntentHandlers) executorFor(projectID uuid.UUID) decision.Executor {
 		inner := payload
 		if nested, ok := payload["payload"].(map[string]any); ok {
 			inner = nested
+		} else {
+			// ConfirmIntent adds trusted routing metadata to the callback.
+			// Keep it outside the original body that domain parsers validate.
+			inner = make(map[string]any, len(payload))
+			for key, value := range payload {
+				if key != "operation" && key != "objectId" && key != "reviewHash" {
+					inner[key] = value
+				}
+			}
 		}
 		number := func(key string) int64 { v, _ := inner[key].(float64); return int64(v) }
 		text := func(key string) string { v, _ := inner[key].(string); return v }
@@ -263,6 +272,10 @@ func (h *IntentHandlers) executorFor(projectID uuid.UUID) decision.Executor {
 				return "", apierrors.New(apierrors.NotFound, "source not found")
 			}
 			if operation == "handoff.send" {
+				currentRevision, ok := inner["sourceVersion"].(float64)
+				if !ok || currentRevision < 0 || currentRevision != float64(int64(currentRevision)) {
+					return "", apierrors.Fields("sourceVersion", "current nonnegative integer required")
+				}
 				var report uuid.UUID
 				if err := tx.QueryRow(ctx, `SELECT t.latest_report_id FROM tasks t JOIN handoff_sources s ON s.source_task_id=t.id WHERE s.id=$1 AND s.project_id=$2`, objectID, projectID).Scan(&report); err != nil {
 					return "", apierrors.New(apierrors.RequirementUnmet, "source report missing")
@@ -270,7 +283,7 @@ func (h *IntentHandlers) executorFor(projectID uuid.UUID) decision.Executor {
 				if report.String() != reviewHash {
 					return "", apierrors.New(apierrors.ReviewStale, "source report changed")
 				}
-				result, err := h.Handoffs.SendSource(ctx, userID, projectID, hid, objectID, text("summary"))
+				result, err := h.Handoffs.SendReviewed(ctx, userID, projectID, hid, objectID, report, int64(currentRevision)+1, text("summary"))
 				return "source:" + result.ID.String(), err
 			}
 			if current == nil || current.String() != reviewHash {
@@ -286,7 +299,11 @@ func (h *IntentHandlers) executorFor(projectID uuid.UUID) decision.Executor {
 			if h.Projects == nil {
 				return "", apierrors.New(apierrors.DependencyDown, "project service unavailable")
 			}
-			result, err := h.Projects.Create(ctx, userID, project.CreateRequest{Title: text("title"), Description: text("description"), Kind: text("kind"), MaxDiscussionRounds: int(number("maxDiscussionRounds")), ApprovalTimeoutSeconds: int(number("approvalTimeoutSeconds"))})
+			input, err := project.ParseCreatePayload(inner)
+			if err != nil {
+				return "", err
+			}
+			result, err := h.Projects.Create(ctx, userID, input)
 			return "project:" + result.ID.String(), err
 		case "workflow.publish":
 			if h.Workflows == nil {

@@ -3,8 +3,10 @@ package runner
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/kakj-go/Judex/internal/agent/tools"
 	"github.com/kakj-go/Judex/internal/infrastructure/model"
+	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 )
 
 func (r *Runner) executeTool(ctx context.Context, req RunRequest, call model.ToolCall) (model.Message, bool, error) {
@@ -26,10 +28,20 @@ func (r *Runner) executeTool(ctx context.Context, req RunRequest, call model.Too
 		}
 	}
 	ctx = tools.WithRuntimeAuthority(ctx, tools.RuntimeAuthority{Project: req.ProjectID.String(), Run: req.RunID.String(), Lease: req.Lease, ToolCall: call.ID})
-	result, callErr := r.Registry.Execute(ctx, call.Name, "agent", args, env)
+	env.CanManage = req.CanManage
+	principal := req.PrincipalKind
+	if principal == "" {
+		principal = "agent"
+	}
+	result, callErr := r.Registry.Execute(ctx, call.Name, principal, args, env)
 	content := map[string]any{"toolCallId": call.ID}
 	if callErr != nil {
 		content["error"] = callErr.Error()
+		var public *apierrors.Error
+		if errors.As(callErr, &public) {
+			content["error"] = public.Message
+			content["errorCode"], content["details"], content["retryable"] = public.Code, public.Details, public.Retryable
+		}
 	} else {
 		content["data"] = result.Data
 	}

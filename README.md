@@ -14,11 +14,11 @@ Judex 是面向团队的项目协同平台。成员在本地完成实际工作�
 - 共享资料：上传、固定版本、内容预览、用途关联和历史；支持 PDF、图片、文本／源码、目录和压缩包等场景，权限由真实 API 校验。
 - 配置与本地接入：职位与流程场景模板、人工发布、个人职位工作偏好、CLI／Skill 上报及需要人工决定的确认入口。
 
-对应实现与验收见 [Demo4 逐项复核](docs/plans/demo4/REVIEW5-20261009.md)、[共享资料体验收尾](docs/共享资料体验收尾-20261009.md)及[文档索引](docs/README.md)。各记录说明自身范围与制品，整套 V1 的运行门槛另见实施计划。
+对应实现与验收见 [Demo4 逐项复核](docs/plans/demo4/STATUS.md)、[共享资料体验收尾](docs/plans/materials/records/RELEASE-20261009.md)及[文档索引](docs/README.md)。各记录说明自身范围与制品，整套 V1 的运行门槛另见实施计划。
 
 ## 正式工程入口
 
-工程组成：`cmd/` 放 server 与 CLI 入口（Agent harness 位于 `internal/agent`，随 server 进程运行）；`internal/` 放 Go + Gin 模块化单体；`web/` 放 React + HeroUI + Tailwind + Zustand + TanStack Query；`tests/` 集中测试；`deploy/` 放 Docker / Helm；根目录提供 Makefile 和 Apache-2.0 LICENSE / NOTICE。
+工程组成：`cmd/` 放 server 与 CLI 入口（Agent harness 位于 `internal/agent`，随 server 进程运行）；`internal/` 放 Go + Gin 模块化单体；`web/` 放 React + HeroUI + Tailwind + Zustand + TanStack Query；`tests/` 集中测试；`deploy/` 放 Docker / Helm；`scripts/` 放生成、发行和运维辅助工具；`docs/` 为统一文档入口。
 
 需要 Go **1.26+**、Node.js **22.12+**、npm；正式前端构建还需要 Python 3（可通过 `JUDEX_PYTHON` 指定），用于 CLI／Skill 下载包生成。
 
@@ -41,7 +41,7 @@ go run ./cmd/judex-server
 npm run dev
 ```
 
-生产构建执行 `npm run build`，由 Go 服务托管，使用真实 API。开发模式也默认 API；演示需显式执行 `npm run dev:demo --workspace @judex/web`。当前实现和验证边界见 [修复记录](docs/plans/v1/REMEDIATION.md) 与 [验证报告](docs/plans/v1/FINAL-REPORT.md)。
+生产构建执行 `npm run build`，由 Go 服务托管，使用真实 API。开发模式也默认 API；演示需显式执行 `npm run dev:demo --workspace @judex/web`。当前实现和验证边界见 [修复记录](docs/plans/v1/records/REMEDIATION.md) 与 [验证报告](docs/plans/v1/STATUS.md)。
 
 ```sh
 go test ./...
@@ -55,7 +55,7 @@ go run ./cmd/judex --server http://127.0.0.1:8080 status
 安装 GNU Make 后可使用 `make deps`、`make api`、`make web`、`make check`、`make image`。API 配置见 [.env.example](.env.example)，程序不自动加载 .env。
 
 - [前端工程](web/README.md) · [测试说明](tests/README.md)
-- [Helm 部署](deploy/README.md) · [工程实现状态](docs/详细设计/13-工程骨架与实现状态.md)
+- [Helm 部署](deploy/README.md) · [工程实现状态](docs/详细设计/13-工程实现与验收状态.md)
 - [Apache-2.0](LICENSE) · [NOTICE](NOTICE) · [部署依赖](deploy/helm/UPSTREAM.md)
 
 ## 完整业务实施计划
@@ -64,15 +64,15 @@ go run ./cmd/judex --server http://127.0.0.1:8080 status
 
 ## 设计与实现边界
 
-正式前端工程统一在 `web/`。历史 `docs/demo` 已删除；交互决策原型保存在 [项目协同](docs/plans/cooperation-ui/demo.html)、[共享资料 Demo3](docs/plans/cooperation-ui/demo3.html)和[计划任务 Demo4](docs/plans/cooperation-ui/demo4.html)，其示例人物和模拟数据只用于对照。
+正式前端工程统一在 `web/`。历史 `docs/demo` 已删除；交互决策原型保存在 [项目协同](docs/plans/cooperation-ui/demo.html)、[共享资料 Demo3](docs/plans/materials/demo3.html)和[计划任务 Demo4](docs/plans/demo4/demo4.html)，其示例人物和模拟数据只用于对照。
 
-原型源代码位于 `web/cooperation-preview`、`web/material-preview` 和 `web/task-route-preview`。例如执行 `node web/task-route-preview/build.mjs` 生成本地 `demo4.html` 后，运行 `node tests/task-route-preview/server.mjs`，可在 `http://127.0.0.1:5396/demo4.html` 查看交互原型。
+原型源代码位于 `web/cooperation-preview`、`web/material-preview` 和 `web/task-route-preview`，HTML 输出到各自的计划目录。例如执行 `node web/task-route-preview/build.mjs` 生成 `docs/plans/demo4/demo4.html` 后，运行 `node tests/task-route-preview/server.mjs`，可在 `http://127.0.0.1:5396/demo4.html` 查看交互原型。全部入口见[计划与原型索引](docs/plans/README.md)。
 
 - [文档索引](docs/README.md)
 - [详细设计总览与技术基线](docs/详细设计/README.md)
-- [工作室 2.0 卡片树与闭环](docs/工作室2.0卡片树与闭环.md)
-- [工作室交互闭环](docs/工作室交互闭环.md)
-- [前端生产就绪审计](docs/前端生产就绪审计.md)
-- [产品主线](docs/产品主线.md)
-- [设计讨论与决策记录](docs/重新设计讨论.md)
-- [Agent 协同架构](docs/Agent协同架构讨论.md)
+- [工作室 2.0 卡片树与闭环](docs/plans/cooperation-ui/README.md)
+- [工作室交互闭环](docs/plans/cooperation-ui/README.md)
+- [工程实现与验收状态](docs/详细设计/13-工程实现与验收状态.md)
+- [产品主线](docs/产品/README.md)
+- [设计讨论与决策记录](docs/产品/决策答复.md)
+- [Agent 协同架构](docs/详细设计/06-Agent执行与上下文.md)

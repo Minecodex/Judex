@@ -30,6 +30,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -37,12 +38,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/kakj-go/Judex/internal/agent"
 	"github.com/kakj-go/Judex/internal/agent/batch"
 	"github.com/kakj-go/Judex/internal/agent/runner"
 	"github.com/kakj-go/Judex/internal/agent/tools"
 	"github.com/kakj-go/Judex/internal/app"
 	"github.com/kakj-go/Judex/internal/config"
 	"github.com/kakj-go/Judex/internal/infrastructure/model"
+	"github.com/kakj-go/Judex/internal/infrastructure/objectstore"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	integration "github.com/kakj-go/Judex/tests/integration"
 )
@@ -66,6 +69,9 @@ func (p *persona) do(t *testing.T, method, path string, body any) (int, map[stri
 	req, _ := http.NewRequest(method, path, reader)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	if method != "GET" && method != "HEAD" {
+		req.Header.Set("Idempotency-Key", uuid.NewString())
 	}
 	if p.cookie != nil {
 		req.AddCookie(p.cookie)
@@ -172,6 +178,7 @@ func TestFullBusinessClosedLoop(t *testing.T) {
 	t.Setenv("JUDEX_S3_PATH_STYLE", "true")
 	provider, err := model.NewProvider(model.GatewayConfig{
 		Protocol: gwProtocol, BaseURL: gwBase, APIKey: gwKey,
+		RequestOptions: scenarioRequestOptions(),
 	})
 	if err != nil {
 		t.Fatalf("provider: %v", err)
@@ -188,10 +195,17 @@ func TestFullBusinessClosedLoop(t *testing.T) {
 		t.Fatal(err)
 	}
 	base := "http://" + listener.Addr().String()
+	modelID := uuid.NewString()
+	catalogFile := filepath.Join(t.TempDir(), "live-model-catalog.json")
+	catalogJSON, _ := json.Marshal(map[string]any{"models": []agent.CatalogEntry{{ID: modelID, DisplayName: "Real scenario model", Provider: gwProtocol, BaseURL: gwBase, APIKeyEnv: "SCENARIO_GLM_API_KEY", ModelName: gwModel, MaxInputTokens: 128000, MaxOutputTokens: 16384, ToolCalling: true, Streaming: true, RequestOptions: scenarioRequestOptions()}}})
+	if err = os.WriteFile(catalogFile, catalogJSON, 0600); err != nil {
+		t.Fatal(err)
+	}
 	cfg := config.Config{
 		Environment: "test", HTTPAddress: listener.Addr().String(), WebDirectory: "none",
 		Mode: config.ModeAll, DatabaseURL: fixture.URL,
-		AllowedOrigins: []string{"http://127.0.0.1:1"}, LogLevel: "error",
+		ModelCatalogFile: catalogFile,
+		AllowedOrigins:   []string{"http://127.0.0.1:1"}, LogLevel: "error",
 		ObjectStorage: config.ObjectStorageOptions{
 			Endpoint:    "http://127.0.0.1:" + minio.port,
 			AccessKeyID: "judex", SecretAccessKey: "judex-scenario",
@@ -201,6 +215,11 @@ func TestFullBusinessClosedLoop(t *testing.T) {
 	application, err := app.New(cfg, nil)
 	if err != nil {
 		t.Fatalf("app: %v", err)
+	}
+	executor.ResolveModel = agent.Resolver(fixture.Pool, config.ModelGatewayConfig{})
+	executor.Objects, err = objectstore.New(context.Background(), objectstore.Options{Endpoint: cfg.ObjectStorage.Endpoint, AccessKeyID: cfg.ObjectStorage.AccessKeyID, SecretAccessKey: cfg.ObjectStorage.SecretAccessKey, Bucket: cfg.ObjectStorage.Bucket, PathStyle: true})
+	if err != nil {
+		t.Fatal(err)
 	}
 	srv := &httptest.Server{Listener: listener, Config: &http.Server{Handler: application.Server.Handler}}
 	srv.Start()
@@ -219,18 +238,20 @@ func TestFullBusinessClosedLoop(t *testing.T) {
 
 	// ── 1. 甲建项目 + 两个岗位（执行/验收） ──────────────────────────
 	doc := jiǎ.data(t, "POST", base+"/api/v1/projects", map[string]any{
-		"title": "订单服务稳定性治理", "kind": "software",
+		"title": "订单服务稳定性治理", "kind": "software", "defaultModelId": modelID,
 	}, 201)
 	projectID := doc["data"].(map[string]any)["id"].(string)
 	positions := map[string]string{}
 	for _, spec := range []struct{ name, key string }{
-		{"后端工程师", "backend"}, {"质量验收", "qa"},
+		{"后端工程师", "backend"}, {"质量验收", "qa"}, {"计划负责人", "owner"},
 	} {
 		doc = jiǎ.data(t, "POST", base+"/api/v1/projects/"+projectID+"/positions", map[string]any{
 			"name": spec.name, "prompt": spec.name + "：按职责分析并如实报告", "publicSummary": spec.name,
 		}, 201)
 		positions[spec.key] = doc["data"].(map[string]any)["id"].(string)
 	}
+	ownerSession := jiǎ.data(t, "GET", base+"/api/v1/auth/session", nil, 200)["data"].(map[string]any)
+	ownerIdentity := jiǎ.data(t, "POST", base+"/api/v1/projects/"+projectID+"/identities", map[string]any{"positionId": positions["owner"], "userId": ownerSession["user"].(map[string]any)["id"]}, 201)["data"].(map[string]any)["id"].(string)
 
 	// ── 2. 邀请乙/丙并接受（获得身份绑定） ────────────────────────────
 	for _, inv := range []struct {
@@ -243,8 +264,10 @@ func TestFullBusinessClosedLoop(t *testing.T) {
 			"targetEmail": inv.p.email, "positionIds": []string{inv.pos},
 		}, 201)
 		invID := doc["data"].(map[string]any)["id"].(string)
+		inviteURL := doc["data"].(map[string]any)["inviteUrl"].(string)
+		inviteToken := inviteURL[strings.LastIndex(inviteURL, "/")+1:]
 		inv.p.data(t, "POST", base+"/api/v1/invitations/"+invID+"/accept", map[string]any{
-			"expectedVersion": 1,
+			"expectedVersion": 1, "token": inviteToken,
 		}, 200)
 	}
 
@@ -259,7 +282,7 @@ func TestFullBusinessClosedLoop(t *testing.T) {
 		case "position":
 			if id["positionName"].(string) == "后端工程师" {
 				backendIdentity = id["id"].(string)
-			} else {
+			} else if id["positionName"].(string) == "质量验收" {
 				qaIdentity = id["id"].(string)
 			}
 		}
@@ -267,6 +290,10 @@ func TestFullBusinessClosedLoop(t *testing.T) {
 	if backendIdentity == "" || qaIdentity == "" || coordinatorID == "" {
 		t.Fatalf("identities missing: backend=%s qa=%s coordinator=%s", backendIdentity, qaIdentity, coordinatorID)
 	}
+	workflowDefinition := jiǎ.data(t, "POST", base+"/api/v1/projects/"+projectID+"/workflows", map[string]any{"name": "Scenario delivery workflow", "instructions": "Implementation and review remain separate; human approval required.", "nodes": []any{map[string]any{"id": "work", "name": "实现", "phase": "implementation", "responsibility": "实现并上报固定材料", "allowedPositionIds": []string{positions["backend"]}, "defaultApprovalPolicy": "none"}, map[string]any{"id": "verify", "name": "验证", "phase": "verification", "responsibility": "核对固定来源", "allowedPositionIds": []string{positions["qa"]}, "defaultApprovalPolicy": "none"}}, "hardRules": []any{}, "advisoryEdges": []any{}, "approvalPolicies": map[string]any{}}, 201)["data"].(map[string]any)
+	workflowID := workflowDefinition["id"].(string)
+	draftVersion := jiǎ.data(t, "GET", base+"/api/v1/projects/"+projectID+"/workflows/"+workflowID+"/versions?limit=100", nil, 200)["data"].(map[string]any)["items"].([]any)[0].(map[string]any)
+	jiǎ.data(t, "POST", base+"/api/v1/projects/"+projectID+"/workflows/"+workflowID+"/publish", map[string]any{"expectedVersion": workflowDefinition["version"], "draftHash": draftVersion["draftHash"]}, 200)
 
 	// ── 3. 甲建议题 + 首条提交（真实业务内容） ────────────────────────
 	doc = jiǎ.data(t, "POST", base+"/api/v1/projects/"+projectID+"/topics", map[string]any{
@@ -310,21 +337,24 @@ func TestFullBusinessClosedLoop(t *testing.T) {
 
 	// ── 5. 甲创建工作提案（计划+任务，引用身份） ─────────────────────
 	doc = jiǎ.data(t, "POST", base+"/api/v1/projects/"+projectID+"/proposals", map[string]any{
-		"kind": "work_arrangement",
+		"kind":    "work_arrangement",
+		"topicId": topicID,
 		"changes": []map[string]any{
 			{"operation": "create_plan", "targetType": "plan", "clientRef": "p1",
-				"fields": map[string]any{"title": "幂等修复计划"}},
+				"fields": map[string]any{"title": "幂等修复计划", "goal": "基于固定原件核对幂等修复", "acceptanceCriteria": "任务独立接受且来源与方法边界明确", "ownerIdentityId": ownerIdentity, "workflowId": workflowID}},
 			{"operation": "create_task", "targetType": "task",
 				"fields": map[string]any{
 					"title": "实现下单幂等键", "planId": "p1",
 					"participantIdentityIds": []any{backendIdentity},
 					"reviewerIdentityId":     qaIdentity,
+					"workflowId":             workflowID, "nodeId": "work", "expectedOutput": "固定验证材料及真实来源", "acceptanceCriteria": "原件SHA与独立核对一致",
 				}},
 		},
 	}, 201)
 	proposalID := doc["data"].(map[string]any)["id"].(string)
+	initialProposalReview := jiǎ.data(t, "GET", base+"/api/v1/projects/"+projectID+"/proposals/"+proposalID+"/review", nil, 200)["data"].(map[string]any)
 	jiǎ.data(t, "POST", base+"/api/v1/projects/"+projectID+"/proposals/"+proposalID+"/submit", map[string]any{
-		"expectedVersion": 1,
+		"expectedVersion": 1, "draftHash": initialProposalReview["reviewHash"],
 	}, 200)
 
 	// ── 6. 乙、丙会签（ALL 席位） → 计划+任务生效 ────────────────────
@@ -332,17 +362,25 @@ func TestFullBusinessClosedLoop(t *testing.T) {
 		doc = p.data(t, "GET", base+"/api/v1/projects/"+projectID+"/proposals/"+proposalID+"/review", nil, 200)
 		data := doc["data"].(map[string]any)
 		var slotIDs []string
+		bindings := []any{}
 		for _, raw := range data["slots"].([]any) {
 			s := raw.(map[string]any)
-			if s["state"].(string) == "pending" {
+			if s["state"].(string) == "pending" && s["canDecide"] == true {
 				slotIDs = append(slotIDs, s["id"].(string))
+				if s["authorityType"] == "identity" {
+					bindings = append(bindings, map[string]any{"identityId": s["authorityId"], "bindingVersion": s["bindingVersion"]})
+				}
 			}
+		}
+		if len(slotIDs) == 0 {
+			return
 		}
 		p.data(t, "POST", base+"/api/v1/projects/"+projectID+"/proposals/"+proposalID+"/decisions", map[string]any{
 			"reviewId": data["reviewId"], "reviewHash": data["reviewHash"],
-			"expectedVersion": 2, "decision": "approve", "slotIds": slotIDs,
+			"expectedVersion": data["version"], "decision": "approve", "slotIds": slotIDs, "actingBindingVersions": bindings,
 		}, 200)
 	}
+	approve(jiǎ)
 	approve(yǐ)
 	approve(bǐng)
 	doc = jiǎ.data(t, "GET", base+"/api/v1/projects/"+projectID+"/proposals?limit=5", nil, 200)
@@ -377,11 +415,13 @@ func TestFullBusinessClosedLoop(t *testing.T) {
 	// 交付上报（引用材料 + expectedTaskVersion）
 	doc = yǐ.data(t, "GET", base+"/api/v1/projects/"+projectID+"/tasks/"+taskID, nil, 200)
 	taskVersion := int64(doc["data"].(map[string]any)["version"].(float64))
-	yǐ.data(t, "POST", base+"/api/v1/projects/"+projectID+"/tasks/"+taskID+"/reports", map[string]any{
-		"kind": "delivery", "text": "幂等修复完成，验证记录见附件。",
+	reportDoc := yǐ.data(t, "POST", base+"/api/v1/projects/"+projectID+"/tasks/"+taskID+"/reports", map[string]any{
+		"kind": "delivery", "text": "这是受控场景的验证报告文本样本，不是生产压测证据。请实际用read_material读取固定附件，核对报告声明的SETNX/10s/200次/1笔/210ms并保存结构化公开分析；不调用未配置的沙箱，也不替人决定验收。",
 		"materialVersionIds":  []string{versionID},
 		"expectedTaskVersion": taskVersion,
+		"identityId":          backendIdentity,
 	}, 200)
+	reportID := reportDoc["data"].(map[string]any)["id"].(string)
 	// 任务应进入 delivered
 	doc = yǐ.data(t, "GET", base+"/api/v1/projects/"+projectID+"/tasks/"+taskID, nil, 200)
 	if got := doc["data"].(map[string]any)["status"].(string); got != "delivered" {
@@ -389,26 +429,26 @@ func TestFullBusinessClosedLoop(t *testing.T) {
 	}
 	t.Log("✓ CLI 交付上报 → delivered")
 
-	// ── 8. Agent 二次分析（可选：同一执行器再次运行新批次） ─────────
-	yǐ.data(t, "POST", base+"/api/v1/projects/"+projectID+"/submissions", map[string]any{
-		"clientSubmissionId": uuid.NewString(), "purpose": "message",
-		"topicId": topicID, "text": "幂等修复已交付（任务：实现下单幂等键），验证记录已上传，请验收。",
-	}, 201)
-	// 手动触发第二次分析（自动触发链路已在 handler 中登记 job）
-	subID2 := latestSubmissionID(t, fixture.Pool, ctx, projectID)
-	jiǎ.data(t, "POST", base+"/api/v1/projects/"+projectID+"/topics/"+topicID+"/runs", map[string]any{
-		"sourceSubmissionId": subID2,
-	}, 202)
-	b2 := latestBatchID(t, fixture.Pool, ctx, projectID)
-	if b2 != "" && b2 != batchID {
-		c2, cc := context.WithTimeout(ctx, 5*time.Minute)
-		if err := executor.ExecuteBatch(c2, mustUUID(projectID), mustUUID(b2)); err != nil {
-			t.Logf("second batch (optional): %v", err)
-		} else {
-			t.Log("✓ Agent 二次分析完成")
-		}
-		cc()
+	// ── 8. 原报告实际注册的任务分析，不另造来源或可选绕过失败 ───────
+	var reportBatch, analysisID string
+	if err = fixture.Pool.QueryRow(ctx, `SELECT batch_id::text,id::text FROM task_analyses WHERE project_id=$1 AND source_type='report' AND source_id=$2`, projectID, reportID).Scan(&reportBatch, &analysisID); err != nil {
+		t.Fatal(err)
 	}
+	c2, cc := context.WithTimeout(ctx, 5*time.Minute)
+	err = executor.ExecuteBatch(c2, mustUUID(projectID), mustUUID(reportBatch))
+	cc()
+	if err != nil {
+		t.Fatalf("actual delivery analysis: %v", err)
+	}
+	analysis := jiǎ.data(t, "GET", base+"/api/v1/projects/"+projectID+"/task-analyses/"+analysisID, nil, 200)["data"].(map[string]any)
+	if analysis["state"] != "completed" || analysis["sourceId"] != reportID {
+		t.Fatalf("delivery analysis did not complete original source: %v", analysis["state"])
+	}
+	var reads int
+	if err = fixture.Pool.QueryRow(ctx, `SELECT count(*) FROM tool_calls c JOIN agent_runs r ON r.id=c.run_id WHERE r.batch_id=$1 AND c.name='read_material' AND c.state='succeeded'`, reportBatch).Scan(&reads); err != nil || reads == 0 {
+		t.Fatalf("actual stored delivery bytes were not read: %d %v", reads, err)
+	}
+	t.Log("✓ Agent 实际读取固定交付原件并保存原来源结构化分析")
 
 	// ── 9. 丙经确认意图 + 浏览器一次确认验收任务 ─────────────────────
 	doc = bǐng.data(t, "GET", base+"/api/v1/projects/"+projectID+"/tasks/"+taskID+"/acceptance-review", nil, 200)
@@ -422,15 +462,39 @@ func TestFullBusinessClosedLoop(t *testing.T) {
 		},
 	}, 201)
 	intentID := doc["data"].(map[string]any)["id"].(string)
-	// “浏览器确认”（同会话一次点击；服务端同事务执行验收）
+	// 同一用户的 HTTP 确认协议；真正浏览器点击另由桌面 E2E 覆盖。
 	bǐng.data(t, "POST", base+"/api/v1/projects/"+projectID+"/confirmation-intents/"+intentID+"/confirm", map[string]any{
-		"decision": "approve",
+		"decision": "approve", "intentHash": bǐng.data(t, "GET", base+"/api/v1/projects/"+projectID+"/confirmation-intents/"+intentID, nil, 200)["data"].(map[string]any)["intentHash"],
 	}, 200)
 	doc = yǐ.data(t, "GET", base+"/api/v1/projects/"+projectID+"/tasks/"+taskID, nil, 200)
 	if got := doc["data"].(map[string]any)["status"].(string); got != "accepted" {
 		t.Fatalf("task status=%s (want accepted after intent confirm)", got)
 	}
 	t.Log("✓ 确认意图 → 浏览器一次确认 → 任务 accepted")
+	// ── 9b. 成果来源独立移交；退回不能撤销已经成立的任务验收 ───────
+	handoff := yǐ.data(t, "POST", base+"/api/v1/projects/"+projectID+"/handoffs", map[string]any{"title": "已验收成果来源移交", "kind": "stage", "targetTaskId": taskID, "receiverIdentityId": qaIdentity, "sources": []any{map[string]any{"sourceTaskId": taskID, "senderIdentityId": backendIdentity}}}, 201)["data"].(map[string]any)
+	handoffID := handoff["id"].(string)
+	listed := bǐng.data(t, "GET", base+"/api/v1/projects/"+projectID+"/handoffs?limit=100", nil, 200)["data"].(map[string]any)["items"].([]any)
+	var sourceID string
+	for _, raw := range listed {
+		row := raw.(map[string]any)
+		if row["id"] == handoffID {
+			sourceID = row["sources"].([]any)[0].(map[string]any)["id"].(string)
+		}
+	}
+	if sourceID == "" {
+		t.Fatal("actual source draft absent")
+	}
+	sourcePath := base + "/api/v1/projects/" + projectID + "/handoffs/" + handoffID + "/sources/" + sourceID
+	first := yǐ.data(t, "POST", sourcePath+"/send", map[string]any{"reviewHash": reportID, "sourceVersion": 1, "summary": "受控错误摘要：P99为0ms"}, 200)["data"].(map[string]any)
+	bǐng.data(t, "POST", sourcePath+"/decisions", map[string]any{"reviewHash": first["currentVersionId"], "sourceVersion": first["currentVersion"], "decision": "reject", "reason": "摘要0ms与固定材料210ms不符；仅退回来源，不重开已验收任务"}, 200)
+	unchanged := jiǎ.data(t, "GET", base+"/api/v1/projects/"+projectID+"/tasks/"+taskID, nil, 200)["data"].(map[string]any)
+	if unchanged["status"] != "accepted" {
+		t.Fatal("receipt rejection changed accepted task")
+	}
+	revised := yǐ.data(t, "POST", sourcePath+"/revisions", map[string]any{"reviewHash": reportID, "sourceVersion": 2, "summary": "更正来源摘要：固定验证材料声明P99为210ms，保留原错误摘要和接收决定"}, 201)["data"].(map[string]any)
+	bǐng.data(t, "POST", sourcePath+"/decisions", map[string]any{"reviewHash": revised["currentVersionId"], "sourceVersion": revised["currentVersion"], "decision": "accept"}, 200)
+	t.Log("✓ 固定来源退回/修订/接收完成；原任务验收保持")
 
 	// ── 10. 甲验收计划（整体验收） ───────────────────────────────────
 	doc = jiǎ.data(t, "GET", base+"/api/v1/projects/"+projectID+"/plans?limit=5", nil, 200)
@@ -444,7 +508,7 @@ func TestFullBusinessClosedLoop(t *testing.T) {
 	pReview := doc["data"].(map[string]any)
 	jiǎ.data(t, "POST", base+"/api/v1/projects/"+projectID+"/plans/"+planID+"/acceptances", map[string]any{
 		"reviewId": pReview["reviewId"], "reviewHash": pReview["reviewHash"],
-		"decision": "accept",
+		"decision": "accept", "expectedVersion": pReview["targetVersion"],
 	}, 200)
 	t.Log("✓ 计划整体验收 accepted")
 
@@ -515,6 +579,7 @@ func cliUpload(t *testing.T, p *persona, base, projectID, name, content string) 
 		fmt.Sprintf("%s/api/v1/projects/%s/uploads/%s/parts/1", base, projectID, uploadID),
 		strings.NewReader(content))
 	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Idempotency-Key", uuid.NewString())
 	req.Header.Set("X-Judex-Part-SHA256", sum)
 	req.Header.Set("X-CSRF-Token", p.csrf)
 	req.Header.Set("Origin", "http://127.0.0.1:1")

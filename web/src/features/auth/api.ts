@@ -1,4 +1,4 @@
-import { request, setCSRFToken, clearCSRFToken, type APIError } from "../../lib/api/client";
+import { request, requestAll, setCSRFToken, clearCSRFToken, type APIError } from "../../lib/api/client";
 import type { components } from "../../lib/api/schema";
 
 export type PublicUser = components["schemas"]["PublicUser"];
@@ -48,8 +48,7 @@ export async function logout(): Promise<void> {
 }
 
 export async function listProjects(): Promise<Project[]> {
-  const page = await request<{ items: Project[] }>("/projects?limit=50");
-  return page.items ?? [];
+  return requestAll<Project>("/projects?limit=50");
 }
 
 export type { APIError };

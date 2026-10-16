@@ -6,6 +6,16 @@ import {builtinWorkflowPresets,importDemoWorkflowPresets,saveDemoFlowDraft,publi
 import {savePosition} from '../../web/src/features/work/actions.ts';
 const request={catalogVersion:builtinWorkflowPresets.version,scenarioId:'software',workflowIds:['software-standard','software-bug'],locale:'zh-CN'};
 
+test('workflow gates require concrete nonzero target and known node before saving',()=>{
+ const body={name:'Gate',nodes:[{id:'review',name:'Review',responsibility:'Check',allowedPositionIds:[],defaultApprovalPolicy:'all'}],advisoryEdges:[],hardRules:[],approvalPolicies:{}};
+ assert.equal(validFlowBody(body),true);
+ for(const targetId of [undefined,'','00000000-0000-0000-0000-000000000000','future-material'])
+  assert.equal(validFlowBody({...body,hardRules:[{kind:'material_ready',phase:'start',targetId}]}),false);
+ const rule={kind:'material_ready',phase:'start',targetId:'a35cf7d4-0f42-4d96-a82e-0f504cfe5ea5'};
+ assert.equal(validFlowBody({...body,hardRules:[rule]}),true);
+ assert.equal(validFlowBody({...body,hardRules:[{...rule,nodeId:'missing'}]}),false);
+});
+
 test('workflow catalog uses the shared scenarios and copies independent drafts with parallel edges',()=>{
   assert.deepEqual(builtinWorkflowPresets.scenarios.map(s=>({id:s.id,name:s.name})),builtinPositionPresets.scenarios.map(s=>({id:s.id,name:s.name})));
   const state=seedWork();state.currentUser='林然';

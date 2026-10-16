@@ -19,6 +19,7 @@ type journal struct {
 	project, run, session, batch uuid.UUID
 	lease                        string
 	reserved                     int64
+	requestModel                 string
 	coveredSeq                   int64
 	contextMetadata              map[string]any
 }
@@ -53,6 +54,12 @@ func (j *journal) event(ctx context.Context, tx pgx.Tx, kind string) error {
  SELECT $1,$2,$3,COALESCE(max(seq),0)+1,$4,'{}',now() FROM run_events WHERE run_id=$3`, j.project, uuid.New(), j.run, kind)
 	return err
 }
+func (j *journal) RemainingBudget(ctx context.Context) (int64, int, error) {
+	var tokens int64
+	var attempts int
+	err := j.pool.QueryRow(ctx, `SELECT $2-used_tokens-reserved_tokens,$3-model_attempts FROM discussion_batches WHERE id=$1`, j.batch, runner.BatchMaxTotalTokens, runner.BatchMaxModelAttempts).Scan(&tokens, &attempts)
+	return tokens, attempts, err
+}
 func (j *journal) ModelStart(ctx context.Context, attempt int, request model.Request) error {
 	raw, _ := json.Marshal(request)
 	sum := sha256.Sum256(raw)
@@ -73,20 +80,27 @@ func (j *journal) ModelStart(ctx context.Context, attempt int, request model.Req
 	})
 	if err == nil {
 		j.reserved = reserve
+		j.requestModel = request.Model
 	}
 	return err
 }
-func (j *journal) ModelEnd(ctx context.Context, attempt int, used int64, known bool, callErr error) error {
+func (j *journal) ModelEnd(ctx context.Context, attempt int, snapshot model.UsageSnapshot, known bool, callErr error) error {
+	snapshot = snapshot.Validated()
+	if snapshot.ModelName == "" {
+		snapshot.ModelName = j.requestModel
+	}
+	known = known && snapshot.Known()
 	return j.transaction(ctx, func(tx pgx.Tx) error {
 		state := "succeeded"
 		if callErr != nil {
 			state = "failed"
 		}
+		used := snapshot.Total()
 		if !known {
 			used = j.reserved
 		}
-		usage, _ := json.Marshal(map[string]any{"totalTokens": used, "conservative": !known})
-		if _, err := tx.Exec(ctx, `UPDATE model_calls SET state=$3,usage_json=$4,usage_known=$5,ended_at=now() WHERE run_id=$1 AND attempt=$2 AND state='running'`, j.run, attempt, state, usage, known); err != nil {
+		usage, _ := json.Marshal(map[string]any{"totalTokens": used, "conservative": !known, "observation": snapshot})
+		if _, err := tx.Exec(ctx, `UPDATE model_calls SET state=$3,usage_json=$4,usage_known=$5,provider_request_id=COALESCE(NULLIF($6,''),provider_request_id),error_code=$7,ended_at=now() WHERE run_id=$1 AND attempt=$2 AND state='running'`, j.run, attempt, state, usage, known, snapshot.ProviderRequestID, modelFailureCode(callErr)); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `UPDATE discussion_batches SET reserved_tokens=GREATEST(0,reserved_tokens-$2),used_tokens=used_tokens+$3 WHERE id=$1`, j.batch, j.reserved, used); err != nil {
@@ -110,7 +124,7 @@ func (j *journal) ToolStart(ctx context.Context, call model.ToolCall) error {
 		switch call.Name {
 		case "read", "write", "edit", "bash":
 			effect = "sandbox"
-		case "propose_changes", "record_analysis", "record_task_analysis", "publish":
+		case "propose_changes", "record_analysis", "record_task_analysis", "draft_workflow", "publish":
 			effect = "draft"
 		}
 		if _, err = tx.Exec(ctx, `INSERT INTO tool_calls(project_id,id,run_id,tool_call_id,name,args_hash,effect_class,state,started_at) VALUES($1,$2,$3,$4,$5,$6,$7,'prepared',now())`, j.project, uuid.New(), j.run, call.ID, call.Name, hex.EncodeToString(sum[:]), effect); err != nil {

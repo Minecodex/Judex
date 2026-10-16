@@ -34,8 +34,10 @@ export type PositionValue = {
   name: string;
   prompt: string;
   publicSummary?: string;
-  flowId: string;
-  nodeId: string;
+  modelId?: string | null;
+  bindings?: { flowId: string; nodeId: string }[];
+  flowId?: string;
+  nodeId?: string;
 };
 
 export interface ActionPayloads {

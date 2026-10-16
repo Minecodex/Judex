@@ -199,8 +199,12 @@ func (s *Service) ListTopics(ctx context.Context, requester, projectID uuid.UUID
 }
 
 // LinkTopic attaches plan/task references (06 §4).
-func (s *Service) LinkTopic(ctx context.Context, requester, projectID, topicID uuid.UUID, links []TopicLink) error {
-	return s.changeLinks(ctx, requester, projectID, topicID, nil, links, false)
+func (s *Service) LinkTopic(ctx context.Context, requester, projectID, topicID uuid.UUID, links []TopicLink, expectedVersion ...int64) error {
+	var expected *int64
+	if len(expectedVersion) > 0 {
+		expected = &expectedVersion[0]
+	}
+	return s.changeLinks(ctx, requester, projectID, topicID, expected, links, false)
 }
 
 // ListMessages pages messages by seq (beforeSeq anchor for history fill).
@@ -371,6 +375,11 @@ func (s *Service) CreateSubmission(ctx context.Context, requester, projectID uui
 		}
 		if sub.TaskID != nil && created.ReportID == nil {
 			if _, err := collaboration.EnqueueAnalysis(ctx, tx.Tx, projectID, *sub.TaskID, requester, "submission", created.ID, sub.TopicID, s.now()); err != nil {
+				return err
+			}
+		}
+		if sub.TaskID == nil && sub.TopicID == nil && created.ReportID == nil {
+			if _, err := collaboration.EnqueueAnalysis(ctx, tx.Tx, projectID, uuid.Nil, requester, "submission", created.ID, nil, s.now()); err != nil {
 				return err
 			}
 		}

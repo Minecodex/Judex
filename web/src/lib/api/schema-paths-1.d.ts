@@ -333,6 +333,27 @@ export interface SchemaPaths1 {
         trace?: never;
     };
 
+    "/projects/{projectId}/submissions/{submissionId}/analysis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: components["parameters"]["ProjectIdParam"];
+                submissionId: string;
+            };
+            cookie?: never;
+        };
+        /** 读取提交对应的任务或项目范围分析 */
+        get: operations["getSubmissionAnalysis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
     "/system": {
         parameters: {
             query?: never;
@@ -660,6 +681,28 @@ export interface SchemaPaths1 {
          * @description 同一事务导入，按稳定来源或中英文同名流程跳过重复项。不发布、不分配人员或职位、不添加审批授权。
          */
         post: operations["importWorkflowPresets"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+
+    "/projects/{projectId}/workflows/{workflowId}/versions/{versionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: components["parameters"]["ProjectIdParam"];
+                workflowId: string;
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        /** 读取固定已发布流程正文与哈希 */
+        get: operations["getPublishedWorkflowVersion"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;

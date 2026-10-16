@@ -47,11 +47,12 @@ func (h *ProposalHandlers) list(c *gin.Context) {
 
 func bindChanges(c *gin.Context) ([]decision.Change, error) {
 	var req struct {
-		Kind            string `json:"kind" binding:"required"`
-		ExpectedVersion int64  `json:"expectedVersion"`
-		TopicID         string `json:"topicId"`
-		Reason          string `json:"reason"`
-		Changes         []struct {
+		Kind             string `json:"kind"`
+		PreviousReviewID string `json:"previousReviewId"`
+		ExpectedVersion  int64  `json:"expectedVersion"`
+		TopicID          string `json:"topicId"`
+		Reason           string `json:"reason"`
+		Changes          []struct {
 			Operation       string         `json:"operation"`
 			TargetType      string         `json:"targetType"`
 			TargetID        string         `json:"targetId"`
@@ -75,6 +76,7 @@ func bindChanges(c *gin.Context) ([]decision.Change, error) {
 	c.Set("proposal_version", req.ExpectedVersion)
 	c.Set("proposal_topic", req.TopicID)
 	c.Set("proposal_reason", req.Reason)
+	c.Set("proposal_previous_review", req.PreviousReviewID)
 	return changes, nil
 }
 
@@ -130,12 +132,17 @@ func (h *ProposalHandlers) updateDraft(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	revision, err := h.Decisions.UpdateDraft(c.Request.Context(), p.UserID, projectID, proposalID, c.GetInt64("proposal_version"), changes, c.GetString("proposal_reason"))
+	_, err = h.Decisions.UpdateDraft(c.Request.Context(), p.UserID, projectID, proposalID, c.GetInt64("proposal_version"), changes, c.GetString("proposal_reason"))
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, gin.H{"id": proposalID, "revision": revision, "status": "draft"})
+	proposal, err := h.Decisions.GetProposal(c.Request.Context(), p.UserID, projectID, proposalID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, proposal)
 }
 
 func (h *ProposalHandlers) submit(c *gin.Context) {
@@ -279,11 +286,21 @@ func (h *ProposalHandlers) revision(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	revision, err := h.Decisions.CreateRevision(c.Request.Context(), p.UserID, projectID, proposalID,
-		changes, c.GetString("proposal_reason"))
+	previous, err := uuid.Parse(c.GetString("proposal_previous_review"))
+	if err != nil || previous == uuid.Nil {
+		respond{}.error(c, apierrors.Fields("previousReviewId", "invalid"))
+		return
+	}
+	_, err = h.Decisions.CreateRevision(c.Request.Context(), p.UserID, projectID, proposalID,
+		changes, c.GetString("proposal_reason"), previous)
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.created(c, gin.H{"id": proposalID, "revision": revision, "status": "draft"})
+	proposal, err := h.Decisions.GetProposal(c.Request.Context(), p.UserID, projectID, proposalID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.created(c, proposal)
 }

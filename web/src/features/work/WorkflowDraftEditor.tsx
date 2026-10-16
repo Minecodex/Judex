@@ -7,9 +7,11 @@ import type {Flow} from './types';
 import {bodyFromFlow,diagramFromBody,validFlowBody,feedbackCandidates} from './workflowPresets';
 import {WorkflowDiagram} from './WorkflowDiagram';
 import {uid} from './seed';
+import {WorkflowHardRulesEditor} from './WorkflowHardRulesEditor';
 
 export function WorkflowDraftEditor({flow}: {flow:Flow}) {
-  const {locale,t,state,project,act,management} = useWork();
+  const {locale,t,text,state,project,act,management} = useWork();
+  const positions = state.positions.filter(position => position.projectId === project.id);
   const [body,setBody] = useState(() => bodyFromFlow(flow,locale === 'en'));
   const [expectedVersion,setExpectedVersion] = useState(flow.definitionVersion ?? flow.version);
   const [busy,setBusy] = useState(false), [failed,setFailed] = useState(false);
@@ -38,6 +40,7 @@ export function WorkflowDraftEditor({flow}: {flow:Flow}) {
     <FormField label={t('workflowDraftInstructions')}><UITextArea disabled={busy || !management} value={body.instructions ?? ''} data-testid="workflow-draft-instructions"
       onChange={event => setBody(current => ({...current,instructions:event.target.value}))}/></FormField>
     <WorkflowDiagram flow={diagramFromBody(body)}/>
+    <WorkflowHardRulesEditor body={body} disabled={busy || !management} onChange={hardRules=>setBody(current=>({...current,hardRules}))}/>
     <div className="judex-workflow-draft-heading"><h3>{t('workflowDraftNodes')}</h3>
       {management && <Button size="sm" disabled={busy} data-testid="workflow-add-node" onPress={() => setBody(current => ({...current,
         nodes:[...current.nodes,{id:'node'+uid().replaceAll('-',''),name:t('workflowDraftNewNode'),responsibility:'',allowedPositionIds:[],defaultApprovalPolicy:'all'}]}))}><Plus/>{t('workflowDraftAddNode')}</Button>}</div>
@@ -56,6 +59,14 @@ export function WorkflowDraftEditor({flow}: {flow:Flow}) {
           onChange={event => updateNode(node.id,'name',event.target.value)}/></FormField>
         <FormField label={t('workflowDraftResponsibility')}><UITextArea disabled={busy || !management} value={node.responsibility} data-testid={'workflow-node-responsibility-'+node.id}
           onChange={event => updateNode(node.id,'responsibility',event.target.value)}/></FormField>
+        <fieldset className="judex-workflow-link-options" data-testid={'workflow-node-positions-'+node.id}>
+          <legend>{t('workflowDraftPositions')}</legend>
+          {positions.map(position => <UICheckbox key={position.id} disabled={busy || !management}
+            data-testid={'workflow-node-position-'+node.id+'-'+position.id} checked={node.allowedPositionIds.includes(position.id)}
+            onChange={event => setBody(current => ({...current,nodes:current.nodes.map(n => n.id === node.id ? {...n,
+              allowedPositionIds:event.target.checked ? [...new Set([...n.allowedPositionIds,position.id])] :
+                n.allowedPositionIds.filter(id => id !== position.id)} : n)}))}>{text(position.name)}</UICheckbox>)}
+        </fieldset>
         <fieldset className="judex-workflow-link-options"><legend>{t('workflowDraftLinks')}</legend>{body.nodes.filter(n => n.id !== node.id).map(target =>
           <UICheckbox key={target.id} disabled={busy || !management} checked={!!body.advisoryEdges?.some(e => e.kind !== 'feedback' && e.from === node.id && e.to === target.id)}
             onChange={event => setBody(current => ({...current,advisoryEdges:event.target.checked ?

@@ -38,7 +38,7 @@ func liveSandboxClient(t *testing.T) opensandbox.Sandbox {
 	if endpoint == "" || key == "" {
 		t.Skip("JUDEX_OPENSANDBOX_ENDPOINT / JUDEX_OPENSANDBOX_API_KEY not set")
 	}
-	return opensandbox.New(opensandbox.Config{Endpoint: endpoint, APIKey: key})
+	return opensandbox.New(opensandbox.Config{Endpoint: endpoint, APIKey: key, Image: os.Getenv("JUDEX_LIVE_SANDBOX_IMAGE")})
 }
 
 func TestLiveSandboxLifecycleAndExec(t *testing.T) {

@@ -33,7 +33,7 @@ func (p *taskAnalysisProvider) Stream(ctx context.Context, req model.Request) (<
 	p.prompts = append(p.prompts, transcript.String())
 	out := make(chan model.Event, 4)
 	if len(req.Messages) == 2 {
-		args := map[string]any{"summary": "已核对本任务，保留原始证据。", "disagreements": []string{}}
+		args := map[string]any{"summary": "已核对本任务，保留原始证据。", "basis": []string{"controlled task source"}, "disagreements": []string{}}
 		if p.question {
 			args["discussion"] = map[string]any{"title": "任务问题分析", "reason": "需要持续协调"}
 		}
@@ -42,7 +42,7 @@ func (p *taskAnalysisProvider) Stream(ctx context.Context, req model.Request) (<
 	} else {
 		out <- model.Event{Type: "textDelta", TextDelta: "本次分析完成。"}
 	}
-	out <- model.Event{Type: "usage", InputTokens: 100, OutputTokens: 50}
+	out <- model.Event{Type: "usage", Usage: model.UsageSnapshot{InputTokens: model.TokenCount(100), OutputTokens: model.TokenCount(50)}}
 	out <- model.Event{Type: "finish"}
 	close(out)
 	return out, nil
@@ -153,22 +153,30 @@ func TestTaskAnalysisSuggestionAndNoAutomaticConversation(t *testing.T) {
 	if err = executor.ExecuteBatch(ctx, project.ID, *analysis.BatchID); err != nil {
 		t.Fatal(err)
 	}
-	if provider.calls.Load() != 2 {
+	if provider.calls.Load() != 1 {
 		t.Fatal("completed analysis repeated")
 	}
 }
 
 type retryAnalysisProvider struct {
-	delegate    taskAnalysisProvider
-	interrupted bool
+	calls int
 }
 
 func (p *retryAnalysisProvider) Stream(ctx context.Context, req model.Request) (<-chan model.Event, error) {
-	if len(req.Messages) > 2 && !p.interrupted {
-		p.interrupted = true
+	p.calls++
+	if p.calls == 2 {
 		return nil, errors.New("controlled provider disconnect after durable tool result")
 	}
-	return p.delegate.Stream(ctx, req)
+	out := make(chan model.Event, 3)
+	if p.calls == 1 {
+		out <- model.Event{Type: "toolCallReady", ToolCallID: "before-disconnect", ToolName: "query_work", ArgsJSON: `{"objectType":"task"}`}
+	} else {
+		out <- model.Event{Type: "toolCallReady", ToolCallID: "after-recovery", ToolName: "record_task_analysis", ArgsJSON: `{"summary":"已核对本任务，保留原始证据。","basis":["controlled task source"]}`}
+	}
+	out <- model.Event{Type: "usage", Usage: model.UsageSnapshot{InputTokens: model.TokenCount(100), OutputTokens: model.TokenCount(50)}}
+	out <- model.Event{Type: "finish"}
+	close(out)
+	return out, nil
 }
 func TestTaskAnalysisRetryKeepsToolTranscriptAndBudget(t *testing.T) {
 	d, p, ids, pool := newDiscussionEnv(t)
@@ -222,7 +230,11 @@ func TestTaskAnalysisRetryKeepsToolTranscriptAndBudget(t *testing.T) {
 	if err = pool.QueryRow(ctx, `SELECT model_attempts FROM discussion_batches WHERE id=$1`, *a.BatchID).Scan(&attempts); err != nil {
 		t.Fatal(err)
 	}
-	if tools != 1 || attempts != 3 {
+	var queryCalls int
+	if err = pool.QueryRow(ctx, `SELECT count(*) FROM tool_calls WHERE name='query_work' AND run_id IN(SELECT id FROM agent_runs WHERE batch_id=$1)`, *a.BatchID).Scan(&queryCalls); err != nil {
+		t.Fatal(err)
+	}
+	if tools != 2 || queryCalls != 1 || attempts != 3 {
 		t.Fatalf("replayed effects or reset budget: tools=%d attempts=%d", tools, attempts)
 	}
 }

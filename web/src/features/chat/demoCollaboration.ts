@@ -51,7 +51,7 @@ export function demoTaskActivity(s: WorkState,p: TaskActivityInput): Result & {i
     id,taskId:task.id,kind:p.kind,sourceType,source:p.simulatedLocal?"cli":"web",text:p.body,
     actorUserId:null,actorName:s.currentUser,identityId:null,createdAt:now,
     materialVersionIds:p.files.map(f=>f.id),materials:p.files.map(f=>({versionId:f.id,name:f.name})),topicIds:p.topicId?[p.topicId]:[],
-    analysis:{id:analysisId,taskId:task.id,batchId:null,sourceType,sourceId:id,state:"completed",summary:p.kind==="question"?"已整理待协商的问题。":p.kind==="delivery"?"交付已登记，最终验收仍待确认。":"本次更新已记录。",basis:[],disagreements:[],errorCode:null,updatedAt:now},
+    analysis:{id:analysisId,taskId:task.id,scopeKind:'task',output:{},batchId:null,sourceType,sourceId:id,state:"completed",summary:p.kind==="question"?"已整理待协商的问题。":p.kind==="delivery"?"交付已登记，最终验收仍待确认。":"本次更新已记录。",basis:[],disagreements:[],errorCode:null,updatedAt:now},
   };
   next.taskActivities!.push(activity);
   if(p.kind==="progress")next.tasks.find(t=>t.id===task.id)!.revision++;

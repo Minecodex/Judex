@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-10",
+  "scope": "CLI reliability and temporary platform cache observation MVP only",
+  "version": "0.1.0-cache.20261010.2",
+  "retention": {
+    "ttlHours": 24,
+    "logicalExpiry": "ended_at + 24 hours",
+    "physicalCleanup": "worker startup and once per minute; bounded batches",
+    "expiredFields": [
+      "usage_json.observation",
+      "provider_request_id"
+    ],
+    "durableAccountingPreserved": true
+  },
+  "checks": {
+    "goTestAll": "passed",
+    "goVetAll": "passed",
+    "webReleaseBuild": "passed",
+    "nativeCLI": "passed",
+    "providerAndRunnerContracts": "passed",
+    "postgresUsageAndStartupExpiry": "passed",
+    "kubernetesCacheFlow": {
+      "runId": "judex-ui-a79fd2fa",
+      "tests": 1,
+      "passed": true,
+      "cleanedUp": true
+    },
+    "kubernetesPortal": {
+      "runId": "judex-ui-6c90b75b",
+      "tests": 1,
+      "passed": true,
+      "cleanedUp": true
+    },
+    "kimiCLIError": {
+      "bashCommandCount": 1,
+      "nonzeroExitObserved": true,
+      "structuredFailureObserved": true,
+      "noTaskOrFileAdded": true,
+      "reportedNotSubmitted": true
+    },
+    "productionDeploymentUnchanged": true
+  },
+  "modelEvidence": "K8s usage fixture is controlled protocol data, not a real GLM cache hit; the Kimi error interpretation is real model evidence",
+  "limitations": [
+    "No upgrade of the normal judex release",
+    "Workflow and file analysis stages remain planned",
+    "Real platform GLM cache-hit acceptance remains unexecuted"
+  ],
+  "rawEvidence": {
+    "implementation": ".cache/cache-mvp-20261010-511c38",
+    "kubernetes": [
+      ".cache/k8s/judex-ui-6c90b75b",
+      ".cache/k8s/judex-ui-a79fd2fa"
+    ]
+  },
+  "initialFailures": [
+    "Migration 27 lacked the Goose Up marker; repaired before PostgreSQL retest",
+    "First CACHE01 used a wrong discussion URL; repaired to navigate via project discussion UI"
+  ]
+}

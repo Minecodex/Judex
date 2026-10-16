@@ -11,6 +11,7 @@
     "dev": "npm run dev --workspace @judex/web",
     "build": "npm run build --workspace @judex/web",
     "test:web": "npm test --workspace @judex/web",
+    "test:ci": "node --test tests/ci/*.test.mjs",
     "test:e2e": "playwright test --config tests/e2e/chat.config.ts && node tests/e2e/business.setup.mjs",
     "gen:api": "node api/generate.mjs && node api/generate-types.mjs",
     "release:build": "node scripts/release/build.mjs"

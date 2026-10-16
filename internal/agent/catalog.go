@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/kakj-go/Judex/internal/infrastructure/model"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 )
@@ -24,17 +25,19 @@ import (
 // The API key itself is ONLY resolved from the environment at call time and
 // never persisted or returned.
 type CatalogEntry struct {
-	ID              string `yaml:"id" json:"id"`
-	DisplayName     string `yaml:"displayName" json:"displayName"`
-	Provider        string `yaml:"provider" json:"provider"`
-	BaseURL         string `yaml:"baseUrl" json:"baseUrl"`
-	APIKeyEnv       string `yaml:"apiKeyEnv" json:"apiKeyEnv"`
-	ModelName       string `yaml:"model" json:"model"`
-	MaxInputTokens  int    `yaml:"maxInputTokens" json:"maxInputTokens"`
-	MaxOutputTokens int    `yaml:"maxOutputTokens" json:"maxOutputTokens"`
-	ToolCalling     bool   `yaml:"toolCalling" json:"toolCalling"`
-	Vision          bool   `yaml:"vision" json:"vision"`
-	Streaming       bool   `yaml:"streaming" json:"streaming"`
+	ID               string               `yaml:"id" json:"id"`
+	DisplayName      string               `yaml:"displayName" json:"displayName"`
+	Provider         string               `yaml:"provider" json:"provider"`
+	BaseURL          string               `yaml:"baseUrl" json:"baseUrl"`
+	APIKeyEnv        string               `yaml:"apiKeyEnv" json:"apiKeyEnv"`
+	ModelName        string               `yaml:"model" json:"model"`
+	MaxInputTokens   int                  `yaml:"maxInputTokens" json:"maxInputTokens"`
+	MaxOutputTokens  int                  `yaml:"maxOutputTokens" json:"maxOutputTokens"`
+	ToolCalling      bool                 `yaml:"toolCalling" json:"toolCalling"`
+	Vision           bool                 `yaml:"vision" json:"vision"`
+	Streaming        bool                 `yaml:"streaming" json:"streaming"`
+	QuotaFallbackIDs []string             `yaml:"quotaFallbackIds" json:"quotaFallbackIds"`
+	RequestOptions   model.RequestOptions `yaml:"requestOptions,omitempty" json:"requestOptions,omitempty"`
 }
 
 // LoadCatalogFile reads the deployment catalog YAML.
@@ -64,6 +67,9 @@ func LoadCatalogFile(path string) ([]CatalogEntry, error) {
 		if entry.MaxInputTokens <= 0 || entry.MaxOutputTokens <= 0 {
 			return nil, apierrors.Newf(apierrors.Validation, "model %q needs positive maxInputTokens/maxOutputTokens", entry.ID)
 		}
+		if err := entry.RequestOptions.Validate(entry.Provider); err != nil {
+			return nil, apierrors.Fields("requestOptions", err.Error())
+		}
 	}
 	return doc.Models, nil
 }
@@ -74,6 +80,10 @@ func SyncCatalog(ctx context.Context, pool *postgres.Pool, entries []CatalogEntr
 	return pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
 		active := map[string]bool{}
 		for _, entry := range entries {
+			if err := entry.RequestOptions.Validate(entry.Provider); err != nil {
+				return apierrors.Fields("requestOptions", err.Error())
+			}
+			options, _ := json.Marshal(entry.RequestOptions)
 			active[entry.ID] = true
 			caps, _ := json.Marshal(map[string]bool{
 				"toolCalling": entry.ToolCalling, "vision": entry.Vision, "streaming": entry.Streaming,
@@ -85,12 +95,31 @@ func SyncCatalog(ctx context.Context, pool *postgres.Pool, entries []CatalogEntr
 			if err != nil {
 				return apierrors.Newf(apierrors.Validation, "model id %q must be a uuid", entry.ID)
 			}
+			fallbacks, _ := json.Marshal(entry.QuotaFallbackIDs)
+			if entry.QuotaFallbackIDs == nil {
+				fallbacks = []byte("[]")
+			}
+			for _, fallbackID := range entry.QuotaFallbackIDs {
+				if _, err := uuid.Parse(fallbackID); err != nil || fallbackID == entry.ID {
+					return apierrors.Fields("quotaFallbackIds", "valid distinct model IDs required")
+				}
+				found := false
+				for _, candidate := range entries {
+					if candidate.ID == fallbackID {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return apierrors.Fields("quotaFallbackIds", "fallback not in deployment catalog")
+				}
+			}
 			// endpoint_config_ref holds the baseUrl only; the API key stays an
 			// env/Secret reference and is never written to a row the API can read.
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO model_catalog (id, display_name, provider, endpoint_config_ref, credential_secret_ref,
-				                           model_name, capabilities, limits, enabled, created_at, updated_at)
-				VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,true,$9,$9)
+				                           model_name, capabilities, limits, enabled, created_at, updated_at, quota_fallback_ids, request_options)
+				VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,true,$9,$9,$10,$11::jsonb)
 				ON CONFLICT (id) DO UPDATE SET
 					display_name=EXCLUDED.display_name,
 					provider=EXCLUDED.provider,
@@ -99,10 +128,12 @@ func SyncCatalog(ctx context.Context, pool *postgres.Pool, entries []CatalogEntr
 					model_name=EXCLUDED.model_name,
 					capabilities=EXCLUDED.capabilities,
 					limits=EXCLUDED.limits,
+					quota_fallback_ids=EXCLUDED.quota_fallback_ids,
+					request_options=EXCLUDED.request_options,
 					enabled=true,
 					updated_at=EXCLUDED.updated_at`,
 				id, entry.DisplayName, entry.Provider, entry.BaseURL, entry.APIKeyEnv,
-				entry.ModelName, string(caps), string(limits), now); err != nil {
+				entry.ModelName, string(caps), string(limits), now, fallbacks, options); err != nil {
 				return apierrors.New(apierrors.Internal, "catalog upsert failed").Wrap(err)
 			}
 		}

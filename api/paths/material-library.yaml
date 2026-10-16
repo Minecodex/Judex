@@ -134,9 +134,9 @@ paths:
             type: string
       responses:
         '200':
-          description: 预览流
+          description: 预览流（采用实际预览 MIME）
           content:
-            application/octet-stream:
+            '*/*':
               schema:
                 type: string
                 format: binary

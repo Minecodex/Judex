@@ -17,15 +17,19 @@ const (
 // GatewayConfig is the protocol-agnostic gateway entry resolved from the
 // catalog (baseUrl + key already injected from the Secret/env reference).
 type GatewayConfig struct {
-	Protocol string // openai-compatible | anthropic-compatible
-	BaseURL  string
-	APIKey   string
-	Timeout  time.Duration // default 10m
+	Protocol       string // openai-compatible | anthropic-compatible
+	BaseURL        string
+	APIKey         string
+	Timeout        time.Duration // default 10m
+	RequestOptions RequestOptions
 }
 
 // NewProvider builds the right adapter for a catalog entry; unknown
 // protocols fail loudly instead of falling back to a wrong wire format.
 func NewProvider(cfg GatewayConfig) (Provider, error) {
+	if err := cfg.RequestOptions.Validate(cfg.Protocol); err != nil {
+		return nil, err
+	}
 	if cfg.Timeout == 0 {
 		cfg.Timeout = 10 * time.Minute
 	}
@@ -33,7 +37,7 @@ func NewProvider(cfg GatewayConfig) (Provider, error) {
 	switch cfg.Protocol {
 	case ProtocolOpenAI, "": // historical default
 		return NewOpenAIProvider(OpenAIConfig{
-			BaseURL: cfg.BaseURL, APIKey: cfg.APIKey, HTTP: httpClient,
+			BaseURL: cfg.BaseURL, APIKey: cfg.APIKey, HTTP: httpClient, RequestOptions: cfg.RequestOptions,
 		}), nil
 	case ProtocolAnthropic:
 		return NewAnthropicProvider(AnthropicConfig{

@@ -38,7 +38,12 @@ func (s *Service) ListInvitations(ctx context.Context, requester, projectID uuid
 		}
 		out = append(out, inv)
 	}
-	return out, rows.Err()
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	return out, s.invitationPositions(ctx, out)
 }
 
 // RevokeInvitation (manager) invalidates a pending invite.
@@ -87,9 +92,10 @@ func (s *Service) ResolveInvitationByToken(ctx context.Context, requester uuid.U
 		return Invitation{}, "", apierrors.New(apierrors.Internal, "resolve failed").Wrap(err)
 	}
 	inv.ExpiresAt = expiresAt
-	if err := s.pool.QueryRow(ctx, `SELECT title FROM projects WHERE id=$1`, inv.ProjectID).Scan(&inv.ProjectTitle); err != nil {
+	if err := s.pool.QueryRow(ctx, `SELECT p.title,u.display_name FROM projects p JOIN project_invitations i ON i.project_id=p.id JOIN users u ON u.id=i.inviter_user_id WHERE p.id=$1 AND i.id=$2`, inv.ProjectID, inv.ID).Scan(&inv.ProjectTitle, &inv.InviterDisplayName); err != nil {
 		return Invitation{}, "", err
 	}
+	inv.PositionNames = []string{}
 	rows, err := s.pool.Query(ctx, `SELECT p.name FROM invitation_positions ip JOIN position_templates p ON p.id=ip.position_template_id WHERE ip.invitation_id=$1 ORDER BY p.name`, inv.ID)
 	if err != nil {
 		return Invitation{}, "", err
@@ -319,5 +325,10 @@ func (s *Service) ListMyInvitations(ctx context.Context, requester uuid.UUID) ([
 		}
 		out = append(out, inv)
 	}
-	return out, rows.Err()
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	return out, s.invitationPositions(ctx, out)
 }

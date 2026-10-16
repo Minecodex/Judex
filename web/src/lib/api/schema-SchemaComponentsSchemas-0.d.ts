@@ -60,7 +60,7 @@ export interface SchemaSchemaComponentsSchemas0 {
 
         ConfirmationIntentRequest: {
             /** @enum {string} */
-            operation: "proposal.decision" | "topic.fork" | "discussion_suggestion.resolve" | "task.acceptance" | "task.reopen" | "task.skip" | "task.restore" | "plan.acceptance" | "plan.reopen" | "handoff.send" | "handoff.decision" | "project.create" | "workflow.publish";
+            operation: "proposal.submit" | "proposal.decision" | "topic.fork" | "discussion_suggestion.resolve" | "task.acceptance" | "task.reopen" | "task.skip" | "task.restore" | "plan.acceptance" | "plan.reopen" | "handoff.send" | "handoff.decision" | "project.create" | "workflow.publish";
             /** Format: uuid */
             objectId: string;
             reviewHash: string;
@@ -88,6 +88,14 @@ export interface SchemaSchemaComponentsSchemas0 {
             resultRef?: string | null;
             /** Format: date-time */
             expiresAt: string;
+        };
+
+        ConfirmationResult: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            state: "committed" | "rejected";
+            resultRef?: string | null;
         };
 
         ConfirmIntentRequest: {
@@ -305,7 +313,10 @@ export interface SchemaSchemaComponentsSchemas0 {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
-            taskId: string;
+            taskId: string | null;
+            /** @enum {string} */
+            scopeKind: "task" | "project";
+            output: components["schemas"]["TaskAnalysisOutput"];
             /** Format: uuid */
             batchId: string | null;
             /** @enum {string} */
@@ -319,6 +330,29 @@ export interface SchemaSchemaComponentsSchemas0 {
             errorCode: string | null;
             /** Format: date-time */
             updatedAt: string;
+        };
+
+        WorkflowNodeRef: {
+            /** Format: uuid */
+            workflowId: string;
+            /** Format: uuid */
+            versionId: string;
+            nodeId: string;
+            reason: string;
+        };
+
+        /** @description 公开分析与节点建议，不改变正式工作状态或流程绑定。 */
+        TaskAnalysisOutput: {
+            summary?: string;
+            basis?: string[];
+            disagreements?: string[];
+            needsClarification?: boolean;
+            currentNodeCandidates?: components["schemas"]["WorkflowNodeRef"][] | null;
+            relatedEvidenceNodes?: components["schemas"]["WorkflowNodeRef"][] | null;
+            suggestedNextNodes?: components["schemas"]["WorkflowNodeRef"][] | null;
+            discussion?: {
+                [key: string]: unknown;
+            };
         };
 
         TaskActivity: {
@@ -608,7 +642,10 @@ export interface SchemaSchemaComponentsSchemas0 {
             createdAt: string;
             /** @enum {string} */
             discussionIntent?: "auto" | "question" | "reply";
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description 明确限定本次分析的计划范围；引用任务仅作证据，不能转移归属或将其他计划节点作为当前工作。
+             */
             planId?: string | null;
         };
 
@@ -688,8 +725,11 @@ export interface SchemaSchemaComponentsSchemas0 {
                 partNumber: number;
                 sha256: string;
             }[];
-            /** @description 针对已有材料派生发布时的当前版本号；落后返回 SOURCE_VERSION_CONFLICT。 */
-            sourceVersion?: number;
+            /**
+             * Format: uuid
+             * @description 针对已有材料派生发布时的当前固定版本 ID；落后返回 SOURCE_VERSION_CONFLICT。
+             */
+            sourceVersion?: string;
         };
 
         Material: {
@@ -1090,15 +1130,22 @@ export interface SchemaSchemaComponentsSchemas0 {
             state: "pending" | "accepted" | "declined" | "revoked" | "expired";
             /** Format: uuid */
             inviterUserId: string;
-            positions: components["schemas"]["PositionSummary"][];
+            positions: components["schemas"]["InvitationPosition"][];
             /** Format: date-time */
             expiresAt: string;
             /** Format: uuid */
             acceptedUserId?: string | null;
         };
 
+        InvitationPosition: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+
         CreateInvitationRequest: {
             targetEmail: string;
+            /** @description Empty joins project membership only; no new position identity is created. */
             positionIds: string[];
         };
 
@@ -1244,6 +1291,22 @@ export interface SchemaSchemaComponentsSchemas0 {
             };
         };
 
+        WorkflowCandidate: {
+            /** Format: uuid */
+            workflowId: string;
+            /** Format: uuid */
+            versionId: string;
+            name: string;
+            instructions: string;
+            nodes: components["schemas"]["WorkflowNode"][];
+            hardRules: components["schemas"]["WorkflowHardRule"][];
+            approvalPolicies: {
+                [key: string]: string;
+            };
+            formalTaskBinding: boolean;
+            candidateSources: ("task" | "plan" | "position" | "project")[];
+        };
+
         WorkflowNode: {
             /**
              * @description 图中的活动或评审形状，不构成审批授权。
@@ -1269,8 +1332,12 @@ export interface SchemaSchemaComponentsSchemas0 {
             /** @enum {string} */
             kind: "task_acceptance" | "handoff_receipt" | "material_ready";
             /** @enum {string} */
-            phase?: "start" | "accept" | "both";
-            targetId?: string;
+            phase: "start" | "accept" | "both";
+            /**
+             * Format: uuid
+             * @description 本项目已存在的任务、接收来源或资料版本的非零 UUID；不得以空值或全零 UUID 表达未来对象。
+             */
+            targetId: string;
         };
 
         WorkflowDraftBody: {
@@ -1319,6 +1386,20 @@ export interface SchemaSchemaComponentsSchemas0 {
             publishedAt: string | null;
         };
 
+        PublishedWorkflowContent: {
+            /** Format: uuid */
+            workflowId: string;
+            /** Format: uuid */
+            versionId: string;
+            revision: number;
+            isCurrent: boolean;
+            body: components["schemas"]["WorkflowDraftBody"];
+            /** @description 完整 body 按服务端结构序列化后的 SHA256；节点及边保持原顺序。 */
+            bodySha256: string;
+            /** Format: date-time */
+            publishedAt: string;
+        };
+
         PublishWorkflowRequest: {
             expectedVersion: number;
             /** @description SHA256 十六进制；服务端重新计算校验。 */
@@ -1351,6 +1432,35 @@ export interface SchemaSchemaComponentsSchemas0 {
             url?: string;
             provider?: string;
             defaultBranch?: string;
+        };
+
+        AcceptanceHistoryRecord: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            targetId: string;
+            /** @enum {string} */
+            targetType: "task" | "plan";
+            targetVersion: number | null;
+            /** @enum {string} */
+            decision: "accept" | "reject" | "reopen";
+            /** Format: uuid */
+            actorUserId: string;
+            /** Format: uuid */
+            identityId: string | null;
+            reason: string;
+            /** Format: uuid */
+            acceptanceId: string | null;
+            /** Format: uuid */
+            previousAcceptanceId: string | null;
+            reviewHash: string | null;
+            snapshot: {
+                [key: string]: unknown;
+            } | null;
+            /** @enum {string} */
+            provenance: "work_record" | "accepted_snapshot" | "reopen_record" | "legacy_audit";
+            /** Format: date-time */
+            createdAt: string;
         };
 
         Plan: {
@@ -1405,6 +1515,8 @@ export interface SchemaSchemaComponentsSchemas0 {
         };
 
         Task: {
+            /** @description 同项目已发布流程候选；正式任务绑定不会被候选建议覆盖。 */
+            workflowCandidates?: components["schemas"]["WorkflowCandidate"][];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -1617,7 +1729,7 @@ export interface SchemaSchemaComponentsSchemas0 {
         ReopenRequest: {
             expectedVersion: number;
             /** Format: uuid */
-            acceptanceId?: string;
+            acceptanceId: string;
             reason: string;
         };
 
@@ -1668,129 +1780,5 @@ export interface SchemaSchemaComponentsSchemas0 {
             topicId?: string;
             reason?: string;
             changes: components["schemas"]["ProposalChange"][];
-        };
-
-        ProposalReview: {
-            version?: number;
-            workflowConstraints?: {
-                [key: string]: unknown;
-            }[];
-            /** Format: uuid */
-            reviewId: string;
-            reviewHash: string;
-            /** Format: uuid */
-            proposalId: string;
-            /** @enum {string} */
-            status: "draft" | "pending" | "approved" | "cancelled" | "stale";
-            /** Format: date-time */
-            submittedAt?: string | null;
-            /** Format: date-time */
-            firstApprovalAt?: string | null;
-            /** Format: date-time */
-            deadlineAt?: string | null;
-            changes: components["schemas"]["ProposalChange"][];
-            slots: components["schemas"]["ApprovalSlot"][];
-            createdIds?: {
-                [key: string]: string;
-            };
-            canAct?: boolean;
-            unmetRequirements?: {
-                [key: string]: unknown;
-            }[];
-        };
-
-        ApprovalSlot: {
-            /** Format: uuid */
-            currentUserId?: string | null;
-            bindingVersion?: number;
-            canDecide?: boolean;
-            canDelegate?: boolean;
-            /** Format: uuid */
-            id: string;
-            /** @enum {string} */
-            authorityType: "identity" | "user";
-            /** Format: uuid */
-            authorityId: string;
-            displayName?: string;
-            positionName?: string | null;
-            /** Format: uuid */
-            initialUserId?: string | null;
-            /** @enum {string} */
-            state: "pending" | "approved" | "rejected" | "timeout" | "delegated";
-        };
-
-        ProposalSubmitRequest: {
-            expectedVersion: number;
-            draftHash: string;
-        };
-
-        ProposalDecisionRequest: {
-            /** Format: uuid */
-            reviewId: string;
-            reviewHash: string;
-            expectedVersion: number;
-            /** @enum {string} */
-            decision: "approve" | "reject";
-            slotIds: string[];
-            actingBindingVersions?: {
-                /** Format: uuid */
-                identityId: string;
-                bindingVersion: number;
-            }[];
-            reason?: string;
-        };
-
-        DelegateDecisionRequest: {
-            /** Format: uuid */
-            reviewId: string;
-            reviewHash: string;
-            slotIds: string[];
-            reason: string;
-        };
-
-        ProposalRevisionRequest: {
-            /** Format: uuid */
-            previousReviewId: string;
-            reason: string;
-            changes: components["schemas"]["ProposalChange"][];
-        };
-
-        Handoff: {
-            /** Format: uuid */
-            id: string;
-            title?: string;
-            /** Format: uuid */
-            targetTaskId: string;
-            /** Format: uuid */
-            receiverIdentityId: string;
-            receiverDisplayName?: string;
-            /** Format: uuid */
-            workflowId?: string | null;
-            /** @enum {string} */
-            kind: "dependency" | "stage";
-            /** @enum {string} */
-            state: "waiting" | "accepted" | "needs_revision";
-            version?: number;
-            sources: components["schemas"]["HandoffSource"][];
-        };
-
-        HandoffSource: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            sourceTaskId: string;
-            /** Format: uuid */
-            senderIdentityId: string;
-            senderDisplayName?: string;
-            /** Format: uuid */
-            currentVersionId: string | null;
-            currentVersion?: number | null;
-            /** @enum {string} */
-            state: "draft" | "pending" | "accepted" | "rejected";
-            reason?: string | null;
-            /** Format: date-time */
-            sentAt?: string | null;
-            /** Format: date-time */
-            decidedAt?: string | null;
         };
 }

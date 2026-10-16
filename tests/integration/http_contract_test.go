@@ -3,6 +3,8 @@ package integrationtest_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers/legacy"
@@ -14,15 +16,18 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestProductionHTTPResponsesMatchOpenAPI(t *testing.T) {
-	_, _, _, pool := newDecisionEnv(t)
+	openapi3filter.RegisterBodyDecoder("text/event-stream", openapi3filter.FileBodyDecoder)
+	_, _, identities, pool := newDecisionEnv(t)
+	objectsEndpoint := contractObjects(t)
 	cfg, err := config.FromEnv(func(key string) string {
 		switch key {
 		case "JUDEX_DATABASE_URL":
@@ -31,6 +36,12 @@ func TestProductionHTTPResponsesMatchOpenAPI(t *testing.T) {
 			return "test"
 		case "JUDEX_MODE":
 			return "api"
+		case "JUDEX_S3_ENDPOINT":
+			return objectsEndpoint
+		case "JUDEX_S3_ACCESS_KEY", "JUDEX_S3_SECRET_KEY", "JUDEX_S3_BUCKET":
+			return "contract"
+		case "JUDEX_S3_PATH_STYLE":
+			return "true"
 		}
 		return ""
 	})
@@ -89,8 +100,17 @@ func TestProductionHTTPResponsesMatchOpenAPI(t *testing.T) {
 	call := func(method, path string, body any) map[string]any {
 		t.Helper()
 		raw, _ := json.Marshal(body)
+		binary, isBinary := body.([]byte)
+		if isBinary {
+			raw = binary
+		}
 		req := httptest.NewRequest(method, "http://judex.test/api/v1"+path, bytes.NewReader(raw))
 		req.Header.Set("Content-Type", "application/json")
+		if isBinary {
+			req.Header.Set("Content-Type", "application/octet-stream")
+			sum := sha256.Sum256(raw)
+			req.Header.Set("X-Judex-Part-SHA256", hex.EncodeToString(sum[:]))
+		}
 		req.Header.Set("Idempotency-Key", uuid.NewString())
 		req.Header.Set("X-CSRF-Token", csrf)
 		for _, cookie := range cookies {
@@ -106,7 +126,22 @@ func TestProductionHTTPResponsesMatchOpenAPI(t *testing.T) {
 		}
 		req.Body = io.NopCloser(bytes.NewReader(raw))
 		response := httptest.NewRecorder()
-		application.Server.Handler.ServeHTTP(response, req)
+		if strings.HasSuffix(path, "/events") {
+			ctx, cancel := context.WithCancel(req.Context())
+			defer cancel()
+			timer := time.AfterFunc(3*time.Second, cancel)
+			defer timer.Stop()
+			stopAfter := 2
+			if strings.Contains(path, "/runs/") {
+				stopAfter = 1
+			}
+			application.Server.Handler.ServeHTTP(&contractStreamRecorder{ResponseRecorder: response, cancel: cancel, stopAfter: stopAfter}, req.WithContext(ctx))
+			if !strings.Contains(response.Body.String(), "data:") {
+				t.Error("SSE returned no actual event frame")
+			}
+		} else {
+			application.Server.Handler.ServeHTTP(response, req)
+		}
 		for _, cookie := range response.Result().Cookies() {
 			cookies[cookie.Name] = cookie
 		}
@@ -119,6 +154,12 @@ func TestProductionHTTPResponsesMatchOpenAPI(t *testing.T) {
 			t.Errorf("operation=%s status=%d contract: %v", route.Operation.OperationID, response.Code, err)
 		}
 		operations[route.Operation.OperationID] = true
+		if !strings.Contains(response.Header().Get("Content-Type"), "application/json") {
+			return map[string]any{"content": response.Body.String()}
+		}
+		if response.Code == 204 {
+			return map[string]any{}
+		}
 		var envelope map[string]any
 		if err = json.Unmarshal(response.Body.Bytes(), &envelope); err != nil {
 			t.Fatal(err)
@@ -165,7 +206,7 @@ func TestProductionHTTPResponsesMatchOpenAPI(t *testing.T) {
 	call("GET", topicPath+"/messages", nil)
 	submission := call("POST", prefix+"/submissions", map[string]any{"clientSubmissionId": uuid.NewString(), "purpose": "message", "topicId": topic["id"], "text": "Contract message"})
 	call("GET", topicPath+"/messages", nil)
-	call("POST", topicPath+"/runs", map[string]any{"sourceSubmissionId": submission["id"]})
+	initialRun := call("POST", topicPath+"/runs", map[string]any{"sourceSubmissionId": submission["id"]})
 	proposal := call("POST", prefix+"/proposals", map[string]any{"kind": "work_arrangement", "changes": []any{map[string]any{"operation": "create_task", "targetType": "task", "clientRef": "work", "fields": map[string]any{"title": "Approved task", "reviewerIdentityId": identity["id"], "participantIdentityIds": []any{identity["id"]}}}}})
 	proposalPath := prefix + "/proposals/" + proposal["id"].(string)
 	review := call("GET", proposalPath+"/review", nil)
@@ -202,8 +243,61 @@ func TestProductionHTTPResponsesMatchOpenAPI(t *testing.T) {
 	for _, path := range []string{"/positions", "/identities", "/topics", "/plans", "/tasks", "/proposals", "/audit", "/execution-map"} {
 		call("GET", prefix+path, nil)
 	}
-	if len(operations) < 35 {
-		t.Fatal("insufficient contract coverage: " + strconv.Itoa(len(operations)))
+	type browserSession struct {
+		cookies map[string]*http.Cookie
+		csrf    string
+	}
+	savedSessions := map[string]browserSession{"contract@test.local": {cookies: cookies, csrf: csrf}}
+	copyCookies := func(source map[string]*http.Cookie) map[string]*http.Cookie {
+		result := map[string]*http.Cookie{}
+		for key, value := range source {
+			result[key] = value
+		}
+		return result
+	}
+	savedSessions["contract@test.local"] = browserSession{copyCookies(cookies), csrf}
+	coverage := &contractScenario{t: t, call: call, prefix: prefix, user: user, position: position, identity: identity, flow: flow, taskPath: taskPath, topicPath: topicPath, refresh: func() { csrf = call("GET", "/auth/session", nil)["csrfToken"].(string) }, clearSessions: func() { clear(savedSessions) }, recovery: func() string {
+		code, err := identities.IssueRecoveryCode(context.Background(), "contract@test.local", "contract-fixture", "Exercise public recovery schema")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return code
+	}, login: func(email string) {
+		if saved, ok := savedSessions[email]; ok {
+			cookies = copyCookies(saved.cookies)
+			csrf = saved.csrf
+			return
+		}
+		call("POST", "/auth/login", map[string]any{"email": email, "password": "contract-password-123"})
+		csrf = call("GET", "/auth/session", nil)["csrfToken"].(string)
+		savedSessions[email] = browserSession{copyCookies(cookies), csrf}
+	}}
+	coverage.pool = pool
+	coverage.configuration()
+	coverage.membership()
+	coverage.workLifecycle()
+	coverage.files(pool, objectsEndpoint)
+	coverage.runtime(pool, initialRun)
+	coverage.account(pair)
+	missing := []string{}
+	total := 0
+	for _, item := range doc.Paths.Map() {
+		for _, operation := range item.Operations() {
+			total++
+			if !operations[operation.OperationID] {
+				missing = append(missing, operation.OperationID)
+			}
+		}
+	}
+	sort.Strings(missing)
+	if file := os.Getenv("JUDEX_CONTRACT_EVIDENCE"); file != "" {
+		raw, _ := json.MarshalIndent(map[string]any{"passed": !t.Failed() && len(missing) == 0, "totalOperations": total, "successOperations": sortedOperations(operations), "anonymousProtectedOperations": protectedCount, "missingSuccessOperations": missing}, "", "  ")
+		if err := os.WriteFile(file, raw, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(missing) > 0 {
+		t.Errorf("successful request/response contract gaps (%d/%d): %s", len(operations), total, strings.Join(missing, ","))
 	}
 	t.Log("validated operations:", len(operations), strings.Join(sortedOperations(operations), ","))
 }

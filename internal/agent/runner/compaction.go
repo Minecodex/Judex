@@ -35,7 +35,7 @@ func Compact(messages []model.Message, run string, limit int64, schemas []model.
 			continue
 		}
 		switch names[m.ToolCallID] {
-		case "bash", "read", "read_material", "query_work", "read_context":
+		case "bash", "read", "read_material", "analyze_material", "read_workflow", "query_work", "read_context":
 		default:
 			continue
 		}

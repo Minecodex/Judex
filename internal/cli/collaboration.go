@@ -145,6 +145,15 @@ func taskActivityCommand() *cobra.Command {
 	cmd.PreRun = func(cmd *cobra.Command, args []string) { task = args[0] }
 	return cmd
 }
+
+func handoffListCommand() *cobra.Command {
+	command := listCommand("分页读取交接来源、固定版本、摘要与接收状态", func() (string, error) {
+		project, err := currentProject()
+		return "/projects/" + project + "/handoffs", err
+	})
+	command.Use = "list"
+	return command
+}
 func taskAnalysisCommands() *cobra.Command {
 	group := &cobra.Command{Use: "task-analysis", Short: "任务上报的公开分析"}
 	for _, op := range []string{"show", "retry"} {
@@ -175,4 +184,20 @@ func taskAnalysisCommands() *cobra.Command {
 		group.AddCommand(cmd)
 	}
 	return group
+}
+
+func submissionAnalysisCommand() *cobra.Command {
+	return &cobra.Command{Use: "submission-analysis ID", Args: cobra.ExactArgs(1), Short: "查询原提交的公开分析及草稿引用", RunE: func(cmd *cobra.Command, args []string) error {
+		project, err := currentProject()
+		if err != nil {
+			return emit(nil, err)
+		}
+		c, err := NewClient()
+		if err != nil {
+			return emit(nil, err)
+		}
+		var out map[string]any
+		err = c.Do(cmd.Context(), "GET", "/projects/"+project+"/submissions/"+args[0]+"/analysis", nil, &out, "")
+		return emit(out, err)
+	}}
 }

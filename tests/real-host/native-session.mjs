@@ -1,0 +1,30 @@
+// Restore an existing GLM-backed public Kimi session, then explicitly select
+// the native model. The transient alias is never persisted to global config.
+import fs from 'node:fs';
+import path from 'node:path';
+import {execFileSync,spawn} from 'node:child_process';
+import {startUsageRelay} from './model-usage-relay.mjs';
+const [label,promptFile]=process.argv.slice(2);
+if(!/^(KA0[1-6]|KB0[1-3]|KC0[1-3]|KX0[1-2])$/.test(label??'')||!fs.existsSync(promptFile??''))throw new Error('Planned session and saved prompt required');
+const root=path.resolve('.cache/real-host/20261012-closure');
+const env=JSON.parse(fs.readFileSync(path.join(root,'environment.json'),'utf8'));
+const read=(...args)=>JSON.parse(execFileSync('kubectl',args,{encoding:'utf8',windowsHide:true}));
+const ns=read('get','namespace',env.namespace,'-o','json').metadata;
+if(ns.uid!==env.uid||ns.labels?.['judex.dev/test-run']!==env.runId)throw new Error('Owned namespace required');
+const secret=read('-n',env.namespace,'get','secret','real-model-key','-o','json');
+if(secret.metadata.labels?.['judex.dev/test-run']!==env.runId)throw new Error('Owned key Secret required');
+const key=Buffer.from(secret.data.JUDEX_GLM_CODING_KEY,'base64').toString('utf8');
+const recordFile=path.join(root,'sessions',label+'.json');
+const previous=fs.existsSync(recordFile)?JSON.parse(fs.readFileSync(recordFile,'utf8')).invocations?.filter(i=>i.modelMode?.startsWith('glm-')).at(-1)?.modelMode:null;
+const aliasModel=previous??'glm-5.3-flash';
+const relay=await startUsageRelay({baseURL:aliasModel.startsWith('glm-4.')?'https://open.bigmodel.cn/api/paas/v4':'https://open.bigmodel.cn/api/coding/paas/v4',apiKey:key,modelName:aliasModel});
+const startedAt=new Date().toISOString();
+const child=spawn(process.execPath,['tests/real-host/kimi-session.mjs',label,promptFile,'kimi'],{windowsHide:true,env:{...process.env,KIMI_MODEL_NAME:aliasModel,KIMI_MODEL_API_KEY:key,KIMI_MODEL_PROVIDER_TYPE:'openai',KIMI_MODEL_BASE_URL:relay.baseURL,KIMI_MODEL_MAX_CONTEXT_SIZE:aliasModel.startsWith('glm-4.')?'65536':'128000',KIMI_MODEL_MAX_OUTPUT_SIZE:'8192',KIMI_MODEL_CAPABILITIES:['glm-5.3-flash','glm-4.6v-flash'].includes(aliasModel)?'tool_use,image_in':'tool_use'},stdio:['ignore','pipe','pipe']});
+const emit=chunk=>process.stdout.write(chunk.toString().split(key).join('[redacted]'));
+child.stdout.on('data',emit);child.stderr.on('data',emit);
+const exitCode=await new Promise(resolve=>{child.once('error',()=>resolve(1));child.once('close',code=>resolve(code??1));});
+const observation=await relay.close();
+const result={label,startedAt,finishedAt:new Date().toISOString(),explicitModel:'kimi-code/k3',exitCode,reservedAliasBootstrap:true,aliasModel,unexpectedGLMAliasCalls:observation.calls,unexpectedAliasRejectedRequests:observation.rejectedRequests,nativeUsage:'unknown'};
+fs.writeFileSync(path.join(root,'sessions',`${label}-native-${Date.now()}.json`),JSON.stringify(result,null,2)+'\n');
+console.log(JSON.stringify(result));
+process.exitCode=exitCode||((observation.calls||observation.rejectedRequests)?1:0);

@@ -161,15 +161,15 @@ func (p *AnthropicProvider) Stream(ctx context.Context, req Request) (<-chan Eve
 		defer resp.Body.Close()
 		snippet, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return nil, &ProviderError{
-			Class: classifyStatus(resp.StatusCode),
-			Err:   fmt.Errorf("网关 %d: %s", resp.StatusCode, strings.TrimSpace(string(snippet))),
+			Class: classifyGatewayError(resp.StatusCode, snippet),
+			Err:   fmt.Errorf("网关 %d: %s", resp.StatusCode, strings.ReplaceAll(strings.TrimSpace(string(snippet)), p.cfg.APIKey, "[redacted]")),
 		}
 	}
 	events := make(chan Event, 64)
 	go func() {
 		defer close(events)
 		defer resp.Body.Close()
-		p.streamBody(ctx, resp.Body, events)
+		p.streamBody(ctx, resp.Body, events, req.Model)
 	}()
 	return events, nil
 }
@@ -178,9 +178,9 @@ type anthropicChunk struct {
 	Type string `json:"type"`
 	// message_start
 	Message *struct {
-		Usage *struct {
-			InputTokens int64 `json:"input_tokens"`
-		} `json:"usage"`
+		ID    string          `json:"id"`
+		Model string          `json:"model"`
+		Usage *anthropicUsage `json:"usage"`
 	} `json:"message"`
 	// content_block_start
 	Index        int `json:"index"`
@@ -198,10 +198,7 @@ type anthropicChunk struct {
 		StopReason  string `json:"stop_reason"`
 	} `json:"delta"`
 	// message_delta usage (carries the authoritative totals on GLM)
-	Usage *struct {
-		InputTokens  int64 `json:"input_tokens"`
-		OutputTokens int64 `json:"output_tokens"`
-	} `json:"usage"`
+	Usage *anthropicUsage `json:"usage"`
 	// error frames
 	Error *struct {
 		Type    string `json:"type"`
@@ -211,10 +208,11 @@ type anthropicChunk struct {
 
 // streamBody parses Anthropic SSE into normalized Events. Malformed frames
 // surface as errors instead of silent truncation.
-func (p *AnthropicProvider) streamBody(ctx context.Context, body io.Reader, events chan<- Event) {
+func (p *AnthropicProvider) streamBody(ctx context.Context, body io.Reader, events chan<- Event, modelName string) {
 	toolMeta := map[int]Event{} // block index → tool identity
 	toolArgs := map[int]*strings.Builder{}
-	inputTokens := int64(-1)
+	usage := anthropicUsage{}
+	requestID := ""
 	reader := bufio.NewReader(body)
 	for {
 		line, readErr := reader.ReadString('\n')
@@ -245,8 +243,14 @@ func (p *AnthropicProvider) streamBody(ctx context.Context, body io.Reader, even
 		}
 		switch chunk.Type {
 		case "message_start":
-			if chunk.Message != nil && chunk.Message.Usage != nil {
-				inputTokens = chunk.Message.Usage.InputTokens
+			if chunk.Message != nil {
+				requestID = chunk.Message.ID
+				if chunk.Message.Model != "" {
+					modelName = chunk.Message.Model
+				}
+				if chunk.Message.Usage != nil {
+					usage.update(chunk.Message.Usage)
+				}
 			}
 		case "content_block_start":
 			if chunk.ContentBlock != nil && chunk.ContentBlock.Type == "tool_use" {
@@ -282,13 +286,8 @@ func (p *AnthropicProvider) streamBody(ctx context.Context, body io.Reader, even
 			}
 		case "message_delta":
 			if chunk.Usage != nil {
-				// GLM reports input_tokens=0 in message_start; the authoritative
-				// value arrives here. Prefer the larger of the two.
-				in := chunk.Usage.InputTokens
-				if in < inputTokens {
-					in = inputTokens
-				}
-				events <- Event{Type: "usage", InputTokens: in, OutputTokens: chunk.Usage.OutputTokens}
+				usage.update(chunk.Usage)
+				events <- Event{Type: "usage", Usage: usage.snapshot(modelName, requestID)}
 			}
 			if chunk.Delta != nil && chunk.Delta.StopReason == "tool_use" {
 				// Tool calls already flushed at content_block_stop.
@@ -309,6 +308,8 @@ func (p *AnthropicProvider) streamBody(ctx context.Context, body io.Reader, even
 				case "authentication_error":
 					class = ErrorAuth
 				case "rate_limit_error":
+					class = ErrorRateLimited
+				case "insufficient_quota", "quota_exhausted":
 					class = ErrorQuota
 				}
 			}

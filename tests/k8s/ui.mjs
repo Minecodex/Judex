@@ -28,7 +28,7 @@ try {
   const ns=JSON.parse(run('kubectl',['create','-f','-','-o','json'],JSON.stringify({apiVersion:'v1',kind:'Namespace',metadata:{name:namespace,labels:{'judex.dev/test-run':runId}}})));
   // kubectl input is passed through stdin, never mixed into shell command text.
   uid=ns.metadata.uid;owned=true;
-  if(gatewayImage||converterImage)run(process.execPath,['tests/k8s/load-images.mjs',namespace,runId,uid,image,...[gatewayImage,converterImage].filter(Boolean)]);
+  if(gatewayImage||converterImage||image.startsWith('judex/server:collaboration-'))run(process.execPath,['tests/k8s/load-images.mjs',namespace,runId,uid,image,...[gatewayImage,converterImage].filter(Boolean)]);
   const index=image.lastIndexOf(':');
   const values={environment:'development',image:{repository:image.slice(0,index),tag:image.slice(index+1),pullPolicy:'Never'},sandbox:{enabled:false},
     server:{mode:'all',allowedOrigins:[base],previewOrigin:`http://localhost:${port}`,materialProjection:{enabled:false},materialPreview:{enabled:!!converterImage,image:converterImage??'judex/material-converter:local-materials'}},

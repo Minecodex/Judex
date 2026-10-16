@@ -20,19 +20,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	agentcontext "github.com/kakj-go/Judex/internal/agent/context"
 	"github.com/kakj-go/Judex/internal/agent/runner"
 	"github.com/kakj-go/Judex/internal/agent/tools"
 	"github.com/kakj-go/Judex/internal/infrastructure/model"
-	"github.com/google/uuid"
 )
 
 func liveConfig(t *testing.T) (model.GatewayConfig, string) {
 	t.Helper()
 	cfg := model.GatewayConfig{
-		Protocol: os.Getenv("JUDEX_LIVE_PROTOCOL"),
-		BaseURL:  os.Getenv("JUDEX_LIVE_BASE_URL"),
-		APIKey:   os.Getenv("JUDEX_LIVE_API_KEY"),
+		Protocol:       os.Getenv("JUDEX_LIVE_PROTOCOL"),
+		BaseURL:        os.Getenv("JUDEX_LIVE_BASE_URL"),
+		APIKey:         os.Getenv("JUDEX_LIVE_API_KEY"),
+		RequestOptions: model.RequestOptions{ThinkingType: os.Getenv("JUDEX_LIVE_THINKING_TYPE"), ReasoningEffort: os.Getenv("JUDEX_LIVE_REASONING_EFFORT")},
 	}
 	name := os.Getenv("JUDEX_LIVE_MODEL")
 	if cfg.BaseURL == "" || cfg.APIKey == "" || name == "" {
@@ -167,23 +168,38 @@ func TestLiveDesignScenarioDisagreement(t *testing.T) {
 	t.Logf("design summary head: %s", firstN(outcome.Summary, 120))
 }
 
-// E03 预算熔断：真实 usage 计入预算，上限后停止（合法续开语义保留）。
+// E03：不足的 token 预算在请求前拦截；实际 usage 计入后不越过调用次数上限。
 func TestLiveBudgetEnforcement(t *testing.T) {
-	r, name := newLiveRunner(t, tools.Env{})
+	env := tools.Env{ReadMaterialContent: "预算验证材料：值为19。"}
+	r, name := newLiveRunner(t, env)
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 	outcome := r.Run(ctx, runner.RunRequest{
 		RunID: uuid.New(), ModelName: name,
 		Manifest: agentcontext.Build(agentcontext.Facts{NewMaterial: "测试预算熔断"}),
-		// 极小 token 预算：真实模型第一步 usage 即超。
+		// 当前预留契约不允许先消费再突破1 token；不能把零调用当真实usage。
 		Budget: runner.Budget{MaxRounds: 3, MaxModelAttempts: 10, MaxTotalTokens: 1, MaxWallClock: 100 * time.Second},
 	})
-	if outcome.State != "failed" || !strings.Contains(outcome.Summary, "预算") {
-		t.Fatalf("预算必须在真实 usage 后熔断: %+v", outcome)
+	budgetFailure := func(summary string) bool {
+		return strings.Contains(summary, "BUDGET_EXHAUSTED") || strings.Contains(summary, "预算") || strings.Contains(summary, "尝试次数耗尽")
 	}
-	if !outcome.UsageKnown {
-		t.Fatal("熔断前必须已获得真实 usage")
+	if outcome.State != "failed" || !budgetFailure(outcome.Summary) || outcome.ModelCalls != 0 {
+		t.Fatalf("insufficient token reservation must stop before provider: %+v", outcome)
 	}
+	available := false
+	for _, schema := range r.Registry.SchemasForAuthority("coordinator", false) {
+		if schema["name"] == "list_agent" {
+			available = true
+		}
+	}
+	if !available {
+		t.Fatal("live budget fixture must advertise its wired read-only tool before making a paid request")
+	}
+	live := r.Run(ctx, runner.RunRequest{RunID: uuid.New(), ModelName: name, PrincipalKind: "coordinator", Manifest: agentcontext.Build(agentcontext.Facts{WorkflowPrompt: "本轮为受控预算核验。协调者必须先调用已注册的list_agent读取实际身份清单；工具返回后才能总结，不能在工具调用前直接答复。", NewMaterial: "请核对项目身份清单。"}), Budget: runner.Budget{MaxRounds: 3, MaxModelAttempts: 1, MaxTotalTokens: 200000, MaxWallClock: 100 * time.Second}, Env: &env})
+	if live.State != "failed" || !budgetFailure(live.Summary) || live.ModelCalls != 1 || live.ToolCalls == 0 || !live.UsageKnown || live.TokensUsed <= 0 {
+		t.Fatalf("actual known usage must be charged and second model attempt blocked: %+v", live)
+	}
+	t.Logf("token preflight provider calls=%d; actual request calls=%d tools=%d knownTokens=%d", outcome.ModelCalls, live.ModelCalls, live.ToolCalls, live.TokensUsed)
 }
 
 // 取消传播：真实流式中途取消 → cancelled（不是 failed）。
@@ -197,7 +213,7 @@ func TestLiveCancellation(t *testing.T) {
 	outcome := r.Run(ctx, runner.RunRequest{
 		RunID: uuid.New(), ModelName: name,
 		Manifest: agentcontext.Build(agentcontext.Facts{NewMaterial: "写一篇 800 字的短文，主题：软件工程中的权衡"}),
-		Budget:  runner.DefaultBudget(),
+		Budget:   runner.DefaultBudget(),
 	})
 	if outcome.State != "cancelled" {
 		t.Fatalf("state=%s（应为 cancelled）summary=%s", outcome.State, outcome.Summary)
@@ -248,11 +264,11 @@ func TestLiveProviderContract(t *testing.T) {
 	if !finish {
 		t.Fatal("finish missing")
 	}
-	if usage == nil || usage.InputTokens <= 0 {
+	if usage == nil || !usage.Usage.Known() || *usage.Usage.InputTokens <= 0 {
 		t.Fatalf("usage=%+v（真实网关必须返回正数 usage）", usage)
 	}
 	t.Logf("provider contract: finish=%v tools=%d text=%q usage=%d/%d",
-		finish, len(toolsReady), firstN(text.String(), 40), usage.InputTokens, usage.OutputTokens)
+		finish, len(toolsReady), firstN(text.String(), 40), *usage.Usage.InputTokens, *usage.Usage.OutputTokens)
 }
 
 func firstN(s string, n int) string {

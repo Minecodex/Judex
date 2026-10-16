@@ -1,5 +1,34 @@
 # 流程（docs/plans/v1/02 §7、06 §3）
 paths:
+  /projects/{projectId}/workflows/{workflowId}/versions/{versionId}:
+    parameters:
+      - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'
+      - {name: workflowId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: versionId, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      operationId: getPublishedWorkflowVersion
+      summary: 读取固定已发布流程正文与哈希
+      tags: [workflows]
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: 指定不可变已发布版本；isCurrent 标明是否仍为当前发布版本。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    $ref: '../components/projects.yaml#/components/schemas/PublishedWorkflowContent'
+                  meta:
+                    $ref: '../components/common.yaml#/components/schemas/RequestMeta'
+        '401':
+          $ref: '../components/common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: '../components/common.yaml#/components/responses/NotFound'
   /projects/{projectId}/workflows:
     parameters:
       - $ref: '../components/common.yaml#/components/parameters/ProjectIdParam'

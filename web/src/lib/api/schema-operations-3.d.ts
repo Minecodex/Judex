@@ -2,6 +2,210 @@
 import type { paths, components, operations, SchemaComponentsSchemas } from "./schema";
 export interface SchemaOperations3 {
 
+    publishWorkflow: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKeyParam"];
+            };
+            path: {
+                projectId: components["parameters"]["ProjectIdParam"];
+                workflowId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishWorkflowRequest"];
+            };
+        };
+        responses: {
+            /** @description 已发布的版本。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["WorkflowVersion"];
+                        meta: components["schemas"]["CommandMeta"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+
+    updatePlanDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKeyParam"];
+            };
+            path: {
+                projectId: components["parameters"]["ProjectIdParam"];
+                planId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkDraftUpdate"];
+            };
+        };
+        responses: {
+            /** @description 成功。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["Plan"];
+                        meta: components["schemas"]["CommandMeta"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+
+    getPlanDiscardReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: components["parameters"]["ProjectIdParam"];
+                planId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["DraftDiscardReview"];
+                        meta: components["schemas"]["CommandMeta"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+
+    updateTaskDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKeyParam"];
+            };
+            path: {
+                projectId: components["parameters"]["ProjectIdParam"];
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkDraftUpdate"];
+            };
+        };
+        responses: {
+            /** @description 成功。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["Task"];
+                        meta: components["schemas"]["CommandMeta"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+
+    getTaskDiscardReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: components["parameters"]["ProjectIdParam"];
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["DraftDiscardReview"];
+                        meta: components["schemas"]["CommandMeta"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+
+    getTaskExecutionReview: {
+        parameters: {
+            query?: {
+                operation?: "skip" | "restore";
+            };
+            header?: never;
+            path: {
+                projectId: components["parameters"]["ProjectIdParam"];
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ExecutionReview"];
+                        meta: components["schemas"]["CommandMeta"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+
     skipTask: {
         parameters: {
             query?: never;

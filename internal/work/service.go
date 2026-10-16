@@ -21,6 +21,7 @@ import (
 	"github.com/kakj-go/Judex/internal/collaboration"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
+	"github.com/kakj-go/Judex/internal/workflow"
 )
 
 // Plan is the API projection (06 §5).
@@ -57,28 +58,29 @@ type TaskStats struct {
 
 // Task is the API projection (06 §5).
 type Task struct {
-	Capabilities       WorkCapabilities    `json:"capabilities"`
-	DiscardedAt        *time.Time          `json:"discardedAt"`
-	ExecutionException *ExecutionException `json:"executionException"`
-	MainTopicID        *uuid.UUID          `json:"mainTopicId"`
-	BugDetails         *BugDetails         `json:"bugDetails,omitempty"`
-	ID                 uuid.UUID           `json:"id"`
-	PlanID             *uuid.UUID          `json:"planId"`
-	ParentTaskID       *uuid.UUID          `json:"parentTaskId"`
-	Title              string              `json:"title"`
-	ExpectedOutput     string              `json:"expectedOutput"`
-	AcceptanceCriteria string              `json:"acceptanceCriteria"`
-	Kind               string              `json:"kind"`
-	Status             string              `json:"status"`
-	Participants       []Participant       `json:"participants"`
-	ReviewerIdentityID *uuid.UUID          `json:"reviewerIdentityId"`
-	WorkflowID         *uuid.UUID          `json:"workflowId"`
-	NodeID             *string             `json:"nodeId"`
-	Requirements       []Requirement       `json:"requirements"`
-	LatestReportID     *uuid.UUID          `json:"latestReportId"`
-	LatestAcceptanceID *uuid.UUID          `json:"latestAcceptanceId"`
-	Version            int64               `json:"version"`
-	CreatedAt          time.Time           `json:"createdAt"`
+	WorkflowCandidates []workflow.Candidate `json:"workflowCandidates,omitempty"`
+	Capabilities       WorkCapabilities     `json:"capabilities"`
+	DiscardedAt        *time.Time           `json:"discardedAt"`
+	ExecutionException *ExecutionException  `json:"executionException"`
+	MainTopicID        *uuid.UUID           `json:"mainTopicId"`
+	BugDetails         *BugDetails          `json:"bugDetails,omitempty"`
+	ID                 uuid.UUID            `json:"id"`
+	PlanID             *uuid.UUID           `json:"planId"`
+	ParentTaskID       *uuid.UUID           `json:"parentTaskId"`
+	Title              string               `json:"title"`
+	ExpectedOutput     string               `json:"expectedOutput"`
+	AcceptanceCriteria string               `json:"acceptanceCriteria"`
+	Kind               string               `json:"kind"`
+	Status             string               `json:"status"`
+	Participants       []Participant        `json:"participants"`
+	ReviewerIdentityID *uuid.UUID           `json:"reviewerIdentityId"`
+	WorkflowID         *uuid.UUID           `json:"workflowId"`
+	NodeID             *string              `json:"nodeId"`
+	Requirements       []Requirement        `json:"requirements"`
+	LatestReportID     *uuid.UUID           `json:"latestReportId"`
+	LatestAcceptanceID *uuid.UUID           `json:"latestAcceptanceId"`
+	Version            int64                `json:"version"`
+	CreatedAt          time.Time            `json:"createdAt"`
 }
 
 type Participant struct {

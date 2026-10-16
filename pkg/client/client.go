@@ -42,6 +42,8 @@ func (e *CLIError) ExitCode() int {
 		return 6
 	case e.Status == 0:
 		return 7 // network
+	case e.Status == 400:
+		return 2 // invalid command/request parameters
 	case e.Status == 401 || e.Code == "UNAUTHENTICATED" || e.Code == "GRANT_REVOKED":
 		return 3
 	case e.Status == 403 || e.Code == "FORBIDDEN":

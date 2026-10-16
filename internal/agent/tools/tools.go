@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/getkin/kin-openapi/openapi3"
+	"sort"
 	"strings"
 )
 
@@ -34,18 +35,22 @@ type Result struct {
 
 // Tool is one registered capability.
 type Tool struct {
-	Name          string
-	SchemaVersion int
-	Description   string
-	InputSchema   map[string]any
-	Effect        EffectClass
-	AllowedFor    func(principalKind string) bool
-	Execute       func(ctx context.Context, args map[string]any, env Env) (Result, error)
+	RequiresManager bool
+	Name            string
+	SchemaVersion   int
+	Description     string
+	InputSchema     map[string]any
+	Effect          EffectClass
+	AllowedFor      func(principalKind string) bool
+	Execute         func(ctx context.Context, args map[string]any, env Env) (Result, error)
 }
 
 // Env carries the per-run execution context tools may use; it deliberately
 // exposes NO credentials and NO write access to formal state.
 type Env struct {
+	ReadWorkflow       func(context.Context, string, string) (map[string]any, error)
+	CanManage          bool
+	DraftWorkflow      func(context.Context, map[string]any) (map[string]any, error)
 	RecordTaskAnalysis func(context.Context, string, map[string]any) (map[string]any, error)
 	QueryWorkPage      func(context.Context, string, map[string]any) (map[string]any, error)
 	Publish            func(context.Context, string, map[string]any, []byte) (map[string]any, error)
@@ -64,6 +69,7 @@ type Env struct {
 	ListAgents   func(ctx context.Context, projectID string) ([]map[string]any, error)
 	QueryWork    func(ctx context.Context, projectID string, objectType string, cursor string, limit int) ([]map[string]any, error)
 	ReadMaterial func(ctx context.Context, projectID, versionID string) (map[string]any, error)
+	MaterialInfo func(ctx context.Context, projectID, versionID string) (map[string]any, error)
 	ProposeDraft func(ctx context.Context, projectID string, draft map[string]any) (string, error)
 }
 
@@ -88,9 +94,34 @@ func (r *Registry) Register(tool Tool) {
 
 // Schemas returns the model-facing tool list.
 func (r *Registry) Schemas() []map[string]any {
+	return r.schemas("", true)
+}
+
+// SchemasFor uses the same authority predicate as Execute. The caller supplies
+// the server-verified identity kind, never a model-provided role.
+func (r *Registry) SchemasFor(principalKind string) []map[string]any {
+	return r.schemas(principalKind, false)
+}
+
+func (r *Registry) SchemasForAuthority(principalKind string, canManage bool) []map[string]any {
+	return r.schemas(principalKind, canManage)
+}
+
+func (r *Registry) schemas(principalKind string, canManage bool) []map[string]any {
 	var out []map[string]any
+	names := make([]string, 0, len(r.tools))
 	for name := range r.tools {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
 		tool := r.tools[name]
+		if tool.RequiresManager && !canManage {
+			continue
+		}
+		if principalKind != "" && tool.AllowedFor != nil && !tool.AllowedFor(principalKind) {
+			continue
+		}
 		out = append(out, map[string]any{
 			"name": tool.Name, "schema_version": tool.SchemaVersion,
 			"description": tool.Description, "input_schema": tool.InputSchema,
@@ -100,6 +131,8 @@ func (r *Registry) Schemas() []map[string]any {
 	return out
 }
 
+func CoordinatorOnly(principalKind string) bool { return principalKind == "coordinator" }
+
 // Execute validates principal + schema presence and runs the tool.
 func (r *Registry) Execute(ctx context.Context, name string, principalKind string, args map[string]any, env Env) (Result, error) {
 	tool, ok := r.tools[name]
@@ -108,6 +141,9 @@ func (r *Registry) Execute(ctx context.Context, name string, principalKind strin
 	}
 	if tool.AllowedFor != nil && !tool.AllowedFor(principalKind) {
 		return Result{}, fmt.Errorf("tool %q 不允许该调用方", name)
+	}
+	if tool.RequiresManager && !env.CanManage {
+		return Result{}, fmt.Errorf("tool %q requires manager authority", name)
 	}
 	raw, err := json.Marshal(tool.InputSchema)
 	if err != nil {
@@ -124,8 +160,17 @@ func (r *Registry) Execute(ctx context.Context, name string, principalKind strin
 }
 
 func objectSchema(required []string, props map[string]any) map[string]any {
-	return map[string]any{"type": "object", "required": required, "properties": props,
+	// JSON Schema requires properties to be an object, including zero-argument
+	// tools. A nil map/slice serializes as null and is rejected by strict gateways.
+	if props == nil {
+		props = map[string]any{}
+	}
+	schema := map[string]any{"type": "object", "properties": props,
 		"additionalProperties": false}
+	if len(required) > 0 {
+		schema["required"] = required
+	}
+	return schema
 }
 
 func str(args map[string]any, key string) string {
@@ -142,8 +187,11 @@ func intVal(args map[string]any, key string, fallback int) int {
 
 // RegisterDefaults installs the full V1 tool set (05 §6 table).
 func RegisterDefaults(r *Registry) {
+	registerWorkflowRead(r)
+	registerWorkflowDraft(r)
 	registerContextTools(r)
 	registerFileTools(r)
+	registerMaterialAnalysis(r)
 	r.Register(Tool{
 		Name:        "read",
 		Description: "读取沙箱内文件（只读）",
@@ -163,7 +211,12 @@ func RegisterDefaults(r *Registry) {
 				return Result{}, fmt.Errorf("读取失败 exit=%d", exit)
 			}
 			hash := sha256.Sum256(stdout)
-			return Result{Data: map[string]any{"content": string(stdout), "sha256": hex.EncodeToString(hash[:]), "size": len(stdout)}}, nil
+			text, binary := commandText(stdout)
+			data := map[string]any{"content": text, "sha256": hex.EncodeToString(hash[:]), "size": len(stdout)}
+			if binary != nil {
+				data["binary"] = binary
+			}
+			return Result{Data: data}, nil
 		},
 	})
 	r.Register(Tool{
@@ -182,7 +235,15 @@ func RegisterDefaults(r *Registry) {
 			if err != nil {
 				return Result{Data: map[string]any{"unknown": unknown}}, err
 			}
-			data := map[string]any{"exitCode": exit, "stdout": string(stdout), "stderr": string(stderr)}
+			outText, outBinary := commandText(stdout)
+			errText, errBinary := commandText(stderr)
+			data := map[string]any{"exitCode": exit, "stdout": outText, "stderr": errText}
+			if outBinary != nil {
+				data["stdoutBinary"] = outBinary
+			}
+			if errBinary != nil {
+				data["stderrBinary"] = errBinary
+			}
 			if unknown {
 				data["unknown"] = true
 			}
@@ -191,7 +252,7 @@ func RegisterDefaults(r *Registry) {
 	})
 	r.Register(Tool{
 		Name:        "list_agent",
-		Description: "列出本项目可发现身份与公开职责（无个人提示词）",
+		Description: "列出当前范围可委派的在任岗位身份与公开职责（无个人提示词）。任务范围与 call_agent 使用相同参与人/验收人/当前节点授权；项目范围列出项目在任岗位。仅这些 identityId 可用于委派，同岗位多人仍分别列出。",
 		InputSchema: objectSchema(nil, nil),
 		Effect:      EffectRead,
 		Execute: func(ctx context.Context, args map[string]any, env Env) (Result, error) {
@@ -249,11 +310,18 @@ func RegisterDefaults(r *Registry) {
 		},
 	})
 	r.Register(Tool{
-		Name:        "propose_changes",
-		Description: "创建工作变更草稿（不提交人工投票、不验收）",
+		Name:          "propose_changes",
+		SchemaVersion: 2,
+		Description:   "创建工作安排或工作变更草稿，不提交投票或验收。kind 可选 work_arrangement/work_change，省略保留 work_arrangement；修正现有工作使用 work_change。changes 每项包含 operation、targetType(plan/task)、fields；修改既有对象还须 targetId、expectedVersion。create_plan 使用 clientRef 和 fields.title/goal/acceptanceCriteria/ownerIdentityId/workflowId；create_task 使用 fields.title/expectedOutput/acceptanceCriteria/participantIdentityIds/reviewerIdentityId/workflowId/nodeId。任务归入计划必须显式 fields.planId（既有计划 UUID 或本次计划 clientRef）；顶层 dependsOn 仅是变更创建顺序，不能代替 owning plan 或运行依赖。运行前置条件须 fields.requirements（kind/phase/targetId/hard/label），cancel_task 必须 fields.reason。审批人及贡献者用实际 identityId，不能用职位模板 ID。验收标准是字符串。只能建议已发布流程绑定。",
 		InputSchema: objectSchema([]string{"changes"}, map[string]any{
-			"changes": map[string]any{"type": "array"},
-			"reason":  map[string]any{"type": "string"},
+			"kind": map[string]any{"type": "string", "enum": []string{"work_arrangement", "work_change"}},
+			"changes": map[string]any{"type": "array", "minItems": 1, "maxItems": 100, "items": objectSchema([]string{"operation", "targetType"}, map[string]any{
+				"operation": map[string]any{"type": "string"}, "targetType": map[string]any{"type": "string", "enum": []string{"plan", "task"}},
+				"targetId": map[string]any{"type": "string", "format": "uuid"}, "clientRef": map[string]any{"type": "string"},
+				"expectedVersion": map[string]any{"type": "integer", "minimum": 1}, "fields": map[string]any{"type": "object", "additionalProperties": true},
+				"dependsOn": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+			})},
+			"reason": map[string]any{"type": "string"},
 		}),
 		Effect: EffectDraft,
 		Execute: func(ctx context.Context, args map[string]any, env Env) (Result, error) {
@@ -264,7 +332,11 @@ func RegisterDefaults(r *Registry) {
 			if err != nil {
 				return Result{}, err
 			}
-			return Result{Data: map[string]any{"proposalId": id, "state": "draft"}}, nil
+			kind, _ := args["kind"].(string)
+			if kind == "" {
+				kind = "work_arrangement"
+			}
+			return Result{Data: map[string]any{"proposalId": id, "state": "draft", "kind": kind}}, nil
 		},
 	})
 }

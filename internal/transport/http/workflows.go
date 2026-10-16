@@ -24,10 +24,35 @@ func (h *WorkflowHandlers) Register(spec *SpecRouter) {
 	spec.Register("listWorkflows", withAuth(h.list))
 	spec.Register("createWorkflow", withAuth(h.create))
 	spec.Register("listWorkflowVersions", withAuth(h.versions))
+	spec.Register("getPublishedWorkflowVersion", withAuth(h.publishedVersion))
 	spec.Register("updateWorkflowDraft", withAuth(h.updateDraft))
 	spec.Register("publishWorkflow", withAuth(h.publish))
 	spec.Register("getWorkflowPresetCatalog", withAuth(h.presets))
 	spec.Register("importWorkflowPresets", withAuth(h.importPresets))
+}
+
+func (h *WorkflowHandlers) publishedVersion(c *gin.Context) {
+	projectID, err := projectParam(c)
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("projectId", "invalid"))
+		return
+	}
+	definition, err := uuid.Parse(c.Param("workflowId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("workflowId", "invalid"))
+		return
+	}
+	version, err := uuid.Parse(c.Param("versionId"))
+	if err != nil {
+		respond{}.error(c, apierrors.Fields("versionId", "invalid"))
+		return
+	}
+	out, err := h.Workflows.ReadPublished(c.Request.Context(), principalFrom(c).UserID, projectID, definition, version)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, out)
 }
 
 func (h *WorkflowHandlers) presets(c *gin.Context) {

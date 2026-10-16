@@ -4,6 +4,12 @@
   background: var(--bg);
   color: var(--ink);
 }
+.judex-position-bindings,
+.judex-position-binding {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
 .judex-next-app button,
 .judex-next-app input,
 .judex-next-app select,

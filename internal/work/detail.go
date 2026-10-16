@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/google/uuid"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
+	"github.com/kakj-go/Judex/internal/workflow"
 )
 
 func (s *Service) GetTask(ctx context.Context, user, project, task uuid.UUID) (Task, error) {
@@ -40,6 +41,9 @@ func (s *Service) GetTask(ctx context.Context, user, project, task uuid.UUID) (T
 		all := []Task{out}
 		err = s.decorateTasks(ctx, user, project, all)
 		out = all[0]
+	}
+	if err == nil {
+		out.WorkflowCandidates, err = workflow.PublishedCandidates(ctx, s.pool, project, &task, uuid.Nil)
 	}
 	return out, err
 }

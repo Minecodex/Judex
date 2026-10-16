@@ -6,7 +6,7 @@ Open the web app:
 
 GET /api/v1/system reports configured capabilities. Readiness checks HTTP and PostgreSQL.
 Model and sandbox execution require the corresponding gateway and OpenSandbox configuration.
-See docs/plans/v1/REMEDIATION.md for verified behavior and remaining acceptance gates.
+See docs/plans/v1/records/REMEDIATION.md for verified behavior and remaining acceptance gates.
 
 PostgreSQL/S3 PVCs and generated Secrets are retained on uninstall.
 The {{ .Release.Namespace }}-sandboxes namespace is retained as well.

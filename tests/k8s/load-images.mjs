@@ -15,7 +15,7 @@ const name="test-image-importer",labels={"judex.dev/test-run":runId};
 run("kubectl",["apply","-f","-"],JSON.stringify({apiVersion:"v1",kind:"Pod",metadata:{name,namespace,labels},spec:{nodeName:"desktop-control-plane",automountServiceAccountToken:false,restartPolicy:"Never",containers:[{name:"importer",image:"debian:13-slim",imagePullPolicy:"IfNotPresent",command:["sleep","600"],securityContext:{runAsUser:0,allowPrivilegeEscalation:false,capabilities:{drop:["ALL"]}},volumeMounts:[{name:"ctr",mountPath:"/host/ctr",readOnly:true},{name:"socket",mountPath:"/run/containerd/containerd.sock"}]}],volumes:[{name:"ctr",hostPath:{path:"/usr/local/bin/ctr",type:"File"}},{name:"socket",hostPath:{path:"/run/containerd/containerd.sock",type:"Socket"}}]}}));
 kube("-n",namespace,"wait","pod/"+name,"--for=condition=Ready","--timeout=60s");
 for(const image of images){
- if(!/^(judex\/server|judex\/test-gateway|judex\/material-converter):collaboration-[\w.-]+$/.test(image))throw new Error("Only this collaboration run's images may be imported");
+ if(!/^(judex\/server|judex\/test-gateway|judex\/material-converter|judex\/analysis-sandbox):collaboration-[\w.-]+$/.test(image))throw new Error("Only this collaboration run's images may be imported");
  ownership();
  const inspected=JSON.parse(run("docker",["image","inspect",image]))[0];
  if(inspected.Os!=="linux"||inspected.Architecture!=="amd64")throw new Error("Test image platform mismatch");

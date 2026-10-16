@@ -12,6 +12,10 @@ import (
 )
 
 func (e *Executor) queryWorkPage(ctx context.Context, project string, args map[string]any) (map[string]any, error) {
+	return e.queryWorkPageForPlan(ctx, project, args, nil)
+}
+
+func (e *Executor) queryWorkPageForPlan(ctx context.Context, project string, args map[string]any, plan *uuid.UUID) (map[string]any, error) {
 	kind, _ := args["objectType"].(string)
 	table := map[string]string{"task": "tasks", "plan": "plans", "proposal": "proposals"}[kind]
 	if table == "" {
@@ -32,7 +36,11 @@ func (e *Executor) queryWorkPage(ctx context.Context, project string, args map[s
 	if n, ok := args["limit"].(float64); ok {
 		limit = int(n)
 	}
-	ctx, err := paging.Parse(ctx, "tool:query_work:"+project+":"+kind, url.Values{"cursor": {cursor}, "limit": {strconv.Itoa(limit)}, "query": {query}, "objectId": {rawID}})
+	scopeKey := "project"
+	if plan != nil {
+		scopeKey = plan.String()
+	}
+	ctx, err := paging.Parse(ctx, "tool:query_work:"+project+":"+kind+":"+scopeKey, url.Values{"cursor": {cursor}, "limit": {strconv.Itoa(limit)}, "query": {query}, "objectId": {rawID}})
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +61,19 @@ func (e *Executor) queryWorkPage(ctx context.Context, project string, args map[s
 	if kind == "task" || kind == "plan" {
 		sql = `SELECT jsonb_build_object(` + fields + `) /*keys*/ FROM ` + table + ` t WHERE t.project_id=$1 AND ($2::uuid IS NULL OR t.id=$2) AND (t.discarded_at IS NULL OR $2::uuid IS NOT NULL) AND ($3='' OR strpos(lower(` + label + `),lower($3))>0) /*page*/`
 	}
-	rows, err := paging.Query(ctx, e.Pool, sql, "t.created_at", "t.id", project, id, query)
+	if plan != nil && kind != "proposal" {
+		filter := "t.id=$4"
+		if kind == "task" {
+			filter = "(t.plan_id=$4 OR EXISTS(SELECT 1 FROM plan_task_references r WHERE r.project_id=t.project_id AND r.plan_id=$4 AND r.task_id=t.id))"
+			fields += `,'scopeRole',CASE WHEN t.plan_id=$4 THEN 'owned' ELSE 'reference' END`
+		}
+		sql = `SELECT jsonb_build_object(` + fields + `) /*keys*/ FROM ` + table + ` t WHERE t.project_id=$1 AND ($2::uuid IS NULL OR t.id=$2) AND (t.discarded_at IS NULL OR $2::uuid IS NOT NULL) AND ($3='' OR strpos(lower(` + label + `),lower($3))>0) AND ` + filter + ` /*page*/`
+	}
+	queryArgs := []any{project, id, query}
+	if plan != nil && kind != "proposal" {
+		queryArgs = append(queryArgs, plan)
+	}
+	rows, err := paging.Query(ctx, e.Pool, sql, "t.created_at", "t.id", queryArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +106,11 @@ func (e *Executor) queryWorkPage(ctx context.Context, project string, args map[s
 			}
 			item["effectiveRequirements"] = facts.Requirements
 			item["blockers"] = facts.Blockers
+			reports, err := loadReportFacts(ctx, e.Pool, uuid.MustParse(project), task)
+			if err != nil {
+				return nil, err
+			}
+			item["reportSources"] = reports
 		}
 	}
 	return map[string]any{"items": items, "nextCursor": paging.Next(ctx)}, nil

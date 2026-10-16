@@ -8,7 +8,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	agentcontext "github.com/kakj-go/Judex/internal/agent/context"
 	"github.com/kakj-go/Judex/internal/agent/runner"
+	"github.com/kakj-go/Judex/internal/collaboration"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
+	"github.com/kakj-go/Judex/internal/workflow"
 	"strings"
 )
 
@@ -26,8 +28,9 @@ func (e *Executor) prepareCall(j *journal, topic uuid.UUID, newMaterial string) 
 		var identity uuid.UUID
 		var binding *int64
 		var kind string
-		err = tx.QueryRow(ctx, `SELECT i.id,r.binding_version,i.kind FROM agent_runs r JOIN agent_identities i ON i.id=r.identity_id JOIN projects p ON p.id=r.project_id WHERE r.id=$1 AND r.project_id=$2 AND r.state='running' AND r.lease_token=$3 AND i.status='active' AND p.status='active' AND (i.kind='coordinator' OR i.current_binding_version=r.binding_version)
- AND (r.requested_by IS NULL OR EXISTS(SELECT 1 FROM project_members m JOIN users u ON u.id=m.user_id WHERE m.project_id=r.project_id AND m.user_id=r.requested_by AND m.state='active' AND u.status='active'))`, j.run, j.project, j.lease).Scan(&identity, &binding, &kind)
+		var canManage bool
+		err = tx.QueryRow(ctx, `SELECT i.id,r.binding_version,i.kind,EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=r.project_id AND m.user_id=r.requested_by AND m.state='active' AND m.role IN ('owner','manager')) FROM agent_runs r JOIN agent_identities i ON i.id=r.identity_id JOIN projects p ON p.id=r.project_id WHERE r.id=$1 AND r.project_id=$2 AND r.state='running' AND r.lease_token=$3 AND i.status='active' AND p.status='active' AND (i.kind='coordinator' OR i.current_binding_version=r.binding_version)
+ AND (r.requested_by IS NULL OR EXISTS(SELECT 1 FROM project_members m JOIN users u ON u.id=m.user_id WHERE m.project_id=r.project_id AND m.user_id=r.requested_by AND m.state='active' AND u.status='active'))`, j.run, j.project, j.lease).Scan(&identity, &binding, &kind, &canManage)
 		if err != nil {
 			return out, apierrors.New(apierrors.Forbidden, "run authority or binding changed")
 		}
@@ -49,33 +52,43 @@ func (e *Executor) prepareCall(j *journal, topic uuid.UUID, newMaterial string) 
 		if err != nil {
 			return out, err
 		}
-		if scopeTask == nil {
+		scope, err := collaboration.ReadAnalysisScope(ctx, tx, j.project, j.batch)
+		if err != nil {
+			return out, err
+		}
+		if scopeTask == nil && scope.PlanID == nil {
 			facts.WorkFacts = e.gatherFacts(ctx, j.project, topic).WorkFacts
 		}
 		var rows pgx.Rows
 		versions := map[string]string{}
-		rows, err = tx.Query(ctx, `SELECT d.id,v.id,v.instructions,v.nodes_json,v.hard_rules_json,v.approval_policies_json FROM workflow_definitions d JOIN workflow_versions v ON v.id=d.published_version_id WHERE d.project_id=$1 AND ($2::uuid IS NULL OR d.id=(SELECT workflow_id FROM tasks WHERE id=$2 AND project_id=$1)) ORDER BY d.id`, j.project, scopeTask)
+		candidateIdentity := identity
+		if kind == "coordinator" && scope.IdentityID != nil {
+			candidateIdentity = *scope.IdentityID
+		}
+		candidates, err := workflow.PublishedCandidatesForScope(ctx, tx, j.project, scopeTask, scope.PlanID, candidateIdentity)
 		if err != nil {
 			return out, err
 		}
 		workflows := []string{}
-		for rows.Next() {
-			var id, version uuid.UUID
-			var instructions string
-			var nodes, rules, policies []byte
-			if err = rows.Scan(&id, &version, &instructions, &nodes, &rules, &policies); err != nil {
-				rows.Close()
+		for _, candidate := range candidates {
+			id := candidate.WorkflowID
+			version := candidate.VersionID
+			versions[id.String()] = version.String()
+			raw, err := json.Marshal(candidate)
+			if err != nil {
 				return out, err
 			}
-			versions[id.String()] = version.String()
-			workflows = append(workflows, fmt.Sprintf("workflow=%s version=%s\n%s\nnodes=%s rules=%s policies=%s", id, version, instructions, nodes, rules, policies))
+			workflows = append(workflows, string(raw))
 		}
-		rows.Close()
-		if err = rows.Err(); err != nil {
-			return out, err
+		facts.WorkflowPrompt = "已发布流程参考；formalTaskBinding 是当前任务的正式绑定，不得覆盖。currentNodeCandidates：有任务时只列已绑定节点；仅计划时限于该计划当前工作；仅职位或计划加职位时还须符合该职位 allowedPositionIds；无任务/计划/职位的自由提交应为空，参考路径放 suggestedNextNodes。历史事实放 relatedEvidenceNodes。引用 workflowId/versionId/nodeId 和公开 reason；冲突或含糊时 needsClarification=true 并完整保留异议，不能以澄清标记绕过范围校验。候选和建议都不推进正式节点。\n" + strings.Join(workflows, "\n")
+		if kind == "coordinator" {
+			opinions, err := loadPublicOpinions(ctx, tx, j.project, j.batch, versions)
+			if err != nil {
+				return out, err
+			}
+			facts.WorkFacts = append(facts.WorkFacts, opinions)
 		}
-		facts.WorkflowPrompt = strings.Join(workflows, "\n")
-		references, err := scopedObjects(ctx, tx, j.project, topic, scopeTask)
+		references, err := scopedObjects(ctx, tx, j.project, topic, scopeTask, scope.PlanID)
 		if err != nil {
 			return out, err
 		}
@@ -137,6 +150,7 @@ func (e *Executor) prepareCall(j *journal, topic uuid.UUID, newMaterial string) 
 		}
 		manifest := agentcontext.Build(facts)
 		metadata := map[string]any{"schemaVersion": 1, "identityId": identity, "bindingVersion": binding, "positionVersion": facts.PositionVersion, "preferenceRevision": facts.PreferenceRevision, "preferenceHash": manifest.PreferenceHash, "workflowVersions": versions, "coveredSeq": facts.CoveredSeq, "model": name, "maxInputTokens": maxIn, "maxOutputTokens": maxOut, "layers": manifest.SharedLayers()}
+		metadata["analysisScope"] = scope
 		raw, err := json.Marshal(metadata)
 		if err != nil {
 			return out, err
@@ -149,6 +163,6 @@ func (e *Executor) prepareCall(j *journal, topic uuid.UUID, newMaterial string) 
 		}
 		j.coveredSeq = facts.CoveredSeq
 		j.contextMetadata = metadata
-		return runner.CallContext{Manifest: manifest, Provider: provider, ModelName: name, MaxInputTokens: maxIn, MaxOutputTokens: maxOut}, nil
+		return runner.CallContext{CanManage: canManage, PrincipalKind: kind, Manifest: manifest, Provider: provider, ModelName: name, MaxInputTokens: maxIn, MaxOutputTokens: maxOut}, nil
 	}
 }

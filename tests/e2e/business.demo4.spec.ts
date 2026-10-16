@@ -26,7 +26,8 @@ test('D4-B01 real draft revision, responsibility approval, skip, restore and acc
    const review=await command(a,'get',root+`/tasks/${task.id}/acceptance-review`);await command(a,'post',root+`/tasks/${task.id}/acceptances`,{reviewId:review.reviewId,reviewHash:review.reviewHash,expectedVersion:review.targetVersion,decision:'accept'});
   }
   const planReview=await command(a,'get',root+`/plans/${plan.id}/acceptance-review`);await command(a,'post',root+`/plans/${plan.id}/acceptances`,{reviewId:planReview.reviewId,reviewHash:planReview.reviewHash,expectedVersion:planReview.targetVersion,decision:'accept'});expect((await command(a,'get',root+'/plans/'+plan.id)).status).toBe('accepted');
-  const history=await command(a,'get',root+`/tasks/${first.id}/activity`);expect(history.items.filter((r:any)=>r.kind==='decision')).toHaveLength(3);expect(history.items.filter((r:any)=>r.kind==='delivery')).toHaveLength(2);
+  const history=await command(a,'get',root+`/tasks/${first.id}/activity`);expect(history.items.filter((r:any)=>r.kind==='decision')).toHaveLength(4);expect(history.items.filter((r:any)=>r.kind==='delivery')).toHaveLength(2);
+  const feedback=(await command(a,'get',root+`/tasks/${first.id}/acceptances`)).items;expect(feedback.filter((r:any)=>r.decision==='accept')).toHaveLength(1);expect(feedback.find((r:any)=>r.decision==='accept').acceptanceId).toBe((await command(a,'get',root+'/tasks/'+first.id)).latestAcceptanceId);
   const dir=process.env.JUDEX_E2E_ARTIFACT??'.cache/demo4-implementation/business';fs.mkdirSync(dir,{recursive:true});await a.goto(`/projects/${project.id}/plans/${plan.id}/route`);await a.screenshot({path:dir+'/demo4-business-route.png',fullPage:true,animations:'disabled'});
  }finally{await f.ca.close();await f.cb.close();}
 });

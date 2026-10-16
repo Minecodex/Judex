@@ -100,8 +100,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Pull isolated storage images
         run: |
-          docker pull postgres:17-alpine
-          docker pull chrislusf/seaweedfs:4.47
+          npm run test:ci
+          node scripts/ci/pull-images.mjs postgres:17-alpine chrislusf/seaweedfs:4.47
       - run: node tests/e2e/business.setup.mjs
       - name: Upload business failure evidence
         if: failure()

@@ -66,6 +66,6 @@ test("desktop light/dark and Chinese/English layouts, modal bounds, panel and dr
 });
 test("generated HTML opens directly offline without external assets",async({page})=>{
  const external:string[]=[];page.on("request",request=>{if(/^https?:/.test(request.url()))external.push(request.url());});
- await page.goto(pathToFileURL(resolve("demo3.html")).href);await expect(page.locator(".judex-mp-library-grid .judex-mp-file-card")).toHaveCount(8);
+ await page.goto(pathToFileURL(resolve("docs/plans/materials/demo3.html")).href);await expect(page.locator(".judex-mp-library-grid .judex-mp-file-card")).toHaveCount(8);
  await page.locator('[data-file-id="architecture"] .judex-mp-cover-button').click();await expect(page.getByRole("dialog")).toBeVisible();await expect(page.locator(".judex-mp-reader-canvas svg")).toBeVisible();expect(external).toEqual([]);
 });

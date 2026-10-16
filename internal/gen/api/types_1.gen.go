@@ -4,6 +4,91 @@ package apigen
 import "time"
 import openapi_types "github.com/oapi-codegen/runtime/types"
 
+// Valid indicates whether the value is a known member of the SubmissionRequestDiscussionIntent enum.
+func (e SubmissionRequestDiscussionIntent) Valid() bool {
+	switch e {
+	case SubmissionRequestDiscussionIntentAuto:
+		return true
+	case SubmissionRequestDiscussionIntentQuestion:
+		return true
+	case SubmissionRequestDiscussionIntentReply:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubmissionRequestPurpose.
+const (
+	SubmissionRequestPurposeDelivery SubmissionRequestPurpose = "delivery"
+	SubmissionRequestPurposeMaterial SubmissionRequestPurpose = "material"
+	SubmissionRequestPurposeMessage  SubmissionRequestPurpose = "message"
+	SubmissionRequestPurposeProgress SubmissionRequestPurpose = "progress"
+)
+
+// Valid indicates whether the value is a known member of the SubmissionRequestPurpose enum.
+func (e SubmissionRequestPurpose) Valid() bool {
+	switch e {
+	case SubmissionRequestPurposeDelivery:
+		return true
+	case SubmissionRequestPurposeMaterial:
+		return true
+	case SubmissionRequestPurposeMessage:
+		return true
+	case SubmissionRequestPurposeProgress:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TaskBlockersPhase.
+const (
+	TaskBlockersPhaseAccept TaskBlockersPhase = "accept"
+	TaskBlockersPhaseStart  TaskBlockersPhase = "start"
+)
+
+// Valid indicates whether the value is a known member of the TaskBlockersPhase enum.
+func (e TaskBlockersPhase) Valid() bool {
+	switch e {
+	case TaskBlockersPhaseAccept:
+		return true
+	case TaskBlockersPhaseStart:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TaskKind.
+const (
+	TaskKindBug  TaskKind = "bug"
+	TaskKindTask TaskKind = "task"
+)
+
+// Valid indicates whether the value is a known member of the TaskKind enum.
+func (e TaskKind) Valid() bool {
+	switch e {
+	case TaskKindBug:
+		return true
+	case TaskKindTask:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TaskStatus.
+const (
+	TaskStatusAccepted  TaskStatus = "accepted"
+	TaskStatusCancelled TaskStatus = "cancelled"
+	TaskStatusDelivered TaskStatus = "delivered"
+	TaskStatusDraft     TaskStatus = "draft"
+	TaskStatusReady     TaskStatus = "ready"
+	TaskStatusRework    TaskStatus = "rework"
+	TaskStatusWorking   TaskStatus = "working"
+)
+
 // Valid indicates whether the value is a known member of the TaskStatus enum.
 func (e TaskStatus) Valid() bool {
 	switch e {
@@ -50,6 +135,24 @@ func (e TaskActivityKind) Valid() bool {
 	case TaskActivityKindQuestion:
 		return true
 	case TaskActivityKindReply:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TaskAnalysisScopeKind.
+const (
+	TaskAnalysisScopeKindProject TaskAnalysisScopeKind = "project"
+	TaskAnalysisScopeKindTask    TaskAnalysisScopeKind = "task"
+)
+
+// Valid indicates whether the value is a known member of the TaskAnalysisScopeKind enum.
+func (e TaskAnalysisScopeKind) Valid() bool {
+	switch e {
+	case TaskAnalysisScopeKindProject:
+		return true
+	case TaskAnalysisScopeKindTask:
 		return true
 	default:
 		return false
@@ -341,6 +444,30 @@ func (e WorkReportReportKind) Valid() bool {
 	case WorkReportReportKindDelivery:
 		return true
 	case WorkReportReportKindProgress:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkflowCandidateCandidateSources.
+const (
+	WorkflowCandidateCandidateSourcesPlan     WorkflowCandidateCandidateSources = "plan"
+	WorkflowCandidateCandidateSourcesPosition WorkflowCandidateCandidateSources = "position"
+	WorkflowCandidateCandidateSourcesProject  WorkflowCandidateCandidateSources = "project"
+	WorkflowCandidateCandidateSourcesTask     WorkflowCandidateCandidateSources = "task"
+)
+
+// Valid indicates whether the value is a known member of the WorkflowCandidateCandidateSources enum.
+func (e WorkflowCandidateCandidateSources) Valid() bool {
+	switch e {
+	case WorkflowCandidateCandidateSourcesPlan:
+		return true
+	case WorkflowCandidateCandidateSourcesPosition:
+		return true
+	case WorkflowCandidateCandidateSourcesProject:
+		return true
+	case WorkflowCandidateCandidateSourcesTask:
 		return true
 	default:
 		return false
@@ -884,6 +1011,33 @@ func (e ListTopicsParamsKind) Valid() bool {
 	}
 }
 
+// AcceptanceHistoryRecord defines model for AcceptanceHistoryRecord.
+type AcceptanceHistoryRecord struct {
+	AcceptanceId         *openapi_types.UUID               `json:"acceptanceId"`
+	ActorUserId          openapi_types.UUID                `json:"actorUserId"`
+	CreatedAt            time.Time                         `json:"createdAt"`
+	Decision             AcceptanceHistoryRecordDecision   `json:"decision"`
+	Id                   openapi_types.UUID                `json:"id"`
+	IdentityId           *openapi_types.UUID               `json:"identityId"`
+	PreviousAcceptanceId *openapi_types.UUID               `json:"previousAcceptanceId"`
+	Provenance           AcceptanceHistoryRecordProvenance `json:"provenance"`
+	Reason               string                            `json:"reason"`
+	ReviewHash           *string                           `json:"reviewHash"`
+	Snapshot             *map[string]interface{}           `json:"snapshot"`
+	TargetId             openapi_types.UUID                `json:"targetId"`
+	TargetType           AcceptanceHistoryRecordTargetType `json:"targetType"`
+	TargetVersion        *int                              `json:"targetVersion"`
+}
+
+// AcceptanceHistoryRecordDecision defines model for AcceptanceHistoryRecord.Decision.
+type AcceptanceHistoryRecordDecision string
+
+// AcceptanceHistoryRecordProvenance defines model for AcceptanceHistoryRecord.Provenance.
+type AcceptanceHistoryRecordProvenance string
+
+// AcceptanceHistoryRecordTargetType defines model for AcceptanceHistoryRecord.TargetType.
+type AcceptanceHistoryRecordTargetType string
+
 // AcceptanceRequest defines model for AcceptanceRequest.
 type AcceptanceRequest struct {
 	Decision        AcceptanceRequestDecision `json:"decision"`
@@ -1097,8 +1251,8 @@ type CompleteUploadRequest struct {
 		Sha256     string `json:"sha256"`
 	} `json:"parts"`
 
-	// SourceVersion 针对已有材料派生发布时的当前版本号；落后返回 SOURCE_VERSION_CONFLICT。
-	SourceVersion *int `json:"sourceVersion,omitempty"`
+	// SourceVersion 针对已有材料派生发布时的当前固定版本 ID；落后返回 SOURCE_VERSION_CONFLICT。
+	SourceVersion *openapi_types.UUID `json:"sourceVersion,omitempty"`
 }
 
 // ConfirmIntentRequest defines model for ConfirmIntentRequest.
@@ -1142,6 +1296,16 @@ type ConfirmationIntentRequest struct {
 // ConfirmationIntentRequestOperation defines model for ConfirmationIntentRequest.Operation.
 type ConfirmationIntentRequestOperation string
 
+// ConfirmationResult defines model for ConfirmationResult.
+type ConfirmationResult struct {
+	Id        openapi_types.UUID      `json:"id"`
+	ResultRef *string                 `json:"resultRef,omitempty"`
+	State     ConfirmationResultState `json:"state"`
+}
+
+// ConfirmationResultState defines model for ConfirmationResult.State.
+type ConfirmationResultState string
+
 // ConversationSourceRef defines model for ConversationSourceRef.
 type ConversationSourceRef struct {
 	Id openapi_types.UUID `json:"id"`
@@ -1162,6 +1326,7 @@ type CreateIdentityRequest struct {
 
 // CreateInvitationRequest defines model for CreateInvitationRequest.
 type CreateInvitationRequest struct {
+	// PositionIds Empty joins project membership only; no new position identity is created.
 	PositionIds []openapi_types.UUID `json:"positionIds"`
 	TargetEmail string               `json:"targetEmail"`
 }
@@ -1524,6 +1689,7 @@ type HandoffDraftRequestKind string
 type HandoffSendRequest struct {
 	ReviewHash    string `json:"reviewHash"`
 	SourceVersion int    `json:"sourceVersion"`
+	Summary       string `json:"summary"`
 }
 
 // HandoffSource defines model for HandoffSource.
@@ -1547,8 +1713,12 @@ type HandoffSourceState string
 type HandoffSourceRevisionRequest struct {
 	MaterialVersionIds *[]openapi_types.UUID `json:"materialVersionIds,omitempty"`
 	ReportId           *openapi_types.UUID   `json:"reportId,omitempty"`
-	SubmissionId       *openapi_types.UUID   `json:"submissionId,omitempty"`
-	Summary            string                `json:"summary"`
+
+	// ReviewHash 当前来源任务的交付报告 ID。
+	ReviewHash    openapi_types.UUID  `json:"reviewHash"`
+	SourceVersion int                 `json:"sourceVersion"`
+	SubmissionId  *openapi_types.UUID `json:"submissionId,omitempty"`
+	Summary       string              `json:"summary"`
 }
 
 // Identity defines model for Identity.
@@ -1618,183 +1788,15 @@ type ImportedWorkflowPresets struct {
 
 // Invitation defines model for Invitation.
 type Invitation struct {
-	AcceptedUserId *openapi_types.UUID `json:"acceptedUserId,omitempty"`
-	ExpiresAt      time.Time           `json:"expiresAt"`
-	Id             openapi_types.UUID  `json:"id"`
-	InviterUserId  openapi_types.UUID  `json:"inviterUserId"`
-	Positions      []PositionSummary   `json:"positions"`
-	State          InvitationState     `json:"state"`
-	TargetEmail    string              `json:"targetEmail"`
-	TargetUserId   *openapi_types.UUID `json:"targetUserId,omitempty"`
+	AcceptedUserId *openapi_types.UUID  `json:"acceptedUserId,omitempty"`
+	ExpiresAt      time.Time            `json:"expiresAt"`
+	Id             openapi_types.UUID   `json:"id"`
+	InviterUserId  openapi_types.UUID   `json:"inviterUserId"`
+	Positions      []InvitationPosition `json:"positions"`
+	State          InvitationState      `json:"state"`
+	TargetEmail    string               `json:"targetEmail"`
+	TargetUserId   *openapi_types.UUID  `json:"targetUserId,omitempty"`
 }
 
 // InvitationState defines model for Invitation.State.
 type InvitationState string
-
-// InvitationDecisionRequest defines model for InvitationDecisionRequest.
-type InvitationDecisionRequest struct {
-	ExpectedVersion int     `json:"expectedVersion"`
-	Token           *string `json:"token,omitempty"`
-}
-
-// InvitationResolve defines model for InvitationResolve.
-type InvitationResolve struct {
-	// EmailMatches 当前登录邮箱是否与受邀邮箱一致。
-	EmailMatches       bool               `json:"emailMatches"`
-	ExpiresAt          time.Time          `json:"expiresAt"`
-	Id                 openapi_types.UUID `json:"id"`
-	InviterDisplayName string             `json:"inviterDisplayName"`
-	Positions          []string           `json:"positions"`
-	ProjectId          openapi_types.UUID `json:"projectId"`
-	ProjectTitle       string             `json:"projectTitle"`
-}
-
-// LoginRequest defines model for LoginRequest.
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-// MarkNotificationsRequest defines model for MarkNotificationsRequest.
-type MarkNotificationsRequest struct {
-	Cursor *string               `json:"cursor,omitempty"`
-	Ids    *[]openapi_types.UUID `json:"ids,omitempty"`
-}
-
-// MaterialLibraryItem defines model for MaterialLibraryItem.
-type MaterialLibraryItem struct {
-	Associations []struct {
-		Id   openapi_types.UUID `json:"id"`
-		Name string             `json:"name"`
-		Type string             `json:"type"`
-	} `json:"associations"`
-	AuthorId         *openapi_types.UUID `json:"authorId,omitempty"`
-	AuthorName       string              `json:"authorName"`
-	CanDelete        bool                `json:"canDelete"`
-	CreatedAt        *time.Time          `json:"createdAt,omitempty"`
-	CurrentVersionId *openapi_types.UUID `json:"currentVersionId,omitempty"`
-	DeletedAt        *time.Time          `json:"deletedAt,omitempty"`
-	Format           string              `json:"format"`
-	Id               openapi_types.UUID  `json:"id"`
-	Kind             *string             `json:"kind,omitempty"`
-	Mime             string              `json:"mime"`
-
-	// OriginalStatus 固定版本原件状态，与内容预览状态独立。
-	OriginalStatus string             `json:"originalStatus"`
-	PreviewStatus  string             `json:"previewStatus"`
-	Purpose        string             `json:"purpose"`
-	Revision       int                `json:"revision"`
-	Size           int                `json:"size"`
-	Source         string             `json:"source"`
-	Title          string             `json:"title"`
-	UploadedAt     *time.Time         `json:"uploadedAt"`
-	VersionId      openapi_types.UUID `json:"versionId"`
-	Visibility     *string            `json:"visibility,omitempty"`
-}
-
-// MaterialThumbnail defines model for MaterialThumbnail.
-type MaterialThumbnail struct {
-	Kind MaterialThumbnailKind `json:"kind"`
-
-	// Page PDF 缩略图固定读取第 1 页，其余格式为 null。
-	Page *int   `json:"page"`
-	Url  string `json:"url"`
-}
-
-// MaterialThumbnailKind defines model for MaterialThumbnail.Kind.
-type MaterialThumbnailKind string
-
-// MaterialUsage defines model for MaterialUsage.
-type MaterialUsage struct {
-	ActorId     *openapi_types.UUID `json:"actorId,omitempty"`
-	ActorName   string              `json:"actorName"`
-	CreatedAt   *time.Time          `json:"createdAt"`
-	Description string              `json:"description"`
-	Id          openapi_types.UUID  `json:"id"`
-	Kind        string              `json:"kind"`
-	PlanId      *openapi_types.UUID `json:"planId,omitempty"`
-	PlanName    *string             `json:"planName,omitempty"`
-	Source      string              `json:"source"`
-	TaskId      *openapi_types.UUID `json:"taskId,omitempty"`
-	TaskName    *string             `json:"taskName,omitempty"`
-	TopicId     *openapi_types.UUID `json:"topicId,omitempty"`
-	TopicName   *string             `json:"topicName,omitempty"`
-}
-
-// MaterialVersion defines model for MaterialVersion.
-type MaterialVersion struct {
-	AuthorId  *string   `json:"authorId,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
-
-	// Entries HTML 包的相对路径清单。
-	Entries *[]struct {
-		RelativePath string `json:"relativePath"`
-		Sha256       string `json:"sha256"`
-		Size         int    `json:"size"`
-	} `json:"entries,omitempty"`
-	Entrypoint *string              `json:"entrypoint,omitempty"`
-	Id         openapi_types.UUID   `json:"id"`
-	Library    *MaterialLibraryItem `json:"library,omitempty"`
-	MaterialId *openapi_types.UUID  `json:"materialId,omitempty"`
-	Mime       *string              `json:"mime,omitempty"`
-	Revision   int                  `json:"revision"`
-	RunId      *string              `json:"runId,omitempty"`
-	Sha256     string               `json:"sha256"`
-	Size       int                  `json:"size"`
-	State      MaterialVersionState `json:"state"`
-}
-
-// MaterialVersionState defines model for MaterialVersion.State.
-type MaterialVersionState string
-
-// Message defines model for Message.
-type Message struct {
-	AuthorDisplayName  *string               `json:"authorDisplayName,omitempty"`
-	AuthorUserId       *openapi_types.UUID   `json:"authorUserId,omitempty"`
-	Content            string                `json:"content"`
-	CreatedAt          time.Time             `json:"createdAt"`
-	Id                 openapi_types.UUID    `json:"id"`
-	IdentityId         *openapi_types.UUID   `json:"identityId,omitempty"`
-	IdentityName       *string               `json:"identityName,omitempty"`
-	Inherited          *bool                 `json:"inherited,omitempty"`
-	Kind               MessageKind           `json:"kind"`
-	MaterialVersionIds *[]openapi_types.UUID `json:"materialVersionIds,omitempty"`
-	Materials          *[]struct {
-		Name      string             `json:"name"`
-		VersionId openapi_types.UUID `json:"versionId"`
-	} `json:"materials,omitempty"`
-	OriginTopicId *openapi_types.UUID `json:"originTopicId,omitempty"`
-	RunId         *openapi_types.UUID `json:"runId,omitempty"`
-	Seq           int                 `json:"seq"`
-	Source        *MessageSource      `json:"source,omitempty"`
-	State         MessageState        `json:"state"`
-	SubmissionId  *openapi_types.UUID `json:"submissionId,omitempty"`
-	TaskId        *openapi_types.UUID `json:"taskId,omitempty"`
-	TopicId       openapi_types.UUID  `json:"topicId"`
-}
-
-// MessageKind defines model for Message.Kind.
-type MessageKind string
-
-// MessageSource defines model for Message.Source.
-type MessageSource string
-
-// MessageState defines model for Message.State.
-type MessageState string
-
-// ModelSummary defines model for ModelSummary.
-type ModelSummary struct {
-	Capabilities struct {
-		Streaming   bool  `json:"streaming"`
-		ToolCalling bool  `json:"toolCalling"`
-		Vision      *bool `json:"vision,omitempty"`
-	} `json:"capabilities"`
-	DisplayName string             `json:"displayName"`
-	Enabled     bool               `json:"enabled"`
-	Id          openapi_types.UUID `json:"id"`
-	Limits      struct {
-		MaxInputTokens  int `json:"maxInputTokens"`
-		MaxOutputTokens int `json:"maxOutputTokens"`
-	} `json:"limits"`
-	Provider string `json:"provider"`
-}

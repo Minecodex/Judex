@@ -10,8 +10,5 @@ import (
 )
 
 func main() {
-	root := cli.Root()
-	if err := root.Execute(); err != nil {
-		os.Exit(cli.TakeExitCode())
-	}
+	os.Exit(cli.Run(os.Args[1:]))
 }

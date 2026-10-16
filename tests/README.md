@@ -1,8 +1,12 @@
 # 测试入口
 
+`tests/fixtures/real-provider-gateway` 仅供隔离验收：一次受控429后原样转发真实APImart/high请求，并在内存比较平台消息前缀，仅导出无提示词/凭据/逐请求ID的聚合。原生宿主使用工作区捆绑Python/Node及库，覆盖仅当前测试进程的PATH；保留系统工具，不修改全局环境。实际执行记录见[本轮完整回归](../docs/plans/real-host/records/FULL-REGRESSION-20261015.md)。
+
 | 范围 | 命令 | 覆盖 |
 | --- | --- | --- |
+| API全操作契约 | `go test ./tests/integration -run TestProductionHTTPResponsesMatchOpenAPI` | 157/157成功请求和响应、149匿名401；真实PG，受控S3/分析状态；SSE实际帧、原件字节核对，未覆盖新操作直接失败 |
 | Go | `go test ./...`、`go vet ./...` | 领域、HTTP 契约、真实 PG、模型/沙箱受控测试；live 测试另需真实配置 |
+| 原件解析 | 在解析镜像中挂载并执行 `tests/agent/material_parser_test.py` | 7项，含平台无扩展名content原件、位置/分页、公式缓存非重算、SHA和归档边界；旧镜像失败与真实模型复测见[升级记录](../docs/plans/real-host/records/MODEL-UPGRADE-20261015.md) |
 | Web | `npm run test:web` | 状态、认证、布局、工作权限、资料与模板逻辑；数量以当前输出为准 |
 | 浏览器全套 | `npm run test:e2e` | 桌面 demo 与真实生产业务两套入口 |
 | 生产浏览器 | `node tests/e2e/business.setup.mjs` | 真实 PG/S3、Office 转换、双用户业务、CLI、全表／对象恢复校验；可传入 spec 或 grep 限定场景 |
@@ -11,9 +15,12 @@
 | K8s 矩阵 | `node tests/k8s/matrix.mjs` | 真实服务 JUDEX_TEST_IMAGE 与独立 JUDEX_TEST_GATEWAY_IMAGE，四存储组合及组件故障；真实模型使用 live.mjs |
 | Skill 发现 | `node tests/skill-hosts.mjs` | 原生安装卸载、实际 Codex app-server 发现；无模型调用 |
 | AI 宿主 | `node tests/skill-agent-hosts.mjs` | 需明确授权及 JUDEX_RUN_AGENT_HOST_TESTS=1；限定隔离目录会话，尚未运行 |
+| Kimi 前置核查 | [2026-10-09 历史记录](../docs/plans/real-host/READINESS.md) | 保留当时准入边界；30任务/9计划接受与后续限定实测见 [尾项结果](../docs/plans/real-host/records/ENDURANCE-20261015.md) |
+| Coding Plan 宿主观测协议 | `node --test tests/real-host/model-usage-relay.test.mjs` | 受控回环透传、压缩/原始字节、累计usage、未知/零缓存、鉴权及错误不重试；真实Kimi路径另记 [执行状态](../docs/plans/real-host/IMPLEMENTATION.md) |
+| CLI持续写入 | `node tests/real-host/cli-storage-soak.mjs ROOT` + `node tests/real-host/cli-storage-restarts.mjs ROOT` | 已授权隔离环境中的60分钟原生CLI上传/下载、128初始/512突发积压与组件重启；冻结计划、逐调用日志及前置环境见 [尾项记录](../docs/plans/real-host/records/ENDURANCE-20261015.md) |
 | 发行 | `node tests/release.mjs dist/release/VERSION` | 全包校验和、本机包解压/版本、附带 Skill 安装卸载 |
 
-桌面 demo 浏览器默认 Microsoft Edge，可用 PLAYWRIGHT_CHANNEL=chromium；生产浏览器使用 Chromium。生产测试默认启动受控模型网关，验证真实 PG/S3、CLI 和业务调用，不把受控模型结果作为真实模型验收。设置 JUDEX_E2E_COLLABORATION_GATEWAY=0 可禁用网关，需只运行不依赖模型建议的场景；真实模型测试仍需显式配置和启用。
+桌面 demo 浏览器默认 Microsoft Edge，可用 PLAYWRIGHT_CHANNEL=chromium；生产浏览器使用 Chromium。生产测试默认启动受控模型网关，验证真实 PG/S3、CLI 和业务调用，不把受控模型结果作为真实模型验收。设置 JUDEX_E2E_COLLABORATION_GATEWAY=0 可禁用网关，需只运行不依赖模型建议的场景；真实模型测试以JUDEX_REAL_MODEL_SMOKE=1明确启用，并提供JUDEX_MODEL_CATALOG_FILE或完整provider环境配置，未配置直接失败，不回退受控网关。模型目录可用apiKeyEnv引用仅在子进程内提供的Key，并声明thinking/reasoning参数。
 
 像素检查依赖 Python 3 和 Pillow，测试前在所用 Python 环境执行 `python -m pip install -r tests/e2e/requirements.txt`；可用 JUDEX_PYTHON 指定解释器。CI 使用同一份依赖清单。桌面测试显式启用正常动效；嵌套选择器选择完成后等待退出动画、DOM 移除及焦点恢复，再操作外层弹层。像素采样先核对所有目标边框颜色稳定，避免与截图结束过渡动画后的状态不一致。
 
@@ -23,4 +30,6 @@
 
 生产浏览器使用固定 `chrislusf/seaweedfs:4.47`，与 Helm 默认对象存储一致；每次运行生成独立 S3 凭据，认证接口就绪后再初始化 bucket，并完成真实上传、Range、分片和对象恢复核对。GitHub CI 分别运行 `backend`、`web`、`business`，三项均通过才允许汇总检查通过；本地 `npm run test:e2e` 仍顺序执行界面和业务两套测试。
 
-K8s 矩阵需要 JUDEX_TEST_IMAGE 指向真实服务候选，JUDEX_TEST_GATEWAY_IMAGE 指向独立受控模型夹具。测试需要已存在的兼容 Operator/CRD，不部署第二个 Controller，不停止业务服务；finally 按所有权清理。版本 CI 在每个运行自己的临时集群中先安装 Operator，再执行同一入口并删除所属集群；本地既有集群的规则保持所有权约束。当前证据及剩余边界见 [验收报告](../docs/plans/v1/FINAL-REPORT.md)。
+K8s 矩阵需要 JUDEX_TEST_IMAGE 指向真实服务候选，JUDEX_TEST_GATEWAY_IMAGE 指向独立受控模型夹具。测试需要已存在的兼容 Operator/CRD，不部署第二个 Controller，不停止业务服务；finally 按所有权清理。版本 CI 在每个运行自己的临时集群中先安装 Operator，再执行同一入口并删除所属集群；本地既有集群的规则保持所有权约束。当前证据及剩余边界见 [验收报告](../docs/plans/v1/STATUS.md)。
+
+持续写入入口要求ROOT中的environment.json明确namespace、UID、test-run、同版CLI/配置目录及自有port-forward；soak-plan.json预先固定projectId、60分钟时长、4线程、每线程4秒、64KiB载荷、前55分钟生产、20分钟512积压及四项故障时间。恢复线120秒、非计划原生调用失败率0.5%、哈希/重复ready原件/OOM为0。两入口在独立进程运行：先启动写入，再启动重启控制。每次原生调用保留起止时间和全部错误，重启控制以实际上传、下载与SHA校验确认恢复；测试只创建独立原件，不提交分析或正式工作。结束还需核对服务端原件UUID/SHA清单、正式业务不变、所有故障均完成、采样状态及归档清理，不能只看计时结束或HTTP200。
