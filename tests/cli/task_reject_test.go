@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -24,9 +25,9 @@ func TestNativeTaskRejectOnlyCreatesFrozenIntent(t *testing.T) {
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build: %v %s", err, out)
 	}
-	calls := 0
+	var calls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		calls++
+		calls.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == "GET" && strings.HasSuffix(r.URL.Path, "/acceptance-review") {
 			_, _ = w.Write([]byte(`{"data":{"reviewId":"frozen-review","reviewHash":"current-manifest-hash","targetVersion":7}}`))
@@ -65,11 +66,11 @@ func TestNativeTaskRejectOnlyCreatesFrozenIntent(t *testing.T) {
 	if out, err := run(); err == nil || !strings.Contains(out, `"ok":false`) {
 		t.Fatalf("missing reason accepted: %v %s", err, out)
 	}
-	if calls != 0 {
+	if calls.Load() != 0 {
 		t.Fatal("missing reason made a network request")
 	}
 	out, err := run("--reason", "actual Unicode mismatch")
-	if err != nil || !strings.Contains(out, `"state":"pending"`) || calls != 2 {
-		t.Fatalf("intent flow: %v calls=%d %s", err, calls, out)
+	if count := calls.Load(); err != nil || !strings.Contains(out, `"state":"pending"`) || count != 2 {
+		t.Fatalf("intent flow: %v calls=%d %s", err, count, out)
 	}
 }

@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | [split-api](split-api/main.go) | 按 Go 声明拆分生成类型，补齐各分片导入并检查每个文件不超过 2000 行 | [API 类型生成](../api/generate-types.mjs)，通过 `npm run gen:api` 或 `make generate` 调用 |
 | [release](release/build.mjs) | 构建发行制品、客户端／Skill 下载包和校验清单 | `npm run release:build`；前端 postbuild 使用 `release/client-downloads.mjs` |
+| [ci](ci/pull-images.mjs) | 对固定 Docker 镜像的临时网络或仓库错误最多拉取三次，永久错误立即失败 | `node scripts/ci/pull-images.mjs IMAGE...`；`npm run test:ci` 验证重试及失败边界 |
 | [deploy](deploy/load-local-image.mjs) | 将本地 Docker 镜像导入 Kubernetes 节点镜像存储 | 见[部署说明](../deploy/README.md) |
 | [operations](operations/backup.sh) | PostgreSQL 初始化、完整备份及隔离恢复 | 见[运维手册](../docs/运维/operations.md) |
 

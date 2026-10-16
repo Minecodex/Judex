@@ -26,6 +26,10 @@ CI 失败会阻止合并。修复后在同一功能分支继续提交并重新�
 
 业务 job 显式拉取固定存储镜像，避免本地缓存掩盖公共仓库授权或可用性问题。原 MinIO 镜像匿名拉取返回拒绝，测试使用项目既有 SeaweedFS；应用仍通过同一 S3 API 读写、分片与恢复。
 
+镜像拉取通过 `scripts/ci/pull-images.mjs` 对 HTTP 5xx、限流和临时网络错误最多尝试三次，间隔 2 秒、4 秒，始终使用相同镜像引用；认证、缺失 manifest、摘要校验及未知错误立即失败，重试耗尽仍阻止 CI。`npm run test:ci` 用故障注入核对这些边界。
+
+提交前的 Go 检查应包含 `go test -race -timeout=20m ./...`；普通 `go test` 不能替代竞态检查。原生 CLI 的 HTTP 夹具按子用例隔离不可变期望及版本，跨 handler 和测试协程共享的请求计数使用原子操作。Windows 本地 `CGO_ENABLED=0` 无法运行 race 时，必须以 Linux Actions 的实际结果确认，不能标记为已通过。
+
 业务脚本直接用 Node 启动时，从 Windows 的 Node 目录或 Linux/macOS 的 `lib/node_modules` 定位 npm CLI，不依赖 npm 父进程注入 `npm_execpath`。
 
 每次运行的凭据目录权限为 0700，S3 认证文件只读挂载并允许镜像内非 root 用户读取。失败时保存所属容器状态与脱敏启动日志，再按运行标签清理。CI 仅上传这些诊断及浏览器结果，不上传认证配置或数据库备份。
