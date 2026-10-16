@@ -1,0 +1,381 @@
+{
+  "recordedAt": "2026-10-14T23:14:44.677Z",
+  "status": "bounded_regressions_passed_with_endurance_limits",
+  "version": "0.1.0-realhost.20261015.28",
+  "provider": {
+    "name": "APIMart",
+    "requestedModel": "glm-5.3-flash",
+    "observedModel": "ZHIPU/GLM-5.3-Flash",
+    "reasoningEffort": "high",
+    "nativeKimiVersion": "0.36.1",
+    "automaticFallback": false
+  },
+  "formalBusiness": {
+    "acceptedTasks": 30,
+    "acceptedPlans": 9,
+    "tables": [
+      {
+        "table": "tasks",
+        "rows": 36,
+        "originalSha256": "798fb0d393e5d83c1aa0993664c8f2887cbc286d2413344e0502314bf67ab111",
+        "currentSha256": "798fb0d393e5d83c1aa0993664c8f2887cbc286d2413344e0502314bf67ab111",
+        "unchanged": true
+      },
+      {
+        "table": "plans",
+        "rows": 9,
+        "originalSha256": "d52ea9055d7c58578ea745fc4e7f739ecf5c0cd9cb03d895793b2767ada061bb",
+        "currentSha256": "d52ea9055d7c58578ea745fc4e7f739ecf5c0cd9cb03d895793b2767ada061bb",
+        "unchanged": true
+      },
+      {
+        "table": "proposals",
+        "rows": 29,
+        "originalSha256": "1d8ecfeff1d589476d6dd6edaddcb231f2f8d42262e9b620e877dd77878cafe7",
+        "currentSha256": "1d8ecfeff1d589476d6dd6edaddcb231f2f8d42262e9b620e877dd77878cafe7",
+        "unchanged": true
+      },
+      {
+        "table": "task_acceptances",
+        "rows": 33,
+        "originalSha256": "20b7bef1c0a2b3de434cccd545482d401da3817d81db2de26f2e87443b0c1f29",
+        "currentSha256": "20b7bef1c0a2b3de434cccd545482d401da3817d81db2de26f2e87443b0c1f29",
+        "unchanged": true
+      },
+      {
+        "table": "plan_acceptances",
+        "rows": 9,
+        "originalSha256": "c1db2fe6df2403819e9f23cecb5afd03cdbe6f7fa48a8c2623288b9742ef1328",
+        "currentSha256": "c1db2fe6df2403819e9f23cecb5afd03cdbe6f7fa48a8c2623288b9742ef1328",
+        "unchanged": true
+      }
+    ]
+  },
+  "fixes": [
+    "canonical_plan_analysis_scope",
+    "reject_pure_placeholder_summary",
+    "known_sandbox_preflight_failure",
+    "public_task_report_provenance",
+    "nested_cli_argument_errors",
+    "compatible_public_position_opinions",
+    "delegation_preflight_correction",
+    "required_structured_analysis_record"
+  ],
+  "routing": {
+    "completed": 9,
+    "semanticPasses": 9,
+    "cases": [
+      {
+        "case": "bound",
+        "sourceId": "82b646ec-9e35-4769-a4ef-68e396a042c0",
+        "analysisId": "d7debaf8-44de-4320-b82f-09ecff84a317",
+        "batchId": "ad946fd8-c43c-40dc-876a-5eda2a717985",
+        "state": "completed",
+        "verdict": "pass"
+      },
+      {
+        "case": "only_plan",
+        "sourceId": "b7edfc12-c6cb-4ece-8976-1ce44b01b91b",
+        "analysisId": "132eb7c3-00ff-4dd3-bca2-2539bedc187b",
+        "batchId": "c4b355f7-9d7a-4010-ab11-23c8a22edfd0",
+        "state": "completed",
+        "verdict": "pass"
+      },
+      {
+        "case": "only_position",
+        "sourceId": "a3129612-7d9b-4beb-a428-3dc203832a85",
+        "analysisId": "424d11b8-8c79-4918-9540-e5e54c9201af",
+        "batchId": "6b1e6935-ea35-4026-9c2b-92e819421db6",
+        "state": "completed",
+        "verdict": "pass"
+      },
+      {
+        "case": "text_only",
+        "sourceId": "b8ff43ef-810b-49ef-a71d-37a7c76d7764",
+        "analysisId": "cbb86418-c43c-4052-a0f0-aa7c863b6ed7",
+        "batchId": "8a767e97-43ab-4ad7-a331-e68d2bd5ecaa",
+        "state": "completed",
+        "verdict": "pass"
+      },
+      {
+        "case": "free_no_candidate",
+        "sourceId": "d971a565-3e14-4301-88e5-46874a7e7e58",
+        "analysisId": "ab55dfa8-53ba-41f2-bd6d-36c861e1f65c",
+        "batchId": "844282e2-00c1-47b7-adbf-62fc9d3ea779",
+        "state": "completed",
+        "verdict": "pass"
+      },
+      {
+        "case": "ambiguous",
+        "sourceId": "751d1cd8-f9e1-4ffd-bfdc-a636199f9898",
+        "analysisId": "0c7f61e8-b56c-48b4-96e0-f48275b8e027",
+        "batchId": "5336c0d6-4bd4-4baa-b834-dc7947f041f5",
+        "state": "completed",
+        "verdict": "pass"
+      },
+      {
+        "case": "conflict",
+        "sourceId": "8f9cf392-e4dd-4675-bec3-6c6d26f14625",
+        "analysisId": "1c88067d-1803-421f-8629-2b7f6a406739",
+        "batchId": "2af0ded0-319e-4f8a-9e4c-4505c8d42307",
+        "state": "completed",
+        "verdict": "pass"
+      },
+      {
+        "case": "history_vs_current_followup",
+        "sourceId": "216e9973-1c8a-4894-bd7a-6c61c8e6f338",
+        "analysisId": "00a9ea2f-79d9-44c3-aae8-d003cabb71a5",
+        "batchId": "99f3eb5b-8528-4cd1-a7ee-ef6e0d822682",
+        "state": "completed",
+        "verdict": "pass"
+      },
+      {
+        "case": "only_reference_no_draft_followup",
+        "sourceId": "a0d6fc81-5b60-4fb3-a74a-1267c08ae1d5",
+        "analysisId": "f49476f4-1062-4448-a8cd-555deaaa58fa",
+        "batchId": "abc74081-dbd2-4415-8779-555473bf9b20",
+        "state": "completed",
+        "verdict": "pass"
+      }
+    ],
+    "independentOperatorAssertions": {
+      "total": 32,
+      "passed": 32
+    }
+  },
+  "publicOpinions": {
+    "sourceId": "f6b0d349-27c3-43cc-b7f8-34c0223c5cd1",
+    "analysisId": "3976b423-0b9c-4dc0-896c-c93592db06e4",
+    "batchId": "79e151c8-b083-424c-a5ef-6c6ab2e4caee",
+    "state": "completed",
+    "nativeChecks": {
+      "state_completed": true,
+      "same_source": true,
+      "same_batch": true,
+      "same_analysis_id": true,
+      "errorCode_none": true,
+      "summary_nonempty": true,
+      "summary_len": 998,
+      "basis_count": 8,
+      "qa_jia_af739ffe_separate_scope": true,
+      "qa_yi_846abe01_separate_scope": true,
+      "shared_gaps_explicit": true,
+      "no_placeholder_markers": true,
+      "placeholder_hits": [],
+      "no_private_prompt_echo": true,
+      "disagreements_empty_but_conflict_free_declared": true,
+      "a53_accepted_v6_stated": true,
+      "no_reacceptance_claim": true
+    },
+    "summaryCharacters": 998,
+    "basisItems": 8,
+    "attempts": 17,
+    "totalTokens": 225760,
+    "originalLimits": {
+      "attempts": 30,
+      "tokens": 300000
+    },
+    "humanOperationalExtension": true,
+    "nativeCheckResults": {
+      "total": 17,
+      "passed": 17,
+      "checks": {
+        "state_completed": true,
+        "same_source": true,
+        "same_batch": true,
+        "same_analysis_id": true,
+        "errorCode_none": true,
+        "summary_nonempty": true,
+        "summary_len": true,
+        "basis_count": true,
+        "qa_jia_af739ffe_separate_scope": true,
+        "qa_yi_846abe01_separate_scope": true,
+        "shared_gaps_explicit": true,
+        "no_placeholder_markers": true,
+        "placeholder_hits": true,
+        "no_private_prompt_echo": true,
+        "disagreements_empty_but_conflict_free_declared": true,
+        "a53_accepted_v6_stated": true,
+        "no_reacceptance_claim": true
+      }
+    }
+  },
+  "naturalExpiry": {
+    "expiredAccessHttpStatus": 401,
+    "clockChanged": false,
+    "databaseExpiryChanged": false,
+    "concurrentNativeProcesses": 6,
+    "successfulNativeProcesses": 6,
+    "accessRotated": true,
+    "refreshRotated": true
+  },
+  "uploadRecovery": {
+    "candidateVersion": "0.1.0-realhost.20261015.27",
+    "cases": [
+      {
+        "phase": "before",
+        "failedExit": 7,
+        "versionId": "97addb34-ad11-4700-bff5-a6b7114ea2a6",
+        "sourceId": "4446e0ef-8338-432e-a590-c0e38aa24687",
+        "stableReplay": true,
+        "pendingBefore": 1,
+        "pendingAfter": 0,
+        "actualNativeProcessesRestarted": true,
+        "proxyServerRestarted": true
+      },
+      {
+        "phase": "after",
+        "failedExit": 7,
+        "versionId": "33d2364a-02b4-47d2-a600-b4c1cc149dd0",
+        "sourceId": "ed42d0f0-b633-4813-9173-722c3b47d26e",
+        "stableReplay": true,
+        "pendingBefore": 1,
+        "pendingAfter": 0,
+        "actualNativeProcessesRestarted": true,
+        "proxyServerRestarted": true
+      }
+    ]
+  },
+  "readLoad": {
+    "durationMs": 1800000,
+    "elapsedMs": 1800025,
+    "workers": 8,
+    "perWorkerIntervalMs": 250,
+    "requests": 55215,
+    "http200": 52326,
+    "transportErrors": 2889,
+    "malformed": 0,
+    "plannedOutageRecoveryUpperBoundMs": 113531,
+    "frozenRecoveryLimitMs": 120000,
+    "withinRecoveryLimit": true,
+    "failureScope": "all observed transport errors fell within the registered deployment/port-forward outage; zero outside",
+    "scope": "bounded 30 minute read load; not long write endurance"
+  },
+  "directCache": {
+    "conditions": 7,
+    "calls": 14,
+    "http200": 14,
+    "promptTokens": 94840,
+    "cachedReadTokens": 53888,
+    "contentMarkerPasses": 11,
+    "scope": "usage observation only; not causal cold-cache, model-switch or billing proof"
+  },
+  "sessionAndSkill": {
+    "originalKX01": "session_3ea65df2-9615-457a-ae95-4997d4d0b6f5",
+    "originalKA01": "session_c02e8731-c5ae-49ff-bb9e-571d6efc4c10",
+    "defaultProjectSkillAndCliVersion": "0.1.0-realhost.20261015.28",
+    "original128000WindowRestored": true,
+    "newPublishedWorkflowObserved": "9a85ce8d-7b6f-44f4-8bf8-faca3496931a",
+    "forced32768Window": {
+      "status": "failed",
+      "realHighCalls": 20,
+      "http200": 20,
+      "cliExit": 1,
+      "tools": 0
+    }
+  },
+  "checks": {
+    "goTestAll": "passed",
+    "goVetAll": "passed",
+    "releaseBuildAndChecksums": "passed",
+    "relayAndDriverTests": 13
+  },
+  "platformModelUsage": {
+    "observedAt": "2026-10-14T18:59:48.854Z",
+    "models": [
+      {
+        "state": "succeeded",
+        "returned_model": "ZHIPU/GLM-5.3-Flash",
+        "calls": 68,
+        "total_tokens": 902726,
+        "known_cache": 68
+      }
+    ],
+    "scope": "durable aggregate only; native and direct synthetic probes excluded"
+  },
+  "cleanup": {
+    "cleanedAt": "2026-10-14T19:00:25.818Z",
+    "namespace": "judex-ui-followup-ccb5d773",
+    "uid": "3e7730a4-6f01-48ed-abf3-f167197693dd",
+    "absent": true,
+    "archivedBeforeDelete": true,
+    "backups": [
+      {
+        "file": "database-without-model-observation.sql.gz",
+        "size": 19072458,
+        "sha256": "87e007c4574c9dcdbfbc21f8b5d4a4c33bb9dc0b88084a2681b0e1b181cd932f"
+      },
+      {
+        "file": "durable-model-accounting.jsonl.gz",
+        "size": 7022,
+        "sha256": "beb7d3f3e3037f631a9e0fb8d5d01d6a8a1ad9330967cc9896a1b8a616a88382"
+      },
+      {
+        "file": "original-objects.tar.gz",
+        "size": 54246112,
+        "sha256": "b003e19cdac3d03c1e6e0e1c5d9e69e7b3a91f3b11e002b53503408fc59deb19"
+      }
+    ],
+    "normalJudex": [
+      {
+        "name": "judex",
+        "ready": 1,
+        "desired": 1
+      },
+      {
+        "name": "judex-judex-opensandbox-server",
+        "ready": 1,
+        "desired": 1
+      },
+      {
+        "name": "judex-material-converter",
+        "ready": 1,
+        "desired": 1
+      },
+      {
+        "name": "opensandbox-controller-manager",
+        "ready": 1,
+        "desired": 1
+      }
+    ],
+    "localForward": {
+      "stoppedOwnedPid": 20316,
+      "namespace": "judex-ui-followup-ccb5d773",
+      "listenerPorts": [
+        18192,
+        18193
+      ],
+      "noListeners": true,
+      "checkedAt": "2026-10-14T23:13:59.1938033Z"
+    },
+    "archiveVersion": "0.1.0-realhost.20261015.28",
+    "originalObjectArchiveEntries": 88
+  },
+  "remaining": [
+    "No actual provider 429 observed; controlled HTTP429 is separate evidence",
+    "Forced 32768-window high-mode continuation failed; full compression/update combinations not accepted",
+    "Cross-model cache causality, long write load, backlog and all desktop/worker/sandbox restart combinations not accepted"
+  ],
+  "normalDeploymentUpdated": false,
+  "gitCommittedOrPushed": false,
+  "localEvidenceHashes": {
+    "operator-semantic-audit.json": "23148df5bb429ae91cf8f7f6d892e6dbbe58875949548b4008eba45a88163937",
+    "business-facts-integrity.json": "211bb66f4d594051e4df61731db20669b26959d130364e38906b9512250b4f87",
+    "natural-expiry-result.json": "952a21f03e59286e003a6d5ead092d80da38a3ec31cd840089c31e404544f672",
+    "outbox-real-result.json": "5959a0008201a0ce90fab59bf2af33a64ab9bbbacf1a423decb7a3cd4bb7748d",
+    "soak-result.json": "849fb9e4f8a61b220ac2387c4970c57b9bf273b60009699d5b7b88d399669154",
+    "planned-rollout-outage.json": "13eb38ebabc0833e1cc50eb861099c2ccc7c704499b771c1540e500da66b95ef",
+    "cache-controls-requests-result.json": "43d26fd46da01d1feaeaa19d8706fa459f02057a96ddbadaa5fa0933d2a7c64f",
+    "platform-model-aggregate.json": "062f03661a770e2b26f96ac852d53fa987491df9b09c30809d53801dcd244176",
+    "export/archive-manifest.json": "1870856d0cff613eb425eddd40f0e9139d19a1478412080ba32deac5f20736d3",
+    "export/cleanup-result.json": "ccec8325451120100059b162bf7b1ba5f5b414ba2af0576139899eb4bf40191d",
+    "go-test28.log": "878dab9f853278851da8458cd453f2cce05dcdde583e4b9212cb4a75e08bf1cf",
+    "go-vet28.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "release28-build.log": "23daf2addea6571c75a580edc3d28a62391d84f2b968ef5aa8e0186bff424c31"
+  },
+  "nativeReceiptHashes": {
+    "KX01-routing-followup28.json": "b60f7a36496956fdbe77fd8154adc119158e983779747ae11076885f1ce4253c",
+    "KA01-opinions-followup27.json": "1c704a88d1722b7c4dc40217a4ebee600dfce6ef4a1a094e8171cb687c307760",
+    "KX01-flow-refresh28.json": "72624f4188d85154735efd90002b0c2d7b5d6a51bcb910899bf4cac46be7de42"
+  }
+}

@@ -222,11 +222,16 @@ func (h *DiscussionHandlers) linkTopic(c *gin.Context) {
 		}
 		links = append(links, discussion.TopicLink{ObjectType: raw.ObjectType, ObjectID: id})
 	}
-	if err := h.Discussion.LinkTopic(c.Request.Context(), p.UserID, projectID, topicID, links); err != nil {
+	if err := h.Discussion.LinkTopic(c.Request.Context(), p.UserID, projectID, topicID, links, req.ExpectedVersion); err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, gin.H{"linked": true})
+	topic, err := h.Discussion.GetTopic(c.Request.Context(), p.UserID, projectID, topicID)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, topic)
 }
 
 func (h *DiscussionHandlers) createSubmission(c *gin.Context) {

@@ -712,7 +712,7 @@ export interface SchemaPaths0 {
         };
         get?: never;
         put?: never;
-        /** 提醒未回应来源（有冷却限制） */
+        /** 提醒交接接收人（有冷却限制） */
         post: operations["sendHandoffReminder"];
         delete?: never;
         options?: never;
@@ -1476,7 +1476,8 @@ export interface SchemaPaths0 {
             };
             cookie?: never;
         };
-        get?: never;
+        /** 分页读取正式验收、退回与重开历史及理由，旧记录明确缺失快照 */
+        get: operations["listPlanAcceptances"];
         put?: never;
         /** 计划整体验收（owner 人工确认） */
         post: operations["acceptPlan"];
@@ -1663,7 +1664,8 @@ export interface SchemaPaths0 {
             };
             cookie?: never;
         };
-        get?: never;
+        /** 分页读取正式验收、退回与重开历史及理由，旧记录明确缺失快照 */
+        get: operations["listTaskAcceptances"];
         put?: never;
         /** 任务验收/退回（当前 reviewer 人工确认） */
         post: operations["decideTaskAcceptance"];
@@ -1707,7 +1709,7 @@ export interface SchemaPaths0 {
         };
         get?: never;
         put?: never;
-        /** 为 Bug 选择修复传播目标（生成工作提案草稿） */
+        /** 为 Bug 选择修复传播目标（生成独立任务草稿） */
         post: operations["createFixPropagation"];
         delete?: never;
         options?: never;

@@ -544,7 +544,9 @@ export interface SchemaOperations1 {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["Invitation"];
+                        data: {
+                            revoked: boolean;
+                        };
                         meta: components["schemas"]["CommandMeta"];
                     };
                 };
@@ -1147,6 +1149,45 @@ export interface SchemaOperations1 {
         };
     };
 
+    listPlanAcceptances: {
+        parameters: {
+            query?: {
+                /** @description 分页大小，范围 1-100，默认 50。 */
+                limit?: components["parameters"]["LimitParam"];
+                /** @description 不透明分页游标，编码范围与过滤条件。 */
+                cursor?: components["parameters"]["CursorParam"];
+            };
+            header?: never;
+            path: {
+                projectId: components["parameters"]["ProjectIdParam"];
+                planId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 只读正式反馈历史。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            items: components["schemas"]["AcceptanceHistoryRecord"][];
+                            nextCursor: string | null;
+                        };
+                        meta: components["schemas"]["RequestMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+
     acceptPlan: {
         parameters: {
             query?: never;
@@ -1549,6 +1590,45 @@ export interface SchemaOperations1 {
         };
     };
 
+    listTaskAcceptances: {
+        parameters: {
+            query?: {
+                /** @description 分页大小，范围 1-100，默认 50。 */
+                limit?: components["parameters"]["LimitParam"];
+                /** @description 不透明分页游标，编码范围与过滤条件。 */
+                cursor?: components["parameters"]["CursorParam"];
+            };
+            header?: never;
+            path: {
+                projectId: components["parameters"]["ProjectIdParam"];
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 只读正式反馈历史。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            items: components["schemas"]["AcceptanceHistoryRecord"][];
+                            nextCursor: string | null;
+                        };
+                        meta: components["schemas"]["RequestMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+
     decideTaskAcceptance: {
         parameters: {
             query?: never;
@@ -1643,16 +1723,15 @@ export interface SchemaOperations1 {
             };
         };
         responses: {
-            /** @description 已生成提案草稿引用。 */
-            202: {
+            /** @description 已生成独立修复任务草稿引用，仍需正式安排和分别验收。 */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
                         data: {
-                            /** Format: uuid */
-                            proposalId: string;
+                            targetTaskIds: string[];
                         };
                         meta: components["schemas"]["CommandMeta"];
                     };
@@ -1686,119 +1765,6 @@ export interface SchemaOperations1 {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-        };
-    };
-
-    importPositionPresets: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKeyParam"];
-            };
-            path: {
-                projectId: components["parameters"]["ProjectIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ImportPositionPresetsRequest"];
-            };
-        };
-        responses: {
-            /** @description 新增职位及已存在的跳过项。 */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["ImportedPositionPresets"];
-                        meta: components["schemas"]["CommandMeta"];
-                    };
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-        };
-    };
-
-    listProjects: {
-        parameters: {
-            query?: {
-                /** @description 分页大小，范围 1-100，默认 50。 */
-                limit?: components["parameters"]["LimitParam"];
-                /** @description 不透明分页游标，编码范围与过滤条件。 */
-                cursor?: components["parameters"]["CursorParam"];
-                /** @description 项目名称和简介的字面搜索。 */
-                q?: string;
-                ownership?: "all" | "owned" | "joined";
-                /** @description 整页批量返回活跃成员和讨论摘要。 */
-                include?: "summary";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 项目分页。 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: {
-                            totalCount: number;
-                            items: components["schemas"]["Project"][];
-                            nextCursor: string | null;
-                        };
-                        meta: components["schemas"]["RequestMeta"];
-                    };
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-        };
-    };
-
-    createProject: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKeyParam"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateProjectRequest"];
-            };
-        };
-        responses: {
-            /** @description 已创建。 */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["Project"];
-                        meta: components["schemas"]["CommandMeta"];
-                    };
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
         };
     };
 }

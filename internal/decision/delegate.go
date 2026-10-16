@@ -163,14 +163,12 @@ func (s *Service) Delegate(ctx context.Context, requester, projectID, proposalID
 // CreateRevision turns a terminal proposal back into a NEW draft revision
 // (03 §2 修订): the old tickets are never inherited; resubmitting computes a
 // fresh review hash and slot set.
-func (s *Service) CreateRevision(ctx context.Context, requester, projectID, proposalID uuid.UUID, changes []Change, reason string) (int64, error) {
+func (s *Service) CreateRevision(ctx context.Context, requester, projectID, proposalID uuid.UUID, changes []Change, reason string, previousReview ...uuid.UUID) (int64, error) {
 	if reason == "" {
 		return 0, apierrors.Fields("reason", "required")
 	}
-	for i, change := range changes {
-		if !allowedOperations[change.Operation] {
-			return 0, apierrors.Newf(apierrors.Validation, "changes[%d].operation not whitelisted", i)
-		}
+	if err := ValidateDraftChanges(changes); err != nil {
+		return 0, err
 	}
 	var revision int64
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
@@ -181,10 +179,11 @@ func (s *Service) CreateRevision(ctx context.Context, requester, projectID, prop
 			return err
 		}
 		var status string
-		var createdBy uuid.UUID
+		var createdBy *uuid.UUID
+		var currentReview *uuid.UUID
 		if err := tx.QueryRow(ctx, `
-			SELECT status, created_by FROM proposals WHERE id=$1 AND project_id=$2 FOR UPDATE`,
-			proposalID, projectID).Scan(&status, &createdBy); err != nil {
+			SELECT status, created_by,COALESCE(current_review_id,(SELECT id FROM proposal_versions WHERE proposal_id=proposals.id ORDER BY revision DESC LIMIT 1)) FROM proposals WHERE id=$1 AND project_id=$2 FOR UPDATE`,
+			proposalID, projectID).Scan(&status, &createdBy, &currentReview); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apierrors.New(apierrors.NotFound, "proposal not found")
 			}
@@ -193,7 +192,10 @@ func (s *Service) CreateRevision(ctx context.Context, requester, projectID, prop
 		if status == "pending" {
 			return apierrors.New(apierrors.InvalidTransition, "pending proposal cannot be revised; reject it first")
 		}
-		if createdBy != requester {
+		if len(previousReview) > 0 && (currentReview == nil || *currentReview != previousReview[0]) {
+			return apierrors.New(apierrors.ReviewStale, "previous proposal review changed")
+		}
+		if createdBy != nil && *createdBy != requester {
 			return apierrors.New(apierrors.Forbidden, "只有发起人可以修订")
 		}
 		if err := tx.QueryRow(ctx, `
@@ -210,8 +212,9 @@ func (s *Service) CreateRevision(ctx context.Context, requester, projectID, prop
 		}
 		if _, err := tx.Exec(ctx, `
 			UPDATE proposals SET status='draft', current_review_id=NULL, version=version+1,
+				created_by=COALESCE(created_by,$3),
 				previous_proposal_id=previous_proposal_id, updated_at=$2 WHERE id=$1`,
-			proposalID, s.now()); err != nil {
+			proposalID, s.now(), requester); err != nil {
 			return apierrors.New(apierrors.Internal, "proposal reset failed").Wrap(err)
 		}
 		return audit.Append(ctx, tx, audit.Entry{

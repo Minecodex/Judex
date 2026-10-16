@@ -399,8 +399,9 @@ func (s *Service) Submit(ctx context.Context, requester, projectID, proposalID u
 			}
 		}
 		if _, err := tx.Exec(ctx, `
-			UPDATE proposals SET status='pending', current_review_id=$2, version=version+1, updated_at=$3
-			WHERE id=$1`, proposalID, reviewID, now); err != nil {
+			UPDATE proposals SET status='pending', current_review_id=$2, version=version+1, updated_at=$3,
+				created_by=COALESCE(created_by,$4)
+			WHERE id=$1`, proposalID, reviewID, now, requester); err != nil {
 			return apierrors.New(apierrors.Internal, "proposal update failed").Wrap(err)
 		}
 		if _, err := events.AppendProjectEvent(ctx, tx, projectID, "proposal.changed", "proposal", proposalID.String(), nil,

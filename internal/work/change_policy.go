@@ -103,21 +103,8 @@ func participantFields(fields map[string]any) ([]uuid.UUID, error) {
 	return ids, nil
 }
 func validateNewWork(ctx context.Context, tx pgx.Tx, project uuid.UUID, c Change, created map[string]string) error {
-	allowed := map[string]bool{"title": true, "acceptanceCriteria": true, "workflowId": true}
-	if c.Operation == "create_plan" {
-		allowed["goal"] = true
-		allowed["ownerIdentityId"] = true
-		allowed["sourceTopicId"] = true
-		allowed["forkAfterSeq"] = true
-	} else {
-		for _, key := range []string{"expectedOutput", "reviewerIdentityId", "participantIdentityIds", "planId", "parentTaskId", "nodeId", "kind", "requirements", "bugDetails"} {
-			allowed[key] = true
-		}
-	}
-	for key := range c.Fields {
-		if !allowed[key] {
-			return apierrors.Fields("fields."+key, "unsupported")
-		}
+	if err := ValidateCreateChangeFields(c); err != nil {
+		return err
 	}
 	title := strOrDefault(c.Fields, "title")
 	if strings.TrimSpace(title) == "" || utf8.RuneCountInString(title) > 200 {

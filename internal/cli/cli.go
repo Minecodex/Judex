@@ -223,21 +223,10 @@ func emit(data any, err error) error {
 		fmt.Fprintln(os.Stderr, "错误:", err)
 	}
 	if err != nil {
-		var cliErr *client.CLIError
-		if errors.As(err, &cliErr) {
-			exitCode = cliErr.ExitCode()
-		} else {
-			exitCode = 1
-		}
-		return err
+		return &reportedError{cause: err}
 	}
 	return nil
 }
-
-// exitCode is read by main to map errors to codes (07 §6).
-var exitCode int
-
-func TakeExitCode() int { return exitCode }
 
 // Root builds the full command tree.
 func Root() *cobra.Command {
@@ -266,7 +255,7 @@ func Root() *cobra.Command {
 	identityCmd.AddCommand(identityListCommand(), identityUseCommand())
 	root.AddCommand(identityCmd)
 	planCmd := &cobra.Command{Use: "plan", Short: "计划"}
-	planCmd.AddCommand(planAcceptCommand())
+	planCmd.AddCommand(planReadCommand(false), planReadCommand(true), planAcceptCommand(), acceptanceHistoryCommand("plans"))
 	root.AddCommand(planCmd)
 	bugCmd := &cobra.Command{Use: "bug", Short: "问题草稿"}
 	bugCmd.AddCommand(fileCommand("create", "创建 Bug 草稿", "/tasks", func(body map[string]any) { body["kind"] = "bug" }))
@@ -286,7 +275,7 @@ func Root() *cobra.Command {
 	materialCmd.AddCommand(materialListCommand(), materialUploadCommand(), materialDownloadCommand())
 	root.AddCommand(materialCmd, bundleCommand())
 
-	root.AddCommand(submitCommand(), reportCommand(), discussionSuggestionCommands(), taskAnalysisCommands())
+	root.AddCommand(submitCommand(), reportCommand(), discussionSuggestionCommands(), taskAnalysisCommands(), submissionAnalysisCommand())
 	topicCmd := &cobra.Command{Use: "topic", Short: "讨论会话"}
 	topicCmd.AddCommand(topicForkCommand())
 	root.AddCommand(topicCmd)
@@ -300,15 +289,18 @@ func Root() *cobra.Command {
 	contextCmd := &cobra.Command{Use: "context", Short: "任务上下文"}
 	contextCmd.AddCommand(contextCommand())
 	root.AddCommand(contextCmd)
+	workflowCmd := &cobra.Command{Use: "workflow", Short: "已发布流程"}
+	workflowCmd.AddCommand(workflowReadCommand())
+	root.AddCommand(workflowCmd)
 	root.AddCommand(decisionCmd)
 
 	taskCmd := &cobra.Command{Use: "task", Short: "任务"}
-	taskCmd.AddCommand(taskAcceptCommand(), taskReopenCommand(), taskActivityCommand())
+	taskCmd.AddCommand(taskAcceptCommand(), taskRejectCommand(), taskReopenCommand(), taskActivityCommand(), acceptanceHistoryCommand("tasks"))
 	taskCmd.AddCommand(taskExecutionCommand("skip"), taskExecutionCommand("restore"))
 	root.AddCommand(taskCmd)
 
 	handoffCmd := &cobra.Command{Use: "handoff", Short: "交接"}
-	handoffCmd.AddCommand(handoffSendCommand(), handoffReceiveCommand(), handoffRejectCommand())
+	handoffCmd.AddCommand(handoffListCommand(), handoffSendCommand(), handoffReceiveCommand(), handoffRejectCommand())
 	root.AddCommand(handoffCmd)
 
 	eventsCmd := &cobra.Command{Use: "events", Short: "事件"}
@@ -349,7 +341,7 @@ func authLoginCommand() *cobra.Command {
 			return emit(nil, err)
 		}
 		if len(scopes) == 0 {
-			scopes = []string{"projects:read", "context:read", "materials:read", "materials:write",
+			scopes = []string{"projects:read", "projects:create", "context:read", "materials:read", "materials:write",
 				"submissions:write", "reports:write", "proposals:draft", "events:read", "intents:create"}
 		}
 		token, err := c.DeviceLogin(cmd.Context(), "judex-cli@"+runtime.GOOS, scopes)
@@ -625,47 +617,17 @@ func decisionReviewCommand() *cobra.Command {
 	}}
 }
 
-func taskAcceptCommand() *cobra.Command {
-	return &cobra.Command{Use: "accept ID", Short: "取得快照并创建浏览器确认意图", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		projectID, err := currentProject()
-		if err != nil {
-			return emit(nil, err)
-		}
-		c, err := NewClient()
-		if err != nil {
-			return emit(nil, err)
-		}
-		var review map[string]any
-		path := fmt.Sprintf("/projects/%s/tasks/%s/acceptance-review", projectID, args[0])
-		if err := c.Do(cmd.Context(), "GET", path, nil, &review, ""); err != nil {
-			return emit(nil, err)
-		}
-		// Human confirmation intent: the browser confirms, CLI reads result.
-		intent := map[string]any{
-			"operation":  "task.acceptance",
-			"objectId":   args[0],
-			"reviewHash": review["reviewHash"],
-			"payload": map[string]any{
-				"decision": "accept", "expectedVersion": review["targetVersion"],
-				"reviewId": review["reviewId"],
-			},
-		}
-		var created map[string]any
-		if err := c.Do(cmd.Context(), "POST", "/projects/"+projectID+"/confirmation-intents", intent, &created, requestKey()); err != nil {
-			return emit(nil, err)
-		}
-		return emitIntent(cmd, c, "/projects/"+projectID+"/confirmation-intents", created)
-	}}
-}
-
 func handoffSendCommand() *cobra.Command {
 	var version int
+	var summary string
 	cmd := &cobra.Command{Use: "send SOURCE --version N", Short: "发送来源（经确认意图）", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if strings.TrimSpace(summary) == "" {
+			return emit(nil, fmt.Errorf("summary is required"))
+		}
 		projectID, err := currentProject()
 		if err != nil {
 			return emit(nil, err)
 		}
-		_ = version
 		c, err := NewClient()
 		if err != nil {
 			return emit(nil, err)
@@ -677,6 +639,12 @@ func handoffSendCommand() *cobra.Command {
 		if source.CurrentVersion != nil && *source.CurrentVersion != int64(version) {
 			return emit(nil, fmt.Errorf("source version changed"))
 		}
+		currentVersion := int64(0)
+		if source.CurrentVersion != nil {
+			currentVersion = *source.CurrentVersion
+		} else if version != 1 {
+			return emit(nil, fmt.Errorf("unsent source requires version 1"))
+		}
 		var task map[string]any
 		if err = c.Do(cmd.Context(), "GET", "/projects/"+projectID+"/tasks/"+source.TaskID, nil, &task, ""); err != nil {
 			return emit(nil, err)
@@ -687,7 +655,7 @@ func handoffSendCommand() *cobra.Command {
 		intent := map[string]any{
 			"operation": "handoff.send", "objectId": args[0],
 			"reviewHash": task["latestReportId"],
-			"payload":    map[string]any{"summary": "由 CLI 提交"},
+			"payload":    map[string]any{"summary": summary, "sourceVersion": currentVersion},
 		}
 		var created map[string]any
 		if err := c.Do(cmd.Context(), "POST", "/projects/"+projectID+"/confirmation-intents", intent, &created, requestKey()); err != nil {
@@ -695,7 +663,8 @@ func handoffSendCommand() *cobra.Command {
 		}
 		return emitIntent(cmd, c, "/projects/"+projectID+"/confirmation-intents", created)
 	}}
-	cmd.Flags().IntVar(&version, "version", 1, "source version")
+	cmd.Flags().IntVar(&version, "version", 1, "current source version (use 1 for an unsent source)")
+	cmd.Flags().StringVar(&summary, "summary", "由 CLI 提交", "本次固定来源的具体移交说明")
 	return cmd
 }
 

@@ -271,11 +271,10 @@ func (h *PositionHandlers) createInvitation(c *gin.Context) {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.created(c, gin.H{
-		"id": invitation.ID, "targetEmail": invitation.TargetEmail, "state": invitation.State,
-		"expiresAt": invitation.ExpiresAt,
-		"inviteUrl": "/invite/" + invitation.Token,
-	})
+	respond{}.created(c, struct {
+		project.Invitation
+		InviteURL string `json:"inviteUrl"`
+	}{invitation, "/invite/" + invitation.Token})
 }
 
 func (h *PositionHandlers) revokeInvitation(c *gin.Context) {
@@ -319,6 +318,7 @@ func (h *PositionHandlers) resolveInvitation(c *gin.Context) {
 		"id": invitation.ID, "targetEmail": invitation.TargetEmail, "state": invitation.State,
 		"expiresAt": invitation.ExpiresAt, "emailMatches": email == invitation.TargetEmail,
 		"projectTitle": invitation.ProjectTitle, "positionNames": invitation.PositionNames,
+		"projectId": invitation.ProjectID, "positions": invitation.PositionNames, "inviterDisplayName": invitation.InviterDisplayName,
 	})
 }
 

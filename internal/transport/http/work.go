@@ -37,9 +37,11 @@ func (h *WorkHandlers) Register(spec *SpecRouter) {
 	spec.Register("startTask", withAuth(h.startTask))
 	spec.Register("getExecutionMap", withAuth(h.executionMap))
 	spec.Register("getTaskAcceptanceReview", withAuth(h.taskReview))
+	spec.Register("listTaskAcceptances", withAuth(h.acceptanceHistory))
 	spec.Register("decideTaskAcceptance", withAuth(h.taskDecide))
 	spec.Register("reopenTask", withAuth(h.taskReopen))
 	spec.Register("getPlanAcceptanceReview", withAuth(h.planReview))
+	spec.Register("listPlanAcceptances", withAuth(h.acceptanceHistory))
 	spec.Register("acceptPlan", withAuth(h.planDecide))
 	spec.Register("reopenPlan", withAuth(h.planReopen))
 }

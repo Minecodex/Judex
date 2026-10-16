@@ -50,7 +50,7 @@ func (p *runtimeProvider) Stream(ctx context.Context, req model.Request) (<-chan
 	} else {
 		out <- model.Event{Type: "textDelta", TextDelta: "已汇总岗位意见，等待人工决定"}
 	}
-	out <- model.Event{Type: "usage", InputTokens: 100, OutputTokens: 50}
+	out <- model.Event{Type: "usage", Usage: model.UsageSnapshot{InputTokens: model.TokenCount(100), OutputTokens: model.TokenCount(50)}}
 	out <- model.Event{Type: "finish"}
 	close(out)
 	return out, nil
@@ -167,6 +167,30 @@ func TestProductionAgentPersistsAndCallsPosition(t *testing.T) {
 	}
 	if err = svc.Extend(ctx, user.ID, projectValue.ID, batchID, version, 1, "重复扩展"); err == nil {
 		t.Fatal("stale extension repeated")
+	}
+	var continuation uuid.UUID
+	if err = pool.QueryRow(ctx, `SELECT id FROM agent_runs WHERE batch_id=$1 AND state='queued' AND parent_run_id IS NULL`, batchID).Scan(&continuation); err != nil || continuation == runID {
+		t.Fatalf("new continuation run missing: %s %v", continuation, err)
+	}
+	// An explicit extension starts a fresh round. Completed tools from the old
+	// root must not make this new root look like an interrupted execution with
+	// a missing checkpoint; interrupted roots still use the recovery path above.
+	if err = executor.ExecuteBatch(ctx, projectValue.ID, batchID); err != nil {
+		t.Fatal(err)
+	}
+	continued, err := svc.Get(ctx, user.ID, projectValue.ID, continuation)
+	if err != nil || continued.State != "succeeded" {
+		t.Fatalf("extended round did not execute: %+v %v", continued, err)
+	}
+	if provider.calls.Load() != 9 || provider.children.Load() != 4 {
+		t.Fatalf("extended round model/position calls: %d/%d", provider.calls.Load(), provider.children.Load())
+	}
+	var oldTools, rounds int
+	if err = pool.QueryRow(ctx, `SELECT count(*) FROM tool_calls WHERE run_id=$1 AND state='succeeded'`, runID).Scan(&oldTools); err != nil || oldTools != 2 {
+		t.Fatalf("old completed tool evidence changed: %d %v", oldTools, err)
+	}
+	if err = pool.QueryRow(ctx, `SELECT model_attempts,used_tokens,rounds_reserved FROM discussion_batches WHERE id=$1`, batchID).Scan(&currentAttempts, &currentTokens, &rounds); err != nil || currentAttempts != attempts+4 || currentTokens != tokens+600 || rounds != 2 {
+		t.Fatalf("extended round accounting: attempts=%d tokens=%d rounds=%d err=%v", currentAttempts, currentTokens, rounds, err)
 	}
 }
 

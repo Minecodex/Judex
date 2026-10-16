@@ -8,9 +8,15 @@
 
 CLI 是公共业务 API 的客户端，不另开绕权限接口；Skill 是调用规范，不是持权服务。成员手动调用本地 AI/Skill 拉取工作和上报，平台不向电脑推可执行指令，不安装常驻远控 Agent。
 
+`handoff send --summary` 将实际移交说明放入现有固定来源审阅，省略保留原默认说明，空白在请求前拒绝。`--version N` 为实际当前来源版本，未发送时用1；意图明确冻结已发送版本数（初次为0），确认页与服务器均复核相同来源版本和报告，确认后才生成下一版。来源已修订时旧意图不能重发。发送、接收和退回仍走同一浏览器确认；不把来源接收当成任务验收。上游版本核对须从当前 latestAcceptanceId 对应的 acceptanceId 追到固定报告与材料SHA，详见 Skill 报告约定。
+
+`handoff list --limit/--cursor` 只读完整来源版本、说明和状态，沿用公共项目授权及 context:read。接收人先读同一固定版本再作出接收或退回意图，不依赖别人转述摘要。
+
+真实返工联测暴露活动列表不包含正式验收记录，宿主难以取得拒收理由。初版只增加 CLI 命令，实际请求返回 405，不能算反馈链通过。现补齐 `task acceptances ID` 与 `plan acceptances ID` 对应只读 API、成员权限、项目授权和 limit/cursor 分页，并将新决定写入公开工作记录；旧退回按实际审计来源展示理由，缺失快照保持 null。活动列表和 Agent 当前事实也包含最近正式反馈。命令不创建意图或作出决定，仍须验证发行包及真实服务。`latestAcceptanceId` 只指接受快照；最近退回与重开按历史决定时间读取，重开还须核对有权人的当前明确请求。
+
 ## 2. 工程与发布目录
 
-2026-10-07 门户接入：设置 → 本地 AI 接入提供 Windows CLI、macOS CLI 与 Skills ZIP 三个真实下载入口。平台压缩包分别包含 amd64/arm64 二进制和架构选择启动文件，CLI 包附带匹配版本 Skills，独立 ZIP 供宿主直接安装。前端 postbuild 从当前源码构建并生成 SHA256 清单，经同版本服务端的静态资源通道提供。详细构建与验证约定见 [统一界面组件规范](../../统一界面组件规范.md)。
+2026-10-07 门户接入：设置 → 本地 AI 接入提供 Windows CLI、macOS CLI 与 Skills ZIP 三个真实下载入口。平台压缩包分别包含 amd64/arm64 二进制和架构选择启动文件，CLI 包附带匹配版本 Skills，独立 ZIP 供宿主直接安装。前端 postbuild 从当前源码构建并生成 SHA256 清单，经同版本服务端的静态资源通道提供。详细构建与验证约定见 [统一界面组件规范](../../界面/README.md)。
 
 ```text
 cmd/judex/main.go             小入口、信号、exit code
@@ -62,7 +68,7 @@ HTTPS 默认必需；本机 loopback 开发例外。私有 CA 用 `--ca-file`；
 | `decision review ID` | 获取最新不可变审阅版本、变化、名单、计时和权限 |
 | `decision approve ID --review HASH` / `reject ... --reason-file FILE` | 创建浏览器确认意图并等待结果，`--no-wait` 只返回 pending |
 | `handoff send SOURCE --version N` / `receive ...` / `reject ...` | 各来源正式动作均通过确认意图；拒收理由必填 |
-| `task accept ID` / `task reopen ID` / `plan accept ID` | 先取得验收 snapshot，再浏览器确认；不能只用任务标题匹配 |
+| `task accept ID` / `task reject ID --reason TEXT` / `task reopen ID` / `plan accept ID` | 先取得固定验收 snapshot，再浏览器确认接收或带理由退回；pending 不代表决定生效，不能只用任务标题匹配 |
 | `run show ID` / `run watch ID` / `run cancel ID` | 公开运行状态；取消 run 不撤业务批准 |
 | `events watch` | 只拉事件，断线游标恢复，不执行服务端返回的 shell 文本 |
 | `pending list` / `pending retry ID` | 本地中断提交恢复，用原请求键；冲突需人工更新，不自动换新版本 |
@@ -85,6 +91,8 @@ CLI 没有 `git push/merge`、`kubectl deploy` 的平台代执行快捷命令。
 ## 6. JSON、错误与退出码
 
 stdout 在 `--json` 下只输出一份机器可读结果：`{schemaVersion:"1",ok,data,error?,requestId?,nextActions?}`；进度/log 去 stderr。不得把 ANSI 动画混入 JSON。`nextActions` 只为结构化提示，不给 Skill 未校验 shell 脚本。
+
+2026-10-10：原生进程统一接住 Cobra 前置参数错误和业务错误，缺必填参数不再静默退出 0；参数 / 无效 JSON 与缺文件返回 2，API 400 同类映射。已输出的业务错误和部分成功数据只输出一次；具体发行和真实 Kimi 用例见[CLI 与缓存实施记录](../real-host/records/CLI-CACHE-20261010.md)。
 
 退出码：0 已完成读/写或明确 `--no-wait` 已创建请求；2 参数错误；3 未认证；4 无权限；5 版本/审阅冲突；6 待本人确认/运行未完成（仅同步等待超时）；7 临时网络/依赖错误；8 业务条件不满足；1 其他内部失败。`ok` 与 operationStatus 区分“请求创建成功”和“业务已完成”。
 
@@ -131,4 +139,4 @@ npm run release:build -- VERSION 生成六平台 CLI、双架构 Linux server、
 
 ## 2026-10-09 资料用途登记
 
-material upload 支持可选 --purpose 与互斥的 --task/--plan，单独登记不会产生进度报告。失败返回已上传版本，源摘要和关联上下文的持久收据支持固定版本与提交键重试；报告仍明确引用 materialVersionIds，计划从任务解析。详见 [共享资料正式重构](../../共享资料正式重构.md)。
+material upload 支持可选 --purpose 与互斥的 --task/--plan，单独登记不会产生进度报告。失败返回已上传版本，源摘要和关联上下文的持久收据支持固定版本与提交键重试；报告仍明确引用 materialVersionIds，计划从任务解析。详见 [共享资料正式重构](../materials/DESIGN.md)。

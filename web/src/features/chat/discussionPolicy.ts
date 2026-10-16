@@ -150,7 +150,7 @@ export function discussWorkSubmission(s:WorkState,taskId:string,sourceId:string,
  next.taskActivities!.push({
   id:sourceId,taskId,kind:"delivery",sourceType:"report",source:"web",text:summary,actorUserId:null,actorName:s.currentUser,identityId:null,createdAt:now,
   materialVersionIds:files.map(f=>f.id),materials:files.map(f=>({versionId:f.id,name:f.name})),topicIds:[],
-  analysis:{id:uid(),taskId,batchId:null,sourceType:"report",sourceId,state:"completed",summary:"交付已登记，最终验收仍待确认。",basis:[],disagreements:[],errorCode:null,updatedAt:now}
+  analysis:{id:uid(),taskId,scopeKind:'task',output:{},batchId:null,sourceType:"report",sourceId,state:"completed",summary:"交付已登记，最终验收仍待确认。",basis:[],disagreements:[],errorCode:null,updatedAt:now}
  });
  return {state:next};
 }

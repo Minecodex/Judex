@@ -1,0 +1,890 @@
+{
+  "recordedAt": "2026-10-15T01:09:05.305Z",
+  "status": "bounded_tail_passed_actual_vendor_429_unobserved",
+  "release": "0.1.0-realhost.20261015.31",
+  "sourceTreeHash": "63d7afbe2b74fa41fa754f78d51e022efd5e588c7bd948e7049b8b58fee70489",
+  "originalBusiness": {
+    "acceptedTasks": 30,
+    "acceptedPlans": 9,
+    "allRowsPreserved": [
+      {
+        "table": "tasks",
+        "rows": 36,
+        "archiveSha256": "949005382efcd1804ea8b5ca562f76ce95b0c99cb983d266624c7a9b45e5d7f0",
+        "currentSha256": "949005382efcd1804ea8b5ca562f76ce95b0c99cb983d266624c7a9b45e5d7f0",
+        "unchanged": true
+      },
+      {
+        "table": "plans",
+        "rows": 9,
+        "archiveSha256": "2b0e73d9d5960353cfa1c845c08f9977cc1ea6f96e8c36b387c9bc47a8809dce",
+        "currentSha256": "2b0e73d9d5960353cfa1c845c08f9977cc1ea6f96e8c36b387c9bc47a8809dce",
+        "unchanged": true
+      },
+      {
+        "table": "proposals",
+        "rows": 29,
+        "archiveSha256": "faf72bb64a53db44f19914b7bcc0312b2b118cf51efb0f6f7ddbc5fa2ce338e0",
+        "currentSha256": "faf72bb64a53db44f19914b7bcc0312b2b118cf51efb0f6f7ddbc5fa2ce338e0",
+        "unchanged": true
+      },
+      {
+        "table": "task_acceptances",
+        "rows": 33,
+        "archiveSha256": "dc9bdd4c105af70a651145d2aa22f40861f9f5a78429f5a276a4b92cca55fbde",
+        "currentSha256": "dc9bdd4c105af70a651145d2aa22f40861f9f5a78429f5a276a4b92cca55fbde",
+        "unchanged": true
+      },
+      {
+        "table": "plan_acceptances",
+        "rows": 9,
+        "archiveSha256": "8fb5ecbd6e9cbc2ad195b4060ae48cebaa7a7636dafb4927ba5eba00aecd53e6",
+        "currentSha256": "8fb5ecbd6e9cbc2ad195b4060ae48cebaa7a7636dafb4927ba5eba00aecd53e6",
+        "unchanged": true
+      }
+    ]
+  },
+  "workflowRead": {
+    "sourceId": "6ec747b8-ae5e-402b-8e0b-dba23bd35c1b",
+    "actualToolCalls": {
+      "read_workflow": 2,
+      "record_task_analysis": 1
+    },
+    "newVersion": {
+      "id": "9a85ce8d-7b6f-44f4-8bf8-faca3496931a",
+      "sha256": "34c8a9c0825eec75ddf220d22db7427cc61e04353fe0ae5854de902c4dd32c2f",
+      "isCurrent": true
+    },
+    "historicalVersion": {
+      "id": "2b465086-7967-47e6-8f4c-0d10e9d3264d",
+      "sha256": "9823f2f77d75aac30c648227274604cb618dc7363d88a3af692eee75a0e6752e",
+      "isCurrent": false
+    },
+    "nativeReceiptSha256": "f6f4450830a2f5f01a06535b97013638f0bc5b0324b042f61c3c599cecf701cb"
+  },
+  "clientContext": {
+    "originalSessionId": "session_3ea65df2-9615-457a-ae95-4997d4d0b6f5",
+    "diagnosis": "32768 did compact but retained about 45000 tokens; normal requests were clamped to max_tokens=1",
+    "failed32768RetryPreserved": true,
+    "preflightPaidCalls": 0,
+    "positive65536": {
+      "recordedAt": "2026-10-14T23:36:29.188Z",
+      "sessionId": "session_3ea65df2-9615-457a-ae95-4997d4d0b6f5",
+      "contextSize": 65536,
+      "outputSize": 16384,
+      "exitCode": 0,
+      "tools": 7,
+      "requests": 9,
+      "highRequests": 9,
+      "compactions": [
+        {
+          "tokensBefore": 45291,
+          "tokensAfter": 45159,
+          "summaryOutputTokens": 1046,
+          "keptUserMessageCount": 22
+        },
+        {
+          "tokensBefore": 48464,
+          "tokensAfter": 44777,
+          "summaryOutputTokens": 664,
+          "keptUserMessageCount": 22
+        }
+      ]
+    },
+    "nativeInvocations": [
+      {
+        "startedAt": "2026-10-14T23:20:19.716Z",
+        "exitCode": 1,
+        "contextLimit": 32768,
+        "outputLimit": 16384,
+        "tools": 0,
+        "observation": {
+          "source": "real provider response through test-only loopback relay",
+          "model": "glm-5.3-flash",
+          "calls": 20,
+          "usageKnownCalls": 20,
+          "cacheKnownCalls": 20,
+          "inputTokens": 853387,
+          "outputTokens": 7576,
+          "cacheSubsetInputTokens": 853387,
+          "cacheReadTokens": 485440,
+          "cacheWriteKnownCalls": 0,
+          "cacheWriteTokens": 0,
+          "statusCounts": {
+            "200": 20
+          },
+          "transportErrors": {},
+          "clientAborts": 0,
+          "rejectedRequests": 0,
+          "requestReasoningEffortCounts": {
+            "high": 20
+          },
+          "returnedModelCounts": {
+            "ZHIPU/GLM-5.3-Flash": 20
+          },
+          "returnedModelUnknownCalls": 0,
+          "lastProviderError": null,
+          "requestMaxOutputCounts": {
+            "1": 10,
+            "16384": 10
+          }
+        }
+      },
+      {
+        "startedAt": "2026-10-14T23:28:53.081Z",
+        "exitCode": 0,
+        "contextLimit": 65536,
+        "outputLimit": 16384,
+        "tools": 7,
+        "observation": {
+          "source": "real provider response through test-only loopback relay",
+          "model": "glm-5.3-flash",
+          "calls": 9,
+          "usageKnownCalls": 9,
+          "cacheKnownCalls": 9,
+          "inputTokens": 387752,
+          "outputTokens": 3774,
+          "cacheSubsetInputTokens": 387752,
+          "cacheReadTokens": 267392,
+          "cacheWriteKnownCalls": 0,
+          "cacheWriteTokens": 0,
+          "statusCounts": {
+            "200": 9
+          },
+          "transportErrors": {},
+          "clientAborts": 0,
+          "rejectedRequests": 0,
+          "requestReasoningEffortCounts": {
+            "high": 9
+          },
+          "returnedModelCounts": {
+            "ZHIPU/GLM-5.3-Flash": 9
+          },
+          "returnedModelUnknownCalls": 0,
+          "lastProviderError": null,
+          "requestMaxOutputCounts": {
+            "16384": 9
+          }
+        }
+      },
+      {
+        "startedAt": "2026-10-14T23:35:51.195Z",
+        "exitCode": 0,
+        "contextLimit": 65536,
+        "outputLimit": 16384,
+        "tools": 39,
+        "observation": {
+          "source": "real provider response through test-only loopback relay",
+          "model": "glm-5.3-flash",
+          "calls": 47,
+          "usageKnownCalls": 47,
+          "cacheKnownCalls": 47,
+          "inputTokens": 2089276,
+          "outputTokens": 32359,
+          "cacheSubsetInputTokens": 2089276,
+          "cacheReadTokens": 1694528,
+          "cacheWriteKnownCalls": 0,
+          "cacheWriteTokens": 0,
+          "statusCounts": {
+            "200": 47
+          },
+          "transportErrors": {},
+          "clientAborts": 0,
+          "rejectedRequests": 0,
+          "requestReasoningEffortCounts": {
+            "high": 47
+          },
+          "returnedModelCounts": {
+            "ZHIPU/GLM-5.3-Flash": 47
+          },
+          "returnedModelUnknownCalls": 0,
+          "lastProviderError": null,
+          "requestMaxOutputCounts": {
+            "16384": 47
+          }
+        }
+      },
+      {
+        "startedAt": "2026-10-15T00:09:54.348Z",
+        "exitCode": 0,
+        "contextLimit": 128000,
+        "outputLimit": 16384,
+        "tools": 3,
+        "observation": {
+          "source": "real provider response through test-only loopback relay",
+          "model": "glm-5.3-flash",
+          "calls": 4,
+          "usageKnownCalls": 4,
+          "cacheKnownCalls": 4,
+          "inputTokens": 180486,
+          "outputTokens": 1922,
+          "cacheSubsetInputTokens": 180486,
+          "cacheReadTokens": 90112,
+          "cacheWriteKnownCalls": 0,
+          "cacheWriteTokens": 0,
+          "statusCounts": {
+            "200": 4
+          },
+          "transportErrors": {},
+          "clientAborts": 0,
+          "rejectedRequests": 0,
+          "requestReasoningEffortCounts": {
+            "high": 4
+          },
+          "returnedModelCounts": {
+            "ZHIPU/GLM-5.3-Flash": 4
+          },
+          "returnedModelUnknownCalls": 0,
+          "lastProviderError": null,
+          "requestMaxOutputCounts": {
+            "16384": 4
+          }
+        }
+      }
+    ]
+  },
+  "actualSandboxBoundary": {
+    "registeredAt": "2026-10-14T23:49:31.303Z",
+    "namespace": "judex-ui-endurance-1d2006f4-runtime",
+    "uid": "853cda62-b9be-407a-b2cb-175abd48980e",
+    "scope": "actual OpenSandbox API, existing controller, isolated pods; no formal business task execution",
+    "image": "judex/server:collaboration-realhost-0.1.0-realhost.20261015.29",
+    "cases": [
+      {
+        "kind": "actual_command",
+        "exitCode": 0,
+        "mode": "baseline",
+        "ok": true,
+        "recordedAt": "2026-10-14T23:49:35.4011962Z",
+        "stderr": "",
+        "stdout": "RUNTIME_READY\n",
+        "unknown": false,
+        "processExit": 0
+      },
+      {
+        "kind": "api_restart",
+        "startedAt": "2026-10-14T23:49:36.584Z",
+        "sideEffectObservedBeforeInterruption": true,
+        "interruptedPod": "judex-endurance-runtime-1d2006f4-847546f645-9qvml",
+        "interruptedUID": "82855b8a-57ac-4840-82b1-c808da834930",
+        "error": "unexpected EOF",
+        "exitCode": 0,
+        "mode": "interrupt",
+        "ok": false,
+        "recordedAt": "2026-10-14T23:49:36.6113588Z",
+        "stderr": "",
+        "stdout": "",
+        "unknown": true,
+        "processExit": 2,
+        "afterRecovery": {
+          "exitCode": 0,
+          "mode": "recover",
+          "ok": true,
+          "recordedAt": "2026-10-14T23:49:49.5063411Z",
+          "stderr": "",
+          "stdout": "1\n",
+          "unknown": false,
+          "processExit": 0
+        },
+        "sideEffectLines": 1,
+        "noAutomaticReplay": true,
+        "completedAt": "2026-10-14T23:49:50.534Z"
+      },
+      {
+        "kind": "sandbox_pod_loss",
+        "startedAt": "2026-10-14T23:49:50.754Z",
+        "sideEffectObservedBeforeInterruption": true,
+        "interruptedPod": "6b59c285-b34a-4e1c-bb96-0d4a57551247-0",
+        "interruptedUID": "ac868508-5308-4218-b911-e85386f308b0",
+        "exitCode": -1,
+        "mode": "interrupt",
+        "ok": true,
+        "recordedAt": "2026-10-14T23:49:50.798562Z",
+        "stderr": "",
+        "stdout": "",
+        "unknown": false,
+        "processExit": 0,
+        "newSandbox": {
+          "externalId": "c6958bbb-f2b2-4901-80a3-dc075953eb4a",
+          "baseline": {
+            "exitCode": 0,
+            "mode": "baseline",
+            "ok": true,
+            "recordedAt": "2026-10-14T23:49:55.2215282Z",
+            "stderr": "",
+            "stdout": "RUNTIME_READY\n",
+            "unknown": false,
+            "processExit": 0
+          }
+        },
+        "oldInterruptedCommandNotReplayed": true,
+        "completedAt": "2026-10-14T23:49:56.235Z"
+      }
+    ],
+    "externalIds": [
+      "6b59c285-b34a-4e1c-bb96-0d4a57551247",
+      "c6958bbb-f2b2-4901-80a3-dc075953eb4a"
+    ],
+    "phase": "completed",
+    "completedAt": "2026-10-14T23:49:56.236Z",
+    "cleanup": [
+      {
+        "externalId": "6b59c285-b34a-4e1c-bb96-0d4a57551247",
+        "ok": true
+      },
+      {
+        "externalId": "c6958bbb-f2b2-4901-80a3-dc075953eb4a",
+        "ok": true
+      }
+    ]
+  },
+  "actualWorkerInterruption": {
+    "registeredAt": "2026-10-14T23:52:42.994Z",
+    "namespace": "judex-ui-endurance-1d2006f4",
+    "runtimeNamespace": "judex-ui-endurance-1d2006f4-runtime",
+    "scope": "actual APIMart high requests and a sandbox command interrupted by the real server/worker pod restart; formal business objects untouched",
+    "phase": "completed",
+    "clientSubmissionId": "1591defe-0388-4aae-884e-1a4a86a7db0f",
+    "sentinel": "judex-worker-f1ca4ebf654bdc41",
+    "sourceId": "6bdad48d-99df-4d9f-8f62-4c200fc9a5d6",
+    "before": {
+      "batchId": "f6d88ab4-1c72-4e4a-b010-1a1dc4d7b4df",
+      "analysisState": "running",
+      "rootId": "d36833ce-6998-4aca-9475-49b51a8d4834",
+      "rootState": "running",
+      "rootVersion": 2,
+      "bashCalls": 1,
+      "modelCalls": 1,
+      "tools": [
+        {
+          "id": "347f9230-d9ca-480e-a794-6dd2968431ce",
+          "name": "bash",
+          "state": "prepared",
+          "effect": "sandbox"
+        }
+      ]
+    },
+    "commandObserved": {
+      "pod": "77b7938c-04b9-4c87-905f-afc105503653-0",
+      "uid": "0a5d76b8-a629-4452-8abb-13a8774fc03f",
+      "lines": 1
+    },
+    "interruptedAt": "2026-10-14T23:52:59.270Z",
+    "after": {
+      "batchId": "f6d88ab4-1c72-4e4a-b010-1a1dc4d7b4df",
+      "analysisState": "waiting_human",
+      "rootId": "d36833ce-6998-4aca-9475-49b51a8d4834",
+      "rootState": "waiting_human",
+      "rootVersion": 3,
+      "bashCalls": 1,
+      "modelCalls": 1,
+      "tools": [
+        {
+          "id": "347f9230-d9ca-480e-a794-6dd2968431ce",
+          "name": "bash",
+          "state": "unknown",
+          "effect": "sandbox"
+        }
+      ]
+    },
+    "operationalCancelStatus": 200,
+    "final": {
+      "batchId": "f6d88ab4-1c72-4e4a-b010-1a1dc4d7b4df",
+      "analysisState": "cancelled",
+      "rootId": "d36833ce-6998-4aca-9475-49b51a8d4834",
+      "rootState": "cancelled",
+      "rootVersion": 4,
+      "bashCalls": 1,
+      "modelCalls": 1,
+      "tools": [
+        {
+          "id": "347f9230-d9ca-480e-a794-6dd2968431ce",
+          "name": "bash",
+          "state": "unknown",
+          "effect": "sandbox"
+        }
+      ]
+    },
+    "completedAt": "2026-10-14T23:53:47.999Z",
+    "noAutomaticReplay": true
+  },
+  "desktopBrowser": {
+    "recordedAt": "2026-10-15T00:59:33.477Z",
+    "namespace": "judex-ui-strict-3621cf1e",
+    "label": "post-faults31",
+    "scope": "two separate desktop browser processes, saved authenticated storage and same project URL; no OS reboot claim",
+    "observations": [
+      {
+        "at": "2026-10-15T00:59:32.330Z",
+        "newBrowserProcess": true,
+        "userId": "2e4874fe-64f2-40e4-8483-7c3d45d4a882",
+        "workflowId": "a56f66a0-ef11-5797-b244-34a18d43c322",
+        "versionId": "9a85ce8d-7b6f-44f4-8bf8-faca3496931a",
+        "bodySha256": "34c8a9c0825eec75ddf220d22db7427cc61e04353fe0ae5854de902c4dd32c2f",
+        "workflowSelected": true,
+        "theme": "light",
+        "locale": "zh-CN"
+      },
+      {
+        "at": "2026-10-15T00:59:33.221Z",
+        "newBrowserProcess": true,
+        "userId": "2e4874fe-64f2-40e4-8483-7c3d45d4a882",
+        "workflowId": "a56f66a0-ef11-5797-b244-34a18d43c322",
+        "versionId": "9a85ce8d-7b6f-44f4-8bf8-faca3496931a",
+        "bodySha256": "34c8a9c0825eec75ddf220d22db7427cc61e04353fe0ae5854de902c4dd32c2f",
+        "workflowSelected": true,
+        "theme": "light",
+        "locale": "zh-CN"
+      }
+    ],
+    "passed": true
+  },
+  "firstSoak": {
+    "verdict": {
+      "recordedAt": "2026-10-15T00:33:18.401Z",
+      "requests": 4006,
+      "unplannedFailures": 321,
+      "unplannedFailureRate": 0.0801298052920619,
+      "frozenMaximum": 0.005,
+      "passed": false,
+      "reason": "Original point-in-time marker and first-40 error sample limitation retained; no retroactive reassignment of the unattributed failures. Strict request-interval run is separate."
+    },
+    "storage": {
+      "observedAt": "2026-10-15T00:33:17.003Z",
+      "namespace": "judex-ui-endurance-1d2006f4",
+      "version": "0.1.0-realhost.20261015.29",
+      "generated": 3222,
+      "clientAcknowledged": 3222,
+      "serverReady": 3222,
+      "pendingBacklog": 0,
+      "duplicateReadyNames": [],
+      "clientManifestSha256": "7d4f7daab1752747dc729f00593316a4458a0480d1cf8642bd8dcf90852b2161",
+      "serverManifestSha256": "7d4f7daab1752747dc729f00593316a4458a0480d1cf8642bd8dcf90852b2161",
+      "exactFileNameVersionAndShaMatch": true,
+      "sampledActualDownloads": 406,
+      "allMetadataShaChecks": 3222,
+      "hashFailures": 0,
+      "unplannedFailures": 321,
+      "unplannedFailureRate": null,
+      "passed": true
+    },
+    "existingOutputNegative": {
+      "observedAt": "2026-10-15T00:29:20.346Z",
+      "code": 1,
+      "ok": false,
+      "error": "output exists; choose a new path",
+      "scope": "repeated output path from the first fixture; existing test file preserved"
+    },
+    "classification": "failed first fixture preserved separately; point-in-time marker lost attribution and reused download paths hit overwrite protection"
+  },
+  "strictSoak": {
+    "plan": {
+      "registeredAt": "2026-10-15T00:06:55.340Z",
+      "projectId": "21a13532-7929-4c6c-99a7-01e044eee64e",
+      "durationMs": 3600000,
+      "produceUntilMs": 3300000,
+      "workers": 4,
+      "perWorkerIntervalMs": 4000,
+      "payloadBytes": 65536,
+      "initialBacklog": 128,
+      "burst": {
+        "afterMs": 1200000,
+        "files": 512
+      },
+      "failureDenominator": "all native CLI upload/download invocations; exact request interval overlap determines planned faults",
+      "thresholds": {
+        "recoveryMs": 120000,
+        "unplannedFailureRate": 0.005,
+        "hashFailures": 0,
+        "duplicateReadyFiles": 0,
+        "oom": 0
+      },
+      "faults": [
+        {
+          "atMs": 180000,
+          "kind": "server_worker_restart",
+          "resource": "deployment/test"
+        },
+        {
+          "atMs": 480000,
+          "kind": "postgres_restart",
+          "resource": "pod/test-postgresql-0"
+        },
+        {
+          "atMs": 840000,
+          "kind": "object_store_restart",
+          "resource": "pod/test-seaweedfs-0"
+        },
+        {
+          "atMs": 1500000,
+          "kind": "server_worker_second_restart",
+          "resource": "deployment/test"
+        }
+      ]
+    },
+    "registeredAt": "2026-10-15T00:07:50.637Z",
+    "completedAt": "2026-10-15T01:07:54.045Z",
+    "elapsedMs": 3603408,
+    "generated": 3258,
+    "completed": 3258,
+    "peakBacklog": 512,
+    "nativeInvocations": 4011,
+    "failedInvocations": 45,
+    "plannedFailedInvocations": 45,
+    "unplannedFailedInvocations": 0,
+    "metadataShaChecks": 3258,
+    "actualDownloadShaChecks": 708,
+    "hashFailures": 0,
+    "finalAudit": {
+      "recordedAt": "2026-10-15T01:08:21.829Z",
+      "namespace": "judex-ui-strict-3621cf1e",
+      "uid": "0fd511ef-d47f-441a-a5ff-0f85cfb414c3",
+      "version": "0.1.0-realhost.20261015.31",
+      "passed": true,
+      "checks": [
+        {
+          "name": "continuous frozen one hour",
+          "passed": true
+        },
+        {
+          "name": "all native invocation records retained",
+          "passed": true
+        },
+        {
+          "name": "all intervals match actual timestamps",
+          "passed": true
+        },
+        {
+          "name": "all registered faults complete",
+          "passed": true
+        },
+        {
+          "name": "full storage recovery proof",
+          "passed": true
+        },
+        {
+          "name": "failed native intervals reclassified consistently",
+          "passed": true
+        },
+        {
+          "name": "all produced files acknowledged and queue empty",
+          "passed": true
+        },
+        {
+          "name": "registered initial and burst backlog exercised",
+          "passed": true
+        },
+        {
+          "name": "server UUID SHA manifest exact and no duplicates",
+          "passed": true
+        },
+        {
+          "name": "all original formal business rows unchanged",
+          "passed": true
+        },
+        {
+          "name": "no OOM in actual container samples",
+          "passed": true
+        },
+        {
+          "name": "automatic credential renewal observed during load",
+          "passed": true
+        },
+        {
+          "name": "native original Kimi session verified CLI31 and workflow facts",
+          "passed": true
+        },
+        {
+          "name": "two real desktop browser processes restore current workflow and actual theme",
+          "passed": true
+        }
+      ],
+      "nativeInvocations": 4011,
+      "failedInvocations": 45,
+      "plannedFailedInvocations": 45,
+      "unplannedFailedInvocations": 0,
+      "allInvocationRecordsSha256": "77db374eabb889c917b97da013d0e2c9b5e11e11f1a5b285f85527f0f3958533",
+      "storage": {
+        "observedAt": "2026-10-15T01:08:20.484Z",
+        "namespace": "judex-ui-strict-3621cf1e",
+        "version": "0.1.0-realhost.20261015.31",
+        "generated": 3258,
+        "clientAcknowledged": 3258,
+        "serverReady": 3258,
+        "pendingBacklog": 0,
+        "duplicateReadyNames": [],
+        "clientManifestSha256": "6ad9ea6a726fa20e3c5a7cf6ffb2bb2c51a9baecdd4b64291898bf990f1da034",
+        "serverManifestSha256": "6ad9ea6a726fa20e3c5a7cf6ffb2bb2c51a9baecdd4b64291898bf990f1da034",
+        "exactFileNameVersionAndShaMatch": true,
+        "sampledActualDownloads": 708,
+        "allMetadataShaChecks": 3258,
+        "hashFailures": 0,
+        "unplannedFailures": 0,
+        "unplannedFailureRate": 0,
+        "passed": true
+      },
+      "formal": {
+        "observedAt": "2026-10-15T01:08:21.797Z",
+        "namespace": "judex-ui-strict-3621cf1e",
+        "uid": "0fd511ef-d47f-441a-a5ff-0f85cfb414c3",
+        "method": "exact COPY columns from the verified follow-up archive, sorted by immutable UUID id, all rows and columns compared",
+        "tables": [
+          {
+            "table": "tasks",
+            "rows": 36,
+            "archiveSha256": "949005382efcd1804ea8b5ca562f76ce95b0c99cb983d266624c7a9b45e5d7f0",
+            "currentSha256": "949005382efcd1804ea8b5ca562f76ce95b0c99cb983d266624c7a9b45e5d7f0",
+            "unchanged": true
+          },
+          {
+            "table": "plans",
+            "rows": 9,
+            "archiveSha256": "2b0e73d9d5960353cfa1c845c08f9977cc1ea6f96e8c36b387c9bc47a8809dce",
+            "currentSha256": "2b0e73d9d5960353cfa1c845c08f9977cc1ea6f96e8c36b387c9bc47a8809dce",
+            "unchanged": true
+          },
+          {
+            "table": "proposals",
+            "rows": 29,
+            "archiveSha256": "faf72bb64a53db44f19914b7bcc0312b2b118cf51efb0f6f7ddbc5fa2ce338e0",
+            "currentSha256": "faf72bb64a53db44f19914b7bcc0312b2b118cf51efb0f6f7ddbc5fa2ce338e0",
+            "unchanged": true
+          },
+          {
+            "table": "task_acceptances",
+            "rows": 33,
+            "archiveSha256": "dc9bdd4c105af70a651145d2aa22f40861f9f5a78429f5a276a4b92cca55fbde",
+            "currentSha256": "dc9bdd4c105af70a651145d2aa22f40861f9f5a78429f5a276a4b92cca55fbde",
+            "unchanged": true
+          },
+          {
+            "table": "plan_acceptances",
+            "rows": 9,
+            "archiveSha256": "8fb5ecbd6e9cbc2ad195b4060ae48cebaa7a7636dafb4927ba5eba00aecd53e6",
+            "currentSha256": "8fb5ecbd6e9cbc2ad195b4060ae48cebaa7a7636dafb4927ba5eba00aecd53e6",
+            "unchanged": true
+          }
+        ]
+      },
+      "observedContainerSamples": 79,
+      "oomSamples": 0,
+      "observedAccessHashes": 5,
+      "observedRefreshHashes": 5,
+      "credentialExpiries": [
+        "2026-10-15T00:22:41.743530864Z",
+        "2026-10-15T00:37:11.976575351Z",
+        "2026-10-15T00:51:44.105195194Z",
+        "2026-10-15T01:06:16.208772811Z",
+        "2026-10-15T01:20:48.251147419Z"
+      ],
+      "nativeVerdictSha256": "0994c81ccd2b6b47ac89f8c1b48dcd11a22866acf06e7ae97954802a073aa8a3"
+    },
+    "fullWriteReadRecoveries": [
+      {
+        "kind": "server_worker_restart",
+        "startedAt": "2026-10-15T00:10:50.722Z",
+        "closedAt": "2026-10-15T00:10:54.280Z",
+        "recoveryMs": 3558,
+        "passed": true,
+        "provenVersionId": "b5526773-6432-484d-9241-c9e63e87f7fc"
+      },
+      {
+        "kind": "postgres_restart",
+        "startedAt": "2026-10-15T00:15:50.721Z",
+        "closedAt": "2026-10-15T00:15:52.994Z",
+        "recoveryMs": 2273,
+        "passed": true,
+        "provenVersionId": "cfaf7556-5579-49b7-9162-57db464a9e50"
+      },
+      {
+        "kind": "object_store_restart",
+        "startedAt": "2026-10-15T00:21:50.727Z",
+        "closedAt": "2026-10-15T00:22:29.590Z",
+        "recoveryMs": 38863,
+        "passed": true,
+        "provenVersionId": "a22a8891-0453-4df7-87b6-268957993d4d"
+      },
+      {
+        "kind": "server_worker_second_restart",
+        "startedAt": "2026-10-15T00:32:50.732Z",
+        "closedAt": "2026-10-15T00:32:57.002Z",
+        "recoveryMs": 6270,
+        "passed": true,
+        "provenVersionId": "00d43dfb-2893-47c9-b383-253338161761"
+      }
+    ]
+  },
+  "cache": {
+    "directProvider": {
+      "calls": 14,
+      "http200": 14,
+      "markerPasses": 13,
+      "scope": "usage observations, one non-marker content response retained"
+    },
+    "twoProviders": {
+      "calls": 6,
+      "http200": 6,
+      "markerPasses": 6,
+      "models": [
+        "k3",
+        "ZHIPU/GLM-5.3-Flash"
+      ],
+      "scope": "deliberate isolated two-provider/model synthetic observation, not fallback, never pooled cache denominator or billing/causal proof"
+    }
+  },
+  "controlledRateLimit": {
+    "http429PlusRealPGExplicitRetry": "passed",
+    "sameSourceAnalysisBatch": true,
+    "cumulativeAttempts": 2,
+    "budgetNotReset": true,
+    "automaticRetryOrFallback": false,
+    "actualVendor429Observed": false
+  },
+  "checks": {
+    "goTestAll": "passed",
+    "goVet": {
+      "goVetExit": 0,
+      "checkedAt": "2026-10-15T00:32:38.1200876Z"
+    },
+    "harnessTests": 18,
+    "releaseBuildAndChecksums": "passed",
+    "nativeCli31Assertions": 6
+  },
+  "cleanup": {
+    "first": {
+      "cleanedAt": "2026-10-15T00:34:14.878Z",
+      "namespace": "judex-ui-endurance-1d2006f4",
+      "uid": "df0d6c8b-104d-4d24-9543-bd1ae60151cb",
+      "absent": true,
+      "archivedBeforeDelete": true,
+      "backups": [
+        {
+          "file": "database-without-model-observation.sql.gz",
+          "size": 22231683,
+          "sha256": "7b3bb1768288f59ac576af5eb02800f4c805e5484f5e7c288fcdb061fa9f8f1c"
+        },
+        {
+          "file": "durable-model-accounting.jsonl.gz",
+          "size": 570,
+          "sha256": "65cf0a9521c2a3627e71ae8f03a1f80e6067ce9b85d6dd5c7a5747f46602c0da"
+        },
+        {
+          "file": "original-objects.tar.gz",
+          "size": 55954951,
+          "sha256": "fa1cc694a9f199c4e6b378dc9bb4dfd5a0fcfcfca68dfe0d3b27d8679025bbd9"
+        }
+      ],
+      "normalJudex": [
+        {
+          "name": "judex",
+          "ready": 1,
+          "desired": 1
+        },
+        {
+          "name": "judex-judex-opensandbox-server",
+          "ready": 1,
+          "desired": 1
+        },
+        {
+          "name": "judex-material-converter",
+          "ready": 1,
+          "desired": 1
+        },
+        {
+          "name": "opensandbox-controller-manager",
+          "ready": 1,
+          "desired": 1
+        }
+      ]
+    },
+    "runtime": {
+      "cleanedAt": "2026-10-15T00:33:35.148Z",
+      "namespace": "judex-ui-endurance-1d2006f4-runtime",
+      "uid": "853cda62-b9be-407a-b2cb-175abd48980e",
+      "absent": true,
+      "ownedClusterRolesRemoved": [
+        {
+          "kind": "ClusterRole",
+          "name": "judex-endurance-runtime-1d2006f4-role"
+        },
+        {
+          "kind": "ClusterRoleBinding",
+          "name": "judex-endurance-runtime-1d2006f4-rolebinding"
+        }
+      ],
+      "originalControllerChanged": false
+    },
+    "strict": {
+      "cleanedAt": "2026-10-15T01:09:02.130Z",
+      "namespace": "judex-ui-strict-3621cf1e",
+      "uid": "0fd511ef-d47f-441a-a5ff-0f85cfb414c3",
+      "absent": true,
+      "archivedBeforeDelete": true,
+      "backups": [
+        {
+          "file": "database-without-model-observation.sql.gz",
+          "size": 22233119,
+          "sha256": "b81275ac55d162aa1300d2b2cceec18377ae270f2a48e96574917c4bb6a10127"
+        },
+        {
+          "file": "durable-model-accounting.jsonl.gz",
+          "size": 20,
+          "sha256": "9e72928e7a01615b4cf090daa617b4ca9d68531748f887f323f695eb4ca3ef63"
+        },
+        {
+          "file": "original-objects.tar.gz",
+          "size": 55917823,
+          "sha256": "f7d82c576d7d68e701ce08ee767edeab0b25edd70105936e5ace5654276d687d"
+        }
+      ],
+      "normalJudex": [
+        {
+          "name": "judex",
+          "ready": 1,
+          "desired": 1
+        },
+        {
+          "name": "judex-judex-opensandbox-server",
+          "ready": 1,
+          "desired": 1
+        },
+        {
+          "name": "judex-material-converter",
+          "ready": 1,
+          "desired": 1
+        },
+        {
+          "name": "opensandbox-controller-manager",
+          "ready": 1,
+          "desired": 1
+        }
+      ],
+      "localForward": {
+        "verifiedOwnedPid": 14548,
+        "port": 18198,
+        "noListener": true,
+        "checkedAt": "2026-10-15T01:09:05.241Z"
+      }
+    }
+  },
+  "scopeLimits": [
+    "Real vendor HTTP429 recovery not observed",
+    "32768 with this retained original history is rejected rather than silently truncated",
+    "One hour, four workers, 64KiB files and a 512-file burst are bounded evidence, not multi-day/large-file/unbounded production SLA",
+    "Cache usage is not a billing-savings or global cache-causality guarantee"
+  ],
+  "normalDeploymentUpdated": false,
+  "gitCommittedOrPushed": false,
+  "localEvidenceHashes": {
+    "final-audit.json": "391e3199c346004c1e97e480fe5cade5d97520c3fd086bda78fe8f8f543b1b3a",
+    "soak-result.json": "61711a617fa0d5012177c8ac4a2c10ea6e95363b7bd1e22bf67103d12731dc73",
+    "fault-windows.json": "bb9d0286a55761fc3e83d778c2d2f433a226edc7369ec7ed6573f47b99f5385e",
+    "storage-audit.json": "4217a0bc97ea75a7947afc195f0cbfef8458359ecb1ebf6d7bf4fa00c69a4d07",
+    "formal-integrity-final.json": "ade5af24bc29b31c65a67d9a0954ccff17dec8d8ff52fb7a4a6931782dd96c21",
+    "runtime-observation.json": "80e56ca13dd2b3574a44efb3fe914b9fd2f0786e435bb30177b91b635656900b",
+    "go-test-final.log": "eecd9bd87e5a9b54d38512c7f1fa7e7e23f1a54d22db7c6259f048015df1d8ca",
+    "go-vet-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "export/archive-manifest.json": "34576ee435cbcf16cac3d72067d5d692d72ada39a6aee80c3ce4ce80d7c530b8",
+    "export/cleanup-result.json": "ba73d35bed0f504ca429702562f8a906636400ed7f117d16c9ccca74ec00c713"
+  }
+}

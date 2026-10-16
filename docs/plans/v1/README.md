@@ -1,8 +1,8 @@
 # Judex V1 完整业务开发计划
 
-> 2026-09-29 最新实现、证据和剩余门槛见 [续补记录](CONTINUATION.md) 与 [当前验证报告](FINAL-REPORT.md)。历史记录中的待办不代表目前仍全部未实现。
+> 2026-10-15 最新实现、证据和剩余门槛见[真实模型补测与本地升级](../real-host/records/MODEL-UPGRADE-20261015.md)、[契约与配置核销](records/CONTRACT-CONFIGURATION-20261015.md)与[当前验证报告](STATUS.md)。正常环境已升级 `.34`、revision 23；[9月29日续补](records/CONTINUATION.md)保留历史时点，旧待办不代表当前仍未实现。
 
-编制日期：2026-09-27。交付对象：下一位实施 AI／开发者。本文是**实现与验收合同**，不是实现完成声明。当前修复证据见 [REMEDIATION.md](REMEDIATION.md)。这里的 v1 是本次交付版本号，不是恢复 `docs/history/v1` 的旧产品规则。
+编制日期：2026-09-27。交付对象：下一位实施 AI／开发者。本文是**实现与验收合同**；编制时状态是 2026-09-27 快照，现状从[验收报告](STATUS.md)进入。当前修复证据见 [REMEDIATION.md](records/REMEDIATION.md)。这里的 v1 是本次交付版本号，不继承已经清理的旧产品草案。
 
 目标：让真实内网用户完成注册登录、建立项目与岗位流程、协作讨论和正式决定、通过本地 AI＋CLI＋Skill 上报成果、交接验收，并在真实 PostgreSQL、对象存储、模型和 OpenSandbox 下闭环。正式前端唯一入口为 `web/`，不恢复 `docs/demo`。
 

@@ -31,8 +31,8 @@ func validBody() workflow.Body {
 			{ID: "review", Name: "评审", Responsibility: "审查", DefaultApprovalPolicy: "all"},
 			{ID: "release", Name: "发布", Responsibility: "上线", DefaultApprovalPolicy: "none"},
 		},
-		AdvisoryEdges: []workflow.Edge{{From: "dev", To: "review"}, {From: "review", To: "release"}},
-		HardRules:     []workflow.HardRule{{Kind: "task_acceptance", Phase: "accept"}},
+		AdvisoryEdges:    []workflow.Edge{{From: "dev", To: "review"}, {From: "review", To: "release"}},
+		HardRules:        []workflow.HardRule{},
 		ApprovalPolicies: map[string]string{"release": "all"},
 	}
 }

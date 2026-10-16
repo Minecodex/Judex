@@ -1,0 +1,135 @@
+{
+  "recordedAt": "2026-10-15T07:39:38.343Z",
+  "provider": "APIMart",
+  "requestedModel": "glm-5.3-flash",
+  "returnedModel": "ZHIPU/GLM-5.3-Flash",
+  "reasoningEffort": "high",
+  "host": "public Kimi CLI 0.36.1",
+  "release": "0.1.0-realhost.20261015.34",
+  "nativeSessionId": "session_2fe8c3b2-a003-4e2a-a0e9-0ddd68edcc16",
+  "passed": true,
+  "checks": {
+    "originalDataChain": true,
+    "originalMissingIdentityRetained": true,
+    "explicitRoleIdentity": true,
+    "sameActor": true,
+    "roleAnalysisCompleted": true,
+    "roleStructuredOutput": true,
+    "roleMaterialRead": true,
+    "sameFixedMaterial": true,
+    "oneUploadTotal": true,
+    "twoDistinctSubmissions": true,
+    "nativeFinalExitZero": true,
+    "sameNativeSession": true,
+    "platformBudget": true
+  },
+  "native": {
+    "calls": 33,
+    "http200": 31,
+    "networkTimeouts": 2,
+    "localBudgetRejections": 2
+  },
+  "platformCalls": 7,
+  "firstCase": {
+    "sourceId": "d8dca1d9-bc93-4d72-a622-4b17d154c616",
+    "materialVersionId": "7fa9c1eb-b778-4846-9b84-66c3a695a3a1",
+    "sha256": "6e623ef5462a125ce0b2af736c131d57ca6082ab5ee6e9137c0b50b872c38bd2",
+    "analysisId": "33ef0296-7a78-4e64-81f8-e0eac7ecc05b",
+    "scope": "project-level message, optional identity omitted",
+    "identityNullRetained": true,
+    "tools": [
+      {
+        "name": "analyze_material",
+        "state": "failed",
+        "count": 1
+      },
+      {
+        "name": "query_work",
+        "state": "succeeded",
+        "count": 3
+      },
+      {
+        "name": "read_material",
+        "state": "succeeded",
+        "count": 1
+      },
+      {
+        "name": "read_workflow",
+        "state": "succeeded",
+        "count": 1
+      },
+      {
+        "name": "record_task_analysis",
+        "state": "succeeded",
+        "count": 1
+      }
+    ]
+  },
+  "roleCase": {
+    "sourceId": "b455e890-b844-429d-98ab-f53750588b83",
+    "identityId": "4b02a3ee-4c71-488a-a985-827d641558f7",
+    "actorUserId": "98e2f197-1c7e-4b46-9fd6-7917fa20b05b",
+    "analysisId": "13c03dd9-9eb4-4245-9170-344f1146f5cf",
+    "analysisState": "completed",
+    "tools": [
+      {
+        "name": "read_workflow",
+        "state": "succeeded"
+      },
+      {
+        "name": "record_task_analysis",
+        "state": "succeeded"
+      },
+      {
+        "name": "read_material",
+        "state": "succeeded"
+      },
+      {
+        "name": "read_workflow",
+        "state": "succeeded"
+      },
+      {
+        "name": "query_work",
+        "state": "succeeded"
+      }
+    ]
+  },
+  "formalIntegrity": [
+    {
+      "table": "tasks",
+      "rows": 36,
+      "unchanged": true
+    },
+    {
+      "table": "plans",
+      "rows": 9,
+      "unchanged": true
+    },
+    {
+      "table": "proposals",
+      "rows": 29,
+      "unchanged": true
+    },
+    {
+      "table": "task_acceptances",
+      "rows": 33,
+      "unchanged": true
+    },
+    {
+      "table": "plan_acceptances",
+      "rows": 9,
+      "unchanged": true
+    }
+  ],
+  "normalDeploymentChanged": false,
+  "normalHelmRevision": 23,
+  "scope": "One fresh native session; one Markdown material; generic project message plus distinct explicit-role message; existing 30 accepted tasks and 9 plans unchanged",
+  "rawEvidenceRoot": ".cache/real-host/20261015-key-chain",
+  "cleanup": {
+    "at": "2026-10-15T07:38:23.615Z",
+    "namespaces": [
+      "judex-ui-key-chain-fd364e06"
+    ],
+    "absent": true
+  }
+}

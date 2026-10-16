@@ -282,6 +282,7 @@ test("position templates, invitation, personal preferences and replacement keep 
   await page.getByTestId("new-position").click();
   await page.getByTestId("position-name").fill("研究伙伴");
   await page.getByTestId("position-prompt").fill("为结论附来源与适用范围");
+  await chooseValue(page,"position-flow","delivery");
   await chooseValue(page,"position-node","receive");
   await page.getByTestId("save-position").click();
   await page.getByTestId("next-invite").click();

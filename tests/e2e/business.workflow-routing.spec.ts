@@ -27,7 +27,10 @@ test('WR01 live CLI reports with one position bound to three workflows', async (
       expect(response.ok(), await response.text()).toBeTruthy();
       return (await response.json()).data;
     };
-    const project = await api('post', '/projects', {title: '多流程内容判定实验', maxDiscussionRounds: 5});
+    const models = (await api('get', '/models?limit=100')).items;
+    const selectedModel = models.find((m: any) => m.enabled && m.capabilities.toolCalling && m.capabilities.streaming && (!process.env.JUDEX_E2E_REAL_MODEL_ID || m.id === process.env.JUDEX_E2E_REAL_MODEL_ID));
+    expect(selectedModel, 'Explicit live routing requires a configured model choice').toBeTruthy();
+    const project = await api('post', '/projects', {title: '多流程内容判定实验', maxDiscussionRounds: 5, defaultModelId: selectedModel.id});
     const root = '/projects/' + project.id;
     baseline.projectId = project.id;
     const descriptions = [
@@ -87,7 +90,7 @@ test('WR01 live CLI reports with one position bound to three workflows', async (
     const initial = await api('get', root + `/proposals/${proposal.id}/review`);
     await api('post', root + `/proposals/${proposal.id}/submit`, {expectedVersion: proposal.version, draftHash: initial.reviewHash});
     const review = await api('get', root + `/proposals/${proposal.id}/review`);
-    await api('post', root + `/proposals/${proposal.id}/decisions`, {decision: 'approve', expectedVersion: 2, reviewId: review.reviewId, reviewHash: review.reviewHash,
+    await api('post', root + `/proposals/${proposal.id}/decisions`, {decision: 'approve', expectedVersion: review.version, reviewId: review.reviewId, reviewHash: review.reviewHash,
       slotIds: review.slots.filter((slot: any) => slot.canDecide).map((slot: any) => slot.id),
       actingBindingVersions: review.slots.filter((slot: any) => slot.canDecide && slot.authorityType === 'identity').map((slot: any) => ({identityId: slot.authorityId, bindingVersion: slot.bindingVersion}))});
     const scopes = ['projects:read', 'context:read', 'materials:read', 'materials:write', 'submissions:write', 'reports:write', 'events:read'];
@@ -97,8 +100,13 @@ test('WR01 live CLI reports with one position bound to three workflows', async (
       return await api('post', '/auth/device/token', {deviceCode: device.deviceCode});
     };
     let credentials = await authorizeCLI();
-    const cli = (args: string[]) => JSON.parse(String(execFileSync(process.env.JUDEX_E2E_CLI!, ['--server', baseURL!, '--project', project.id, '--no-wait', ...args],
-      {encoding: 'utf8', windowsHide: true, timeout: 60000, env: {...process.env, JUDEX_TOKEN: credentials.accessToken}})));
+    const cliConfig = info.outputPath('live-cli-config');
+    const cli = (args: string[]) => {
+      const envelope = JSON.parse(String(execFileSync(process.env.JUDEX_E2E_CLI!, ['--server', baseURL!, '--project', project.id, '--json', '--no-wait', ...args],
+        {encoding: 'utf8', windowsHide: true, timeout: 60000, env: {...process.env, JUDEX_CONFIG_DIR: cliConfig, JUDEX_TOKEN: credentials.accessToken}})));
+      expect(envelope.ok, JSON.stringify(envelope.error)).toBe(true);
+      return envelope.data;
+    };
     expect(cli(['auth', 'whoami']).user.id).toBe(session.user.id);
     const fixture = {schemaVersion: 1, project: {id: project.id, title: project.title}, position: savedPosition,
       workflows: workflows.map(flow => ({id: flow.id, publishedVersionId: flow.publishedVersionId, ...flow.body})),
@@ -161,7 +169,7 @@ test('WR01 live CLI reports with one position bound to three workflows', async (
     baseline.unlinkedSubmission = cli(['submit', '--file', freeFile]);
     const missingTask = spawnSync(process.env.JUDEX_E2E_CLI!, ['--server', baseURL!, '--project', project.id, '--no-wait',
       'report', '--kind', 'progress', '--file', freeFile],
-      {encoding: 'utf8', windowsHide: true, timeout: 60000, env: {...process.env, JUDEX_TOKEN: credentials.accessToken}});
+      {encoding: 'utf8', windowsHide: true, timeout: 60000, env: {...process.env, JUDEX_CONFIG_DIR: cliConfig, JUDEX_TOKEN: credentials.accessToken}});
     baseline.reportWithoutTask = {exitCode: missingTask.status, stdout: missingTask.stdout, stderr: missingTask.stderr, error: missingTask.error?.message};
     if (missingTask.status === 0) baseline.failures.push({id: 'report-without-task', error: 'CLI returned success exit code for missing required task'});
     await page.goto(`/?project=${project.id}&view=team`);

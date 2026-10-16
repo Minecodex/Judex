@@ -1,0 +1,349 @@
+{
+  "recordedAt": "2026-10-15T04:28:39.632Z",
+  "status": "contract_configuration_closed_with_documented_runtime_limits",
+  "release": "0.1.0-realhost.20261015.33",
+  "sourceTreeHash": "add7c62f86f03844a66e8ce45411d425f8736bf849a0bb7cc5de33a52d98109f",
+  "api": {
+    "anonymousProtectedOperations": 147,
+    "missingSuccessOperations": [],
+    "passed": true,
+    "successOperations": [
+      "acceptInvitation",
+      "acceptPlan",
+      "archiveProject",
+      "cancelAgentRun",
+      "cancelUpload",
+      "changePassword",
+      "completeUpload",
+      "confirmDeviceAuthorization",
+      "confirmGlobalIntent",
+      "confirmIntent",
+      "createConfirmationIntent",
+      "createDeviceAuthorization",
+      "createFixPropagation",
+      "createGlobalConfirmationIntent",
+      "createHandoff",
+      "createHandoffSourceRevision",
+      "createIdentity",
+      "createInvitation",
+      "createPlan",
+      "createPosition",
+      "createPreviewSession",
+      "createProject",
+      "createProposal",
+      "createProposalRevision",
+      "createReleaseReport",
+      "createRepository",
+      "createSubmission",
+      "createTask",
+      "createTaskReport",
+      "createTopic",
+      "createUploadSession",
+      "createWorkflow",
+      "decideHandoffSource",
+      "decideOwnerTransfer",
+      "decideProposal",
+      "decideTaskAcceptance",
+      "declineInvitation",
+      "delegateProposalDecision",
+      "deleteMaterial",
+      "discardPlan",
+      "discardTask",
+      "downloadFilePreview",
+      "downloadMaterialContent",
+      "downloadMaterialVersionById",
+      "ensureTaskMainTopic",
+      "extendDiscussionBatch",
+      "forkTopic",
+      "getAgentRun",
+      "getCapabilities",
+      "getConfirmationIntent",
+      "getDeviceAuthorization",
+      "getDiscussionSuggestion",
+      "getExecutionMap",
+      "getFilePreview",
+      "getGlobalConfirmationIntent",
+      "getMaterialVersionById",
+      "getMyPreferences",
+      "getOwnerTransfer",
+      "getPlan",
+      "getPlanAcceptanceReview",
+      "getPlanDiscardReview",
+      "getPlanDiscussionSummary",
+      "getPositionPresetCatalog",
+      "getProject",
+      "getProjectBootstrap",
+      "getProposalReview",
+      "getPublishedWorkflowVersion",
+      "getSession",
+      "getSubmissionAnalysis",
+      "getSystem",
+      "getTask",
+      "getTaskAcceptanceReview",
+      "getTaskAnalysis",
+      "getTaskDiscardReview",
+      "getTaskExecutionReview",
+      "getTopic",
+      "getWorkflowPresetCatalog",
+      "importPositionPresets",
+      "importWorkflowPresets",
+      "leaveProject",
+      "linkTopic",
+      "listAudit",
+      "listClientGrants",
+      "listDeliveries",
+      "listDiscussionSuggestions",
+      "listHandoffs",
+      "listIdentities",
+      "listInvitations",
+      "listMaterialUsages",
+      "listMaterialVersions",
+      "listMaterials",
+      "listMembers",
+      "listMessages",
+      "listModels",
+      "listMyActions",
+      "listMyInvitations",
+      "listNotifications",
+      "listPlans",
+      "listPositions",
+      "listProjects",
+      "listProposals",
+      "listRecentTopics",
+      "listReleaseReports",
+      "listRepositories",
+      "listSessions",
+      "listTaskActivity",
+      "listTaskReports",
+      "listTasks",
+      "listTopics",
+      "listUploadSessions",
+      "listWorkflowVersions",
+      "listWorkflows",
+      "login",
+      "logout",
+      "logoutAll",
+      "markNotificationsRead",
+      "pollDeviceToken",
+      "prepareFilePreview",
+      "publishWorkflow",
+      "recoverPassword",
+      "refreshToken",
+      "register",
+      "removeMember",
+      "reopenPlan",
+      "reopenTask",
+      "replaceIdentityBinding",
+      "replaceTopicLinks",
+      "requestOwnerTransfer",
+      "resolveDiscussionSuggestion",
+      "resolveInvitation",
+      "restoreProject",
+      "restoreTask",
+      "retryTaskAnalysis",
+      "revokeClientGrant",
+      "revokeInvitation",
+      "revokeSession",
+      "sendHandoffReminder",
+      "sendHandoffSource",
+      "skipTask",
+      "startAgentRun",
+      "startTask",
+      "submitProposal",
+      "subscribeProjectEvents",
+      "subscribeRunEvents",
+      "updateMe",
+      "updateMemberRole",
+      "updateMyPreferences",
+      "updatePlanDraft",
+      "updatePosition",
+      "updateProject",
+      "updateProposalDraft",
+      "updateRepository",
+      "updateTaskDraft",
+      "updateWorkflowDraft",
+      "uploadPart"
+    ],
+    "totalOperations": 155,
+    "storage": "real isolated PostgreSQL; controlled S3 protocol for schema tests",
+    "analysis": "controlled structured recorder and stopped state fixtures; no vendor quality claim"
+  },
+  "go": {
+    "exitCode": 0,
+    "vetExitCode": 0,
+    "integrationSeconds": 186.123,
+    "passedTestEvents": 279,
+    "skippedTests": [
+      {
+        "package": "github.com/kakj-go/Judex/tests/agent/live",
+        "test": "TestLiveResearchScenario"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/agent/live",
+        "test": "TestLiveDesignScenarioDisagreement"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/agent/live",
+        "test": "TestLiveBudgetEnforcement"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/agent/live",
+        "test": "TestLiveCancellation"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/agent/live",
+        "test": "TestLiveProviderContract"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/agent/live",
+        "test": "TestLiveWorkflowRouting"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/scenario",
+        "test": "TestPositionDifferentiation"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/scenario",
+        "test": "TestDeliveryPreReview"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/scenario",
+        "test": "TestRejectReviseReanalyze"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/scenario",
+        "test": "TestBugRootCause"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/scenario",
+        "test": "TestAgentReadsMaterialContent"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/scenario",
+        "test": "TestLongContextCompression"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/scenario",
+        "test": "TestFullBusinessClosedLoop"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/scenario",
+        "test": "TestMultiAgentCoordination"
+      },
+      {
+        "package": "github.com/kakj-go/Judex/tests/scenario",
+        "test": "TestMultiAgentSinglePosition"
+      }
+    ],
+    "failed": []
+  },
+  "web": {
+    "passed": 67,
+    "skipped": 0,
+    "typecheckExitCode": 0
+  },
+  "kubernetes": {
+    "runId": "judex-ui-aa85fb25",
+    "namespace": "judex-ui-aa85fb25",
+    "image": "judex/server:collaboration-configuration-20261015.33",
+    "acceptanceGrep": "CFG01|T04|T05|T06|B03|B16|P01|P02|P03|P04|P05",
+    "checks": [
+      "Owned deployment, PostgreSQL and object storage are Ready",
+      "Configured authenticated browser acceptance passed: CFG01|T04|T05|T06|B03|B16|P01|P02|P03|P04|P05"
+    ],
+    "controlledModel": true,
+    "registrationTestLimit": 1000,
+    "discoveredTests": 15,
+    "deployments": [
+      {
+        "name": "controlled-gateway",
+        "ready": 1,
+        "image": "judex/test-gateway:collaboration-cache-mvp-20261010-511c38"
+      },
+      {
+        "name": "ui",
+        "ready": 1,
+        "image": "judex/server:collaboration-configuration-20261015.33"
+      },
+      {
+        "name": "ui-material-converter",
+        "ready": 1,
+        "image": "judex/material-converter:collaboration-realhost-0.1.0-realhost.20261013.17"
+      }
+    ],
+    "cleanedUp": true,
+    "exitCode": 0,
+    "namespaceUid": "88132c41-9493-42dc-a745-170da634f9c5",
+    "actualS3": true,
+    "browserPassed": 15
+  },
+  "releaseVerified": {
+    "allChecksums": true,
+    "nativePlatform": "windows-amd64",
+    "packagedSkillInstallAndUninstall": true,
+    "otherPlatforms": "built and package inspected; not native runtime acceptance"
+  },
+  "priorBoundedRuntimeEvidence": "docs/plans/real-host/records/ENDURANCE-20261015.md",
+  "newRealProviderCalls": 0,
+  "remaining": [
+    "Actual vendor HTTP429 business recovery has not naturally occurred",
+    "One non-marker cache sample, global cache causality and billing savings remain unproven",
+    "Multi-day, larger-file, higher-concurrency and full resource metrics not run",
+    "Only declared original-session context windows tested; 32768 rejected when history cannot fit",
+    "Other host agents not inferred from Kimi sessions",
+    "Normal deployment remains Helm revision 21; candidate not deployed; no Git commit or push"
+  ],
+  "normalDeploymentUpdated": false,
+  "gitCommittedOrPushed": false,
+  "evidenceFiles": [
+    {
+      "path": ".cache/configuration-20261015/full-http-contract.json",
+      "sha256": "44d3fa8848847c55bdf7076ecc85757dd3baf65005dd8e98e5a38cb461daf7fc"
+    },
+    {
+      "path": ".cache/configuration-20261015/go-test.jsonl",
+      "sha256": "38d830e8ac1c02c5193e2da9d9981b1ef001107cad61e617c59edd951a76dbcc"
+    },
+    {
+      "path": ".cache/configuration-20261015/go-test.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".cache/configuration-20261015/web-tests.log",
+      "sha256": "f544ab8c1f1f22cf948f783bbec5b0ad4f232bc0aef858897b333143e5698654"
+    },
+    {
+      "path": ".cache/configuration-20261015/typecheck.log",
+      "sha256": "ff75fb9bc5a4caf29694a3fdbbcf002c99a8ca1b8d00d2d4686d442c34a575cf"
+    },
+    {
+      "path": ".cache/configuration-20261015/release-build.log",
+      "sha256": "920f94f4045e2203423aef80b4df140c281f229a2e23789a68c7471d0fe847aa"
+    },
+    {
+      "path": ".cache/configuration-20261015/release-verify.log",
+      "sha256": "d237cb8e33d582ae145335e670a96be73b4661f2c216609f91e5ae203d76307c"
+    },
+    {
+      "path": ".cache/k8s/judex-ui-aa85fb25/manifest.json",
+      "sha256": "93ff88879d0b163d644f47938201b8fd79a0de5158d628d2b89cd1c3da4bdc70"
+    }
+  ],
+  "documentation": {
+    "markdownLinksChecked": 521,
+    "brokenLinks": [],
+    "maximumChangedProductFileLines": 783,
+    "diffCheckExitCode": 0
+  },
+  "cleanup": {
+    "allOwnedKubernetesNamespacesAbsent": true,
+    "abortedDockerRunHasNoRemainingContainers": true,
+    "normalJudexDeploymentsReady": 4,
+    "normalHelmRevision": 21,
+    "portForward": {
+      "port": 58963,
+      "noListener": true,
+      "checkedAt": "2026-10-15T04:30:02.2991941Z"
+    }
+  }
+}

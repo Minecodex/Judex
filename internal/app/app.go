@@ -158,7 +158,8 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 				registry := tools.New()
 				tools.RegisterDefaults(registry)
 				executor := &batch.Executor{
-					Pool: pool.Pool, Provider: provider, ModelName: cfg.ModelGateway.Model,
+					Workflows: app.workflows,
+					Pool:      pool.Pool, Provider: provider, ModelName: cfg.ModelGateway.Model,
 					Objects: app.objects, ResolveModel: agent.Resolver(pool, cfg.ModelGateway),
 					Runner: runner.NewRunnerForTest(provider, registry),
 				}
@@ -340,6 +341,9 @@ func (a *Application) StartWorkers(ctx context.Context, logger *slog.Logger) {
 	for _, h := range append(append([]job.Handler{}, jobHandlers...), a.handlers...) {
 		a.engine.Register(h)
 	}
+	maintenanceCtx, cancelMaintenance := context.WithCancel(ctx)
+	a.workers = append(a.workers, cancelMaintenance)
+	go batch.MaintainModelObservations(maintenanceCtx, a.pool.Pool, logger)
 	for i := 0; i < a.Config.WorkerCount; i++ {
 		wctx, cancel := context.WithCancel(ctx)
 		a.workers = append(a.workers, cancel)

@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kakj-go/Judex/internal/agent/runner"
 	"github.com/kakj-go/Judex/internal/audit"
+	"github.com/kakj-go/Judex/internal/collaboration"
 	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
 	"github.com/kakj-go/Judex/internal/job"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
@@ -133,15 +134,52 @@ func (s *Service) Cancel(ctx context.Context, user, project, run uuid.UUID, vers
 		if !allowed {
 			return apierrors.New(apierrors.Forbidden, "only requester, holder or manager can cancel this run")
 		}
-		tag, err := tx.Exec(ctx, `UPDATE agent_runs SET state='cancelled',version=version+1,updated_at=now() WHERE project_id=$1 AND id=$2 AND version=$3 AND state NOT IN ('succeeded','failed','cancelled')`, project, run, version)
-		if err != nil {
-			return err
+		var state string
+		var current int64
+		var batchID uuid.UUID
+		if err := tx.QueryRow(ctx, `SELECT state,version,batch_id FROM agent_runs WHERE project_id=$1 AND id=$2 FOR UPDATE`, project, run).Scan(&state, &current, &batchID); err != nil {
+			return apierrors.New(apierrors.NotFound, "run not found")
 		}
-		if tag.RowsAffected() == 0 {
+		if current != version || state == "succeeded" || state == "failed" {
 			return apierrors.New(apierrors.VersionConflict, "run changed or terminal")
 		}
-		_, err = tx.Exec(ctx, `UPDATE discussion_batches SET state='cancelled',version=version+1,updated_at=now() WHERE id=(SELECT batch_id FROM agent_runs WHERE id=$1)`, run)
-		return err
+		now := time.Now().UTC()
+		changed := state != "cancelled"
+		reconciled := false
+		if changed {
+			if _, err := tx.Exec(ctx, `UPDATE agent_runs SET state='cancelled',version=version+1,updated_at=$3 WHERE project_id=$1 AND id=$2`, project, run, now); err != nil {
+				return err
+			}
+		}
+		if batchID != uuid.Nil {
+			// Keep an already finished batch intact when a late child is stopped.
+			// Current-version repeats also reconcile older deployments' queued or
+			// waiting analysis projections, without another run version/model call.
+			if _, err := tx.Exec(ctx, `UPDATE discussion_batches SET state='cancelled',version=version+1,updated_at=$3 WHERE project_id=$1 AND id=$2 AND state NOT IN ('completed','failed','cancelled')`, project, batchID, now); err != nil {
+				return err
+			}
+			var unfinished bool
+			if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM task_analyses a JOIN discussion_batches b ON b.id=a.batch_id WHERE a.project_id=$1 AND a.batch_id=$2 AND b.state='cancelled' AND a.state NOT IN ('completed','failed','cancelled'))`, project, batchID).Scan(&unfinished); err != nil {
+				return err
+			}
+			if unfinished {
+				if err := collaboration.FinishTaskAnalysis(ctx, tx, project, batchID, "cancelled", "运行已由有权用户取消："+reason, now); err != nil {
+					return err
+				}
+				reconciled = true
+			}
+		}
+		if !changed && !reconciled {
+			return nil
+		}
+		operation := "agent.run.cancel"
+		if !changed {
+			operation = "agent.run.cancel_reconcile"
+		}
+		if err := audit.Append(ctx, tx, audit.Entry{ProjectID: &project, ActorType: audit.ActorUser, ActorUserID: &user, Source: audit.ContextSource(ctx), Operation: operation, ObjectType: "agent_run", ObjectID: run.String(), Reason: &reason, OccurredAt: now}); err != nil {
+			return err
+		}
+		return nil
 	})
 }
 func (s *Service) Extend(ctx context.Context, user, project, batch uuid.UUID, version int64, rounds int, reason string) error {

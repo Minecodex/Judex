@@ -376,16 +376,16 @@ paths:
             type: string
       responses:
         '200':
-          description: 内容流。
+          description: 内容流（保留固定版本实际 MIME）。
           content:
-            application/octet-stream:
+            '*/*':
               schema:
                 type: string
                 format: binary
         '206':
-          description: 范围内容。
+          description: 范围内容（保留固定版本实际 MIME）。
           content:
-            application/octet-stream:
+            '*/*':
               schema:
                 type: string
                 format: binary

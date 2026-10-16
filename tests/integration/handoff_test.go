@@ -166,7 +166,11 @@ func TestHandoffSourceLevel(t *testing.T) {
 	if _, err := hsvc.SendSource(ctx, receiver.ID, proj.ID, hand.ID, hand.Sources[0].ID, "冒充"); errors.IsCode(err, errors.Forbidden) == false {
 		t.Fatalf("non-sender send must be forbidden, got %v", err)
 	}
-	if _, err := hsvc.SendSource(ctx, sender.ID, proj.ID, hand.ID, hand.Sources[0].ID, "首版成果"); err != nil {
+	var sourceReport uuid.UUID
+	if err := pool.QueryRow(ctx, `SELECT latest_report_id FROM tasks WHERE id=$1`, srcTask.ID).Scan(&sourceReport); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := hsvc.SendReviewed(ctx, sender.ID, proj.ID, hand.ID, hand.Sources[0].ID, sourceReport, 1, "首版成果"); err != nil {
 		t.Fatalf("send: %v", err)
 	}
 	// Receiver rejects: source task not accepted -> rework.
@@ -182,7 +186,10 @@ func TestHandoffSourceLevel(t *testing.T) {
 		t.Fatalf("aggregate must be needs_revision, got %+v", list)
 	}
 	// 补交: sender sends a new version (revision 2), old decision kept.
-	revised, err := hsvc.SendSource(ctx, sender.ID, proj.ID, hand.ID, hand.Sources[0].ID, "补充测试后的版本")
+	if _, err := hsvc.SendReviewed(ctx, sender.ID, proj.ID, hand.ID, hand.Sources[0].ID, sourceReport, 1, "过期首版审阅不能重发"); !errors.IsCode(err, errors.ReviewStale) {
+		t.Fatalf("stale send must preserve rejected revision: %v", err)
+	}
+	revised, err := hsvc.SendReviewed(ctx, sender.ID, proj.ID, hand.ID, hand.Sources[0].ID, sourceReport, 2, "补充测试后的版本")
 	if err != nil || revised.CurrentVersion == nil || *revised.CurrentVersion != 2 {
 		t.Fatalf("revision send: %+v %v", revised, err)
 	}

@@ -25,6 +25,14 @@ const activityCTE = `WITH activities AS (
  AND NOT EXISTS(SELECT 1 FROM work_reports r WHERE r.submission_id=s.id)
 	 UNION ALL
 	 SELECT w.id,w.project_id,w.object_id,'decision','work_change',w.source,w.text,w.actor_user_id,NULL::uuid,w.created_at,ARRAY[]::text[],NULL::uuid FROM work_change_records w WHERE w.project_id=$1 AND w.object_type='task' AND w.object_id=$2
+	 UNION ALL
+	 SELECT a.id::uuid,a.project_id,$2,'decision','acceptance_feedback',a.source,COALESCE(a.reason,''),a.actor_user_id,a.identity_id,a.occurred_at,ARRAY[]::text[],NULL::uuid
+	 FROM audit_events a WHERE a.project_id=$1 AND a.object_type='task' AND a.object_id=$2::text AND a.actor_type='user' AND a.operation='task.reject'
+	 AND NOT EXISTS(SELECT 1 FROM work_change_records w WHERE w.project_id=a.project_id AND w.object_type='task' AND w.object_id=$2 AND w.operation='acceptance.reject' AND w.actor_user_id=a.actor_user_id AND w.created_at=a.occurred_at)
+	 UNION ALL
+	 SELECT r.id,r.project_id,r.target_id,'decision','reopen_record','web',r.reason,r.actor_user_id,NULL::uuid,r.created_at,ARRAY[]::text[],NULL::uuid
+	 FROM reopen_records r WHERE r.project_id=$1 AND r.target_type='task' AND r.target_id=$2
+	 AND NOT EXISTS(SELECT 1 FROM work_change_records w WHERE w.project_id=r.project_id AND w.object_type='task' AND w.object_id=$2 AND w.operation='acceptance.reopen' AND w.actor_user_id=r.actor_user_id AND w.created_at=r.created_at)
 	 ) `
 
 func (s *Service) ListActivity(ctx context.Context, user, project, task uuid.UUID) ([]Activity, error) {
@@ -43,7 +51,7 @@ func (s *Service) ListActivity(ctx context.Context, user, project, task uuid.UUI
  SELECT topic_id AS id FROM topic_source_refs WHERE project_id=$1 AND source_type=a.source_type AND source_id=a.id
  UNION SELECT a.original_topic WHERE a.original_topic IS NOT NULL)x),
  (SELECT row_to_json(x) FROM (SELECT id,task_id AS "taskId",batch_id AS "batchId",source_type AS "sourceType",source_id AS "sourceId",state,summary,disagreements,error_code AS "errorCode",updated_at AS "updatedAt"
- ,basis FROM task_analyses ta WHERE ta.project_id=a.project_id AND ta.source_type=a.source_type AND ta.source_id=a.id)x),
+ ,basis,output_json AS "output" FROM task_analyses ta WHERE ta.project_id=a.project_id AND ta.source_type=a.source_type AND ta.source_id=a.id)x),
  COALESCE((SELECT jsonb_agg(jsonb_build_object('versionId',v.id,'name',m.title) ORDER BY v.id)
  FROM material_versions v JOIN materials m ON m.id=v.material_id WHERE v.project_id=$1 AND v.id::text=ANY(a.material_ids)),'[]'::jsonb)
  /*keys*/ FROM activities a LEFT JOIN users u ON u.id=a.actor_user_id WHERE true /*page*/`, "a.created_at", "a.id", project, task)
@@ -63,6 +71,7 @@ func (s *Service) ListActivity(ctx context.Context, user, project, task uuid.UUI
 			if err = json.Unmarshal(analysis, a.Analysis); err != nil {
 				return nil, err
 			}
+			a.Analysis.setScopeKind()
 		}
 		if err = json.Unmarshal(materials, &a.Materials); err != nil {
 			return nil, err

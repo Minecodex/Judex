@@ -7,7 +7,9 @@
 package project
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -44,11 +46,28 @@ type Project struct {
 
 // CreateRequest is the create command payload.
 type CreateRequest struct {
-	Title                  string
-	Description            string
-	Kind                   string
-	MaxDiscussionRounds    int
-	ApprovalTimeoutSeconds int
+	DefaultModelID         *uuid.UUID `json:"defaultModelId,omitempty"`
+	Title                  string     `json:"title"`
+	Description            string     `json:"description,omitempty"`
+	Kind                   string     `json:"kind,omitempty"`
+	MaxDiscussionRounds    int        `json:"maxDiscussionRounds,omitempty"`
+	ApprovalTimeoutSeconds int        `json:"approvalTimeoutSeconds,omitempty"`
+}
+
+// ParseCreatePayload validates the same body for the CLI review and commit.
+// Invalid drafts cannot become unconfirmable project-creation intents.
+func ParseCreatePayload(payload map[string]any) (CreateRequest, error) {
+	var req CreateRequest
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return req, apierrors.Fields("payload", "invalid project")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err = decoder.Decode(&req); err != nil {
+		return req, apierrors.Fields("payload", "invalid project fields")
+	}
+	return req, validateCreate(req)
 }
 
 // Service owns project persistence.
@@ -114,17 +133,23 @@ func (s *Service) Create(ctx context.Context, creator uuid.UUID, req CreateReque
 		if err := tx.LockUserForShare(ctx, creator.String()); err != nil {
 			return err
 		}
+		if req.DefaultModelID != nil {
+			var enabled bool
+			if err := tx.QueryRow(ctx, `SELECT enabled FROM model_catalog WHERE id=$1 FOR SHARE`, *req.DefaultModelID).Scan(&enabled); err != nil || !enabled {
+				return apierrors.New(apierrors.ModelUnavailable, "selected project model disabled or missing")
+			}
+		}
 		now := s.now()
 		id := uuid.New()
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO projects (id, title, description, kind, creator_user_id, owner_user_id,
-			                      max_discussion_rounds, approval_timeout_seconds, created_at, updated_at)
-			VALUES ($1,$2,$3,$4,$5,$5,$6,$7,$8,$8)
-			RETURNING id, title, description, kind, status, max_discussion_rounds, approval_timeout_seconds, version, created_at, updated_at`,
-			id, title, req.Description, req.Kind, creator, req.MaxDiscussionRounds, req.ApprovalTimeoutSeconds, now).
+			                      max_discussion_rounds, approval_timeout_seconds, created_at, updated_at, default_model_id)
+			VALUES ($1,$2,$3,$4,$5,$5,$6,$7,$8,$8,$9)
+			RETURNING id, title, description, kind, status, max_discussion_rounds, approval_timeout_seconds, version, created_at, updated_at, default_model_id`,
+			id, title, req.Description, req.Kind, creator, req.MaxDiscussionRounds, req.ApprovalTimeoutSeconds, now, req.DefaultModelID).
 			Scan(&created.ID, &created.Title, &created.Description, &created.Kind, &created.Status,
 				&created.MaxDiscussionRounds, &created.ApprovalTimeoutSeconds,
-				&created.Version, &created.CreatedAt, &created.UpdatedAt); err != nil {
+				&created.Version, &created.CreatedAt, &created.UpdatedAt, &created.DefaultModelID); err != nil {
 			return apierrors.New(apierrors.Internal, "project insert failed").Wrap(err)
 		}
 		if _, err := tx.Exec(ctx, `

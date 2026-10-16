@@ -19,22 +19,17 @@ func EnqueueAnalysis(ctx context.Context, tx pgx.Tx, project, task, user uuid.UU
 		return uuid.Nil, err
 	}
 	var rounds int
-	var coordinator uuid.UUID
-	var session uuid.UUID
+	var coordinator, session uuid.UUID
 	if err := tx.QueryRow(ctx, `SELECT max_discussion_rounds FROM projects WHERE id=$1`, project).Scan(&rounds); err != nil {
 		return uuid.Nil, err
 	}
 	if err := tx.QueryRow(ctx, `SELECT id FROM agent_identities WHERE project_id=$1 AND kind='coordinator' AND status='active'`, project).Scan(&coordinator); err != nil {
 		return uuid.Nil, err
 	}
-	if replyTopic == nil {
-		if err := tx.QueryRow(ctx, `INSERT INTO agent_sessions(project_id,id,task_id,identity_id,created_at)
- VALUES($1,$2,$3,$4,$5) ON CONFLICT(task_id,identity_id) WHERE task_id IS NOT NULL
- DO UPDATE SET identity_id=EXCLUDED.identity_id RETURNING id`, project, uuid.New(), task, coordinator, now).Scan(&session); err != nil {
-			return uuid.Nil, err
-		}
+	var submission, report, taskValue any
+	if task != uuid.Nil {
+		taskValue = task
 	}
-	var submission, report any
 	if sourceType == "report" {
 		report = sourceID
 		if replyTopic == nil {
@@ -46,30 +41,50 @@ func EnqueueAnalysis(ctx context.Context, tx pgx.Tx, project, task, user uuid.UU
 		submission = sourceID
 	}
 	if replyTopic != nil {
-		if err := tx.QueryRow(ctx, `INSERT INTO agent_sessions(project_id,id,topic_id,identity_id,created_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT(topic_id,identity_id) DO UPDATE SET identity_id=EXCLUDED.identity_id RETURNING id`, project, uuid.New(), *replyTopic, coordinator, now).Scan(&session); err != nil {
+		if err := tx.QueryRow(ctx, `INSERT INTO agent_sessions(project_id,id,topic_id,identity_id,created_at)VALUES($1,$2,$3,$4,$5) ON CONFLICT(topic_id,identity_id)DO UPDATE SET identity_id=EXCLUDED.identity_id RETURNING id`, project, uuid.New(), *replyTopic, coordinator, now).Scan(&session); err != nil {
+			return uuid.Nil, err
+		}
+	} else if task != uuid.Nil {
+		if err := tx.QueryRow(ctx, `INSERT INTO agent_sessions(project_id,id,task_id,identity_id,created_at)VALUES($1,$2,$3,$4,$5)ON CONFLICT(task_id,identity_id)WHERE task_id IS NOT NULL DO UPDATE SET identity_id=EXCLUDED.identity_id RETURNING id`, project, uuid.New(), task, coordinator, now).Scan(&session); err != nil {
+			return uuid.Nil, err
+		}
+	} else {
+		if err := tx.QueryRow(ctx, `INSERT INTO agent_sessions(project_id,id,identity_id,created_at)VALUES($1,$2,$3,$4)ON CONFLICT(project_id,identity_id)WHERE topic_id IS NULL AND task_id IS NULL DO UPDATE SET identity_id=EXCLUDED.identity_id RETURNING id`, project, uuid.New(), coordinator, now).Scan(&session); err != nil {
 			return uuid.Nil, err
 		}
 	}
-	batch := uuid.New()
-	if _, err := tx.Exec(ctx, `INSERT INTO discussion_batches(project_id,id,topic_id,task_id,source_submission_id,source_report_id,policy_snapshot,max_rounds,state,trigger_kind,created_at,updated_at)
- VALUES($1,$2,$3,$4,$5,$6,jsonb_build_object('maxRounds',$7::int),$7,'queued','task_activity',$8,$8)`, project, batch, nullID(replyTopic), task, submission, report, rounds, now); err != nil {
+	parent := replyTopic
+	var point int64
+	if task != uuid.Nil && parent == nil {
+		if err := tx.QueryRow(ctx, `SELECT p.main_topic_id FROM tasks t LEFT JOIN plans p ON p.id=t.plan_id AND p.project_id=t.project_id WHERE t.project_id=$1 AND t.id=$2`, project, task).Scan(&parent); err != nil {
+			return uuid.Nil, err
+		}
+	}
+	if parent != nil {
+		if err := tx.QueryRow(ctx, `SELECT last_message_seq FROM topics WHERE project_id=$1 AND id=$2`, project, *parent).Scan(&point); err != nil {
+			return uuid.Nil, err
+		}
+	}
+	trigger := "task_activity"
+	objectType, objectID := "task", task.String()
+	if task == uuid.Nil {
+		trigger = "project_activity"
+		objectType, objectID = "project", project.String()
+	}
+	batch, id, run := uuid.New(), uuid.New(), uuid.New()
+	if _, err := tx.Exec(ctx, `INSERT INTO discussion_batches(project_id,id,topic_id,task_id,source_submission_id,source_report_id,policy_snapshot,max_rounds,state,trigger_kind,created_at,updated_at)VALUES($1,$2,$3,$4,$5,$6,jsonb_build_object('maxRounds',$7::int),$7,'queued',$9,$8,$8)`, project, batch, nullID(replyTopic), taskValue, submission, report, rounds, now, trigger); err != nil {
 		return uuid.Nil, err
 	}
-	id := uuid.New()
-	if _, err := tx.Exec(ctx, `INSERT INTO task_analyses(project_id,id,task_id,batch_id,source_type,source_id,state,parent_topic_id,fork_after_seq,created_at,updated_at)
- SELECT $1,$2,$3,$4,$5,$6,'queued',COALESCE($8::uuid,p.main_topic_id),COALESCE(tp.last_message_seq,0),$7,$7
- FROM tasks t LEFT JOIN plans p ON p.id=t.plan_id AND p.project_id=t.project_id
- LEFT JOIN topics tp ON tp.id=COALESCE($8::uuid,p.main_topic_id) WHERE t.id=$3 AND t.project_id=$1`, project, id, task, batch, sourceType, sourceID, now, nullID(replyTopic)); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO task_analyses(project_id,id,task_id,batch_id,source_type,source_id,state,parent_topic_id,fork_after_seq,created_at,updated_at)VALUES($1,$2,$3,$4,$5,$6,'queued',$8,$9,$7,$7)`, project, id, taskValue, batch, sourceType, sourceID, now, nullID(parent), point); err != nil {
 		return uuid.Nil, err
 	}
-	run := uuid.New()
-	if _, err := tx.Exec(ctx, `INSERT INTO agent_runs(project_id,id,session_id,batch_id,identity_id,state,requested_by,created_at,updated_at) VALUES($1,$2,$3,$4,$5,'queued',$6,$7,$7)`, project, run, session, batch, coordinator, user, now); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO agent_runs(project_id,id,session_id,batch_id,identity_id,state,requested_by,created_at,updated_at)VALUES($1,$2,$3,$4,$5,'queued',$6,$7,$7)`, project, run, session, batch, coordinator, user, now); err != nil {
 		return uuid.Nil, err
 	}
 	unique := "batch:" + batch.String()
 	if _, err := job.Enqueue(ctx, tx, "discussion.batch", map[string]string{"projectId": project.String(), "batchId": batch.String()}, &unique, now, now); err != nil {
 		return uuid.Nil, err
 	}
-	_, err := events.AppendProjectEvent(ctx, tx, project, "task.activity.changed", "task", task.String(), nil, map[string]any{"analysisId": id, "sourceType": sourceType, "sourceId": sourceID}, now)
+	_, err := events.AppendProjectEvent(ctx, tx, project, "task.activity.changed", objectType, objectID, nil, map[string]any{"analysisId": id, "sourceType": sourceType, "sourceId": sourceID}, now)
 	return id, err
 }

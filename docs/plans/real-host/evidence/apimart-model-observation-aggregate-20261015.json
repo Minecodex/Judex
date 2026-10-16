@@ -1,0 +1,417 @@
+{
+  "observedAt": "2026-10-14T15:53:34.673Z",
+  "localKimiAPIMart": [
+    {
+      "label": "KA01",
+      "sessionId": "session_c02e8731-c5ae-49ff-bb9e-571d6efc4c10",
+      "invocations": 17,
+      "failedInvocations": 2,
+      "calls": 313,
+      "usageKnownCalls": 306,
+      "cacheKnownCalls": 306,
+      "inputTokens": 18826658,
+      "outputTokens": 192488,
+      "cacheSubsetInputTokens": 18826658,
+      "cacheReadTokens": 16204864,
+      "cacheWriteKnownCalls": 0,
+      "cacheWriteTokens": 0,
+      "reasoningEffortCounts": {
+        "high": 313
+      },
+      "transportErrors": {
+        "ECONNRESET": 3,
+        "ETIMEDOUT": 2
+      },
+      "returnedModelCounts": {
+        "ZHIPU/GLM-5.3-Flash": 308
+      },
+      "weightedCacheReadRatio": 0.8607403395759353
+    },
+    {
+      "label": "KA03",
+      "sessionId": "session_be7debef-3c1b-49ed-96f3-6c9a490e94e8",
+      "invocations": 3,
+      "failedInvocations": 1,
+      "calls": 96,
+      "usageKnownCalls": 80,
+      "cacheKnownCalls": 80,
+      "inputTokens": 4212333,
+      "outputTokens": 55399,
+      "cacheSubsetInputTokens": 4212333,
+      "cacheReadTokens": 3600128,
+      "cacheWriteKnownCalls": 0,
+      "cacheWriteTokens": 0,
+      "reasoningEffortCounts": {
+        "high": 96
+      },
+      "transportErrors": {
+        "ECONNRESET": 13,
+        "ETIMEDOUT": 2
+      },
+      "returnedModelCounts": {
+        "ZHIPU/GLM-5.3-Flash": 83
+      },
+      "weightedCacheReadRatio": 0.8546636745005677
+    },
+    {
+      "label": "KA04",
+      "sessionId": "session_6964f8aa-a459-40de-be9f-f2e4140cfeb1",
+      "invocations": 1,
+      "failedInvocations": 0,
+      "calls": 8,
+      "usageKnownCalls": 8,
+      "cacheKnownCalls": 8,
+      "inputTokens": 363761,
+      "outputTokens": 3307,
+      "cacheSubsetInputTokens": 363761,
+      "cacheReadTokens": 209792,
+      "cacheWriteKnownCalls": 0,
+      "cacheWriteTokens": 0,
+      "reasoningEffortCounts": {
+        "high": 8
+      },
+      "transportErrors": {},
+      "returnedModelCounts": {
+        "ZHIPU/GLM-5.3-Flash": 8
+      },
+      "weightedCacheReadRatio": 0.5767303256808729
+    },
+    {
+      "label": "KA05",
+      "sessionId": "session_cd5ab237-1591-4978-b102-3d5c87957d98",
+      "invocations": 4,
+      "failedInvocations": 2,
+      "calls": 160,
+      "usageKnownCalls": 156,
+      "cacheKnownCalls": 156,
+      "inputTokens": 8655303,
+      "outputTokens": 96777,
+      "cacheSubsetInputTokens": 8655303,
+      "cacheReadTokens": 6673408,
+      "cacheWriteKnownCalls": 0,
+      "cacheWriteTokens": 0,
+      "reasoningEffortCounts": {
+        "high": 160
+      },
+      "transportErrors": {
+        "ECONNRESET": 4
+      },
+      "returnedModelCounts": {
+        "ZHIPU/GLM-5.3-Flash": 156
+      },
+      "weightedCacheReadRatio": 0.7710195703142917
+    },
+    {
+      "label": "KA06",
+      "sessionId": "session_e684258d-cd35-4438-b684-c68c95dfb101",
+      "invocations": 5,
+      "failedInvocations": 1,
+      "calls": 140,
+      "usageKnownCalls": 130,
+      "cacheKnownCalls": 130,
+      "inputTokens": 7257721,
+      "outputTokens": 98037,
+      "cacheSubsetInputTokens": 7257721,
+      "cacheReadTokens": 6477120,
+      "cacheWriteKnownCalls": 0,
+      "cacheWriteTokens": 0,
+      "reasoningEffortCounts": {
+        "high": 140
+      },
+      "transportErrors": {
+        "ECONNRESET": 9
+      },
+      "returnedModelCounts": {
+        "ZHIPU/GLM-5.3-Flash": 131
+      },
+      "weightedCacheReadRatio": 0.8924454384509959
+    },
+    {
+      "label": "KB01",
+      "sessionId": "session_fc4804ac-7dea-4c04-86d6-0444f0796eaf",
+      "invocations": 6,
+      "failedInvocations": 0,
+      "calls": 73,
+      "usageKnownCalls": 70,
+      "cacheKnownCalls": 70,
+      "inputTokens": 3970151,
+      "outputTokens": 51104,
+      "cacheSubsetInputTokens": 3970151,
+      "cacheReadTokens": 3000896,
+      "cacheWriteKnownCalls": 0,
+      "cacheWriteTokens": 0,
+      "reasoningEffortCounts": {
+        "high": 73
+      },
+      "transportErrors": {
+        "ECONNRESET": 2
+      },
+      "returnedModelCounts": {
+        "ZHIPU/GLM-5.3-Flash": 73
+      },
+      "weightedCacheReadRatio": 0.7558644494881933
+    },
+    {
+      "label": "KB02",
+      "sessionId": "session_8e1da1b9-afe4-4591-b495-31a0c1f47a4b",
+      "invocations": 5,
+      "failedInvocations": 1,
+      "calls": 205,
+      "usageKnownCalls": 195,
+      "cacheKnownCalls": 195,
+      "inputTokens": 10389987,
+      "outputTokens": 127859,
+      "cacheSubsetInputTokens": 10389987,
+      "cacheReadTokens": 5535808,
+      "cacheWriteKnownCalls": 0,
+      "cacheWriteTokens": 0,
+      "reasoningEffortCounts": {
+        "high": 205
+      },
+      "transportErrors": {
+        "ECONNRESET": 1,
+        "ETIMEDOUT": 1
+      },
+      "returnedModelCounts": {
+        "ZHIPU/GLM-5.3-Flash": 202
+      },
+      "weightedCacheReadRatio": 0.532802206586014
+    },
+    {
+      "label": "KB03",
+      "sessionId": "session_2b7be5f2-4f14-4b3f-8def-aceb464a6cfe",
+      "invocations": 6,
+      "failedInvocations": 0,
+      "calls": 151,
+      "usageKnownCalls": 147,
+      "cacheKnownCalls": 147,
+      "inputTokens": 8177504,
+      "outputTokens": 107959,
+      "cacheSubsetInputTokens": 8177504,
+      "cacheReadTokens": 5679936,
+      "cacheWriteKnownCalls": 0,
+      "cacheWriteTokens": 0,
+      "reasoningEffortCounts": {
+        "high": 151
+      },
+      "transportErrors": {
+        "ETIMEDOUT": 2
+      },
+      "returnedModelCounts": {
+        "ZHIPU/GLM-5.3-Flash": 149
+      },
+      "weightedCacheReadRatio": 0.6945806446563646
+    },
+    {
+      "label": "KC01",
+      "sessionId": "session_9849e2f4-68d4-4911-933a-9577dc3dc4bd",
+      "invocations": 13,
+      "failedInvocations": 1,
+      "calls": 335,
+      "usageKnownCalls": 313,
+      "cacheKnownCalls": 313,
+      "inputTokens": 17917019,
+      "outputTokens": 193996,
+      "cacheSubsetInputTokens": 17917019,
+      "cacheReadTokens": 15334720,
+      "cacheWriteKnownCalls": 0,
+      "cacheWriteTokens": 0,
+      "reasoningEffortCounts": {
+        "high": 335
+      },
+      "transportErrors": {
+        "ECONNRESET": 15,
+        "ETIMEDOUT": 1
+      },
+      "returnedModelCounts": {
+        "ZHIPU/GLM-5.3-Flash": 320
+      },
+      "weightedCacheReadRatio": 0.8558745179652932
+    },
+    {
+      "label": "KC02",
+      "sessionId": "session_a19d67a9-b20e-4ab3-b8a9-79ac41056a8f",
+      "invocations": 5,
+      "failedInvocations": 1,
+      "calls": 153,
+      "usageKnownCalls": 138,
+      "cacheKnownCalls": 138,
+      "inputTokens": 7744183,
+      "outputTokens": 74598,
+      "cacheSubsetInputTokens": 7744183,
+      "cacheReadTokens": 4950720,
+      "cacheWriteKnownCalls": 0,
+      "cacheWriteTokens": 0,
+      "reasoningEffortCounts": {
+        "high": 153
+      },
+      "transportErrors": {
+        "ECONNRESET": 13,
+        "ETIMEDOUT": 1
+      },
+      "returnedModelCounts": {
+        "ZHIPU/GLM-5.3-Flash": 141
+      },
+      "weightedCacheReadRatio": 0.6392824136516402
+    },
+    {
+      "label": "KC03",
+      "sessionId": "session_59814024-99d5-405d-a70a-d6f5068c1637",
+      "invocations": 10,
+      "failedInvocations": 6,
+      "calls": 334,
+      "usageKnownCalls": 306,
+      "cacheKnownCalls": 306,
+      "inputTokens": 16579834,
+      "outputTokens": 180503,
+      "cacheSubsetInputTokens": 16579834,
+      "cacheReadTokens": 10111872,
+      "cacheWriteKnownCalls": 0,
+      "cacheWriteTokens": 0,
+      "reasoningEffortCounts": {
+        "high": 334
+      },
+      "transportErrors": {
+        "ECONNRESET": 20,
+        "ETIMEDOUT": 5
+      },
+      "returnedModelCounts": {
+        "ZHIPU/GLM-5.3-Flash": 312
+      },
+      "weightedCacheReadRatio": 0.6098898215748119
+    },
+    {
+      "label": "KX01",
+      "sessionId": "session_3ea65df2-9615-457a-ae95-4997d4d0b6f5",
+      "invocations": 5,
+      "failedInvocations": 0,
+      "calls": 155,
+      "usageKnownCalls": 152,
+      "cacheKnownCalls": 152,
+      "inputTokens": 8986361,
+      "outputTokens": 88754,
+      "cacheSubsetInputTokens": 8986361,
+      "cacheReadTokens": 7934784,
+      "cacheWriteKnownCalls": 0,
+      "cacheWriteTokens": 0,
+      "reasoningEffortCounts": {
+        "high": 155
+      },
+      "transportErrors": {
+        "ECONNRESET": 1,
+        "ETIMEDOUT": 1
+      },
+      "returnedModelCounts": {
+        "ZHIPU/GLM-5.3-Flash": 153
+      },
+      "weightedCacheReadRatio": 0.8829807749766563
+    },
+    {
+      "label": "KX02",
+      "sessionId": "session_56eb410c-1606-4047-b0d7-0073943ddfea",
+      "invocations": 4,
+      "failedInvocations": 0,
+      "calls": 135,
+      "usageKnownCalls": 133,
+      "cacheKnownCalls": 133,
+      "inputTokens": 6656936,
+      "outputTokens": 84645,
+      "cacheSubsetInputTokens": 6656936,
+      "cacheReadTokens": 6189888,
+      "cacheWriteKnownCalls": 0,
+      "cacheWriteTokens": 0,
+      "reasoningEffortCounts": {
+        "high": 135
+      },
+      "transportErrors": {
+        "ETIMEDOUT": 1,
+        "ECONNRESET": 1
+      },
+      "returnedModelCounts": {
+        "ZHIPU/GLM-5.3-Flash": 133
+      },
+      "weightedCacheReadRatio": 0.9298403950406012
+    }
+  ],
+  "platformLast24Hours": {
+    "groups": [
+      {
+        "calls": 26,
+        "model": "k3",
+        "project_id": "f8071fd6-1ffb-40ec-9a15-cfdd1492c93c",
+        "cache_known_calls": 25,
+        "cache_read_tokens": 138752,
+        "usage_known_calls": 26,
+        "eligible_input_tokens": 177712,
+        "weightedCacheReadRatio": 0.7807688844872603
+      },
+      {
+        "calls": 27,
+        "model": "k3",
+        "project_id": "8154db15-2f0f-4b37-971f-cc71a5241948",
+        "cache_known_calls": 24,
+        "cache_read_tokens": 228608,
+        "usage_known_calls": 26,
+        "eligible_input_tokens": 283841,
+        "weightedCacheReadRatio": 0.8054086618916929
+      },
+      {
+        "calls": 29,
+        "model": "ZHIPU/GLM-5.3-Flash",
+        "project_id": "f8071fd6-1ffb-40ec-9a15-cfdd1492c93c",
+        "cache_known_calls": 29,
+        "cache_read_tokens": 240576,
+        "usage_known_calls": 29,
+        "eligible_input_tokens": 426468,
+        "weightedCacheReadRatio": 0.5641126649596219
+      },
+      {
+        "calls": 3,
+        "model": "glm-5.3-flash",
+        "project_id": "21a13532-7929-4c6c-99a7-01e044eee64e",
+        "cache_known_calls": 0,
+        "cache_read_tokens": null,
+        "usage_known_calls": 0,
+        "eligible_input_tokens": null,
+        "weightedCacheReadRatio": null
+      },
+      {
+        "calls": 68,
+        "model": "ZHIPU/GLM-5.3-Flash",
+        "project_id": "8154db15-2f0f-4b37-971f-cc71a5241948",
+        "cache_known_calls": 68,
+        "cache_read_tokens": 609152,
+        "usage_known_calls": 68,
+        "eligible_input_tokens": 1050371,
+        "weightedCacheReadRatio": 0.5799398498244905
+      },
+      {
+        "calls": 113,
+        "model": "ZHIPU/GLM-5.3-Flash",
+        "project_id": "21a13532-7929-4c6c-99a7-01e044eee64e",
+        "cache_known_calls": 113,
+        "cache_read_tokens": 1000192,
+        "usage_known_calls": 113,
+        "eligible_input_tokens": 1786776,
+        "weightedCacheReadRatio": 0.5597747003541574
+      },
+      {
+        "calls": 22,
+        "model": "k3",
+        "project_id": "21a13532-7929-4c6c-99a7-01e044eee64e",
+        "cache_known_calls": 14,
+        "cache_read_tokens": 160000,
+        "usage_known_calls": 16,
+        "eligible_input_tokens": 196164,
+        "weightedCacheReadRatio": 0.8156440529352991
+      }
+    ],
+    "naturalExpiry": {
+      "durableUsageRows": 435,
+      "expiredDurableRows": 435,
+      "temporaryRequestIDRemaining": 0,
+      "temporaryObservationRemaining": 0
+    }
+  },
+  "scope": "local aggregate invocation records and actual owned platform usage, separate populations; no global cold-cache, fixed hit-rate target, billing savings or missing-field zero assumption; no raw prompt/request/call detail"
+}

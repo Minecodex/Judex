@@ -28,7 +28,9 @@ func Member(ctx context.Context, q Reader, user, project uuid.UUID) error {
 
 type Analysis struct {
 	ID            uuid.UUID       `json:"id"`
-	TaskID        uuid.UUID       `json:"taskId"`
+	TaskID        *uuid.UUID      `json:"taskId"`
+	ScopeKind     string          `json:"scopeKind"`
+	Output        json.RawMessage `json:"output"`
 	BatchID       *uuid.UUID      `json:"batchId"`
 	SourceType    string          `json:"sourceType"`
 	SourceID      uuid.UUID       `json:"sourceId"`
@@ -39,6 +41,14 @@ type Analysis struct {
 	ErrorCode     *string         `json:"errorCode"`
 	UpdatedAt     time.Time       `json:"updatedAt"`
 }
+
+func (a *Analysis) setScopeKind() {
+	a.ScopeKind = "task"
+	if a.TaskID == nil {
+		a.ScopeKind = "project"
+	}
+}
+
 type MaterialRef struct {
 	VersionID uuid.UUID `json:"versionId"`
 	Name      string    `json:"name"`
@@ -94,9 +104,31 @@ func (s *Service) GetAnalysis(ctx context.Context, user, project, id uuid.UUID) 
 	if err := Member(ctx, s.Pool, user, project); err != nil {
 		return out, err
 	}
-	err := s.Pool.QueryRow(ctx, `SELECT id,task_id,batch_id,source_type,source_id,state,summary,disagreements,basis,error_code,updated_at FROM task_analyses WHERE project_id=$1 AND id=$2`, project, id).Scan(&out.ID, &out.TaskID, &out.BatchID, &out.SourceType, &out.SourceID, &out.State, &out.Summary, &out.Disagreements, &out.Basis, &out.ErrorCode, &out.UpdatedAt)
+	err := s.Pool.QueryRow(ctx, `SELECT id,task_id,batch_id,source_type,source_id,state,summary,disagreements,basis,error_code,updated_at,output_json FROM task_analyses WHERE project_id=$1 AND id=$2`, project, id).Scan(&out.ID, &out.TaskID, &out.BatchID, &out.SourceType, &out.SourceID, &out.State, &out.Summary, &out.Disagreements, &out.Basis, &out.ErrorCode, &out.UpdatedAt, &out.Output)
+	out.setScopeKind()
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, apierrors.New(apierrors.NotFound, "analysis not found")
 	}
 	return out, err
+}
+
+// SubmissionAnalysis resolves the canonical report source where a submission
+// backs a work report. It never reveals an analysis outside this project.
+func (s *Service) SubmissionAnalysis(ctx context.Context, user, project, submission uuid.UUID) (Analysis, error) {
+	if err := Member(ctx, s.Pool, user, project); err != nil {
+		return Analysis{}, err
+	}
+	var id uuid.UUID
+	err := s.Pool.QueryRow(ctx, `SELECT a.id FROM submissions s
+ LEFT JOIN work_reports r ON r.submission_id=s.id AND r.project_id=s.project_id
+ JOIN task_analyses a ON a.project_id=s.project_id AND
+ ((a.source_type='submission' AND a.source_id=s.id) OR (a.source_type='report' AND a.source_id=r.id))
+ WHERE s.project_id=$1 AND s.id=$2 ORDER BY a.created_at DESC LIMIT 1`, project, submission).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Analysis{}, apierrors.New(apierrors.NotFound, "submission analysis not found")
+	}
+	if err != nil {
+		return Analysis{}, err
+	}
+	return s.GetAnalysis(ctx, user, project, id)
 }

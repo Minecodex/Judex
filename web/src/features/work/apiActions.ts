@@ -1,9 +1,10 @@
 import {cooperationApiActions} from "../cooperation/commands";
 import {runtimeApiActions} from './apiRuntimeActions';
+import {positionBindings} from './positionBindings';
 // api 模式命名动作执行器（P2）：与 actionRegistry 命名一一对应的真实 REST 写操作。
 // 未在 apiActions 中出现的动作在 api 模式仍不可用（调用方提示 shellUnavailable）。
 // 约定：写操作带幂等键；需要 reviewHash/expectedVersion 的操作先读冻结引用再提交。
-import { APIError, request } from "../../lib/api/client";
+import { APIError, request, requestAll } from "../../lib/api/client";
 import type { components } from "../../lib/api/schema";
 import type { ActResult, ActionPayloads } from "./storeTypes";
 import type { Evidence, WorkState } from "./types";
@@ -66,8 +67,7 @@ const patch = <T>(path: string, body: unknown): Promise<T> =>
     idempotencyKey: crypto.randomUUID(),
   });
 
-const listItems = async <T>(path: string): Promise<T[]> =>
-  (await request<{ items: T[] }>(path)).items ?? [];
+const listItems = requestAll;
 
 // 发布当前草稿：expectedVersion 必须取调用瞬间的流程头版本（草稿保存会推进头版本）。
 async function publishCurrentDraft(projectId: string, workflowId: string) {
@@ -192,10 +192,10 @@ async function findHandoffSource(
   handoffId: string,
   sourceId: string,
 ): Promise<ApiHandoffSource> {
-  const page = await request<{ items: ApiHandoff[] }>(
+  const handoffs = await requestAll<ApiHandoff>(
     `/projects/${projectId}/handoffs?limit=100`,
   );
-  const source = page.items
+  const source = handoffs
     .find((h) => h.id === handoffId)
     ?.sources.find((s) => s.id === sourceId);
   if (!source) throw new APIError(404, "NOT_FOUND", "handoff source not found");
@@ -489,13 +489,9 @@ export const apiActions: {
   reviseSource: async (projectId, p, ctx) => {
     const source = await findHandoffSource(projectId, p.handoffId, p.sourceId);
     if(source.currentVersion!==p.revision)throw new APIError(409,"SOURCE_VERSION_CONFLICT","source changed");
-    let cursor="",held=false;
-    do{
-      const identities=await request<{items:ApiIdentity[];nextCursor?:string|null}>(`/projects/${projectId}/identities?limit=100${cursor?"&cursor="+encodeURIComponent(cursor):""}`);
-      const identity=identities.items.find(v=>v.id===source.senderIdentityId);
-      if(identity){held=identity.status==="active"&&identity.currentBinding?.userId===ctx.userId;break;}
-      cursor=identities.nextCursor??"";
-    }while(cursor);
+    const identities = await requestAll<ApiIdentity>(`/projects/${projectId}/identities`);
+    const identity = identities.find(v=>v.id===source.senderIdentityId);
+    const held = identity?.status === 'active' && identity.currentBinding?.userId === ctx.userId;
     if(!held)throw new APIError(403,"FORBIDDEN","only the current sender may revise a source");
     const task = await fetchTask(projectId, source.sourceTaskId);
     // 新版本以交付报告为证据载体：有附件先补一条交付报告，否则复用最新报告。
@@ -563,10 +559,10 @@ export const apiActions: {
     return { ok: true, id: handoff.id };
   },
   refreshHandoff: async (projectId, p) => {
-    const page = await request<{ items: ApiHandoff[] }>(
+    const handoffs = await requestAll<ApiHandoff>(
       `/projects/${projectId}/handoffs?limit=100`,
     );
-    const handoff = page.items.find((h) => h.id === p.handoffId);
+    const handoff = handoffs.find((h) => h.id === p.handoffId);
     if (!handoff) throw new APIError(404, "NOT_FOUND", "handoff not found");
     await post(`/projects/${projectId}/handoffs/${p.handoffId}/reminders`, {
       expectedVersion: handoff.version ?? 1,
@@ -697,9 +693,9 @@ export const apiActions: {
     return { ok: true, id: p.flowId };
   },
   savePosition: async (projectId, p) => {
-    const nodeBindings = p.value.flowId
-      ? [{ workflowId: p.value.flowId, nodeId: p.value.nodeId }]
-      : [];
+    const bindings = positionBindings(p.value);
+    if (!bindings) throw new APIError(400, 'VALIDATION_ERROR', 'Invalid workflow node bindings');
+    const nodeBindings = bindings.map(b => ({ workflowId: b.flowId, nodeId: b.nodeId }));
     if (p.value.id) {
       const positions = await listItems<ApiPosition>(
         `/projects/${projectId}/positions?limit=100`,
@@ -711,14 +707,14 @@ export const apiActions: {
         name: p.value.name,
         prompt: p.value.prompt,
         publicSummary: p.value.publicSummary ?? current.publicSummary,
-        modelId: current.modelId ?? null,
+        modelId: p.value.modelId === undefined ? current.modelId ?? null : p.value.modelId,
         nodeBindings,
       });
       return { ok: true, id: p.value.id };
     }
     const position = await post<ApiPosition>(
       `/projects/${projectId}/positions`,
-      { name: p.value.name, prompt: p.value.prompt, publicSummary: p.value.publicSummary, nodeBindings },
+      { name: p.value.name, prompt: p.value.prompt, publicSummary: p.value.publicSummary, modelId: p.value.modelId ?? null, nodeBindings },
     );
     return { ok: true, id: position.id };
   },

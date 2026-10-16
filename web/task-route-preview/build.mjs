@@ -9,4 +9,4 @@ const result=await build({configFile:false,root:webRoot,plugins:[react(),tailwin
 const output=(Array.isArray(result)?result:[result]).flatMap(v=>v.output),entry=output.find(v=>v.type==='chunk'&&v.isEntry),css=output.filter(v=>v.type==='asset'&&v.fileName.endsWith('.css')).map(v=>String(v.source)).join('\n');
 if(!entry||!css)throw new Error('Demo4 build output missing');
 const html=`<!doctype html><html lang="zh-CN" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>Judex · Demo 4</title><style>${css.replace(/<\/style/gi,'<\\/style')}</style></head><body><div id="root"></div><noscript>请启用 JavaScript 查看交互原型。</noscript><script>${entry.code.replace(/<\/script/gi,'<\\/script')}</script></body></html>`;
-const target=resolve(webRoot,'../demo4.html');await writeFile(target,html,'utf8');console.log(`Created ${target}: ${Math.round(Buffer.byteLength(html)/1024)} KiB`);
+const target=resolve(webRoot,'../docs/plans/demo4/demo4.html');await writeFile(target,html,'utf8');console.log(`Created ${target}: ${Math.round(Buffer.byteLength(html)/1024)} KiB`);

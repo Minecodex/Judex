@@ -2,7 +2,7 @@
   "planVersion": "1.0",
   "baselineCommit": "8edd258",
   "generatedAt": "2026-09-27",
-  "status": "2026-09-29 continuation implemented and verified; remaining acceptance gates listed in continuation and CONTINUATION.md",
+  "status": "bounded_business_and_contract_configuration_passed_actual_vendor_429_unobserved",
   "decisions": {
     "registration": "confirmed: intranet email+password, no email verification",
     "cliName": "confirmed: judex CLI, not ctl",
@@ -45,7 +45,7 @@
         "internal/platform/errors: canonical code->status map + envelope helpers; internal/platform/auth: Principal model (web/cli/operator), scopes, human-confirm gate",
         "transport: SpecRouter mounts all contract operations with 501 NOT_IMPLEMENTED defaults; router rewritten on top",
         "tests/contract: spec load+validate, spec<->router parity (both directions), embedded-copy sync check, 501 envelope check - all passing",
-        "2026-09-29 continuation: 125 操作注册；59 成功请求/响应 schema、117 匿名错误 schema 实测。其余成功路径断言待补，不将注册完整性当成全覆盖。 Evidence: evidence/v1-closure/manifest.json"
+        "2026-09-29 continuation: 125 操作注册；59 成功请求/响应 schema、117 匿名错误 schema 实测。其余成功路径断言待补，不将注册完整性当成全覆盖。 Evidence: docs/plans/v1/evidence/v1-closure/manifest.json"
       ],
       "notes": "make unavailable on this Windows host; generation invoked via npm run gen:api + direct go tool calls",
       "reviewNote": "125 操作注册；59 成功请求/响应 schema、117 匿名错误 schema 实测。其余成功路径断言待补，不将注册完整性当成全覆盖。"
@@ -632,7 +632,7 @@
         "skills/judex：SKILL.md（前置 auth/context、明确文件上报、确认边界、保密、冲突）+ references（commands/reporting/human-decisions）+ manifest.json（版本/协议范围/安装目标）",
         "CLI skill install/uninstall：按 manifest 安装到 codex/claude-code/自定义目录；卸载校验 manifest 归属（不删用户自建目录）；本地实测安装/卸载",
         "宿主实机验证（Codex/Claude Code 真实宿主）在最终验收执行并记录证据状态",
-        "2026-09-29 continuation: 发行 Skill 与安装所有权、Codex 实际发现已通过；本机 AI 宿主完整业务执行仍待授权和验收。 Evidence: evidence/v1-closure/manifest.json"
+        "2026-09-29 continuation: 发行 Skill 与安装所有权、Codex 实际发现已通过；本机 AI 宿主完整业务执行仍待授权和验收。 Evidence: docs/plans/v1/evidence/v1-closure/manifest.json"
       ],
       "notes": "",
       "reviewNote": "发行 Skill 与安装所有权、Codex 实际发现已通过；本机 AI 宿主完整业务执行仍待授权和验收。"
@@ -649,7 +649,7 @@
         "scripts/release/build.sh：6 平台 CLI（CGO=0 trimpath -s -w + 版本注入）+ server 二进制 + skill zip + sha256 checksums + manifest.json（同版本组件清单/协议范围）；本地全平台构建通过",
         "judex doctor：协议兼容/凭据/网络诊断（协议不一致时如实报告）",
         "实际运行验证：windows/amd64 已运行；其余平台按计划标注“已构建未运行验证”",
-        "2026-09-29 continuation: 0.1.0-review.20260929.4 六平台 CLI、双架构 server 构建；56 项校验和通过；Windows amd64 解包实际运行，其他架构仅构建。 Evidence: evidence/v1-closure/manifest.json"
+        "2026-09-29 continuation: 0.1.0-review.20260929.4 六平台 CLI、双架构 server 构建；56 项校验和通过；Windows amd64 解包实际运行，其他架构仅构建。 Evidence: docs/plans/v1/evidence/v1-closure/manifest.json"
       ],
       "notes": "",
       "reviewNote": "0.1.0-review.20260929.4 六平台 CLI、双架构 server 构建；56 项校验和通过；Windows amd64 解包实际运行，其他架构仅构建。"
@@ -716,7 +716,7 @@
         "agent/context：分层 manifest（系统→职位→个人偏好[Private]→工作事实→异议→近消息→新材料）；Prompt 拆 system/user；SharedLayers 过滤私有层；压缩摘要强制保留异议/待决/覆盖范围/下一步",
         "binding/workflow/preference 版本快照冻结于 manifest",
         "M005 agent 表（agent_sessions/runs、model_calls、tool_calls、run_events、context_checkpoints、discussion_batches/rounds、knowledge_candidates、sandbox_leases）已随 M004 迁移布局规划；会话/检查点 PG 持久化在 P5-05 调度落地",
-        "2026-09-29 continuation: 逐调用岗位/偏好/流程/模型刷新、覆盖游标、隐私检查点及安全服务端工具续接均有真实 PG 回归。 Evidence: evidence/v1-closure/manifest.json"
+        "2026-09-29 continuation: 逐调用岗位/偏好/流程/模型刷新、覆盖游标、隐私检查点及安全服务端工具续接均有真实 PG 回归。 Evidence: docs/plans/v1/evidence/v1-closure/manifest.json"
       ],
       "notes": "",
       "reviewNote": "逐调用岗位/偏好/流程/模型刷新、覆盖游标、隐私检查点及安全服务端工具续接均有真实 PG 回归。"
@@ -783,7 +783,7 @@
         "agent/context：压缩摘要强制保留异议/待决/覆盖/下一步；私有层 SharedLayers 过滤；binding/preference 版本冻结",
         "knowledge_candidates 表（unverified 状态必须保留）；PG 关键词/引用查询在 catalog 读取层",
         "受控测试 E05 语义（异议不丢）由 context.CompressSummary 结构保证",
-        "2026-09-29 continuation: 探索工具原文持久引用压缩/分段回读、硬上下文阻塞、项目知识记录查询已实现并测；通用长对话语义摘要恢复尚未全面验收。 Evidence: evidence/v1-closure/manifest.json"
+        "2026-09-29 continuation: 探索工具原文持久引用压缩/分段回读、硬上下文阻塞、项目知识记录查询已实现并测；通用长对话语义摘要恢复尚未全面验收。 Evidence: docs/plans/v1/evidence/v1-closure/manifest.json"
       ],
       "notes": "",
       "reviewNote": "探索工具原文持久引用压缩/分段回读、硬上下文阻塞、项目知识记录查询已实现并测；通用长对话语义摘要恢复尚未全面验收。"
@@ -826,7 +826,7 @@
         "commit d240835: OpenSandbox 实测契约 + 3 live 测试 PASS",
         "2026-09-28: tests/agent/live 9/9 PASS（含 TestLiveAgentBashInRealSandbox 首次真实模型运行）",
         "2026-09-28: tests/scenario 9/9 PASS（794s，真实 PG+MinIO+GLM-5.3）",
-        "2026-09-29 continuation: 真实 K8s 研发/设计双岗位 + coordinator + HTML 发布/浏览器渲染通过；来源/工具/产物和故障证据见 v1-closure manifest。 Evidence: evidence/v1-closure/manifest.json"
+        "2026-09-29 continuation: 真实 K8s 研发/设计双岗位 + coordinator + HTML 发布/浏览器渲染通过；来源/工具/产物和故障证据见 v1-closure manifest。 Evidence: docs/plans/v1/evidence/v1-closure/manifest.json"
       ],
       "notes": "真实模型协议栈验证完成；密钥只经环境变量注入（用户应轮换已泄露在聊天中的 key） | 2026-09-28 补验：GLM-5.3 coding 入口 5/5 通过（E11 双中文场景/E03 预算/E05 压缩/取消）+ Anthropic 适配器；OpenSandbox 适配器对齐真实 API（execd 44772 代理、RunSandbox 一次运行一沙箱），脚本化模型驱动 bash 在真实沙箱计算 PASS；GLM-5.3+真实沙箱场景 TestLiveAgentBashInRealSandbox 就绪（key 401 待换新后补跑） | 2026-09-28 终验：以当前有效 Coding Plan key 全量重跑——live 9/9（E11 研发/设计、E03 预算、E05 取消、契约、沙箱生命周期/惰性/脚本化/GLM 驱动真实沙箱 bash 2 次工具调用计算 5 行/1903）；scenario 9/9（六扩展场景+全链路闭环+多 Agent 双模式）。用户消息中的旧 key 已失效（服务端 401），实际以本机 ZCode 配置的当前 key 验证。",
       "reviewNote": "真实 K8s 研发/设计双岗位 + coordinator + HTML 发布/浏览器渲染通过；来源/工具/产物和故障证据见 v1-closure manifest。"
@@ -929,7 +929,7 @@
         "修复：Dockerfile go 1.26 镜像 + 宿主预构建 web/dist（平台无关）+ .dockerignore 放行 dist；migrate Job 环境校验降为 development（运维任务不要求生产 Origin 白名单）",
         "镜像经 stdin tar 导入 containerd（ctr import）",
         "四组合模板 OK（P7-01）；四组合真实安装按资源仅执行 embedded-embedded（其余组合标待执行，见 notes）",
-        "2026-09-29 continuation: 四种内置/外部 PG × S3 独立临时部署实际通过，外部依赖亦为本次测试专属资源。 Evidence: evidence/v1-closure/manifest.json"
+        "2026-09-29 continuation: 四种内置/外部 PG × S3 独立临时部署实际通过，外部依赖亦为本次测试专属资源。 Evidence: docs/plans/v1/evidence/v1-closure/manifest.json"
       ],
       "notes": "旧 evidence 为历史快照；当前实测以 reviewNote 和 continuation 为准。",
       "reviewNote": "四种内置/外部 PG × S3 独立临时部署实际通过，外部依赖亦为本次测试专属资源。"
@@ -944,7 +944,7 @@
       "status": "completed",
       "evidence": [
         "scripts/operations/backup.sh + restore.sh：pg_dump 自定义格式 + S3 对象清单（mc mirror）+ 版本化 manifest（cutoff 时间戳）；恢复到新环境（restore-db + restore-objects + 校验材料 SHA/用户/验收链）",
-        "runbook：docs/operations.md（备份范围/恢复步骤/RPO RTO 记录模板）"
+        "runbook：docs/运维/operations.md（备份范围/恢复步骤/RPO RTO 记录模板）"
       ],
       "notes": ""
     },
@@ -962,7 +962,7 @@
         "备份验证：backup.sh 产出 185KB pgdump + manifest；对象清单 best-effort（SeaweedFS mc 不可用时报错继续）",
         "P7-02 补充：Agent 真实分析在 K8s 上运行（批次 completed，Agent 消息入题，诚实报告工具限制）",
         "组合2-4：Helm 模板全绿；真实部署发现外部 PG 需预建 judex 用户+数据库（部署前置条件，已记录）",
-        "2026-09-29 continuation: API 重启、PG/S3 中断、模型断流/429、prepared 工具后 worker 中断及沙箱服务中断/恢复通过；未知 shell 不重放。原部署无需停服，全部测试 namespace 已回收。 Evidence: evidence/v1-closure/manifest.json"
+        "2026-09-29 continuation: API 重启、PG/S3 中断、模型断流/429、prepared 工具后 worker 中断及沙箱服务中断/恢复通过；未知 shell 不重放。原部署无需停服，全部测试 namespace 已回收。 Evidence: docs/plans/v1/evidence/v1-closure/manifest.json"
       ],
       "notes": "旧 evidence 为历史快照；当前实测以 reviewNote 和 continuation 为准。",
       "reviewNote": "API 重启、PG/S3 中断、模型断流/429、prepared 工具后 worker 中断及沙箱服务中断/恢复通过；未知 shell 不重放。原部署无需停服，全部测试 namespace 已回收。"
@@ -981,7 +981,7 @@
       "evidence": [
         "scripts/release/build.sh：同版本 server 镜像输入 + 6 平台 CLI + skill zip + sha256 checksums + manifest.json（protocolVersion/components/cliPlatforms）；本地全平台构建通过",
         "server/web/CLI/skill/OpenAPI 同版本清单；README/.env.example/deploy/README 更新（移除 501 时代说明）",
-        "2026-09-29 continuation: 同版本全制品构建、源树指纹、56 项校验和及 Windows 安装卸载通过；Skill 宿主与其他剩余计划门槛见 continuation，未发布。 Evidence: evidence/v1-closure/manifest.json"
+        "2026-09-29 continuation: 同版本全制品构建、源树指纹、56 项校验和及 Windows 安装卸载通过；Skill 宿主与其他剩余计划门槛见 continuation，未发布。 Evidence: docs/plans/v1/evidence/v1-closure/manifest.json"
       ],
       "notes": "",
       "reviewNote": "同版本全制品构建、源树指纹、56 项校验和及 Windows 安装卸载通过；Skill 宿主与其他剩余计划门槛见 continuation，未发布。"
@@ -990,8 +990,8 @@
   "reviewRemediation": {
     "date": "2026-09-28",
     "baselineCommit": "296c07d",
-    "report": "REMEDIATION.md",
-    "evidence": "../../../evidence/review-remediation/manifest.json",
+    "report": "records/REMEDIATION.md",
+    "evidence": "evidence/review-remediation/manifest.json",
     "scope": "R01-R22 concrete defects and related production UI paths",
     "go": "go test ./... and go vet ./... passed",
     "webUnitTests": 37,
@@ -1011,8 +1011,8 @@
   "continuation": {
     "date": "2026-09-29",
     "baselineCommit": "296c07d",
-    "report": "CONTINUATION.md",
-    "evidence": "../../../evidence/v1-closure/manifest.json",
+    "report": "records/CONTINUATION.md",
+    "evidence": "evidence/v1-closure/manifest.json",
     "go": "all tests and vet passed",
     "webUnitTests": 40,
     "productionE2E": 18,
@@ -1032,5 +1032,70 @@
       "pagination of remaining configuration selectors and hard-rule target picker",
       "general long-dialogue semantic summary recovery and sustained concurrency/load acceptance"
     ]
+  },
+  "currentAcceptance": {
+    "recordedAt": "2026-10-15T06:55:50.608Z",
+    "release": "0.1.0-realhost.20261015.34",
+    "sourceTreeHash": "d498bfac1f5602ce16a7d2749791cd4e5cbb2134c925d0f6c5e2ca527d674256",
+    "record": "../real-host/records/MODEL-UPGRADE-20261015.md",
+    "evidence": "../real-host/evidence/model-upgrade-20261015.json",
+    "successfulAPISchemas": 155,
+    "totalAPIOperations": 155,
+    "anonymousAPISchemas": 147,
+    "webUnitTests": 67,
+    "relatedK8sProductionBrowserTests": 15,
+    "normalDeploymentUpdated": true,
+    "gitCommittedOrPushed": false,
+    "fullV1Acceptance": false,
+    "remaining": [
+      "Actual vendor HTTP429 business recovery not naturally observed",
+      "Provider-wide cache causality and invoice savings not established",
+      "Multi-day, larger files, higher concurrency and full resource curves not executed",
+      "Only declared original-session compression/restart combinations verified",
+      "Other AI hosts not inferred from Kimi"
+    ],
+    "cleanedUp": true,
+    "normalHelmRevision": 23,
+    "modelReasoningEffort": "high",
+    "realModelRegression": true,
+    "cacheOriginalMarkers": "19/24, original failures retained",
+    "cacheExplicitTailMarkers": "24/24",
+    "nativeCompressionAndRestartCases": 6,
+    "parserRegressionTests": 7,
+    "latestKeyChain": {
+      "recordedAt": "2026-10-15T07:39:38.343Z",
+      "passed": true,
+      "record": "../real-host/records/KEY-CHAIN-20261015.md",
+      "evidence": "../real-host/evidence/key-chain-20261015.json",
+      "nativeCalls": 33,
+      "platformCalls": 7,
+      "newUploads": 1,
+      "newSubmissions": 2,
+      "formalTablesUnchanged": 5
+    }
+  },
+  "previousContractConfigurationAcceptance": {
+    "recordedAt": "2026-10-15T04:28:39.632Z",
+    "release": "0.1.0-realhost.20261015.33",
+    "sourceTreeHash": "add7c62f86f03844a66e8ce45411d425f8736bf849a0bb7cc5de33a52d98109f",
+    "record": "records/CONTRACT-CONFIGURATION-20261015.md",
+    "evidence": "evidence/contract-configuration-20261015.json",
+    "successfulAPISchemas": 155,
+    "totalAPIOperations": 155,
+    "anonymousAPISchemas": 147,
+    "webUnitTests": 67,
+    "relatedK8sProductionBrowserTests": 15,
+    "normalDeploymentUpdated": false,
+    "gitCommittedOrPushed": false,
+    "fullV1Acceptance": false,
+    "remaining": [
+      "Actual vendor HTTP429 business recovery has not naturally occurred",
+      "One non-marker cache sample, global cache causality and billing savings remain unproven",
+      "Multi-day, larger-file, higher-concurrency and full resource metrics not run",
+      "Only declared original-session context windows tested; 32768 rejected when history cannot fit",
+      "Other host agents not inferred from Kimi sessions",
+      "Normal deployment remains Helm revision 21; candidate not deployed; no Git commit or push"
+    ],
+    "cleanedUp": true
   }
 }

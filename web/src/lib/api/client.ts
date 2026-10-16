@@ -1,3 +1,5 @@
+import {collectPages, type CollectionPage} from './pagination';
+
 export const dataMode =
   import.meta.env.VITE_DATA_MODE === "demo" ? "demo" : "api";
 
@@ -74,6 +76,10 @@ export async function request<T>(
   return (payload as Envelope<T>).data !== undefined || payload === null
     ? ((payload as Envelope<T>)?.data as T)
     : (payload as T);
+}
+
+export function requestAll<T>(path: string, init?: RequestInit): Promise<T[]> {
+  return collectPages<T>(path, url => request<CollectionPage<T>>(url, init));
 }
 
 export type SystemInfo = {

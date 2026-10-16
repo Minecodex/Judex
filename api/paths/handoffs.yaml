@@ -215,7 +215,7 @@ paths:
           format: uuid
     post:
       operationId: sendHandoffReminder
-      summary: 提醒未回应来源（有冷却限制）
+      summary: 提醒交接接收人（有冷却限制）
       tags: [handoffs]
       security:
         - sessionCookie: []

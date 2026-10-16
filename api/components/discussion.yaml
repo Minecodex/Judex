@@ -305,6 +305,7 @@ components:
             - question
             - reply
         planId:
+          description: 明确限定本次分析的计划范围；引用任务仅作证据，不能转移归属或将其他计划节点作为当前工作。
           type:
             - string
             - 'null'
@@ -487,8 +488,9 @@ components:
               sha256:
                 type: string
         sourceVersion:
-          type: integer
-          description: 针对已有材料派生发布时的当前版本号；落后返回 SOURCE_VERSION_CONFLICT。
+          type: string
+          format: uuid
+          description: 针对已有材料派生发布时的当前固定版本 ID；落后返回 SOURCE_VERSION_CONFLICT。
     Material:
       type: object
       required:

@@ -206,12 +206,19 @@ func (h *HandoffHandlers) reminder(c *gin.Context) {
 		respond{}.error(c, apierrors.Fields("handoffId", "uuid"))
 		return
 	}
-	count, err := h.Handoffs.Remind(c.Request.Context(), principalFrom(c).UserID, project, handoff)
+	var req struct {
+		ExpectedVersion int64 `json:"expectedVersion" binding:"required"`
+	}
+	if err := bindJSON(c, &req); err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	count, err := h.Handoffs.Remind(c.Request.Context(), principalFrom(c).UserID, project, handoff, req.ExpectedVersion)
 	if err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	respond{}.ok(c, gin.H{"reminded": true, "recipientCount": count})
+	respond{}.accepted(c, gin.H{"reminded": true, "recipientCount": count}, nil)
 }
 
 func (h *HandoffHandlers) listReports(c *gin.Context) {

@@ -13,6 +13,6 @@ const output=(Array.isArray(result)?result:[result]).flatMap(v=>v.output),entry=
 const css=output.filter(v=>v.type==="asset"&&v.fileName.endsWith(".css")).map(v=>String(v.source)).join("\n");
 if(!entry||!css)throw new Error("Preview output missing");
 const html=`<!doctype html><html lang="zh-CN" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="description" content="Judex 项目协同、计划与任务讨论交互原型；只使用示例数据。"><title>Judex · 项目协同原型</title><style>${css.replace(/<\/style/gi,"<\\/style")}</style></head><body><div id="root"></div><noscript>请启用 JavaScript 查看交互原型。</noscript><script>${entry.code.replace(/<\/script/gi,"<\\/script")}</script></body></html>`;
-const target=resolve(webRoot,"../demo.html");
+const target=resolve(webRoot,"../docs/plans/cooperation-ui/demo.html");
 await writeFile(target,html,"utf8");
 console.log(`Created ${target}: ${Math.round(Buffer.byteLength(html)/1024)} KiB; self-contained HeroUI prototype`);

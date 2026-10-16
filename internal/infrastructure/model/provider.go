@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 )
@@ -27,8 +28,7 @@ type Event struct {
 	ToolName     string
 	ArgsDelta    string
 	ArgsJSON     string
-	InputTokens  int64
-	OutputTokens int64
+	Usage        UsageSnapshot
 	FinishReason string
 	Err          error
 }
@@ -44,6 +44,8 @@ const (
 	ErrorContextExceeded
 	ErrorCancelled
 	ErrorUnknown
+	ErrorRateLimited
+	ErrorOutputTruncated
 )
 
 // ProviderError carries the class for retry decisions.
@@ -93,6 +95,7 @@ type Request struct {
 	Tools           []ToolSchema
 	MaxOutputTokens int64
 	Temperature     float64
+	Options         RequestOptions
 }
 
 // Provider streams model events. Implementations must never log secrets.
@@ -103,9 +106,10 @@ type Provider interface {
 // OpenAIConfig carries the operator-configured entry (02 §8): baseUrl,
 // apiKey (env-resolved), model name, token limits.
 type OpenAIConfig struct {
-	BaseURL string
-	APIKey  string
-	HTTP    *http.Client
+	BaseURL        string
+	APIKey         string
+	HTTP           *http.Client
+	RequestOptions RequestOptions
 }
 
 type OpenAIProvider struct {
@@ -120,13 +124,19 @@ func NewOpenAIProvider(cfg OpenAIConfig) *OpenAIProvider {
 }
 
 type chatRequest struct {
-	Model         string         `json:"model"`
-	Messages      []wireMessage  `json:"messages"`
-	Tools         []toolWire     `json:"tools,omitempty"`
-	Stream        bool           `json:"stream"`
-	StreamOptions *streamOptions `json:"stream_options,omitempty"`
-	MaxTokens     int64          `json:"max_tokens,omitempty"`
-	Temperature   float64        `json:"temperature,omitempty"`
+	Model           string         `json:"model"`
+	Messages        []wireMessage  `json:"messages"`
+	Tools           []toolWire     `json:"tools,omitempty"`
+	Stream          bool           `json:"stream"`
+	StreamOptions   *streamOptions `json:"stream_options,omitempty"`
+	MaxTokens       int64          `json:"max_tokens,omitempty"`
+	Temperature     float64        `json:"temperature,omitempty"`
+	Thinking        *thinkingWire  `json:"thinking,omitempty"`
+	ReasoningEffort string         `json:"reasoning_effort,omitempty"`
+}
+
+type thinkingWire struct {
+	Type string `json:"type"`
 }
 
 // wireMessage serializes assistant tool calls in the OpenAI nested shape
@@ -187,11 +197,22 @@ type ToolFunction struct {
 
 // Stream opens a streaming chat completion and normalizes SSE into Events.
 func (p *OpenAIProvider) Stream(ctx context.Context, req Request) (<-chan Event, error) {
+	options := req.Options
+	if options.ThinkingType == "" && options.ReasoningEffort == "" {
+		options = p.cfg.RequestOptions
+	}
+	if err := options.Validate(ProtocolOpenAI); err != nil {
+		return nil, err
+	}
 	body := chatRequest{
 		Model: req.Model, Messages: toWireMessages(req.Messages), Stream: true,
 		StreamOptions: &streamOptions{IncludeUsage: true},
 		MaxTokens:     req.MaxOutputTokens, Temperature: req.Temperature,
 	}
+	if options.ThinkingType != "" {
+		body.Thinking = &thinkingWire{Type: options.ThinkingType}
+	}
+	body.ReasoningEffort = options.ReasoningEffort
 	for _, tool := range req.Tools {
 		body.Tools = append(body.Tools, toolWire{Type: "function", Function: ToolFunction{
 			Name: tool.Name, Description: tool.Description, Parameters: tool.InputSchema,
@@ -221,15 +242,15 @@ func (p *OpenAIProvider) Stream(ctx context.Context, req Request) (<-chan Event,
 		defer resp.Body.Close()
 		snippet, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return nil, &ProviderError{
-			Class: classifyStatus(resp.StatusCode),
-			Err:   fmt.Errorf("网关 %d: %s", resp.StatusCode, strings.TrimSpace(string(snippet))),
+			Class: classifyGatewayError(resp.StatusCode, snippet),
+			Err:   fmt.Errorf("网关 %d: %s", resp.StatusCode, strings.ReplaceAll(strings.TrimSpace(string(snippet)), p.cfg.APIKey, "[redacted]")),
 		}
 	}
 	events := make(chan Event, 64)
 	go func() {
 		defer close(events)
 		defer resp.Body.Close()
-		p.streamBody(ctx, resp.Body, events)
+		p.streamBody(ctx, resp.Body, events, req.Model)
 	}()
 	return events, nil
 }
@@ -243,7 +264,7 @@ func classifyStatus(status int) ErrorClass {
 	case status == 400:
 		return ErrorInvalidRequest
 	case status == 429:
-		return ErrorQuota
+		return ErrorRateLimited
 	case status >= 500:
 		return ErrorTransient
 	default:
@@ -252,8 +273,13 @@ func classifyStatus(status int) ErrorClass {
 }
 
 type sseChunk struct {
-	Choices []struct {
-		Delta struct {
+	Error     json.RawMessage `json:"error"`
+	ID        string          `json:"id"`
+	RequestID string          `json:"request_id"`
+	Model     string          `json:"model"`
+	Choices   []struct {
+		FinishReason *string `json:"finish_reason"`
+		Delta        struct {
 			Content   string `json:"content"`
 			ToolCalls []struct {
 				Index    int    `json:"index"`
@@ -263,20 +289,40 @@ type sseChunk struct {
 					Arguments string `json:"arguments"`
 				} `json:"function"`
 			} `json:"tool_calls"`
-			FinishReason *string `json:"finish_reason"`
 		} `json:"delta"`
 	} `json:"choices"`
 	Usage *struct {
-		PromptTokens     int64 `json:"prompt_tokens"`
-		CompletionTokens int64 `json:"completion_tokens"`
+		PromptTokens     *int64 `json:"prompt_tokens"`
+		CompletionTokens *int64 `json:"completion_tokens"`
+		PromptDetails    *struct {
+			CachedTokens        *int64 `json:"cached_tokens"`
+			CacheWriteTokens    *int64 `json:"cache_write_tokens"`
+			CacheCreationTokens *int64 `json:"cache_creation_tokens"`
+		} `json:"prompt_tokens_details"`
 	} `json:"usage"`
 }
 
 // streamBody parses gateway SSE; malformed frames surface as error events
 // instead of silently truncating (05 §2 受控测试覆盖).
-func (p *OpenAIProvider) streamBody(ctx context.Context, body io.Reader, events chan<- Event) {
+func (p *OpenAIProvider) streamBody(ctx context.Context, body io.Reader, events chan<- Event, modelName string) {
 	toolArgs := map[int]*strings.Builder{}
 	toolMeta := map[int]Event{}
+	usage := UsageSnapshot{ModelName: modelName}
+	finishReason := ""
+	flushTools := func() {
+		indices := make([]int, 0, len(toolArgs))
+		for index := range toolArgs {
+			indices = append(indices, index)
+		}
+		sort.Ints(indices)
+		for _, index := range indices {
+			meta := toolMeta[index]
+			events <- Event{Type: "toolCallReady", ToolCallID: meta.ToolCallID,
+				ToolName: meta.ToolName, ArgsJSON: toolArgs[index].String()}
+			delete(toolArgs, index)
+			delete(toolMeta, index)
+		}
+	}
 	reader := bufio.NewReader(body)
 	for {
 		line, err := reader.ReadString('\n')
@@ -300,13 +346,13 @@ func (p *OpenAIProvider) streamBody(ctx context.Context, body io.Reader, events 
 		}
 		payload := strings.TrimPrefix(line, "data: ")
 		if payload == "[DONE]" {
-			// Flush accumulated tool calls before finishing.
-			for idx, args := range toolArgs {
-				meta := toolMeta[idx]
-				events <- Event{Type: "toolCallReady", ToolCallID: meta.ToolCallID,
-					ToolName: meta.ToolName, ArgsJSON: args.String()}
+			if finishReason == "length" {
+				events <- Event{Type: "error", Err: &ProviderError{Class: ErrorOutputTruncated, Err: fmt.Errorf("model output truncated at max output tokens; incomplete tools were not executed")}}
+				return
 			}
-			events <- Event{Type: "finish"}
+			// Flush accumulated tool calls before finishing.
+			flushTools()
+			events <- Event{Type: "finish", FinishReason: finishReason}
 			return
 		}
 		var chunk sseChunk
@@ -315,9 +361,30 @@ func (p *OpenAIProvider) streamBody(ctx context.Context, body io.Reader, events 
 				Err: fmt.Errorf("网关返回无效 JSON 帧: %w", err)}}
 			return
 		}
+		if len(chunk.Error) > 0 && string(chunk.Error) != "null" {
+			events <- Event{Type: "error", Err: &ProviderError{Class: classifyGatewayError(0, []byte(payload)), Err: fmt.Errorf("provider returned a stream error")}}
+			return
+		}
+		if chunk.ID != "" {
+			usage.ProviderRequestID = chunk.ID
+		}
+		if chunk.RequestID != "" {
+			usage.ProviderRequestID = chunk.RequestID
+		}
+		if chunk.Model != "" {
+			usage.ModelName = chunk.Model
+		}
 		if chunk.Usage != nil {
-			events <- Event{Type: "usage", InputTokens: chunk.Usage.PromptTokens,
-				OutputTokens: chunk.Usage.CompletionTokens}
+			updateCounter(&usage.InputTokens, chunk.Usage.PromptTokens)
+			updateCounter(&usage.OutputTokens, chunk.Usage.CompletionTokens)
+			if chunk.Usage.PromptDetails != nil {
+				updateCounter(&usage.CacheReadTokens, chunk.Usage.PromptDetails.CachedTokens)
+				details := chunk.Usage.PromptDetails
+				if details.CacheWriteTokens != nil || details.CacheCreationTokens != nil {
+					usage.CacheWriteTokens = cacheWriteCounter(details.CacheWriteTokens, details.CacheCreationTokens)
+				}
+			}
+			events <- Event{Type: "usage", Usage: usage.Validated()}
 		}
 		for _, choice := range chunk.Choices {
 			if choice.Delta.Content != "" {
@@ -337,13 +404,11 @@ func (p *OpenAIProvider) streamBody(ctx context.Context, body io.Reader, events 
 						ArgsDelta: call.Function.Arguments}
 				}
 			}
-			if choice.Delta.FinishReason != nil {
+			if choice.FinishReason != nil {
+				finishReason = *choice.FinishReason
 				// Gateway finish: flush tools, then wait for possible usage.
-				for idx, args := range toolArgs {
-					meta := toolMeta[idx]
-					events <- Event{Type: "toolCallReady", ToolCallID: meta.ToolCallID,
-						ToolName: meta.ToolName, ArgsJSON: args.String()}
-					delete(toolArgs, idx)
+				if finishReason != "length" {
+					flushTools()
 				}
 			}
 		}

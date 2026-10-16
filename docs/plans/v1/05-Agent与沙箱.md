@@ -4,6 +4,10 @@
 
 协调者通过 record_task_analysis 保存结构化公开 summary、basis、disagreements 与可选 discussion 建议。没有结构化结果、模型未配置、外部调用失败或预算耗尽都保留真实失败/待处理状态与原记录；成功文本不冒充结构化分析。人明确选择新建、主讨论继续或指定已有会话，分析本身不创建会话、不验收。重试沿用原批次、工具结果和预算，不重放未知工具效果。Agent 工作提案与人的提案共用计划来源快照规则，批准后每个计划各建主讨论。
 
+任务和计划当前事实附带最近一条公开正式验收、退回或重开反馈，包含实际理由、来源、决定人和可用版本引用，省略大型审阅快照。旧退回只有审计理由时明确标记 `legacy_audit`，不捏造当时快照。原始历史通过有权限的验收历史 API/CLI 分页读取；模型仍不能据此代替 reviewer/owner 作出正式决定。
+
+`propose_changes` 支持显式 `kind=work_arrangement/work_change`，省略沿用 work_arrangement。二者均仅创建草稿，既有发起人采用、固定审阅和审批权限保持；不把现有工作的变更强制记成新工作安排。计划范围查询只读该计划已有工作及引用；跨计划来源修正须以项目范围提交核对，不扩大原计划批次的读取范围。
+
 ## 1. 首版运行拓扑
 
 主 Agent 为项目 coordinator，按 topic 保有独立 session；岗位子 Agent 按 identity＋topic 独立 session。harness 在 server worker 进程，模型调用、PG 上下文、业务工具均在服务器。四工具派发至该 run 的 OpenSandbox 容器，一 run 一 sandbox。不得在业务 Server 主机执行模型 shell，也不主动调用成员电脑。
@@ -18,6 +22,12 @@ Provider contract tests 用受控响应检测拆包、无效 JSON、工具调用
 
 模型请求失败分类 transient/quota/auth/invalid_request/context_exceeded/cancelled；重试计入 attempts/预算。缺 usage 不记零成本，标 usageKnown=false，并保守预留预算。流断后若工具结果不确定，不盲目重放工具。
 
+部署模型目录的requestOptions允许非秘密的thinkingType与reasoningEffort；后者仅限OpenAI兼容协议、取low/medium/high/max，实际可用档位须按所选模型验证。配置经目录校验、JSONB保存、Resolver及Runner传入请求，在外部预约前进入请求哈希，不能由未记录的代理改写；它与maxInputTokens/maxOutputTokens预算独立。2026-10-14用户要求APIMart GLM-5.3-Flash采用enabled/high，其他目录及历史调用保留各自原值。
+
+2026-10-14：真实 Kimi Code 将五小时额度耗尽返回为 HTTP403、`access_terminated_error`，共用网关分类只有在类型匹配且正文同时明确达到五小时 usage limit 和 quota reset 时才识别为 quota；类型单独出现、普通403、401、普通429及网络错误仍不触发额度降级。本轮隔离 K3 目录没有备用模型，识别为 quota 也不会切换 GLM 或其他模型。联测批量刺激遇到未完成/失败即停止，恢复使用原来源与批次，不连续发送后续样本。
+
+2026-10-10：输入、输出、缓存读取 / 写入用量以可空完整快照穿过 Provider、Runner 和 Journal。临时观测放入 model_calls.usage_json.observation，从 ended_at 起保留 24 小时，查询到期立即排除，worker 启动及每分钟自动清理；同时清除临时供应商请求 ID。调用序号、总 token 和预留保留供恢复与预算核对。工具 schema 固定排序，累计 usage 帧不重复求和；[实施与证据](../real-host/records/CLI-CACHE-20261010.md)分别标明受控协议和真实宿主范围。
+
 ## 3. 触发、轮次与去重
 
 触发来自已 ready 的新 submission、明确手动分析及允许的正式业务事件。由服务端 eventId/submissionId 建唯一 discussion_batch，固定 maxRounds 和预算。AI 自己生成的回复、系统 heartbeat、重复 webhook/CLI 请求不构成新提交，不能循环重置限额。
@@ -25,6 +35,8 @@ Provider contract tests 用受控响应检测拆包、无效 JSON、工具调用
 一轮 = coordinator 为同一问题安排岗位分析＋消费必要结果＋形成阶段摘要。多个模型调用、工具调用和子结果回流不各算一轮。第一次启动以事务预留 round ordinal；同一 round 重试不新增 ordinal，但所有调用/工具重试仍计入独立资源预算。每轮只能一个 coordinator session lease 持有者推进。
 
 批次状态：queued/running/waiting_human/waiting_material/limit_reached/completed/failed/cancelled。到上限停止本批自动循环，保存草稿/异议/缺口，仍允许用户输入。项目修改上限只影响以后新批次；有权限的人显式续开需记录 extension 事件与额外额度，不伪装新材料。
+
+显式续开建立新的协调者run，沿用原batch与累计模型/token预算，以当前公开事实开始新一轮。中断恢复只读取当前run的执行记录；旧run已经完成的工具是历史，不能把新run误判为缺检查点的中断。原run重试仍恢复已知工具结果，prepared/running/unknown工具继续阻止续开与自动重放。
 
 新提交进入正运行 topic 时：保存独立 submission/batch，串行排队；V1 不做多个来源额度混合，避免合并事件绕过限额。后续可把多个输入合为工作集，但原批次预算与来源须可追踪。
 
@@ -44,17 +56,31 @@ Provider contract tests 用受控响应检测拆包、无效 JSON、工具调用
 
 ## 5. 上下文与隐私
 
+固定已发布流程使用独立只读入口：`read_workflow(workflowId,versionId)` 与 CLI `workflow get --version` 返回相同正文、不可变版本、正文SHA256及是否为当前版本。HTTP仍按本项目成员/grant范围校验，Agent每次读取核对运行租约、成员和岗位当前绑定；不暴露草稿，不提供发布操作。流程UUID不能交给材料工具。正文哈希按服务端Body结构序列化计算，保持节点/边顺序；历史版本可追溯但明确isCurrent=false，不改变正式绑定。
+
 每次模型调用按 manifest 构建：系统工具权限 → 当前已发布项目流程与节点 → 岗位职责 → 本人项目偏好（岗位 run 私有）→ 工作/决定事实 → 未决异议/缺料/子结果 → 历史摘要与近消息 → 新材料。
 
 固定本调用 bindingVersion、workflowVersion、positionVersion、preferenceRevision、review/material/report refs、模型配置和消费游标。下一调用重新验证 current membership/binding；替换人后停止旧 run，不用旧私有上下文给继任者续接。
 
 共享页面只展示岗位的对外分析、摘要、工具公开证据与结果；不公开原始私有系统 prompt、完整模型上下文或私密调试轨迹。coordinator 不读取子 Agent 私人偏好原文；子返回包区分 summary/evidenceRefs/disagreements/missing/partial/artifactRefs。
 
+提交已明确 planId 且无 taskId 时，模型上下文与 query_work 分页限定该计划，分开本计划任务和引用证据；流程候选保留计划来源。currentNodeCandidates 不接受无关计划工作或已接受、取消、丢弃计划的执行节点，历史放 relatedEvidenceNodes。公开分析的纯未替换模板摘要在保存前返回校验错误，恢复旧占位结果也不计分析完成；引用失败样本的正常说明可保留。正式绑定及人的发布、安排、验收边界保持不变。
+
+真实模型复测发现：仅靠澄清标记及提示词，仍可能把其他职位节点或无明确范围的参考路径填入“当前候选”。因此 `currentNodeCandidates` 在存储前按来源校验：有任务时必须匹配其已绑定的 workflow/node；无任务而有计划时限于该计划当前工作；明确职位时还须符合已发布节点的 allowedPositionIds。无任务、计划、职位的自由提交保持该字段为空，路径建议放 suggestedNextNodes；冲突时保留 needsClarification 和异议。服务端返回字段错误供模型在原预算内纠正，不静默过滤、不变更正式工作。协调者的候选来源也采用原提交明确的职位，而非协调者自身身份；此读取只含公开职位关联，不读取个人私有偏好。
+
 压缩只处理探索历史，保留消息序号范围、原文引用、正式决定、反对理由、待决、未返回子任务和下一步。不能只存摘要删除原文；不能把“摘要没写反对”当同意。若硬上下文无法放入窗口，标 context_blocked，不静默截断。
+
+公开分析保存时，`basis` 必须至少有一条非空的实际来源依据；澄清也须标明原提交及已读事实，不能只在摘要中声称执行查询而让结构化依据为空。工具说明要求核对数量与分页结果一致，并将异议写成完整句子。此约束不代替对模型事实正确性的独立审阅。
+
+模型调用的失败原因与用量是否已知分别记录。调用结束时将受限类别保存到 `model_calls.error_code`：RATE_LIMITED、QUOTA_EXHAUSTED、AUTH_FAILED、REQUEST_INVALID、CONTEXT_EXCEEDED、CANCELLED、TIMEOUT、UPSTREAM_TRANSIENT、OUTPUT_TRUNCATED 或 UNKNOWN_PROVIDER_ERROR；成功调用为空。只保存类别，不把上游原始错误正文或凭据存入该字段。未知用量继续按保守预留量计账，分类已知不代表用量为零；重试仍保留原来源与累计预算，普通429不因此启用额度耗尽降级。
+
+工作流建稿：新建只传 `body`，由服务端生成真实 ID；修订传已存在的 `workflowId` 和实读 `expectedVersion`。不存在或不属于当前项目的修订目标返回 `NOT_FOUND`，不尝试写入子版本；旧版本返回冲突，模型不能自拟 UUID 作为新建目标。
 
 ## 6. 工具注册与作用边界
 
 每个工具声明 name/schemaVersion/inputSchema/outputSchema/effectClass/allowedPrincipal/limits。工具执行前服务端校验权限和 JSON Schema，工具结果是数据而非高权限指令。
+
+模型侧工具输入采用有效 JSON Schema：零参数工具的 `properties` 序列化为 `{}`，无必填字段时省略 `required`；不得发送 `properties:null` 或 `required:null`。该规则由共享 Schema 构造器保证，对所有网关一致，不改变工具参数、权限或副作用边界。
 
 | 工具 | 执行位置 | 必须约束 |
 | --- | --- | --- |
@@ -83,6 +109,8 @@ Sandbox 接口至少 Create/Connect/Exec/Read/Write/Stat/List/Pause/Resume/Kill/
 ## 8. 生命周期、恢复和未知结果
 
 run：queued→provisioning→running→waiting_children/waiting_human/waiting_material→succeeded/failed/cancelled。业务任务不跟随此状态自动完成。
+
+有权用户取消运行时，在同一项目事务中同步未完成batch与对应公开分析为cancelled，保留来源、已知工具、预算和正式工作。取消原因与实际渠道入审计。已完成或失败的batch不被迟到的子运行取消改写；对已cancelled运行以当前version重复取消可修复旧未收敛分析，不增加run版本或重放模型，旧version仍拒绝。
 
 等子结果保持 sandbox TTL 心跳，释放模型并发名额；长等人决定尝试 pause，有能力限制则先保存允许恢复的工作产物清单再回收，下次重建。临时目录丢失要说明，不宣称所有 shell 进程可原样恢复。
 

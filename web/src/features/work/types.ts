@@ -15,6 +15,7 @@ export type Position = {
   projectId: string;
   presetId?: string;
   publicSummary?: Text;
+  modelId?: string | null;
   name: Text;
   prompt: Text;
   tone: string;

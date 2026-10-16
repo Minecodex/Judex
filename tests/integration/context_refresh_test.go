@@ -66,11 +66,14 @@ func TestEveryModelCallRefreshesPrivateContextAndKeepsItPrivate(t *testing.T) {
 	childCalls := 0
 	otherCalls := 0
 	parentCalls := 0
+	var reviewSystems []string
+	var otherSystem string
 	provider := contextProvider(func(ctx context.Context, r model.Request) (<-chan model.Event, error) {
 		events := make(chan model.Event, 4)
 		system := r.Messages[0].Content
 		if strings.Contains(system, "runtime-refresh-duty") {
 			childCalls++
+			reviewSystems = append(reviewSystems, system)
 			if strings.Contains(system, "PRIVATE-OTHER-POSITION-PROMPT") {
 				t.Error("another position's preference entered the review context")
 			}
@@ -90,6 +93,7 @@ func TestEveryModelCallRefreshesPrivateContextAndKeepsItPrivate(t *testing.T) {
 			}
 		} else if strings.Contains(system, "runtime-other-duty") {
 			otherCalls++
+			otherSystem = system
 			if !strings.Contains(system, "PRIVATE-OTHER-POSITION-PROMPT") || strings.Contains(system, "PRIVATE-OLD-PROMPT") || strings.Contains(system, "PRIVATE-NEW-PROMPT") {
 				t.Error("design context did not isolate its own preference")
 			}
@@ -109,7 +113,7 @@ func TestEveryModelCallRefreshesPrivateContextAndKeepsItPrivate(t *testing.T) {
 				events <- model.Event{Type: "textDelta", TextDelta: "保留岗位异议，待人确认"}
 			}
 		}
-		events <- model.Event{Type: "usage", InputTokens: 30, OutputTokens: 30}
+		events <- model.Event{Type: "usage", Usage: model.UsageSnapshot{InputTokens: model.TokenCount(30), OutputTokens: model.TokenCount(30)}}
 		events <- model.Event{Type: "finish"}
 		close(events)
 		return events, nil
@@ -121,6 +125,22 @@ func TestEveryModelCallRefreshesPrivateContextAndKeepsItPrivate(t *testing.T) {
 	if childCalls != 2 || otherCalls != 1 || parentCalls != 2 {
 		t.Fatalf("unexpected calls: parent=%d child=%d other=%d", parentCalls, childCalls, otherCalls)
 	}
+	common := func(a, b string) int {
+		n := 0
+		for n < len(a) && n < len(b) && a[n] == b[n] {
+			n++
+		}
+		return n
+	}
+	prefPrefix := common(reviewSystems[0], reviewSystems[1])
+	rolePrefix := common(reviewSystems[0], otherSystem)
+	if prefPrefix == len(reviewSystems[0]) || rolePrefix == len(reviewSystems[0]) {
+		t.Fatal("changed private preference or position reused the complete system input")
+	}
+	// Only counts leave this controlled test. Private system inputs and their
+	// per-request hashes are never included in the durable evidence.
+	t.Logf(`{"check":"platform_system_prefix","oldBytes":%d,"newPreferenceBytes":%d,"preferenceCommonBytes":%d,"otherRoleCommonBytes":%d,"providerCacheMeasured":false}`,
+		len(reviewSystems[0]), len(reviewSystems[1]), prefPrefix, rolePrefix)
 	var leaked bool
 	if err = pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM context_checkpoints WHERE project_id=$1 AND manifest::text LIKE '%PRIVATE-%') OR EXISTS(SELECT 1 FROM agent_runs WHERE project_id=$1 AND manifest::text LIKE '%PRIVATE-%')`, p.ID).Scan(&leaked); err != nil || leaked {
 		t.Fatalf("checkpoint leaked private text: %v", err)

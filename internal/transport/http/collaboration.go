@@ -24,6 +24,7 @@ func (h *CollaborationHandlers) Register(spec *SpecRouter) {
 	spec.Register("getDiscussionSuggestion", withAuth(h.suggestion))
 	spec.Register("resolveDiscussionSuggestion", withAuth(h.resolve))
 	spec.Register("getTaskAnalysis", withAuth(h.analysis))
+	spec.Register("getSubmissionAnalysis", withAuth(h.submissionAnalysis))
 	spec.Register("retryTaskAnalysis", withAuth(h.retry))
 }
 func collaborationIDs(c *gin.Context, key string) (uuid.UUID, uuid.UUID, bool) {
@@ -150,6 +151,19 @@ func (h *CollaborationHandlers) retry(c *gin.Context) {
 		return
 	}
 	out, err := h.Service.Retry(c.Request.Context(), principalFrom(c).UserID, project, id)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	respond{}.ok(c, out)
+}
+
+func (h *CollaborationHandlers) submissionAnalysis(c *gin.Context) {
+	project, id, ok := collaborationIDs(c, "submissionId")
+	if !ok {
+		return
+	}
+	out, err := h.Service.SubmissionAnalysis(c.Request.Context(), principalFrom(c).UserID, project, id)
 	if err != nil {
 		respond{}.error(c, err)
 		return

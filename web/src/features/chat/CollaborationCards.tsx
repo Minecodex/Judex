@@ -8,12 +8,13 @@ import { useWork } from "../work/store";
 import type { DiscussionSuggestion, TaskActivity } from "./collaborationTypes";
 import {usePlanSummary,useTaskActivity,useDiscussionSuggestions} from "./collaborationData";
 import { SuggestionDialog } from "./CollaborationDialogs";
+import {WorkflowAnalysisText} from './WorkflowAnalysisText';
 export function AnalysisText({activity,compact=false}:{activity:TaskActivity;compact?:boolean}){
  const {t,mode,act}=useWork(),a=activity.analysis;
  if(!a)return <span>{t("coNotAnalyzed")}</span>;
  const key=a.state==="queued"?"coQueued":a.state==="running"?"coRunning":a.state==="completed"?"coCompleted":a.errorCode==="MODEL_UNAVAILABLE"?"coModelUnavailable":a.state==="failed"?"coFailed":"coWaiting";
  if(compact)return <p className="judex-collab-meta judex-collab-summary-preview">{a.state==="completed"?a.summary:t(key)}</p>;
- return <div className="judex-collab-analysis"><span>{t(key)}{mode==="demo"?" · "+t("coSimulated"):""}</span>{a.summary&&<p>{a.summary}</p>}{a.basis?.length>0&&<div><strong>{t("coBasis")}</strong>{a.basis.map((b,i)=><p key={i}>{b}</p>)}</div>}{a.disagreements.map((d,i)=><p key={i}>{d}</p>)}{a.state==="failed"&&<Button size="sm" variant="outline" onPress={()=>void act("retryTaskAnalysis",{analysisId:a.id},{toast:false})}>{t("coRetryAnalysis")}</Button>}</div>;
+ return <div className="judex-collab-analysis"><span>{t(key)}{mode==="demo"?" · "+t("coSimulated"):""}</span>{a.summary&&<p>{a.summary}</p>}{a.output&&<WorkflowAnalysisText output={a.output}/>} {a.basis?.length>0&&<div><strong>{t("coBasis")}</strong>{a.basis.map((b,i)=><p key={i}>{b}</p>)}</div>}{a.disagreements.map((d,i)=><p key={i}>{d}</p>)}{a.state==="failed"&&<Button size="sm" variant="outline" onPress={()=>void act("retryTaskAnalysis",{analysisId:a.id},{toast:false})}>{t("coRetryAnalysis")}</Button>}</div>;
 }
 export function SuggestionCard({suggestion}:{suggestion:DiscussionSuggestion}){
  const {state,t,text,act,go}=useWork(),[dialog,setDialog]=useState<"create"|"link"|null>(null);

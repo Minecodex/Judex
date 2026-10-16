@@ -216,18 +216,19 @@ func (s *Service) ReplaceIdentityBinding(ctx context.Context, requester, project
 
 // Invitation is the invite aggregate (06 §3).
 type Invitation struct {
-	ProjectID      uuid.UUID      `json:"projectId"`
-	ProjectTitle   string         `json:"projectTitle"`
-	PositionNames  []string       `json:"positionNames"`
-	ID             uuid.UUID      `json:"id"`
-	TargetEmail    string         `json:"targetEmail"`
-	TargetUserID   *uuid.UUID     `json:"targetUserId"`
-	State          string         `json:"state"`
-	InviterUserID  uuid.UUID      `json:"inviterUserId"`
-	Positions      []PositionLite `json:"positions"`
-	ExpiresAt      time.Time      `json:"expiresAt"`
-	AcceptedUserID *uuid.UUID     `json:"acceptedUserId"`
-	Token          string         `json:"-"`
+	ProjectID          uuid.UUID      `json:"projectId"`
+	ProjectTitle       string         `json:"projectTitle"`
+	PositionNames      []string       `json:"positionNames"`
+	InviterDisplayName string         `json:"inviterDisplayName"`
+	ID                 uuid.UUID      `json:"id"`
+	TargetEmail        string         `json:"targetEmail"`
+	TargetUserID       *uuid.UUID     `json:"targetUserId"`
+	State              string         `json:"state"`
+	InviterUserID      uuid.UUID      `json:"inviterUserId"`
+	Positions          []PositionLite `json:"positions"`
+	ExpiresAt          time.Time      `json:"expiresAt"`
+	AcceptedUserID     *uuid.UUID     `json:"acceptedUserId"`
+	Token              string         `json:"-"`
 }
 
 // PositionLite is a position reference inside invitations.
@@ -239,9 +240,8 @@ type PositionLite struct {
 // CreateInvitation (manager) targets an exact email with a fixed position
 // set; the one-time link token is returned once (02 §5).
 func (s *Service) CreateInvitation(ctx context.Context, requester, projectID uuid.UUID, targetEmail string, positionIDs []uuid.UUID) (Invitation, error) {
-	if len(positionIDs) == 0 {
-		return Invitation{}, apierrors.Fields("positionIds", "required")
-	}
+	// An empty set joins the project without allocating a new identity, so a
+	// replacement holder can later take over an existing stable identity.
 	token := keys.NewRandom()
 	var out Invitation
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
@@ -290,7 +290,7 @@ func (s *Service) CreateInvitation(ctx context.Context, requester, projectID uui
 			map[string]any{"change": "invited"}, now); err != nil {
 			return err
 		}
-		out = Invitation{ID: id, TargetEmail: normalized, State: "pending",
+		out = Invitation{ID: id, ProjectID: projectID, TargetEmail: normalized, State: "pending",
 			InviterUserID: requester, ExpiresAt: now.Add(7 * 24 * time.Hour), Token: token}
 		return audit.Append(ctx, tx, audit.Entry{
 			ProjectID: &projectID, ActorType: audit.ActorUser, ActorUserID: &requester,
@@ -298,6 +298,11 @@ func (s *Service) CreateInvitation(ctx context.Context, requester, projectID uui
 			ObjectType: "invitation", ObjectID: id.String(), OccurredAt: now,
 		})
 	})
+	if err == nil {
+		page := []Invitation{out}
+		err = s.invitationPositions(ctx, page)
+		out = page[0]
+	}
 	return out, err
 }
 

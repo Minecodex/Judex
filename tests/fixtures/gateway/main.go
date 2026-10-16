@@ -13,6 +13,7 @@ import (
 
 func main() {
 	var mode atomic.Value
+	var cacheRequests atomic.Int64
 	mode.Store("normal")
 	if value := os.Getenv("JUDEX_FIXTURE_MODE"); value != "" {
 		mode.Store(value)
@@ -50,6 +51,16 @@ func main() {
 		}
 		if m == "disconnect" {
 			emit(`{"choices":[{"delta":{"content":"只有部分结果"}}]}`)
+			return
+		}
+		if m == "cache" {
+			frame, _ := json.Marshal(map[string]any{
+				"id": fmt.Sprintf("cache-fixture-%d", cacheRequests.Add(1)), "model": "cache-fixture",
+				"choices": []any{map[string]any{"delta": map[string]any{"content": "缓存观测协议验收完成，业务验收仍由人确认。"}, "finish_reason": "stop"}},
+				"usage":   map[string]any{"prompt_tokens": 1000, "completion_tokens": 50, "prompt_tokens_details": map[string]int{"cached_tokens": 800}},
+			})
+			emit(string(frame))
+			emit("[DONE]")
 			return
 		}
 		if m == "publish" {
@@ -102,7 +113,11 @@ func main() {
 				return
 			}
 			name, id := "record_task_analysis", "controlled-task-analysis"
-			args := map[string]any{"summary": "当前任务进展已核对，原始记录保持可追溯。", "disagreements": []string{}}
+			basis := "当前受控请求中的原始提交与岗位核对；仅用于协议验收，不作真实模型或业务验收结论。"
+			if match := regexp.MustCompile(`"(sourceId|taskId|identityId)"\s*:\s*"([0-9a-f-]{36})"`).FindStringSubmatch(all); len(match) > 2 {
+				basis = match[1] + "=" + match[2] + ": " + basis
+			}
+			args := map[string]any{"summary": "当前任务进展已核对，原始记录保持可追溯。", "basis": []string{basis}, "disagreements": []string{}}
 			if !strings.Contains(all, "岗位已核对") {
 				match := regexp.MustCompile(`"identityId"\s*:\s*"([0-9a-f-]{36})"`).FindStringSubmatch(all)
 				if len(match) > 1 {

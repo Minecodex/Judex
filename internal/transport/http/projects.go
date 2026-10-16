@@ -74,18 +74,20 @@ func (h *ProjectHandlers) recentTopics(c *gin.Context) {
 func (h *ProjectHandlers) create(c *gin.Context) {
 	p := principalFrom(c)
 	var req struct {
-		Title                  string `json:"title" binding:"required"`
-		Description            string `json:"description"`
-		Kind                   string `json:"kind"`
-		MaxDiscussionRounds    int    `json:"maxDiscussionRounds"`
-		ApprovalTimeoutSeconds int    `json:"approvalTimeoutSeconds"`
+		DefaultModelID         *uuid.UUID `json:"defaultModelId"`
+		Title                  string     `json:"title" binding:"required"`
+		Description            string     `json:"description"`
+		Kind                   string     `json:"kind"`
+		MaxDiscussionRounds    int        `json:"maxDiscussionRounds"`
+		ApprovalTimeoutSeconds int        `json:"approvalTimeoutSeconds"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
 		return
 	}
 	created, err := h.Projects.Create(c.Request.Context(), p.UserID, project.CreateRequest{
-		Title: req.Title, Description: req.Description, Kind: req.Kind,
+		DefaultModelID: req.DefaultModelID,
+		Title:          req.Title, Description: req.Description, Kind: req.Kind,
 		MaxDiscussionRounds: req.MaxDiscussionRounds, ApprovalTimeoutSeconds: req.ApprovalTimeoutSeconds,
 	})
 	if err != nil {

@@ -27,6 +27,9 @@ import { Btn, Dialog, EmptyState, Field, Heading, Person } from "./ui";
 import { dataMode } from "../../lib/api/client";
 import type { Position, Seat } from "./types";
 import { PositionPresetsDialog } from "./PositionPresetsDialog";
+import {PositionBindingsEditor} from './PositionBindingsEditor';
+import {positionBindings} from './positionBindings';
+import {PositionModelSelect} from './PositionModelSelect';
 export function InvitePage() {
   const { state, project, t, text, act, go } = useWork();
   const invites = state.invites.filter(
@@ -169,10 +172,9 @@ function PositionDialog({
     name: position ? text(position.name) : "",
     prompt: position ? text(position.prompt) : "",
     publicSummary: position?.publicSummary ? text(position.publicSummary) : "",
-    flowId: position?.bindings[0]?.flowId ?? (position ? "" : flows[0]?.id ?? ""),
-    nodeId: position?.bindings[0]?.nodeId ?? (position ? "" : flows[0]?.nodes[0]?.id ?? ""),
+    modelId: position?.modelId ?? null,
+    bindings: position ? position.bindings.map(b => ({...b})) : (flows.length ? [{flowId: '', nodeId: ''}] : []),
   });
-  const flow = flows.find((f) => f.id === value.flowId);
   return (
     <Dialog
       title={t(position ? "workEditPosition" : "workCreatePosition")}
@@ -180,6 +182,7 @@ function PositionDialog({
       wide
     >
       <p className="judex-modal-description">{t("workPositionHint")}</p>
+      {dataMode === 'api' && <PositionModelSelect value={value.modelId} onChange={modelId => setValue({...value, modelId})} />}
       <Field label={t("workPositionName")}>
         <UIInput
           className="judex-input"
@@ -210,58 +213,15 @@ function PositionDialog({
         <UIInput className="judex-input" data-testid="position-summary" value={value.publicSummary}
           onChange={e => setValue({...value, publicSummary: e.target.value})}/>
       </Field>
-      {!flows.length && <p className="judex-muted">{t("positionPresetsNoFlow")}</p>}
-      <div className="judex-work-form-grid">
-        <Field label={t("workChooseFlow")}>
-          <UISelect
-            className="judex-input"
-            data-testid="position-flow"
-            value={value.flowId}
-            onChange={(e) => {
-              const f = flows.find((f) => f.id === e.target.value)!;
-              setValue({
-                ...value,
-                flowId: f?.id ?? "",
-                nodeId: f?.nodes[0]?.id ?? "",
-              });
-            }}
-          >
-            <UIOption value="">{t("positionPresetsNoBinding")}</UIOption>
-            {flows.map((f) => (
-              <UIOption key={f.id} value={f.id}>
-                {text(f.name)}
-              </UIOption>
-            ))}
-          </UISelect>
-        </Field>
-        <Field label={t("workChooseNode")}>
-          <UISelect
-            className="judex-input"
-            data-testid="position-node"
-            value={value.nodeId}
-            disabled={!flow}
-            onChange={(e) =>
-              setValue({
-                ...value,
-                nodeId: e.target.value,
-              })
-            }
-          >
-            <UIOption value="">{t("positionPresetsNoBinding")}</UIOption>
-            {flow?.nodes.map((n) => (
-              <UIOption value={n.id} key={n.id}>
-                {text(n.label)}
-              </UIOption>
-            ))}
-          </UISelect>
-        </Field>
-      </div>
+      <PositionBindingsEditor bindings={value.bindings} onChange={bindings => setValue({...value, bindings})}/>
+      {!positionBindings(value) && <p className="judex-muted" role="status">{t('workBindingIncomplete')}</p>}
       <div className="judex-modal-actions">
         <Btn secondary onClick={onClose}>
           {t("cancel")}
         </Btn>
         <Btn
           testId="save-position"
+          disabled={!positionBindings(value)}
           onClick={async () => {
             if ((await act("savePosition", { projectId: project.id, value })).ok)
               onClose();
@@ -348,13 +308,7 @@ export function TeamPage() {
             </Btn>
             <Btn
               secondary
-              onClick={() =>
-                state.flows.some((f) => f.projectId === project.id)
-                  ? setEditing("new")
-                  : go({
-                      view: "flows",
-                    })
-              }
+              onClick={() => setEditing("new")}
               testId="new-position"
             >
               <Plus />

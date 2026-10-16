@@ -1,5 +1,83 @@
 components:
   schemas:
+    AcceptanceHistoryRecord:
+      type: object
+      required:
+        - id
+        - targetId
+        - targetType
+        - targetVersion
+        - decision
+        - actorUserId
+        - identityId
+        - reason
+        - acceptanceId
+        - previousAcceptanceId
+        - reviewHash
+        - snapshot
+        - provenance
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        targetId:
+          type: string
+          format: uuid
+        targetType:
+          type: string
+          enum:
+            - task
+            - plan
+        targetVersion:
+          type:
+            - integer
+            - 'null'
+        decision:
+          type: string
+          enum:
+            - accept
+            - reject
+            - reopen
+        actorUserId:
+          type: string
+          format: uuid
+        identityId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        reason:
+          type: string
+        acceptanceId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        previousAcceptanceId:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        reviewHash:
+          type:
+            - string
+            - 'null'
+        snapshot:
+          type:
+            - object
+            - 'null'
+          additionalProperties: true
+        provenance:
+          type: string
+          enum:
+            - work_record
+            - accepted_snapshot
+            - reopen_record
+            - legacy_audit
+        createdAt:
+          type: string
+          format: date-time
     Plan:
       type: object
       required:
@@ -132,6 +210,11 @@ components:
         - reviewerIdentityId
         - version
       properties:
+        workflowCandidates:
+          type: array
+          description: 同项目已发布流程候选；正式任务绑定不会被候选建议覆盖。
+          items:
+            $ref: ../components/projects.yaml#/components/schemas/WorkflowCandidate
         id:
           type: string
           format: uuid
@@ -626,6 +709,7 @@ components:
       type: object
       required:
         - expectedVersion
+        - acceptanceId
         - reason
       properties:
         expectedVersion:
@@ -1128,7 +1212,16 @@ components:
       type: object
       required:
         - summary
+        - sourceVersion
+        - reviewHash
       properties:
+        sourceVersion:
+          type: integer
+          minimum: 1
+        reviewHash:
+          type: string
+          format: uuid
+          description: 当前来源任务的交付报告 ID。
         summary:
           type: string
           minLength: 1
@@ -1149,7 +1242,12 @@ components:
       required:
         - sourceVersion
         - reviewHash
+        - summary
       properties:
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 65536
         sourceVersion:
           type: integer
           minimum: 1

@@ -304,7 +304,7 @@ paths:
                 required: [data, meta]
                 properties:
                   data:
-                    $ref: '../components/agent.yaml#/components/schemas/ConfirmationIntent'
+                    $ref: '../components/agent.yaml#/components/schemas/ConfirmationResult'
                   meta:
                     $ref: '../components/common.yaml#/components/schemas/CommandMeta'
         '403':

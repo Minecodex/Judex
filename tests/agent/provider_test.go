@@ -76,7 +76,7 @@ func TestStreamTextAndUsage(t *testing.T) {
 	if text != "你好" {
 		t.Fatalf("text = %q", text)
 	}
-	if usage == nil || usage.InputTokens != 128 || usage.OutputTokens != 7 {
+	if usage == nil || !usage.Usage.Known() || *usage.Usage.InputTokens != 128 || *usage.Usage.OutputTokens != 7 {
 		t.Fatalf("usage = %+v", usage)
 	}
 }
@@ -123,7 +123,7 @@ func TestStreamInvalidJSONFails(t *testing.T) {
 
 func TestErrorClassification(t *testing.T) {
 	for status, want := range map[int]model.ErrorClass{
-		401: model.ErrorAuth, 429: model.ErrorQuota, 500: model.ErrorTransient,
+		401: model.ErrorAuth, 429: model.ErrorRateLimited, 500: model.ErrorTransient,
 	} {
 		server := fakeGateway(t, nil, status)
 		provider := model.NewOpenAIProvider(model.OpenAIConfig{BaseURL: server.URL, APIKey: "test-key"})
@@ -186,7 +186,7 @@ func TestMissingUsageNotZeroCost(t *testing.T) {
 	if text != "done" {
 		t.Fatalf("text = %q", text)
 	}
-	if usage != nil && usage.InputTokens == 0 && usage.OutputTokens == 0 {
+	if usage != nil && usage.Usage.Known() {
 		t.Fatal("usage 缺失时不得记零成本：应保持 nil 由调用方标记 usageKnown=false")
 	}
 	if usage != nil {

@@ -4,6 +4,180 @@ package apigen
 import "time"
 import openapi_types "github.com/oapi-codegen/runtime/types"
 
+// InvitationDecisionRequest defines model for InvitationDecisionRequest.
+type InvitationDecisionRequest struct {
+	ExpectedVersion int     `json:"expectedVersion"`
+	Token           *string `json:"token,omitempty"`
+}
+
+// InvitationPosition defines model for InvitationPosition.
+type InvitationPosition struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+}
+
+// InvitationResolve defines model for InvitationResolve.
+type InvitationResolve struct {
+	// EmailMatches 当前登录邮箱是否与受邀邮箱一致。
+	EmailMatches       bool               `json:"emailMatches"`
+	ExpiresAt          time.Time          `json:"expiresAt"`
+	Id                 openapi_types.UUID `json:"id"`
+	InviterDisplayName string             `json:"inviterDisplayName"`
+	Positions          []string           `json:"positions"`
+	ProjectId          openapi_types.UUID `json:"projectId"`
+	ProjectTitle       string             `json:"projectTitle"`
+}
+
+// LoginRequest defines model for LoginRequest.
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// MarkNotificationsRequest defines model for MarkNotificationsRequest.
+type MarkNotificationsRequest struct {
+	Cursor *string               `json:"cursor,omitempty"`
+	Ids    *[]openapi_types.UUID `json:"ids,omitempty"`
+}
+
+// MaterialLibraryItem defines model for MaterialLibraryItem.
+type MaterialLibraryItem struct {
+	Associations []struct {
+		Id   openapi_types.UUID `json:"id"`
+		Name string             `json:"name"`
+		Type string             `json:"type"`
+	} `json:"associations"`
+	AuthorId         *openapi_types.UUID `json:"authorId,omitempty"`
+	AuthorName       string              `json:"authorName"`
+	CanDelete        bool                `json:"canDelete"`
+	CreatedAt        *time.Time          `json:"createdAt,omitempty"`
+	CurrentVersionId *openapi_types.UUID `json:"currentVersionId,omitempty"`
+	DeletedAt        *time.Time          `json:"deletedAt,omitempty"`
+	Format           string              `json:"format"`
+	Id               openapi_types.UUID  `json:"id"`
+	Kind             *string             `json:"kind,omitempty"`
+	Mime             string              `json:"mime"`
+
+	// OriginalStatus 固定版本原件状态，与内容预览状态独立。
+	OriginalStatus string             `json:"originalStatus"`
+	PreviewStatus  string             `json:"previewStatus"`
+	Purpose        string             `json:"purpose"`
+	Revision       int                `json:"revision"`
+	Size           int                `json:"size"`
+	Source         string             `json:"source"`
+	Title          string             `json:"title"`
+	UploadedAt     *time.Time         `json:"uploadedAt"`
+	VersionId      openapi_types.UUID `json:"versionId"`
+	Visibility     *string            `json:"visibility,omitempty"`
+}
+
+// MaterialThumbnail defines model for MaterialThumbnail.
+type MaterialThumbnail struct {
+	Kind MaterialThumbnailKind `json:"kind"`
+
+	// Page PDF 缩略图固定读取第 1 页，其余格式为 null。
+	Page *int   `json:"page"`
+	Url  string `json:"url"`
+}
+
+// MaterialThumbnailKind defines model for MaterialThumbnail.Kind.
+type MaterialThumbnailKind string
+
+// MaterialUsage defines model for MaterialUsage.
+type MaterialUsage struct {
+	ActorId     *openapi_types.UUID `json:"actorId,omitempty"`
+	ActorName   string              `json:"actorName"`
+	CreatedAt   *time.Time          `json:"createdAt"`
+	Description string              `json:"description"`
+	Id          openapi_types.UUID  `json:"id"`
+	Kind        string              `json:"kind"`
+	PlanId      *openapi_types.UUID `json:"planId,omitempty"`
+	PlanName    *string             `json:"planName,omitempty"`
+	Source      string              `json:"source"`
+	TaskId      *openapi_types.UUID `json:"taskId,omitempty"`
+	TaskName    *string             `json:"taskName,omitempty"`
+	TopicId     *openapi_types.UUID `json:"topicId,omitempty"`
+	TopicName   *string             `json:"topicName,omitempty"`
+}
+
+// MaterialVersion defines model for MaterialVersion.
+type MaterialVersion struct {
+	AuthorId  *string   `json:"authorId,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
+
+	// Entries HTML 包的相对路径清单。
+	Entries *[]struct {
+		RelativePath string `json:"relativePath"`
+		Sha256       string `json:"sha256"`
+		Size         int    `json:"size"`
+	} `json:"entries,omitempty"`
+	Entrypoint *string              `json:"entrypoint,omitempty"`
+	Id         openapi_types.UUID   `json:"id"`
+	Library    *MaterialLibraryItem `json:"library,omitempty"`
+	MaterialId *openapi_types.UUID  `json:"materialId,omitempty"`
+	Mime       *string              `json:"mime,omitempty"`
+	Revision   int                  `json:"revision"`
+	RunId      *string              `json:"runId,omitempty"`
+	Sha256     string               `json:"sha256"`
+	Size       int                  `json:"size"`
+	State      MaterialVersionState `json:"state"`
+}
+
+// MaterialVersionState defines model for MaterialVersion.State.
+type MaterialVersionState string
+
+// Message defines model for Message.
+type Message struct {
+	AuthorDisplayName  *string               `json:"authorDisplayName,omitempty"`
+	AuthorUserId       *openapi_types.UUID   `json:"authorUserId,omitempty"`
+	Content            string                `json:"content"`
+	CreatedAt          time.Time             `json:"createdAt"`
+	Id                 openapi_types.UUID    `json:"id"`
+	IdentityId         *openapi_types.UUID   `json:"identityId,omitempty"`
+	IdentityName       *string               `json:"identityName,omitempty"`
+	Inherited          *bool                 `json:"inherited,omitempty"`
+	Kind               MessageKind           `json:"kind"`
+	MaterialVersionIds *[]openapi_types.UUID `json:"materialVersionIds,omitempty"`
+	Materials          *[]struct {
+		Name      string             `json:"name"`
+		VersionId openapi_types.UUID `json:"versionId"`
+	} `json:"materials,omitempty"`
+	OriginTopicId *openapi_types.UUID `json:"originTopicId,omitempty"`
+	RunId         *openapi_types.UUID `json:"runId,omitempty"`
+	Seq           int                 `json:"seq"`
+	Source        *MessageSource      `json:"source,omitempty"`
+	State         MessageState        `json:"state"`
+	SubmissionId  *openapi_types.UUID `json:"submissionId,omitempty"`
+	TaskId        *openapi_types.UUID `json:"taskId,omitempty"`
+	TopicId       openapi_types.UUID  `json:"topicId"`
+}
+
+// MessageKind defines model for Message.Kind.
+type MessageKind string
+
+// MessageSource defines model for Message.Source.
+type MessageSource string
+
+// MessageState defines model for Message.State.
+type MessageState string
+
+// ModelSummary defines model for ModelSummary.
+type ModelSummary struct {
+	Capabilities struct {
+		Streaming   bool  `json:"streaming"`
+		ToolCalling bool  `json:"toolCalling"`
+		Vision      *bool `json:"vision,omitempty"`
+	} `json:"capabilities"`
+	DisplayName string             `json:"displayName"`
+	Enabled     bool               `json:"enabled"`
+	Id          openapi_types.UUID `json:"id"`
+	Limits      struct {
+		MaxInputTokens  int `json:"maxInputTokens"`
+		MaxOutputTokens int `json:"maxOutputTokens"`
+	} `json:"limits"`
+	Provider string `json:"provider"`
+}
+
 // Notification defines model for Notification.
 type Notification struct {
 	CreatedAt time.Time               `json:"createdAt"`
@@ -402,6 +576,19 @@ type PublishWorkflowRequest struct {
 	ExpectedVersion int    `json:"expectedVersion"`
 }
 
+// PublishedWorkflowContent defines model for PublishedWorkflowContent.
+type PublishedWorkflowContent struct {
+	Body WorkflowDraftBody `json:"body"`
+
+	// BodySha256 完整 body 按服务端结构序列化后的 SHA256；节点及边保持原顺序。
+	BodySha256  string             `json:"bodySha256"`
+	IsCurrent   bool               `json:"isCurrent"`
+	PublishedAt time.Time          `json:"publishedAt"`
+	Revision    int                `json:"revision"`
+	VersionId   openapi_types.UUID `json:"versionId"`
+	WorkflowId  openapi_types.UUID `json:"workflowId"`
+}
+
 // RecentTopic defines model for RecentTopic.
 type RecentTopic struct {
 	LastActivityAt time.Time          `json:"lastActivityAt"`
@@ -487,9 +674,9 @@ type RemoveMemberResultAffectedResponsibilitiesResolution string
 
 // ReopenRequest defines model for ReopenRequest.
 type ReopenRequest struct {
-	AcceptanceId    *openapi_types.UUID `json:"acceptanceId,omitempty"`
-	ExpectedVersion int                 `json:"expectedVersion"`
-	Reason          string              `json:"reason"`
+	AcceptanceId    openapi_types.UUID `json:"acceptanceId"`
+	ExpectedVersion int                `json:"expectedVersion"`
+	Reason          string             `json:"reason"`
 }
 
 // ReplaceIdentityRequest defines model for ReplaceIdentityRequest.
@@ -611,14 +798,16 @@ type Submission struct {
 	IdentityId         *openapi_types.UUID         `json:"identityId,omitempty"`
 	MaterialVersionIds *[]openapi_types.UUID       `json:"materialVersionIds,omitempty"`
 	MessageId          *openapi_types.UUID         `json:"messageId,omitempty"`
-	PlanId             *openapi_types.UUID         `json:"planId,omitempty"`
-	Purpose            SubmissionPurpose           `json:"purpose"`
-	ReportId           *openapi_types.UUID         `json:"reportId,omitempty"`
-	Source             SubmissionSource            `json:"source"`
-	Status             SubmissionStatus            `json:"status"`
-	TaskId             *openapi_types.UUID         `json:"taskId,omitempty"`
-	Text               *string                     `json:"text,omitempty"`
-	TopicId            *openapi_types.UUID         `json:"topicId,omitempty"`
+
+	// PlanId 明确限定本次分析的计划范围；引用任务仅作证据，不能转移归属或将其他计划节点作为当前工作。
+	PlanId   *openapi_types.UUID `json:"planId,omitempty"`
+	Purpose  SubmissionPurpose   `json:"purpose"`
+	ReportId *openapi_types.UUID `json:"reportId,omitempty"`
+	Source   SubmissionSource    `json:"source"`
+	Status   SubmissionStatus    `json:"status"`
+	TaskId   *openapi_types.UUID `json:"taskId,omitempty"`
+	Text     *string             `json:"text,omitempty"`
+	TopicId  *openapi_types.UUID `json:"topicId,omitempty"`
 }
 
 // SubmissionDiscussionIntent defines model for Submission.DiscussionIntent.
@@ -698,7 +887,10 @@ type Task struct {
 	Status             TaskStatus          `json:"status"`
 	Title              string              `json:"title"`
 	Version            int                 `json:"version"`
-	WorkflowId         *openapi_types.UUID `json:"workflowId,omitempty"`
+
+	// WorkflowCandidates 同项目已发布流程候选；正式任务绑定不会被候选建议覆盖。
+	WorkflowCandidates *[]WorkflowCandidate `json:"workflowCandidates,omitempty"`
+	WorkflowId         *openapi_types.UUID  `json:"workflowId,omitempty"`
 }
 
 // TaskBlockersPhase defines model for Task.Blockers.Phase.
@@ -736,21 +928,40 @@ type TaskActivityKind string
 
 // TaskAnalysis defines model for TaskAnalysis.
 type TaskAnalysis struct {
-	Basis         []string               `json:"basis"`
-	BatchId       *openapi_types.UUID    `json:"batchId"`
-	Disagreements []string               `json:"disagreements"`
-	ErrorCode     *string                `json:"errorCode"`
-	Id            openapi_types.UUID     `json:"id"`
-	SourceId      openapi_types.UUID     `json:"sourceId"`
-	SourceType    TaskAnalysisSourceType `json:"sourceType"`
-	State         string                 `json:"state"`
-	Summary       string                 `json:"summary"`
-	TaskId        openapi_types.UUID     `json:"taskId"`
-	UpdatedAt     time.Time              `json:"updatedAt"`
+	Basis         []string            `json:"basis"`
+	BatchId       *openapi_types.UUID `json:"batchId"`
+	Disagreements []string            `json:"disagreements"`
+	ErrorCode     *string             `json:"errorCode"`
+	Id            openapi_types.UUID  `json:"id"`
+
+	// Output 公开分析与节点建议，不改变正式工作状态或流程绑定。
+	Output     TaskAnalysisOutput     `json:"output"`
+	ScopeKind  TaskAnalysisScopeKind  `json:"scopeKind"`
+	SourceId   openapi_types.UUID     `json:"sourceId"`
+	SourceType TaskAnalysisSourceType `json:"sourceType"`
+	State      string                 `json:"state"`
+	Summary    string                 `json:"summary"`
+	TaskId     *openapi_types.UUID    `json:"taskId"`
+	UpdatedAt  time.Time              `json:"updatedAt"`
 }
+
+// TaskAnalysisScopeKind defines model for TaskAnalysis.ScopeKind.
+type TaskAnalysisScopeKind string
 
 // TaskAnalysisSourceType defines model for TaskAnalysis.SourceType.
 type TaskAnalysisSourceType string
+
+// TaskAnalysisOutput 公开分析与节点建议，不改变正式工作状态或流程绑定。
+type TaskAnalysisOutput struct {
+	Basis                 *[]string               `json:"basis,omitempty"`
+	CurrentNodeCandidates *[]WorkflowNodeRef      `json:"currentNodeCandidates,omitempty"`
+	Disagreements         *[]string               `json:"disagreements,omitempty"`
+	Discussion            *map[string]interface{} `json:"discussion,omitempty"`
+	NeedsClarification    *bool                   `json:"needsClarification,omitempty"`
+	RelatedEvidenceNodes  *[]WorkflowNodeRef      `json:"relatedEvidenceNodes,omitempty"`
+	SuggestedNextNodes    *[]WorkflowNodeRef      `json:"suggestedNextNodes,omitempty"`
+	Summary               *string                 `json:"summary,omitempty"`
+}
 
 // TaskDraftRequest defines model for TaskDraftRequest.
 type TaskDraftRequest struct {
@@ -1009,6 +1220,22 @@ type Workflow struct {
 	Version            *int                `json:"version,omitempty"`
 }
 
+// WorkflowCandidate defines model for WorkflowCandidate.
+type WorkflowCandidate struct {
+	ApprovalPolicies  map[string]string                   `json:"approvalPolicies"`
+	CandidateSources  []WorkflowCandidateCandidateSources `json:"candidateSources"`
+	FormalTaskBinding bool                                `json:"formalTaskBinding"`
+	HardRules         []WorkflowHardRule                  `json:"hardRules"`
+	Instructions      string                              `json:"instructions"`
+	Name              string                              `json:"name"`
+	Nodes             []WorkflowNode                      `json:"nodes"`
+	VersionId         openapi_types.UUID                  `json:"versionId"`
+	WorkflowId        openapi_types.UUID                  `json:"workflowId"`
+}
+
+// WorkflowCandidateCandidateSources defines model for WorkflowCandidate.CandidateSources.
+type WorkflowCandidateCandidateSources string
+
 // WorkflowDraftBody defines model for WorkflowDraftBody.
 type WorkflowDraftBody struct {
 	AdvisoryEdges *[]struct {
@@ -1039,9 +1266,11 @@ type WorkflowHardRule struct {
 	Kind WorkflowHardRuleKind `json:"kind"`
 
 	// NodeId 缺省适用于整个流程；指定时仅约束该节点。
-	NodeId   *string                `json:"nodeId,omitempty"`
-	Phase    *WorkflowHardRulePhase `json:"phase,omitempty"`
-	TargetId *string                `json:"targetId,omitempty"`
+	NodeId *string               `json:"nodeId,omitempty"`
+	Phase  WorkflowHardRulePhase `json:"phase"`
+
+	// TargetId 本项目已存在的任务、接收来源或资料版本的非零 UUID；不得以空值或全零 UUID 表达未来对象。
+	TargetId openapi_types.UUID `json:"targetId"`
 }
 
 // WorkflowHardRuleKind defines model for WorkflowHardRule.Kind.
@@ -1075,6 +1304,14 @@ type WorkflowNodeDefaultApprovalPolicy string
 
 // WorkflowNodeKind 图中的活动或评审形状，不构成审批授权。
 type WorkflowNodeKind string
+
+// WorkflowNodeRef defines model for WorkflowNodeRef.
+type WorkflowNodeRef struct {
+	NodeId     string             `json:"nodeId"`
+	Reason     string             `json:"reason"`
+	VersionId  openapi_types.UUID `json:"versionId"`
+	WorkflowId openapi_types.UUID `json:"workflowId"`
+}
 
 // WorkflowPreset defines model for WorkflowPreset.
 type WorkflowPreset struct {
@@ -1561,244 +1798,4 @@ type ListMaterialsParamsKind string
 // DeleteMaterialJSONBody defines parameters for DeleteMaterial.
 type DeleteMaterialJSONBody struct {
 	ExpectedCurrentVersionId openapi_types.UUID `json:"expectedCurrentVersionId"`
-}
-
-// DeleteMaterialParams defines parameters for DeleteMaterial.
-type DeleteMaterialParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// DownloadMaterialContentParams defines parameters for DownloadMaterialContent.
-type DownloadMaterialContentParams struct {
-	// Entry HTML 包内的相对路径条目。
-	Entry *string `form:"entry,omitempty" json:"entry,omitempty"`
-	Range *string `json:"Range,omitempty"`
-}
-
-// CreatePreviewSessionParams defines parameters for CreatePreviewSession.
-type CreatePreviewSessionParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// UpdateMyPreferencesParams defines parameters for UpdateMyPreferences.
-type UpdateMyPreferencesParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// ListMembersParams defines parameters for ListMembers.
-type ListMembersParams struct {
-	// Limit 分页大小，范围 1-100，默认 50。
-	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Cursor 不透明分页游标，编码范围与过滤条件。
-	Cursor *CursorParam `form:"cursor,omitempty" json:"cursor,omitempty"`
-}
-
-// UpdateMemberRoleParams defines parameters for UpdateMemberRole.
-type UpdateMemberRoleParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// RemoveMemberParams defines parameters for RemoveMember.
-type RemoveMemberParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// RequestOwnerTransferParams defines parameters for RequestOwnerTransfer.
-type RequestOwnerTransferParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// DecideOwnerTransferParams defines parameters for DecideOwnerTransfer.
-type DecideOwnerTransferParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// ListPlansParams defines parameters for ListPlans.
-type ListPlansParams struct {
-	// Limit 分页大小，范围 1-100，默认 50。
-	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Cursor 不透明分页游标，编码范围与过滤条件。
-	Cursor *CursorParam           `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Status *ListPlansParamsStatus `form:"status,omitempty" json:"status,omitempty"`
-	Q      *string                `form:"q,omitempty" json:"q,omitempty"`
-	Mine   *bool                  `form:"mine,omitempty" json:"mine,omitempty"`
-}
-
-// ListPlansParamsStatus defines parameters for ListPlans.
-type ListPlansParamsStatus string
-
-// CreatePlanParams defines parameters for CreatePlan.
-type CreatePlanParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// AcceptPlanParams defines parameters for AcceptPlan.
-type AcceptPlanParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// DiscardPlanParams defines parameters for DiscardPlan.
-type DiscardPlanParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// DiscardPlan200JSONResponseBodyDataStatus defines parameters for DiscardPlan.
-type DiscardPlan200JSONResponseBodyDataStatus string
-
-// UpdatePlanDraftParams defines parameters for UpdatePlanDraft.
-type UpdatePlanDraftParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// ReopenPlanParams defines parameters for ReopenPlan.
-type ReopenPlanParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// CreatePositionParams defines parameters for CreatePosition.
-type CreatePositionParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// ImportPositionPresetsParams defines parameters for ImportPositionPresets.
-type ImportPositionPresetsParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// UpdatePositionParams defines parameters for UpdatePosition.
-type UpdatePositionParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// ListProposalsParams defines parameters for ListProposals.
-type ListProposalsParams struct {
-	// Limit 分页大小，范围 1-100，默认 50。
-	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Cursor 不透明分页游标，编码范围与过滤条件。
-	Cursor *CursorParam               `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Status *ListProposalsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
-	Kind   *string                    `form:"kind,omitempty" json:"kind,omitempty"`
-}
-
-// ListProposalsParamsStatus defines parameters for ListProposals.
-type ListProposalsParamsStatus string
-
-// CreateProposalParams defines parameters for CreateProposal.
-type CreateProposalParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// DecideProposalParams defines parameters for DecideProposal.
-type DecideProposalParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// DelegateProposalDecisionParams defines parameters for DelegateProposalDecision.
-type DelegateProposalDecisionParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// UpdateProposalDraftJSONBody defines parameters for UpdateProposalDraft.
-type UpdateProposalDraftJSONBody struct {
-	Changes         []ProposalChange `json:"changes"`
-	ExpectedVersion int              `json:"expectedVersion"`
-	Reason          *string          `json:"reason,omitempty"`
-}
-
-// UpdateProposalDraftParams defines parameters for UpdateProposalDraft.
-type UpdateProposalDraftParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// CreateProposalRevisionParams defines parameters for CreateProposalRevision.
-type CreateProposalRevisionParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// SubmitProposalParams defines parameters for SubmitProposal.
-type SubmitProposalParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// ListReleaseReportsParams defines parameters for ListReleaseReports.
-type ListReleaseReportsParams struct {
-	// Limit 分页大小，范围 1-100，默认 50。
-	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Cursor 不透明分页游标，编码范围与过滤条件。
-	Cursor *CursorParam `form:"cursor,omitempty" json:"cursor,omitempty"`
-}
-
-// CreateReleaseReportParams defines parameters for CreateReleaseReport.
-type CreateReleaseReportParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// CreateRepositoryParams defines parameters for CreateRepository.
-type CreateRepositoryParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// UpdateRepositoryParams defines parameters for UpdateRepository.
-type UpdateRepositoryParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// RestoreProjectParams defines parameters for RestoreProject.
-type RestoreProjectParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// CancelAgentRunParams defines parameters for CancelAgentRun.
-type CancelAgentRunParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// SubscribeRunEventsParams defines parameters for SubscribeRunEvents.
-type SubscribeRunEventsParams struct {
-	After *int `form:"after,omitempty" json:"after,omitempty"`
-}
-
-// CreateSubmissionParams defines parameters for CreateSubmission.
-type CreateSubmissionParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
-}
-
-// RetryTaskAnalysisJSONBody defines parameters for RetryTaskAnalysis.
-type RetryTaskAnalysisJSONBody = map[string]interface{}
-
-// RetryTaskAnalysisParams defines parameters for RetryTaskAnalysis.
-type RetryTaskAnalysisParams struct {
-	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
-	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
 }

@@ -1,6 +1,6 @@
 # Kubernetes 部署骨架
 
-2026-10-09 本地 `judex` 已更新到 Helm revision 21，包含 Demo4 正式交互、运行例外及共享资料体验修复，访问 `http://127.0.0.1:18097/`。当前源码、镜像、同镜像隔离业务与真实模型证据见 [Demo4 当前部署复核](../docs/plans/demo4/REVIEW5-20261009.md)和[共享资料体验收尾](../docs/共享资料体验收尾-20261009.md)。发布保留既有数据、Secret、PVC、模型及沙箱配置；此前 revision 14／15／18／19／20 的记录继续作为历史证据保留。
+2026-10-15 本地 `judex` 已更新到 `.34`、Helm revision 23，访问 `http://127.0.0.1:18097/`。默认模型为 APIMart `glm-5.3-flash`，`reasoning_effort=high`；服务端和解析沙箱均为本地构建的 `.34` 镜像。升级前备份 PG/S3，原84表中82表完全相同，仅模型目录与迁移记录预期变化，PVC和原件校验通过。真实复测、失败记录及恢复边界见[本地升级记录](../docs/plans/real-host/records/MODEL-UPGRADE-20261015.md)。下文旧日期记录保留当时配置，不作为当前模型设置。
 
 Go 单体服务托管生产前端。Helm 同时声明 PostgreSQL、SeaweedFS、OpenSandbox，也可独立选择外部 PG / S3。需要可用 K8s、动态 PVC StorageClass、Helm 3.16+、安装 Operator / CRD 的权限及集群可拉取的 Judex 镜像。
 
@@ -40,7 +40,7 @@ kubectl -n judex-dev port-forward service/judex 8080:8080
 
 运行 `go test ./tests/deploy` 与 Helm lint 验证模板。K8s 冒烟入口为 `tests/k8s/smoke.mjs`，需要已有兼容 Operator / CRD 和可拉取镜像。
 
-2026-09-29 已在 Docker Desktop 集群验证四种内置/外部 PG/S3 组合、组件故障和资源回收。证据与镜像范围见 docs/plans/v1/CONTINUATION.md。
+2026-09-29 已在 Docker Desktop 集群验证四种内置/外部 PG/S3 组合、组件故障和资源回收。证据与镜像范围见 docs/plans/v1/records/CONTINUATION.md。
 
 ## 本地全内置部署（Docker Desktop，2026-09-28 实测）
 
@@ -100,15 +100,15 @@ kubectl --context docker-desktop -n judex port-forward service/judex 18097:8080
 部署验证可在临时 Namespace 运行 `tests/k8s/smoke.mjs`；浏览器业务 E2E 通过 `JUDEX_E2E_BASE_URL` 指向临时部署，必须把该访问 Origin 加入 `server.allowedOrigins`。测试资源按运行标签核对归属后删除。
 
 
-2026-10-07 12:05 的本机发布为 Helm revision 6，镜像 `judex/server:local-20261007120038-ea51afc0`，服务端与 Windows/macOS CLI、Skills 下载清单版本均为 `0.1.0-ui.20261007120038`。更新前通过隔离 namespace 的 11 条真实浏览器测试；更新后核对健康检查、生产网页校验值、三个实际下载 ZIP 和业务数据/Secret/PVC 保持。证据见 `.cache/deploy/ui-downloads-20261007120038-ea51afc0/manifest.json`，完整界面验收说明见 [桌面界面统一改造](../docs/界面优化预览.md)。
+2026-10-07 12:05 的本机发布为 Helm revision 6，镜像 `judex/server:local-20261007120038-ea51afc0`，服务端与 Windows/macOS CLI、Skills 下载清单版本均为 `0.1.0-ui.20261007120038`。更新前通过隔离 namespace 的 11 条真实浏览器测试；更新后核对健康检查、生产网页校验值、三个实际下载 ZIP 和业务数据/Secret/PVC 保持。证据见 `.cache/deploy/ui-downloads-20261007120038-ea51afc0/manifest.json`，完整界面验收说明见 [桌面界面统一改造](../docs/plans/cooperation-ui/records/视觉统一-20261007.md)。
 
 
-2026-10-07 14:10 的职位场景模板发布为 Helm revision 7，镜像 `judex/server:local-20261007140030-9b42bc04`，应用和客户端下载版本 `0.1.0-presets.20261007140030`。Migration 19 增加可空来源标识及活跃预设唯一索引，既有业务记录、Secret/PVC 与运行配置已核对保持。当前镜像通过隔离 namespace 的 13 条业务浏览器验收，详情和证据见 [职位场景模板](../docs/职位场景模板.md)。
+2026-10-07 14:10 的职位场景模板发布为 Helm revision 7，镜像 `judex/server:local-20261007140030-9b42bc04`，应用和客户端下载版本 `0.1.0-presets.20261007140030`。Migration 19 增加可空来源标识及活跃预设唯一索引，既有业务记录、Secret/PVC 与运行配置已核对保持。当前镜像通过隔离 namespace 的 13 条业务浏览器验收，详情和证据见 [职位场景模板](../docs/功能/职位场景模板.md)。
 
 
-2026-10-07 15:15 的边框、卡片按钮与职位优先分配更新为 Helm revision 8，镜像 `judex/server:local-20261007151045-4ad93210`，应用/客户端下载版本 `0.1.0-ui.20261007151045`。部署前的当前镜像通过隔离 namespace 的 14 条业务浏览器验收，原有 9 个职位及其他业务数据、Secret/PVC、运行配置已核对保持；完整范围见 [职位场景模板](../docs/职位场景模板.md)。
+2026-10-07 15:15 的边框、卡片按钮与职位优先分配更新为 Helm revision 8，镜像 `judex/server:local-20261007151045-4ad93210`，应用/客户端下载版本 `0.1.0-ui.20261007151045`。部署前的当前镜像通过隔离 namespace 的 14 条业务浏览器验收，原有 9 个职位及其他业务数据、Secret/PVC、运行配置已核对保持；完整范围见 [职位场景模板](../docs/功能/职位场景模板.md)。
 
 
-2026-10-07 16:24 的标签边框与功能列表悬停更新为 Helm revision 9，镜像 `judex/server:local-20261007161448-b7fad684`，应用/客户端下载版本 `0.1.0-ui.20261007161448`。当前镜像通过隔离 namespace 的 14 条真实业务浏览器测试，原有数据、Secret/PVC 与运行配置核对保持；记录见 [统一界面组件规范](../docs/统一界面组件规范.md)。
+2026-10-07 16:24 的标签边框与功能列表悬停更新为 Helm revision 9，镜像 `judex/server:local-20261007161448-b7fad684`，应用/客户端下载版本 `0.1.0-ui.20261007161448`。当前镜像通过隔离 namespace 的 14 条真实业务浏览器测试，原有数据、Secret/PVC 与运行配置核对保持；记录见 [统一界面组件规范](../docs/界面/README.md)。
 
 2026-10-07 16:49 的固定返回项目列表更新为 Helm revision 10，镜像 `judex/server:local-20261007164302-00199b76`，应用/客户端下载版本 `0.1.0-ui.20261007164302`。通过隔离 namespace 的 15 条真实业务浏览器测试，包含项目间往返、草稿/附件恢复与实际提交；测试资源已按所属标识清理。生产资源、三个下载包、现有业务数据、Secret/PVC 与运行配置已核对。端口转发 `http://127.0.0.1:18097/` 已恢复；证据见 `.cache/deploy/project-return-20261007164302-00199b76/manifest.json`。

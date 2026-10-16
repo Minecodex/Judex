@@ -3,6 +3,255 @@ package apigen
 
 import openapi_types "github.com/oapi-codegen/runtime/types"
 
+// DeleteMaterialParams defines parameters for DeleteMaterial.
+type DeleteMaterialParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// DownloadMaterialContentParams defines parameters for DownloadMaterialContent.
+type DownloadMaterialContentParams struct {
+	// Entry HTML 包内的相对路径条目。
+	Entry *string `form:"entry,omitempty" json:"entry,omitempty"`
+	Range *string `json:"Range,omitempty"`
+}
+
+// CreatePreviewSessionParams defines parameters for CreatePreviewSession.
+type CreatePreviewSessionParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// UpdateMyPreferencesParams defines parameters for UpdateMyPreferences.
+type UpdateMyPreferencesParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// ListMembersParams defines parameters for ListMembers.
+type ListMembersParams struct {
+	// Limit 分页大小，范围 1-100，默认 50。
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor 不透明分页游标，编码范围与过滤条件。
+	Cursor *CursorParam `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// UpdateMemberRoleParams defines parameters for UpdateMemberRole.
+type UpdateMemberRoleParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// RemoveMemberParams defines parameters for RemoveMember.
+type RemoveMemberParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// RequestOwnerTransferParams defines parameters for RequestOwnerTransfer.
+type RequestOwnerTransferParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// DecideOwnerTransferParams defines parameters for DecideOwnerTransfer.
+type DecideOwnerTransferParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// ListPlansParams defines parameters for ListPlans.
+type ListPlansParams struct {
+	// Limit 分页大小，范围 1-100，默认 50。
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor 不透明分页游标，编码范围与过滤条件。
+	Cursor *CursorParam           `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Status *ListPlansParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	Q      *string                `form:"q,omitempty" json:"q,omitempty"`
+	Mine   *bool                  `form:"mine,omitempty" json:"mine,omitempty"`
+}
+
+// ListPlansParamsStatus defines parameters for ListPlans.
+type ListPlansParamsStatus string
+
+// CreatePlanParams defines parameters for CreatePlan.
+type CreatePlanParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// ListPlanAcceptancesParams defines parameters for ListPlanAcceptances.
+type ListPlanAcceptancesParams struct {
+	// Limit 分页大小，范围 1-100，默认 50。
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor 不透明分页游标，编码范围与过滤条件。
+	Cursor *CursorParam `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// AcceptPlanParams defines parameters for AcceptPlan.
+type AcceptPlanParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// DiscardPlanParams defines parameters for DiscardPlan.
+type DiscardPlanParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// DiscardPlan200JSONResponseBodyDataStatus defines parameters for DiscardPlan.
+type DiscardPlan200JSONResponseBodyDataStatus string
+
+// UpdatePlanDraftParams defines parameters for UpdatePlanDraft.
+type UpdatePlanDraftParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// ReopenPlanParams defines parameters for ReopenPlan.
+type ReopenPlanParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// CreatePositionParams defines parameters for CreatePosition.
+type CreatePositionParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// ImportPositionPresetsParams defines parameters for ImportPositionPresets.
+type ImportPositionPresetsParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// UpdatePositionParams defines parameters for UpdatePosition.
+type UpdatePositionParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// ListProposalsParams defines parameters for ListProposals.
+type ListProposalsParams struct {
+	// Limit 分页大小，范围 1-100，默认 50。
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor 不透明分页游标，编码范围与过滤条件。
+	Cursor *CursorParam               `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Status *ListProposalsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	Kind   *string                    `form:"kind,omitempty" json:"kind,omitempty"`
+}
+
+// ListProposalsParamsStatus defines parameters for ListProposals.
+type ListProposalsParamsStatus string
+
+// CreateProposalParams defines parameters for CreateProposal.
+type CreateProposalParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// DecideProposalParams defines parameters for DecideProposal.
+type DecideProposalParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// DelegateProposalDecisionParams defines parameters for DelegateProposalDecision.
+type DelegateProposalDecisionParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// UpdateProposalDraftJSONBody defines parameters for UpdateProposalDraft.
+type UpdateProposalDraftJSONBody struct {
+	Changes         []ProposalChange `json:"changes"`
+	ExpectedVersion int              `json:"expectedVersion"`
+	Reason          *string          `json:"reason,omitempty"`
+}
+
+// UpdateProposalDraftParams defines parameters for UpdateProposalDraft.
+type UpdateProposalDraftParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// CreateProposalRevisionParams defines parameters for CreateProposalRevision.
+type CreateProposalRevisionParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// SubmitProposalParams defines parameters for SubmitProposal.
+type SubmitProposalParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// ListReleaseReportsParams defines parameters for ListReleaseReports.
+type ListReleaseReportsParams struct {
+	// Limit 分页大小，范围 1-100，默认 50。
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor 不透明分页游标，编码范围与过滤条件。
+	Cursor *CursorParam `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// CreateReleaseReportParams defines parameters for CreateReleaseReport.
+type CreateReleaseReportParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// CreateRepositoryParams defines parameters for CreateRepository.
+type CreateRepositoryParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// UpdateRepositoryParams defines parameters for UpdateRepository.
+type UpdateRepositoryParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// RestoreProjectParams defines parameters for RestoreProject.
+type RestoreProjectParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// CancelAgentRunParams defines parameters for CancelAgentRun.
+type CancelAgentRunParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// SubscribeRunEventsParams defines parameters for SubscribeRunEvents.
+type SubscribeRunEventsParams struct {
+	After *int `form:"after,omitempty" json:"after,omitempty"`
+}
+
+// CreateSubmissionParams defines parameters for CreateSubmission.
+type CreateSubmissionParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// RetryTaskAnalysisJSONBody defines parameters for RetryTaskAnalysis.
+type RetryTaskAnalysisJSONBody = map[string]interface{}
+
+// RetryTaskAnalysisParams defines parameters for RetryTaskAnalysis.
+type RetryTaskAnalysisParams struct {
+	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
+	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
 // ListTasksParams defines parameters for ListTasks.
 type ListTasksParams struct {
 	// Limit 分页大小，范围 1-100，默认 50。
@@ -25,6 +274,15 @@ type ListTasksParamsStatus string
 type CreateTaskParams struct {
 	// IdempotencyKey 客户端生成的 UUID；同键同载荷重试返回原结果，同键异载荷返回 409。
 	IdempotencyKey IdempotencyKeyParam `json:"Idempotency-Key"`
+}
+
+// ListTaskAcceptancesParams defines parameters for ListTaskAcceptances.
+type ListTaskAcceptancesParams struct {
+	// Limit 分页大小，范围 1-100，默认 50。
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor 不透明分页游标，编码范围与过滤条件。
+	Cursor *CursorParam `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // DecideTaskAcceptanceParams defines parameters for DecideTaskAcceptance.

@@ -2,6 +2,130 @@
 import type { paths, components, operations, SchemaComponentsSchemas } from "./schema";
 export interface SchemaSchemaComponentsSchemas1 {
 
+        ProposalReview: {
+            version?: number;
+            workflowConstraints?: {
+                [key: string]: unknown;
+            }[];
+            /** Format: uuid */
+            reviewId: string;
+            reviewHash: string;
+            /** Format: uuid */
+            proposalId: string;
+            /** @enum {string} */
+            status: "draft" | "pending" | "approved" | "cancelled" | "stale";
+            /** Format: date-time */
+            submittedAt?: string | null;
+            /** Format: date-time */
+            firstApprovalAt?: string | null;
+            /** Format: date-time */
+            deadlineAt?: string | null;
+            changes: components["schemas"]["ProposalChange"][];
+            slots: components["schemas"]["ApprovalSlot"][];
+            createdIds?: {
+                [key: string]: string;
+            };
+            canAct?: boolean;
+            unmetRequirements?: {
+                [key: string]: unknown;
+            }[];
+        };
+
+        ApprovalSlot: {
+            /** Format: uuid */
+            currentUserId?: string | null;
+            bindingVersion?: number;
+            canDecide?: boolean;
+            canDelegate?: boolean;
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            authorityType: "identity" | "user";
+            /** Format: uuid */
+            authorityId: string;
+            displayName?: string;
+            positionName?: string | null;
+            /** Format: uuid */
+            initialUserId?: string | null;
+            /** @enum {string} */
+            state: "pending" | "approved" | "rejected" | "timeout" | "delegated";
+        };
+
+        ProposalSubmitRequest: {
+            expectedVersion: number;
+            draftHash: string;
+        };
+
+        ProposalDecisionRequest: {
+            /** Format: uuid */
+            reviewId: string;
+            reviewHash: string;
+            expectedVersion: number;
+            /** @enum {string} */
+            decision: "approve" | "reject";
+            slotIds: string[];
+            actingBindingVersions?: {
+                /** Format: uuid */
+                identityId: string;
+                bindingVersion: number;
+            }[];
+            reason?: string;
+        };
+
+        DelegateDecisionRequest: {
+            /** Format: uuid */
+            reviewId: string;
+            reviewHash: string;
+            slotIds: string[];
+            reason: string;
+        };
+
+        ProposalRevisionRequest: {
+            /** Format: uuid */
+            previousReviewId: string;
+            reason: string;
+            changes: components["schemas"]["ProposalChange"][];
+        };
+
+        Handoff: {
+            /** Format: uuid */
+            id: string;
+            title?: string;
+            /** Format: uuid */
+            targetTaskId: string;
+            /** Format: uuid */
+            receiverIdentityId: string;
+            receiverDisplayName?: string;
+            /** Format: uuid */
+            workflowId?: string | null;
+            /** @enum {string} */
+            kind: "dependency" | "stage";
+            /** @enum {string} */
+            state: "waiting" | "accepted" | "needs_revision";
+            version?: number;
+            sources: components["schemas"]["HandoffSource"][];
+        };
+
+        HandoffSource: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            sourceTaskId: string;
+            /** Format: uuid */
+            senderIdentityId: string;
+            senderDisplayName?: string;
+            /** Format: uuid */
+            currentVersionId: string | null;
+            currentVersion?: number | null;
+            /** @enum {string} */
+            state: "draft" | "pending" | "accepted" | "rejected";
+            reason?: string | null;
+            /** Format: date-time */
+            sentAt?: string | null;
+            /** Format: date-time */
+            decidedAt?: string | null;
+        };
+
         HandoffDraftRequest: {
             title?: string;
             /** Format: uuid */
@@ -21,6 +145,12 @@ export interface SchemaSchemaComponentsSchemas1 {
         };
 
         HandoffSourceRevisionRequest: {
+            sourceVersion: number;
+            /**
+             * Format: uuid
+             * @description 当前来源任务的交付报告 ID。
+             */
+            reviewHash: string;
             summary: string;
             /** Format: uuid */
             submissionId?: string;
@@ -30,6 +160,7 @@ export interface SchemaSchemaComponentsSchemas1 {
         };
 
         HandoffSendRequest: {
+            summary: string;
             sourceVersion: number;
             reviewHash: string;
         };

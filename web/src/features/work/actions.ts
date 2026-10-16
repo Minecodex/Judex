@@ -11,6 +11,8 @@ import {
   type Text,
 } from "./types.ts";
 import { uid } from "./seed.ts";
+import {positionBindings} from './positionBindings.ts';
+import type {PositionValue} from './storeTypes';
 import { myPositions, myPreference } from "./preferences.ts";
 import {
   blockers,
@@ -573,27 +575,14 @@ export function personalPrompt(
 export function savePosition(
   state: WorkState,
   projectId: string,
-  value: {
-    id?: string;
-    name: string;
-    prompt: string;
-    publicSummary?: string;
-    flowId: string;
-    nodeId: string;
-  },
+  value: PositionValue,
 ): Result {
   if (!manage(state, projectId)) return fail("permission");
   if (![value.name, value.prompt].every((v) => v.trim()))
     return fail("required");
-  if (
-    (value.flowId || value.nodeId) && !state.flows.some(
-      (f) =>
-        f.id === value.flowId &&
-        f.status !== 'draft' &&
-        f.projectId === projectId &&
-        f.nodes.some((n) => n.id === value.nodeId),
-    )
-  )
+  const bindings = positionBindings(value);
+  if (!bindings || bindings.some(b => !state.flows.some(f => f.id === b.flowId &&
+      f.status !== 'draft' && f.projectId === projectId && f.nodes.some(n => n.id === b.nodeId))))
     return fail("scope");
   if (
     value.id &&
@@ -608,8 +597,9 @@ export function savePosition(
     name: W(value.name.trim()),
     prompt: W(value.prompt.trim()),
     publicSummary: W(value.publicSummary ?? value.prompt.trim()),
+    modelId: value.modelId,
     tone: "mint",
-    bindings: value.flowId ? [{ flowId: value.flowId, nodeId: value.nodeId }] : [],
+    bindings,
   };
   if (value.id)
     s.positions = s.positions.map((p) =>

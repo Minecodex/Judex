@@ -26,12 +26,13 @@ func scenarioRunner(t *testing.T) (*runner.Runner, string) {
 	}
 	protocol := envOr("SCENARIO_GLM_PROTOCOL", model.ProtocolOpenAI)
 	provider, err := model.NewProvider(model.GatewayConfig{
-		Protocol: protocol,
-		BaseURL:  envOr("SCENARIO_GLM_BASE_URL", ""),
-		APIKey:   envOr("SCENARIO_GLM_API_KEY", ""),
+		Protocol:       protocol,
+		BaseURL:        envOr("SCENARIO_GLM_BASE_URL", ""),
+		APIKey:         envOr("SCENARIO_GLM_API_KEY", ""),
+		RequestOptions: scenarioRequestOptions(),
 	})
 	if err != nil {
-		t.Skipf("SCENARIO_GLM_* env: %v", err)
+		t.Fatalf("SCENARIO_GLM_* configured but invalid: %v", err)
 	}
 	registry := tools.New()
 	tools.RegisterDefaults(registry)
@@ -43,6 +44,10 @@ func envOr(k, d string) string {
 		return v
 	}
 	return d
+}
+
+func scenarioRequestOptions() model.RequestOptions {
+	return model.RequestOptions{ThinkingType: os.Getenv("SCENARIO_GLM_THINKING_TYPE"), ReasoningEffort: os.Getenv("SCENARIO_GLM_REASONING_EFFORT")}
 }
 
 func runScenario(t *testing.T, modelName string, facts agentcontext.Facts, timeout time.Duration) runner.Outcome {

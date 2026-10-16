@@ -1,0 +1,500 @@
+{
+  "recordedAt": "2026-10-15T06:55:50.608Z",
+  "requestedItems": [
+    1,
+    3,
+    5
+  ],
+  "version": "0.1.0-realhost.20261015.34",
+  "sourceTreeHash": "d498bfac1f5602ce16a7d2749791cd4e5cbb2134c925d0f6c5e2ca527d674256",
+  "model": {
+    "provider": "APIMart",
+    "name": "glm-5.3-flash",
+    "returnedName": "ZHIPU/GLM-5.3-Flash",
+    "reasoningEffort": "high",
+    "thinking": "enabled",
+    "fallback": false
+  },
+  "platform": {
+    "passed": true,
+    "modelCalls": 22,
+    "requiredCases": [
+      "M01-workflow",
+      "M02-task-question",
+      "M07-live-xlsx-parser3"
+    ],
+    "cases": [
+      {
+        "id": "M01-workflow",
+        "sourceId": "b98923e1-9b1c-4db2-aece-c6454c1c096a",
+        "state": "completed",
+        "structuredAnalysisPassed": true,
+        "semanticPassed": true,
+        "tools": [
+          {
+            "name": "read_workflow",
+            "state": "succeeded",
+            "count": 2
+          },
+          {
+            "name": "record_task_analysis",
+            "state": "succeeded",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "id": "M02-task-question",
+        "sourceId": "bdb244f8-7808-478c-bcb8-2309a4a5e023",
+        "state": "completed",
+        "structuredAnalysisPassed": true,
+        "semanticPassed": true,
+        "tools": [
+          {
+            "name": "analyze_material",
+            "state": "failed",
+            "count": 1
+          },
+          {
+            "name": "query_work",
+            "state": "succeeded",
+            "count": 2
+          },
+          {
+            "name": "read_material",
+            "state": "succeeded",
+            "count": 1
+          },
+          {
+            "name": "read_workflow",
+            "state": "succeeded",
+            "count": 1
+          },
+          {
+            "name": "record_task_analysis",
+            "state": "succeeded",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "id": "M03-live-xlsx",
+        "sourceId": "5b19bbfd-b893-4a28-bd11-35a56bf0800e",
+        "state": "completed",
+        "structuredAnalysisPassed": true,
+        "semanticPassed": false,
+        "tools": [
+          {
+            "name": "analyze_material",
+            "state": "failed",
+            "count": 3
+          },
+          {
+            "name": "bash",
+            "state": "succeeded",
+            "count": 6
+          },
+          {
+            "name": "read_material",
+            "state": "succeeded",
+            "count": 1
+          },
+          {
+            "name": "record_task_analysis",
+            "state": "succeeded",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "id": "M04-live-xlsx-corrected",
+        "sourceId": "389dedee-e380-4737-be9d-d4cd5cbc08f4",
+        "state": "completed",
+        "structuredAnalysisPassed": true,
+        "semanticPassed": false,
+        "tools": [
+          {
+            "name": "analyze_material",
+            "state": "failed",
+            "count": 1
+          },
+          {
+            "name": "record_task_analysis",
+            "state": "succeeded",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "id": "M05-live-xlsx-mounted",
+        "sourceId": "39b2a7ea-a52a-4aff-962d-337417b826ad",
+        "state": "failed",
+        "structuredAnalysisPassed": false,
+        "semanticPassed": false,
+        "tools": []
+      },
+      {
+        "id": "M06-live-xlsx-stream-retry",
+        "sourceId": "c0bef112-cebb-46f1-a694-5e7f2ba60b05",
+        "state": "completed",
+        "structuredAnalysisPassed": true,
+        "semanticPassed": false,
+        "tools": [
+          {
+            "name": "analyze_material",
+            "state": "failed",
+            "count": 1
+          },
+          {
+            "name": "record_task_analysis",
+            "state": "succeeded",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "id": "M07-live-xlsx-parser3",
+        "sourceId": "a3f3b1a6-c0b1-416b-b4c4-a948062695bc",
+        "state": "completed",
+        "structuredAnalysisPassed": true,
+        "semanticPassed": true,
+        "tools": [
+          {
+            "name": "analyze_material",
+            "state": "succeeded",
+            "count": 1
+          },
+          {
+            "name": "record_task_analysis",
+            "state": "succeeded",
+            "count": 1
+          }
+        ]
+      }
+    ],
+    "failedAttemptsRetained": [
+      "M03-live-xlsx",
+      "M04-live-xlsx-corrected",
+      "M05-live-xlsx-mounted",
+      "M06-live-xlsx-stream-retry"
+    ]
+  },
+  "native": [
+    {
+      "id": "L01",
+      "passed": true,
+      "checks": {
+        "sameSession": true,
+        "exitZero": true,
+        "actualNativeCompaction": true,
+        "markerPreserved": true,
+        "disagreementPreserved": true,
+        "formalNode": true,
+        "accepted": true,
+        "freshSnapshot": true
+      },
+      "compactions": [
+        {
+          "time": 1792044409592,
+          "tokensBefore": 53599,
+          "tokensAfter": 45045,
+          "summaryOutputTokens": 920,
+          "keptUserMessageCount": 22
+        },
+        {
+          "time": 1792044477003,
+          "tokensBefore": 52450,
+          "tokensAfter": 44901,
+          "summaryOutputTokens": 777,
+          "keptUserMessageCount": 22
+        }
+      ],
+      "modelCalls": 6,
+      "restoreWarnings": 0
+    },
+    {
+      "id": "L02",
+      "passed": true,
+      "checks": {
+        "exitZero": true,
+        "marker": true,
+        "disagreement": true,
+        "node": true,
+        "accepted": true,
+        "snapshot": true
+      },
+      "modelCalls": 3,
+      "restoreWarnings": 0
+    },
+    {
+      "id": "L03",
+      "passed": true,
+      "checks": {
+        "exitZero": true,
+        "marker": true,
+        "disagreement": true,
+        "node": true,
+        "accepted": true,
+        "snapshot": true,
+        "actualPodRestart": true
+      },
+      "modelCalls": 2,
+      "restoreWarnings": 0
+    },
+    {
+      "id": "L04-resume",
+      "passed": true,
+      "checks": {
+        "exitZero": true,
+        "marker": true,
+        "disagreement": true,
+        "node": true,
+        "accepted": true,
+        "snapshot": true,
+        "unknownInterruptedTool": true,
+        "actualInterruption": true
+      },
+      "modelCalls": 2,
+      "restoreWarnings": 0
+    },
+    {
+      "id": "KA01",
+      "passed": true,
+      "checks": {
+        "exitZero": true,
+        "actualSixChecks": true,
+        "otherSessionMarkerUnknown": true,
+        "actor": true
+      },
+      "modelCalls": 3,
+      "restoreWarnings": 71
+    },
+    {
+      "id": "L05",
+      "passed": true,
+      "modelCalls": 0,
+      "restoreWarnings": 0
+    }
+  ],
+  "cache": [
+    {
+      "protocol": "original",
+      "calls": 24,
+      "http200": 24,
+      "markerPasses": 19,
+      "passed": false,
+      "failedCases": [
+        "same_prefix_new_request_session/1",
+        "same_prefix_new_request_session/2",
+        "workflow_change/2",
+        "cross_project/1",
+        "cross_project_exact/4"
+      ],
+      "balanceUsedDelta": 0.005566,
+      "currencyOrSavingsNotInferred": true
+    },
+    {
+      "protocol": "separately preregistered explicit tail",
+      "calls": 24,
+      "http200": 24,
+      "markerPasses": 24,
+      "passed": true,
+      "failedCases": [],
+      "balanceUsedDelta": 0.006786,
+      "currencyOrSavingsNotInferred": true
+    }
+  ],
+  "cacheWriteCounter": {
+    "explicitZeroNonStreamingObserved": true,
+    "streamingCounterReported": false,
+    "absentRemainsUnknown": true,
+    "aliasCases": 8
+  },
+  "checks": {
+    "goTestsExit": 0,
+    "goVetExit": 0,
+    "releaseExit": 0,
+    "parserTests": 7,
+    "parserTestsExit": 0,
+    "oldParserRegressionExit": 1,
+    "relayTests": 9
+  },
+  "formalIntegrity": {
+    "observedAt": "2026-10-15T06:50:54.131Z",
+    "namespace": "judex-ui-model-final-9aa4ace7",
+    "uid": "b7ebd2d6-f672-4f71-b7a2-ba8a4fd3bf0a",
+    "method": "exact COPY columns from the verified follow-up archive, sorted by immutable UUID id, all rows and columns compared",
+    "tables": [
+      {
+        "table": "tasks",
+        "rows": 36,
+        "archiveSha256": "949005382efcd1804ea8b5ca562f76ce95b0c99cb983d266624c7a9b45e5d7f0",
+        "currentSha256": "949005382efcd1804ea8b5ca562f76ce95b0c99cb983d266624c7a9b45e5d7f0",
+        "unchanged": true
+      },
+      {
+        "table": "plans",
+        "rows": 9,
+        "archiveSha256": "2b0e73d9d5960353cfa1c845c08f9977cc1ea6f96e8c36b387c9bc47a8809dce",
+        "currentSha256": "2b0e73d9d5960353cfa1c845c08f9977cc1ea6f96e8c36b387c9bc47a8809dce",
+        "unchanged": true
+      },
+      {
+        "table": "proposals",
+        "rows": 29,
+        "archiveSha256": "faf72bb64a53db44f19914b7bcc0312b2b118cf51efb0f6f7ddbc5fa2ce338e0",
+        "currentSha256": "faf72bb64a53db44f19914b7bcc0312b2b118cf51efb0f6f7ddbc5fa2ce338e0",
+        "unchanged": true
+      },
+      {
+        "table": "task_acceptances",
+        "rows": 33,
+        "archiveSha256": "dc9bdd4c105af70a651145d2aa22f40861f9f5a78429f5a276a4b92cca55fbde",
+        "currentSha256": "dc9bdd4c105af70a651145d2aa22f40861f9f5a78429f5a276a4b92cca55fbde",
+        "unchanged": true
+      },
+      {
+        "table": "plan_acceptances",
+        "rows": 9,
+        "archiveSha256": "8fb5ecbd6e9cbc2ad195b4060ae48cebaa7a7636dafb4927ba5eba00aecd53e6",
+        "currentSha256": "8fb5ecbd6e9cbc2ad195b4060ae48cebaa7a7636dafb4927ba5eba00aecd53e6",
+        "unchanged": true
+      }
+    ]
+  },
+  "deployment": {
+    "version": "0.1.0-realhost.20261015.34",
+    "helmRevision": 23,
+    "url": "http://127.0.0.1:18097/",
+    "serverImage": "judex/server:collaboration-realhost-0.1.0-realhost.20261015.34",
+    "sandbox": {
+      "at": "2026-10-15T06:50:50.394Z",
+      "helmRevision": 23,
+      "status": "deployed",
+      "image": "judex/analysis-sandbox:collaboration-realhost-0.1.0-realhost.20261015.34",
+      "imageId": "sha256:c3859f4093b2c99af317d283d313e1c1070e51d2c8a65275937bcc54516d03e6",
+      "parserVersion": "judex-original-3",
+      "parserSha256": "15e44ade15e78a4c0029fb2e3fef98a0c910286bf9bb35d339324d5d92a354e0",
+      "requirementsSha256": "a0c5c9abcd90134be6f04497407f90983c958e40536a65bbc3bc5cbe30c1287f",
+      "baseImage": "judex/analysis-sandbox:collaboration-realhost-0.1.0-realhost.20261013.17",
+      "buildMethod": "local verified dependency image plus current parser source; original upstream build blocked by Docker Hub network",
+      "tests": 7
+    },
+    "backup": {
+      "at": "2026-10-15T06:37:59.758Z",
+      "quiesced": true,
+      "files": [
+        {
+          "file": "database.pgdump",
+          "bytes": 274767,
+          "sha256": "965c115901987d52550e758a4d9b84c15f264787e25bf298b861342675cecfcf"
+        },
+        {
+          "file": "objects.tar",
+          "bytes": 3186688,
+          "sha256": "ae00a5da331e497b99f349ecd7c0f14e956d90d43df9961786ce94c9183c90aa"
+        }
+      ],
+      "archiveListingsValidated": true
+    },
+    "verification": {
+      "at": "2026-10-15T06:50:51.298Z",
+      "pvcsUnchanged": true,
+      "databaseTables": 84,
+      "unchangedTables": 82,
+      "differences": [
+        {
+          "table": "model_catalog",
+          "before": {
+            "name": "model_catalog",
+            "rows": 3,
+            "digest": "d7137bf1dde60a61d26b8ad14382b4f2"
+          },
+          "after": {
+            "name": "model_catalog",
+            "rows": 3,
+            "digest": "71f58c08d2f79bb7838570a13241823e"
+          }
+        },
+        {
+          "table": "goose_db_version",
+          "before": {
+            "name": "goose_db_version",
+            "rows": 27,
+            "digest": "e152292fb3f790008619b3d161a9ee48"
+          },
+          "after": {
+            "name": "goose_db_version",
+            "rows": 31,
+            "digest": "e27df45a06360c3a11ac959e89d34532"
+          }
+        }
+      ],
+      "verifiedMaterialEntries": 1,
+      "models": [
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "enabled": false,
+          "model": "glm-5.3",
+          "endpoint": "https://open.bigmodel.cn/api/anthropic",
+          "requestOptions": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000003",
+          "enabled": false,
+          "model": "glm-4-flash",
+          "endpoint": "https://open.bigmodel.cn/api/paas/v4",
+          "requestOptions": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "enabled": true,
+          "model": "glm-5.3-flash",
+          "endpoint": "https://api.apimart.ai/v1",
+          "requestOptions": {
+            "thinkingType": "enabled",
+            "reasoningEffort": "high"
+          }
+        }
+      ]
+    },
+    "http": [
+      {
+        "route": "/readyz",
+        "status": 200
+      },
+      {
+        "route": "/api/v1/system",
+        "status": 200
+      },
+      {
+        "route": "/downloads/manifest.json",
+        "status": 200
+      }
+    ],
+    "browser": {
+      "at": "2026-10-15T06:52:35.334Z",
+      "url": "http://127.0.0.1:18097/login",
+      "title": "Judex · 登录",
+      "loginVisible": true,
+      "errors": []
+    }
+  },
+  "cleanup": {
+    "at": "2026-10-15T06:55:34.463Z",
+    "namespaces": [
+      "judex-ui-model-final-9aa4ace7-runtime",
+      "judex-ui-model-final-9aa4ace7"
+    ],
+    "absent": true
+  },
+  "remaining": [
+    "Actual vendor HTTP429 business recovery not naturally observed",
+    "Provider-wide cache causality and invoice savings not established",
+    "Multi-day, larger files, higher concurrency and full resource curves not executed",
+    "Only declared original-session compression/restart combinations verified",
+    "Other AI hosts not inferred from Kimi"
+  ],
+  "gitCommittedOrPushed": false,
+  "rawEvidenceRoot": ".cache/real-host/20261015-model-upgrade"
+}

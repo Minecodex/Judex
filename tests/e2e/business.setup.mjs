@@ -12,6 +12,11 @@ const require = createRequire(import.meta.url);
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const collaborationGateway = process.env.JUDEX_E2E_COLLABORATION_GATEWAY
   ?? (process.env.JUDEX_REAL_MODEL_SMOKE === "1" ? "0" : "1");
+const realModel = process.env.JUDEX_REAL_MODEL_SMOKE === "1";
+if (realModel && collaborationGateway !== "0") throw new Error("Explicit real-model smoke cannot use the controlled gateway");
+if (realModel && !process.env.JUDEX_MODEL_CATALOG_FILE &&
+  !["JUDEX_MODEL_PROTOCOL", "JUDEX_MODEL_BASE_URL", "JUDEX_MODEL_API_KEY", "JUDEX_MODEL_NAME"].every(key => process.env[key]))
+  throw new Error("Explicit real-model smoke requires a model catalog or complete provider configuration");
 const runId = `judex-e2e-${process.pid}-${Date.now()}`;
 const pg = `${runId}-pg`, s3 = `${runId}-s3`, converter = `${runId}-converter`;
 const artifact = path.join(root, ".cache/e2e", runId);
@@ -31,7 +36,11 @@ async function waitFor(url, ready = response => response.ok) {
   throw new Error(`Readiness timed out: ${url}`);
 }
 try {
-  run(process.execPath, [npm, "run", "build"], { stdio: "inherit" });
+  // Every server keeps its own immutable web tree while another suite builds.
+  const webDir = path.join(artifact, "web");
+  run(process.execPath, [npm, "exec", "--workspace", "@judex/web", "--", "tsc", "--noEmit"], { stdio: "inherit" });
+  run(process.execPath, [npm, "exec", "--workspace", "@judex/web", "--", "vite", "build", "--outDir", webDir], { stdio: "inherit" });
+  run(process.execPath, ["scripts/release/client-downloads.mjs", path.join(webDir, "downloads")], { stdio: "inherit" });
   const executable = path.join(artifact, process.platform === "win32" ? "judex-server.exe" : "judex-server");
   run("go", ["build", "-o", executable, "./cmd/judex-server"]);
   const cli = path.join(artifact, process.platform === "win32" ? "judex.exe" : "judex");
@@ -68,11 +77,15 @@ try {
   const listener = net.createServer(); await new Promise((resolve) => listener.listen(0, "127.0.0.1", resolve));
   const port = listener.address().port; await new Promise((resolve) => listener.close(resolve));
   const base = `http://127.0.0.1:${port}`;
-  const env = { ...process.env, JUDEX_E2E_COLLABORATION_GATEWAY: collaborationGateway, JUDEX_MATERIAL_CONVERTER_URL: converterUrl, GIN_MODE: "release", JUDEX_ENV: "development", JUDEX_MODE: "all", JUDEX_HTTP_ADDR: `127.0.0.1:${port}`, JUDEX_WEB_DIR: "web/dist",
+  const env = { ...process.env, JUDEX_E2E_COLLABORATION_GATEWAY: collaborationGateway, JUDEX_MATERIAL_CONVERTER_URL: converterUrl, GIN_MODE: "release", JUDEX_ENV: "development", JUDEX_MODE: "all", JUDEX_HTTP_ADDR: `127.0.0.1:${port}`, JUDEX_WEB_DIR: webDir,
     JUDEX_DATABASE_URL: `postgres://postgres:${password}@127.0.0.1:${pgPort}/judex?sslmode=disable`, JUDEX_ALLOWED_ORIGINS: base, JUDEX_PREVIEW_ORIGIN: `http://localhost:${port}`,
     JUDEX_S3_ENDPOINT: `http://127.0.0.1:${s3Port}`, JUDEX_S3_ACCESS_KEY: "judex", JUDEX_S3_SECRET_KEY: password, JUDEX_S3_BUCKET: "judex", JUDEX_S3_PATH_STYLE: "true",
     JUDEX_REGISTER_PER_IP: "1000", JUDEX_MODEL_CATALOG_FILE: "", JUDEX_MODEL_PROTOCOL: "", JUDEX_OPENSANDBOX_ENDPOINT: "",
   };
+  if (realModel) {
+    env.JUDEX_MODEL_CATALOG_FILE = process.env.JUDEX_MODEL_CATALOG_FILE ?? "";
+    env.JUDEX_MODEL_PROTOCOL = process.env.JUDEX_MODEL_PROTOCOL ?? "";
+  }
   if(collaborationGateway==="1"){
     const reservation=net.createServer();await new Promise(resolve=>reservation.listen(0,"127.0.0.1",resolve));
     const gatewayPort=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));
@@ -80,7 +93,7 @@ try {
     run("go",["build","-o",gatewayExe,"./tests/fixtures/gateway"]);
     const gatewayLog=fs.openSync(path.join(artifact,"gateway.log"),"w");
     gateway=spawn(gatewayExe,[],{windowsHide:true,env:{...process.env,JUDEX_FIXTURE_MODE:"collaboration",JUDEX_FIXTURE_ADDR:"127.0.0.1:"+gatewayPort},stdio:["ignore",gatewayLog,gatewayLog]});
-    Object.assign(env,{JUDEX_MODEL_PROTOCOL:"openai-compatible",JUDEX_MODEL_BASE_URL:"http://127.0.0.1:"+gatewayPort+"/v1",JUDEX_MODEL_API_KEY:"controlled-fixture-key",JUDEX_MODEL_NAME:"collaboration-fixture"});
+    Object.assign(env,{JUDEX_MODEL_PROTOCOL:"openai-compatible",JUDEX_MODEL_BASE_URL:"http://127.0.0.1:"+gatewayPort+"/v1",JUDEX_MODEL_API_KEY:"controlled-fixture-key",JUDEX_MODEL_NAME:"collaboration-fixture",JUDEX_E2E_GATEWAY_ADMIN_URL:"http://127.0.0.1:"+gatewayPort});
   }
   execFileSync(executable, ["objects", "init"], { env, windowsHide: true });
   const log = fs.openSync(path.join(artifact, "server.log"), "w");

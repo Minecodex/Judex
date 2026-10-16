@@ -120,6 +120,7 @@ components:
         operation:
           type: string
           enum:
+            - proposal.submit
             - proposal.decision
             - topic.fork
             - discussion_suggestion.resolve
@@ -180,6 +181,18 @@ components:
         expiresAt:
           type: string
           format: date-time
+    ConfirmationResult:
+      type: object
+      required: [id, state]
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [committed, rejected]
+        resultRef:
+          type: [string, 'null']
     ConfirmIntentRequest:
       type: object
       required: [intentHash, decision]

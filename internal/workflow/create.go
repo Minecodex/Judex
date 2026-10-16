@@ -15,6 +15,9 @@ import (
 // caller's project-locked transaction.
 func (s *Service) insertDefinition(ctx context.Context, tx postgres.Tx, requester, projectID uuid.UUID, body Body, presetID *string) (Definition, error) {
 	now, id, versionID := s.now(), uuid.New(), uuid.New()
+	if creationID, ok := ctx.Value(agentCreationKey{}).(uuid.UUID); ok {
+		id = creationID
+	}
 	nodesJSON, _ := json.Marshal(body.Nodes)
 	edgesJSON, _ := json.Marshal(body.AdvisoryEdges)
 	hardJSON, _ := json.Marshal(body.HardRules)

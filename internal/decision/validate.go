@@ -1,6 +1,9 @@
 package decision
 
-import apierrors "github.com/kakj-go/Judex/internal/platform/errors"
+import (
+	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
+	"github.com/kakj-go/Judex/internal/work"
+)
 
 // ValidateDraftChanges is shared by human and Agent draft creation.
 func ValidateDraftChanges(changes []Change) error {
@@ -13,6 +16,9 @@ func ValidateDraftChanges(changes []Change) error {
 		}
 		if change.TargetType != "plan" && change.TargetType != "task" {
 			return apierrors.Fields("targetType", "enum")
+		}
+		if err := work.ValidateCreateChangeFields(change); err != nil {
+			return err
 		}
 	}
 	return nil

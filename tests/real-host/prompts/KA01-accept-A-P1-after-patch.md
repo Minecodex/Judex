@@ -1,0 +1,7 @@
+继续KA01/U0产品计划owner。仅在A24已accepted、A-P2已accepted、A-P1通过真实模型reference_task提案及全部浏览器审批正式引用A24后执行。本人CLI plan show/review c6308a0a-32c1-4f4b-9717-3755aaa81d00，核对仍active/owner本人/实时version、referenceTaskIds恰A24 8b355144-610b-4349-8031-662cb3174ee0；plan review.manifest应为六个原任务+A24引用，共七项独立accepted快照，不复制任务，A24仍owning A-P2。完整taskId/version/acceptanceId取实读。
+
+按原正式goal/criteria整体复核可启动缺陷小站API/Web（CRUD、状态、Unicode字面过滤/%/_、排序/分页/合法极大页码、错误400/409/500约定、语言/主题持久化、固定发布包与重启持久化）。已有本人固定原件独立A21/A23/A24证据与U4主题/回归为本轮依据：修补包ac1f9342-62c3-46fd-bb93-2edadab8e053 SHA15fe1472bab45a6f3ff495e7dcca1eaed6e3c180935a90df1c4c5c57bf9c4d3a；A24 API38/UI20/私有HTTP18/来源SHA29、原件字节27、两次重建相同；A23真实HTTP31+Edge21覆盖主题语言，不能重写旧A15 18/19为通过。A-P1标题v0.1是首版目标，正式goal为功能性可启动小站；本次明确接受已引用v0.1.1修补交付完成该目标，旧v0.1三个500和旧失败完整保留，未测并发/性能等仍按约定不宣称通过，不放松标准。
+
+写review/A-P1-owner-review-after-patch.md与receipts/KA01-A-P1-owner-review.json，清楚区分原六task成果接受、原失败与当前修补后的整体功能接受。达成原正式条件且七manifest均有接受证据，本人 `plan accept c6308a0a-32c1-4f4b-9717-3755aaa81d00 --no-wait`，写receipts/KA01-A-P1-owner-intent.json。必须实际JSON对象：{"intent":完整原CLI JSON,"snapshotBasis":{"recommendation":"accept","productChecksPassed":true,"planVersion":实际整数,"ownerIdentityId":"2a2888fd-4c5b-457b-a622-33b358ca640c","tasks":[七项{"taskId":实际UUID,"version":实际整数,"acceptanceId":实际UUID}],"materialVersionIds":[本次实际固定修补/回归UUID],"reviewDoc":"review/A-P1-owner-review-after-patch.md"}}。不要把snapshotBasis写成字符串。
+
+停止待U0真实固定浏览器确认。发现实质缺证或冲突则记录并停止，不因七task accepted就自动断言计划通过；不替人确认、不改其他工作、不派生子代理。

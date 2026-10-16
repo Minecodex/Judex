@@ -1,0 +1,728 @@
+{
+  "at": "2026-10-16T03:30:01.019Z",
+  "version": "0.1.0-realhost.20261016.44",
+  "sourceTreeHash": "26776619f8627af5e39c914f8d7b4d7a45bbdef2bf82aed729122c5851e9ee15",
+  "scope": "Frozen current 30-task/9-plan real CLI business acceptance and documented functional/release checks; not exhaustive coverage of every conceivable state combination",
+  "acceptedTasks": 30,
+  "acceptedPlans": 9,
+  "taskAcceptances": [
+    {
+      "id": "e3516d27-b50c-4e4f-9d32-a68f5db6eefd",
+      "title": "R34-A11 需求与验收标准",
+      "status": "accepted",
+      "version": 11,
+      "reportId": "f06cc657-e99d-488f-a245-bc85a02eb20e",
+      "acceptanceId": "dd616715-d4cf-4b34-8fe5-42729ad972e2"
+    },
+    {
+      "id": "670efdc1-0ef9-4997-b09c-925cbbf21e69",
+      "title": "R34-A12 API 实现",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "06abdc3c-a089-4da4-a292-ab5526adf635",
+      "acceptanceId": "269fc27c-a9a6-4bc7-889a-9fec2516a976"
+    },
+    {
+      "id": "bb2eae14-5726-4a33-8125-3a28626068f5",
+      "title": "R34-A13 桌面页面与交互",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "398ed105-541f-4d7d-b157-a44d2f14b777",
+      "acceptanceId": "4f2e2d5d-b479-4912-8dab-2f5f57e7a0ef"
+    },
+    {
+      "id": "d94966d5-38f8-4e41-85d1-813145bc23ff",
+      "title": "R34-A14 接口与异常测试",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "1cfead37-298e-46af-8eee-b8e0d0bbb715",
+      "acceptanceId": "d3fcdb0f-8945-4647-ac57-8d3fde63a32a"
+    },
+    {
+      "id": "0ba42ed2-1799-40f2-9986-10304ff9785d",
+      "title": "R34-A15 桌面测试",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "320ae982-452b-4f9f-ac96-23010d35fe71",
+      "acceptanceId": "62f3769a-6945-4234-95d1-56c582c70803"
+    },
+    {
+      "id": "24243862-6d9a-4c20-bc19-ce59424187f5",
+      "title": "R34-A16 构建与交付包",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "1b8d34b7-40c2-4a29-8fdf-a281fe86d815",
+      "acceptanceId": "a24638ad-152f-45ba-b9b8-e7e3e6daa014"
+    },
+    {
+      "id": "3d2670a7-0ee9-446e-a6e4-bb8e05f2a8c3",
+      "title": "R34-A21 极大页码缺陷复现",
+      "status": "accepted",
+      "version": 7,
+      "reportId": "b98afbee-511b-48dd-9a24-90f5a1ca32d1",
+      "acceptanceId": "84206f94-0301-414a-a10e-37f794e0301b"
+    },
+    {
+      "id": "cafef453-2721-4b46-b3e6-2a82776d7f78",
+      "title": "R34-A22 极大页码修复",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "41ee678f-de3d-45c3-af7d-e2b745b4c1fe",
+      "acceptanceId": "e9151432-b999-4a4e-b638-15dba211a96e"
+    },
+    {
+      "id": "9553312e-991f-4ec8-ba23-201fb3a1f40d",
+      "title": "R34-A23 补丁独立回归",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "a0b8839a-1795-49a8-915b-fcfb3fd35bb2",
+      "acceptanceId": "f1f18bc6-76ba-4b9d-8b43-32e6e04c881b"
+    },
+    {
+      "id": "daa9e4c7-7d38-433d-8bbf-17d10a77316f",
+      "title": "R34-A24 v0.1.1 补丁交付包",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "2a3857a9-e466-42c8-bfae-1d16f6636670",
+      "acceptanceId": "60fc55fa-93f4-440a-b333-f8bc08be8b89"
+    },
+    {
+      "id": "504205ae-4ea2-4a0d-942c-34e4a0a6be33",
+      "title": "R34-A31 固定基准与性能目标",
+      "status": "accepted",
+      "version": 7,
+      "reportId": "cd2e3d76-2173-4ecd-9874-fd911dbacd4f",
+      "acceptanceId": "d8e227c7-dba7-4e1b-a519-56998c090d05"
+    },
+    {
+      "id": "ed9ee3c7-a82e-410f-8363-fefbe56e9b0f",
+      "title": "R34-A32 列表性能改进",
+      "status": "accepted",
+      "version": 7,
+      "reportId": "508a5455-0e6b-4248-b506-b6901a97e7ab",
+      "acceptanceId": "0a9fb705-3c61-4427-8175-a48009c146fe"
+    },
+    {
+      "id": "bd14956e-1247-4cba-b649-4f74bc22c55d",
+      "title": "R34-A33 独立性能比较",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "8133959c-2d57-4681-b704-d6e23070bb01",
+      "acceptanceId": "ec25d0f9-a30d-4b02-8e5b-5c6ec8d5636b"
+    },
+    {
+      "id": "3f769fb2-3540-4a1d-8514-9798e06f6ac1",
+      "title": "R34-A41 故障诊断",
+      "status": "accepted",
+      "version": 7,
+      "reportId": "f3506909-5eb2-44ac-a3bf-029180023cd3",
+      "acceptanceId": "7c085c21-3867-4dd1-83a1-597f5b636c22"
+    },
+    {
+      "id": "87fd1e39-229a-4375-b99c-d3cfc35682b5",
+      "title": "R34-A42 恢复与结果",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "4cd9c8f3-d1d4-4107-a15b-b99db9a1d386",
+      "acceptanceId": "101946d4-c688-42b9-9f50-ea92d14135de"
+    },
+    {
+      "id": "75ed19fb-3699-4964-9b34-fbd24587912c",
+      "title": "R34-A43 恢复验证和复盘",
+      "status": "accepted",
+      "version": 7,
+      "reportId": "d7958f56-9b96-4e7e-99f8-b3feff9ca589",
+      "acceptanceId": "674e4d62-593d-432a-9103-789f04fb622b"
+    },
+    {
+      "id": "aea9930c-6402-4775-8591-967bcf51cbff",
+      "title": "R34-A51 集成已批准视觉资产",
+      "status": "accepted",
+      "version": 7,
+      "reportId": "78179d61-0cf7-4678-956e-6d24b017256e",
+      "acceptanceId": "6f652b9a-cfc8-4435-9b9e-f5cd7b42ad91"
+    },
+    {
+      "id": "47404d4b-e380-445c-8208-a9a28060701e",
+      "title": "R34-A52 整合说明与质量材料",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "3d459665-c2ec-4dad-bec8-df1444e4feb4",
+      "acceptanceId": "1201bb11-7d8f-44ec-a031-03fd3fff3c8c"
+    },
+    {
+      "id": "c977ab04-51d6-4b09-b8fc-b21fd312dd7c",
+      "title": "R34-A53 联合回归",
+      "status": "accepted",
+      "version": 6,
+      "reportId": "bfe46799-07d9-4298-9ece-e60d0e23a2f0",
+      "acceptanceId": "788d20b0-5f8a-44a0-bbd0-3d5f88c47468"
+    },
+    {
+      "id": "35e061ca-f7d7-46c7-a4a8-2e42a40a54b1",
+      "title": "R34-A54 最终发布包",
+      "status": "accepted",
+      "version": 9,
+      "reportId": "cb0a390a-dc3a-442c-905f-78b70c66a0fe",
+      "acceptanceId": "bf0cf139-c010-49b8-9528-cd54f5223d21"
+    },
+    {
+      "id": "1232c107-f3b7-4b1d-85e9-651378db4ceb",
+      "title": "R34-B11 设计约束和需求",
+      "status": "accepted",
+      "version": 6,
+      "reportId": "fde32bc3-8f71-44c7-bc53-b9492783bdd8",
+      "acceptanceId": "4cb0aed9-57f0-4d05-b017-3f6c3d0e2fc1"
+    },
+    {
+      "id": "fde36877-a916-48ec-91e3-94f8e12ac30f",
+      "title": "R34-B12 PNG主视觉和SVG可编辑标识源",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "cb262da4-b487-41c1-b5de-4f846209aeaa",
+      "acceptanceId": "968fb505-6adf-4171-8d6b-0e498e905263"
+    },
+    {
+      "id": "04ebc4b6-61b0-4f7b-95db-cf4b24576545",
+      "title": "R34-B13 独立品牌审阅报告",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "060b9c27-4668-42d6-81e6-d2a43db35518",
+      "acceptanceId": "5a0ad8cd-6f4f-48bd-9906-6f02298700c9"
+    },
+    {
+      "id": "af3f233f-1da6-40b7-8df1-60d4bafc56f4",
+      "title": "R34-B21 桌面尺寸和布局变体",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "cb4e4955-ceb1-464c-be30-86dd573a9f71",
+      "acceptanceId": "39d36ae7-c544-4247-89d7-9f7b99213f0f"
+    },
+    {
+      "id": "644016e2-aa3d-4877-bb6e-1ba8cbda422c",
+      "title": "R34-B22 透明素材与导出清单",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "f207567b-32c8-4ef1-a3b2-b00065631c97",
+      "acceptanceId": "422fc042-655a-42ed-b4a5-4d0686d719ab"
+    },
+    {
+      "id": "387cf206-4c2c-4826-adb6-4557600154a6",
+      "title": "R34-C11 多工作表 XLSX 公式图表",
+      "status": "accepted",
+      "version": 6,
+      "reportId": "2f1a71d3-fcc5-498a-ab33-42002a02caa9",
+      "acceptanceId": "066d61f6-bd9e-48ee-8381-4234ae9b636c"
+    },
+    {
+      "id": "4ae3fd6e-d4a7-4d97-a5ed-498064c47119",
+      "title": "R34-C12 DOCX 质量报告及 PDF",
+      "status": "accepted",
+      "version": 12,
+      "reportId": "eea22e9c-29d0-4e55-99a3-aa5efff03912",
+      "acceptanceId": "7b4c5aa6-1af7-4ad3-9a76-27ace112ea45"
+    },
+    {
+      "id": "6c7cb4de-dcd3-47fb-a510-6ab5ce805d54",
+      "title": "R34-C13 来源/数值一致性核对报告",
+      "status": "accepted",
+      "version": 7,
+      "reportId": "7a2c97b3-e5d6-4159-bade-7cb6349dd828",
+      "acceptanceId": "f518cea2-b5ac-4f1f-b2b2-0d4f8bd3a58e"
+    },
+    {
+      "id": "179356f8-97c7-4144-8344-7a8f125fe9a0",
+      "title": "R34-C21 PPTX 汇报及 PDF",
+      "status": "accepted",
+      "version": 7,
+      "reportId": "fd5a60d6-1d53-4590-930f-bde3f4154cbf",
+      "acceptanceId": "44b29f7a-b0b2-4518-9acf-79ad8575fe3b"
+    },
+    {
+      "id": "e451823e-8e94-444e-97d4-93ff98c49904",
+      "title": "R34-C22 图表/数值/版面核对报告",
+      "status": "accepted",
+      "version": 5,
+      "reportId": "a5a3f08e-d86f-4f53-9f78-fd5f6532de6b",
+      "acceptanceId": "0209bc84-9697-4177-b981-f1bae1409ae8"
+    }
+  ],
+  "plans": [
+    {
+      "id": "6dd72802-97ba-4c80-94c3-f1e7782ab01f",
+      "title": "R34-A-P1 MiniIssue v0.1 首版交付",
+      "status": "accepted",
+      "version": 3
+    },
+    {
+      "id": "28874747-f88e-4a30-8b0b-1e6445abfaae",
+      "title": "R34-A-P2 MiniIssue v0.1.1 极大页码缺陷修复",
+      "status": "accepted",
+      "version": 2
+    },
+    {
+      "id": "5935784b-a032-40b8-9d4b-41f311ce994f",
+      "title": "R34-A-P3 MiniIssue 列表查询性能改进",
+      "status": "accepted",
+      "version": 2
+    },
+    {
+      "id": "1cdb7b66-e5d8-4738-adf2-4fe30987421e",
+      "title": "R34-A-P4 MiniIssue 测试服务不可用演练",
+      "status": "accepted",
+      "version": 2
+    },
+    {
+      "id": "f09b3135-532f-42ce-a268-0d57195313db",
+      "title": "R34-A-P5 MiniIssue 综合版本交付",
+      "status": "accepted",
+      "version": 7
+    },
+    {
+      "id": "684b3782-241a-4d41-b389-2c828478fc53",
+      "title": "R34-B-P1 首版视觉方案",
+      "status": "accepted",
+      "version": 2
+    },
+    {
+      "id": "7ec86b23-ee4f-4eb3-9f4a-8b1dfc5e1dc9",
+      "title": "R34-B-P2 适配与交付素材",
+      "status": "accepted",
+      "version": 2
+    },
+    {
+      "id": "71a5b2aa-b8d1-48af-926f-93f0563d7266",
+      "title": "R34-C-P1 质量分析报告",
+      "status": "accepted",
+      "version": 2
+    },
+    {
+      "id": "cfc747f1-2f9a-4a68-a0af-e4ec63eca738",
+      "title": "R34-C-P2 发布汇报材料",
+      "status": "accepted",
+      "version": 2
+    }
+  ],
+  "checks": {
+    "go": true,
+    "vet": true,
+    "web": true,
+    "desktop": true,
+    "controlledProductionRecheck": true,
+    "realModelBrowser": true,
+    "realRoutingBrowser": true,
+    "realRoutingIndependentSemantics": true,
+    "explicitLive19": true,
+    "release": true,
+    "localPrefixProtocol": true,
+    "httpContracts157": true
+  },
+  "httpContracts": {
+    "test": "TestProductionHTTPResponsesMatchOpenAPI",
+    "passed": true,
+    "successOperations": 157,
+    "anonymousProtectedOperations": 149,
+    "source": "go-tests44.jsonl",
+    "scope": "Actual current request and response validation against OpenAPI; historical155/147 counts are superseded for release44"
+  },
+  "testSummary": {
+    "go": {
+      "passed": 312,
+      "failed": 0,
+      "defaultLiveTestsSkipped": 15,
+      "packagesWithoutTests": 35
+    },
+    "web": {
+      "passed": 67,
+      "scope": "same unchanged frontend source as release44"
+    },
+    "desktop": {
+      "initialPassed": 111,
+      "initialFailed": 1,
+      "focusedRecheckPassed": 1,
+      "totalCovered": 112
+    },
+    "productionBrowser": {
+      "initialPassed": 61,
+      "initialFailed": 5,
+      "initialExplicitLiveSkipped": 2,
+      "focusedControlledRecheckPassed": 5,
+      "realModelC02Passed": 1,
+      "realRoutingWR01Passed": 1,
+      "totalCovered": 68,
+      "independentRoutingSemanticCases": 5,
+      "scope": "Real PG/S3/browser/native CLI; controlled gateway cases and real APImart enabled/high cases are separately recorded. WR01 free analysis was not awaited and is excluded from its five semantic results."
+    },
+    "explicitLive": {
+      "initialPassed": [
+        "TestLiveResearchScenario",
+        "TestLiveDesignScenarioDisagreement",
+        "TestLiveCancellation",
+        "TestLiveProviderContract",
+        "TestLiveSandboxLifecycleAndExec",
+        "TestLiveRunSandboxLazyAndKill",
+        "TestLiveAgentBashInRealSandbox",
+        "TestLiveScriptedAgentBashInRealSandbox",
+        "TestPositionDifferentiation",
+        "TestDeliveryPreReview",
+        "TestRejectReviseReanalyze",
+        "TestBugRootCause",
+        "TestAgentReadsMaterialContent",
+        "TestLongContextCompression",
+        "TestMultiAgentCoordination",
+        "TestMultiAgentSinglePosition"
+      ],
+      "initialFailedRetained": [
+        "TestLiveBudgetEnforcement",
+        "TestLiveWorkflowRouting",
+        "TestFullBusinessClosedLoop"
+      ],
+      "threeFocusedRechecksPassed": true,
+      "totalTopLevelCovered": 19,
+      "scope": "Real-provider and owned real OpenSandbox tests from their recorded source candidates; not claimed as another new business task loop"
+    },
+    "binaryProvenance": {
+      "sourceBuiltBrowserCLI": {
+        "cli": "0.1.0-dev",
+        "commit": "unknown",
+        "protocol": "1"
+      },
+      "packagedReleaseCLI": {
+        "cli": "0.1.0-realhost.20261016.44",
+        "commit": "fa70c0e-dirty",
+        "protocol": "1"
+      },
+      "scope": "Browser fixtures compile current release44 source without ldflags, so their binary versions are dev. Packaged44 CLI/Skill and deployed44 native campaign are independently verified; no claim that the browser fixture used the packaged binary."
+    }
+  },
+  "jointReports": [
+    "fd5e7a19-aa15-4733-ac0c-51b4f889731a",
+    "bfe46799-07d9-4298-9ece-e60d0e23a2f0"
+  ],
+  "finalMaterials": [
+    {
+      "file": "a54-inputs.json",
+      "versionId": "1898d94b-158e-4b27-8608-cb891322a5f1",
+      "sha256": "b2348bb5670f15989043fbc41c3bad341ea48483d4561517da0f3fb0b336dedf"
+    },
+    {
+      "file": "a54-desktop-check.js",
+      "versionId": "4a1afe82-f300-4744-85aa-9a4b4b1bbd94",
+      "sha256": "fce10ea0d981b9f7b8dc06860d19f6356d47eed18e79726033a1d6a1ddae1c44"
+    },
+    {
+      "file": "miniissue-v0.2.0-final.zip",
+      "versionId": "43a387fe-3d4c-40be-bbb8-b4a997e88e92",
+      "sha256": "850e00f29d2887ff84b7a6a1fc6c0eb5a39031d90c0b648af658d0e675466ee2",
+      "bytes": 10087676
+    },
+    {
+      "file": "a54-build-rev3-run1.json",
+      "versionId": "dd9c8f82-68fb-4c5a-b62f-dab4094484e7",
+      "sha256": "d81e53cec8de01570c645141cf77760674b678a9d5857d8c15a4f0dbb9fec7f7",
+      "bytes": 566
+    },
+    {
+      "file": "a54-build-rev3-run2.json",
+      "versionId": "028dab17-ca60-4ae6-966f-6de50223ac01",
+      "sha256": "698d10a768c1360ec62bb09c923ddd35dc024acdbe195a01285906f4eba1a87a",
+      "bytes": 566
+    },
+    {
+      "file": "a54-build-compare-rev3.json",
+      "versionId": "06de8246-3f29-43ec-b305-fa550de9e89a",
+      "sha256": "741f2e4e5113d41b41dad5fa396bab8b37f0d9c315df5fc37fdc450dbd8a7ef6",
+      "bytes": 551
+    },
+    {
+      "file": "a54-replay-rev3.json",
+      "versionId": "ca5bb830-fbb1-43a0-8eca-f9a93204c135",
+      "sha256": "03d38a8448fc6a7c8d9f69489aa7bea66a3fce47c2d9cab64f79fd6941d964e7",
+      "bytes": 20327
+    },
+    {
+      "file": "desktop-smoke.png",
+      "versionId": "a24df493-081b-46d2-ad26-b6f170f82f59",
+      "sha256": "2a43d70b2b650230aa3b8efb2d536f9eb2cd5d92894c9eac3520d57f9fd36f27",
+      "bytes": 49253
+    },
+    {
+      "file": "desktop-smoke.png",
+      "versionId": "b538c492-228b-4431-8b06-796d8f0be9a1",
+      "sha256": "2a43d70b2b650230aa3b8efb2d536f9eb2cd5d92894c9eac3520d57f9fd36f27",
+      "bytes": 49253
+    },
+    {
+      "file": "a54-step2-build-rev3.py",
+      "versionId": "570b1d5c-e8cc-47f1-8c55-08302fdef56f",
+      "sha256": "a29144ae20e3d9a83fd2282835fb4d0feb90cb9a68639325539732e1686a27b5",
+      "bytes": 26689
+    },
+    {
+      "file": "a54-step3-replay-rev3.py",
+      "versionId": "a5ed46c9-1f8c-4876-b2cc-99ba51288023",
+      "sha256": "7c21dd7cedc9fd63361a8d1a9f9d40484b5d54a009b1183878aa7e25678aa7af",
+      "bytes": 20475
+    }
+  ],
+  "originalBusinessTablesUnchanged": 5,
+  "latestPublicAnalysis": {
+    "completed": 30,
+    "structuredWithBasis": 30,
+    "unknownToolEffects": 0
+  },
+  "native": {
+    "sessions": 14,
+    "actualCompactions": 91,
+    "naturalRefresh": [
+      {
+        "label": "KA02",
+        "rotations": 11
+      },
+      {
+        "label": "KA05",
+        "rotations": 17
+      }
+    ],
+    "earlyUnknownProviderCallsUpperBound": 84
+  },
+  "localMessagePrefix": {
+    "observedInvocations": 228,
+    "unobservedInvocations": 3,
+    "requests": 3239,
+    "comparisons": 3011,
+    "wholePreviousMessagesRetained": 2910,
+    "commonBytes": 719213670,
+    "completeMessageMatches": 127537,
+    "modelChanges": 0,
+    "toolChanges": 151
+  },
+  "normal": {
+    "version": "0.1.0-realhost.20261016.44",
+    "helmRevision": 24,
+    "namespace": "judex",
+    "namespaceUID": "395c358e-6d5d-42b7-9176-5b721a6dd640",
+    "url": "http://127.0.0.1:18097",
+    "sameTestedImageID": "sha256:9168d5540d07a7527da11e18a3a1f80e2891f20e71ac074b97f6b1de64c0df9f",
+    "sameFrozenBinary": true,
+    "sameFrozenDistribution": true,
+    "pvcsUnchanged": true,
+    "dataPreserved": true,
+    "tables": 84,
+    "unchangedTables": 83,
+    "differences": [
+      "model_catalog"
+    ],
+    "verifiedMaterialEntries": 1,
+    "configuration": {
+      "at": "2026-10-16T03:18:38.270Z",
+      "passed": true,
+      "changedPaths": [
+        "image.tag",
+        "server.materialProjection.image"
+      ],
+      "allOtherValuesIdentical": true,
+      "modelAndStorageAndSecretsPreserved": true
+    },
+    "reviewedDifference": {
+      "at": "2026-10-16T03:16:19.077Z",
+      "passed": true,
+      "scope": "All83 other tables byte-hash equal; same3 model catalog UUIDs and every non-updated_at field recursively identical. Only actual startup refresh timestamps changed.",
+      "catalogRows": 3,
+      "sameIds": true,
+      "changes": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "changedFields": [
+            "updated_at"
+          ],
+          "beforeUpdatedAt": "2026-10-15T06:50:45.785883+00:00",
+          "afterUpdatedAt": "2026-10-16T03:10:39.621953+00:00",
+          "nonTimestampFieldsIdentical": true
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "changedFields": [
+            "updated_at"
+          ],
+          "beforeUpdatedAt": "2026-10-15T06:50:45.785883+00:00",
+          "afterUpdatedAt": "2026-10-16T03:10:39.621953+00:00",
+          "nonTimestampFieldsIdentical": true
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000003",
+          "changedFields": [
+            "updated_at"
+          ],
+          "beforeUpdatedAt": "2026-10-15T06:50:45.785883+00:00",
+          "afterUpdatedAt": "2026-10-16T03:10:39.621953+00:00",
+          "nonTimestampFieldsIdentical": true
+        }
+      ],
+      "materialEntriesUnchanged": true,
+      "pvcsUnchanged": true,
+      "backupStillRetained": true
+    },
+    "afterCleanup": {
+      "at": "2026-10-16T03:28:33.749Z",
+      "passed": true,
+      "version": "0.1.0-realhost.20261016.44",
+      "normalNamespaceUID": "395c358e-6d5d-42b7-9176-5b721a6dd640",
+      "readyStatus": 200,
+      "workloads": [
+        {
+          "kind": "Deployment",
+          "name": "judex",
+          "desired": 1,
+          "ready": 1
+        },
+        {
+          "kind": "Deployment",
+          "name": "judex-judex-opensandbox-server",
+          "desired": 1,
+          "ready": 1
+        },
+        {
+          "kind": "Deployment",
+          "name": "judex-material-converter",
+          "desired": 1,
+          "ready": 1
+        },
+        {
+          "kind": "Deployment",
+          "name": "opensandbox-controller-manager",
+          "desired": 1,
+          "ready": 1
+        },
+        {
+          "kind": "StatefulSet",
+          "name": "judex-postgresql",
+          "desired": 1,
+          "ready": 1
+        },
+        {
+          "kind": "StatefulSet",
+          "name": "judex-seaweedfs",
+          "desired": 1,
+          "ready": 1
+        }
+      ],
+      "pvcs": [
+        {
+          "name": "data-judex-postgresql-0",
+          "uid": "46dc0fe5-de87-4cb0-8691-9a2372c79f19"
+        },
+        {
+          "name": "data-judex-seaweedfs-0",
+          "uid": "cc2641b0-34cb-425a-b2e6-f09aa71d98f5"
+        }
+      ],
+      "testNamespacesAbsent": true,
+      "ownedTestRBACAbsent": true,
+      "backupHelperAbsent": true,
+      "url": "http://127.0.0.1:18097"
+    }
+  },
+  "archive": {
+    "namespaceUID": "117094e4-232b-44e2-9372-c195fcb45071",
+    "runtimeUID": "31102239-d14d-4ff9-93ee-9de33ac93e59",
+    "verifiedMaterialEntries": 478,
+    "files": [
+      {
+        "file": "database-without-model-observation.sql.gz",
+        "bytes": 34604296,
+        "sha256": "9b091d4347f45fdd7660c9fd0123d83c8b393ca077071e0de2f43cc6def9146a"
+      },
+      {
+        "file": "durable-model-accounting.jsonl.gz",
+        "bytes": 47540,
+        "sha256": "71887bfc48a743fa3fd6038882e77f58681b8fd03107c8ccac045087b0a6dfa5"
+      },
+      {
+        "file": "objects.tar",
+        "bytes": 123393024,
+        "sha256": "a5503a4610b0e38560aab9a53906e079bada17ee7ea464d8a96c5dc56f9bf7e2"
+      }
+    ],
+    "privateBackup": true
+  },
+  "cleanup": {
+    "namespaces": [
+      "judex-ui-full-5c7e9bb1",
+      "judex-ui-full-5c7e9bb1-sandboxes"
+    ],
+    "uids": [
+      "117094e4-232b-44e2-9372-c195fcb45071",
+      "31102239-d14d-4ff9-93ee-9de33ac93e59"
+    ],
+    "absent": true,
+    "normalUpgradeVerifiedBeforeDelete": true,
+    "sourceDirectoriesDeleted": false,
+    "ownedLocalProcessesStopped": true,
+    "normalBackupHelper": {
+      "at": "2026-10-16T03:23:29.028Z",
+      "namespace": "judex",
+      "namespaceUID": "395c358e-6d5d-42b7-9176-5b721a6dd640",
+      "pod": "judex-upgrade-backup-20261016-44",
+      "uid": "36bfef50-225f-4fdf-b76e-26abd5cf2b34",
+      "deleted": true,
+      "backupHashesValidated": true,
+      "normalWorkloadsUntouched": true
+    },
+    "ownedTestRBAC": [
+      {
+        "kind": "ClusterRole",
+        "name": "judex-ui-full-5c7e9bb1-test-opensandbox-server-role",
+        "uid": "5ca71480-7abb-41b6-b245-cba3a49ba5d5"
+      },
+      {
+        "kind": "ClusterRoleBinding",
+        "name": "judex-ui-full-5c7e9bb1-test-opensandbox-server-rolebinding",
+        "uid": "b19be664-9ad3-4bb0-b1f6-cbb102dd6d8d",
+        "roleRef": {
+          "apiGroup": "rbac.authorization.k8s.io",
+          "kind": "ClusterRole",
+          "name": "judex-ui-full-5c7e9bb1-test-opensandbox-server-role"
+        },
+        "subjects": [
+          {
+            "kind": "ServiceAccount",
+            "name": "judex-ui-full-5c7e9bb1-test-opensandbox-server",
+            "namespace": "judex-ui-full-5c7e9bb1"
+          }
+        ]
+      }
+    ]
+  },
+  "excluded": [
+    "long-term stability",
+    "scale/load",
+    "provider cache-hit and billing"
+  ],
+  "unexecuted": [
+    {
+      "scenario": "held-response in-flight workflow mutation",
+      "reason": "automatic approval rejected the experiment; exact rejection reason unavailable",
+      "testedAlternative": "ordinary sequential publication and fresh model reading of both old and new versions"
+    }
+  ],
+  "limits": [
+    "Actual vendor429 was not naturally observed; controlled429-to-real-provider recovery is separately verified",
+    "Early interrupted request counts remain unknown with upper bound84; later aborted/unknown usage observations are retained",
+    "Office rendering used LibreOffice and pypdfium2; no licensed native Office recovery claim",
+    "Real Kimi evidence does not prove other native AI hosts"
+  ],
+  "localEvidenceRoot": ".cache/real-host/20261015-full-regression",
+  "documentCommandNegativeControl": {
+    "scope": "Operator-only actual negative control using fixed submitted checker; native independent current-candidate runs are separate",
+    "checkerVersionId": "a5ed46c9-1f8c-4876-b2cc-99ba51288023",
+    "checkerSha256": "7c21dd7cedc9fd63361a8d1a9f9d40484b5d54a009b1183878aa7e25678aa7af",
+    "rejectedV6ZipSha256": "238c6077dd5a3ef5b6f653fd48109fbb8082c783ca8764cef2c1bb13131cbfa1",
+    "expectedFailureObserved": true
+  },
+  "publicSummarySemanticReview": {
+    "scope": "Selected latest A53/A54/B22/C22 public summaries and basis inspected; detailed independent native reviews remain the acceptance evidence",
+    "latestSourceAndFixedMaterialsMatched": true,
+    "historicalMetadataCaveat": "C22 public summary flagged an auxiliary zip-verification filename/count prose discrepancy; original report is retained. Independent review verified actual11 ZIP entries,64 numeric/source checks and8 rendered/viewed pages. Narrative metadata is not treated as additional measured evidence."
+  }
+}

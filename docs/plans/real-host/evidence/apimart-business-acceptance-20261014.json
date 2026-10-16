@@ -1,0 +1,577 @@
+{
+  "observedAt": "2026-10-14T15:53:34.098Z",
+  "namespace": "judex-ui-realhost-20261012105211-5d4b9c",
+  "namespaceUid": "79725dd1-d0de-4810-999c-4e1d6224a099",
+  "scope": "actual public named U0 current business/acceptance reads; not full scenario PASS",
+  "scenes": [
+    {
+      "scene": "A",
+      "projectId": "21a13532-7929-4c6c-99a7-01e044eee64e",
+      "plans": [
+        {
+          "id": "af7b4c88-0fdd-4b39-9223-53735442fd40",
+          "title": "A-P5 MiniIssue 综合版本交付",
+          "status": "accepted",
+          "version": 6,
+          "ownerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "referenceTaskIds": [
+            "558dea8f-1473-4618-b6c4-fc7e64d76869",
+            "8b355144-610b-4349-8031-662cb3174ee0",
+            "ab8a25ab-e64a-4be0-9dd7-36202c018b82",
+            "f118d0a6-cb9c-42fa-8a78-60947a1bf739"
+          ],
+          "latestAcceptanceId": "cd720fed-420c-4816-96bb-44d2c65379ed"
+        },
+        {
+          "id": "37e495cf-7b96-49aa-848e-5ea92ae38660",
+          "title": "A-P4 MiniIssue 测试服务不可用演练",
+          "status": "accepted",
+          "version": 2,
+          "ownerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "referenceTaskIds": [],
+          "latestAcceptanceId": "0e3e8416-652c-4518-8bae-22f250ca6c53"
+        },
+        {
+          "id": "a82fd017-a411-47e1-975e-ff4565070273",
+          "title": "A-P3 MiniIssue 列表查询性能改进",
+          "status": "accepted",
+          "version": 2,
+          "ownerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "referenceTaskIds": [],
+          "latestAcceptanceId": "b80493d0-1ceb-4d9b-b3c9-050ee040aad3"
+        },
+        {
+          "id": "1c27d436-d46b-492f-90d1-7e87181ffedd",
+          "title": "A-P2 MiniIssue v0.1.1 极大页码缺陷修复",
+          "status": "accepted",
+          "version": 2,
+          "ownerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "referenceTaskIds": [],
+          "latestAcceptanceId": "f12980c6-894e-4706-a731-fb28c620753f"
+        },
+        {
+          "id": "c6308a0a-32c1-4f4b-9717-3755aaa81d00",
+          "title": "A-P1 MiniIssue v0.1 首版交付",
+          "status": "accepted",
+          "version": 3,
+          "ownerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "referenceTaskIds": [
+            "8b355144-610b-4349-8031-662cb3174ee0"
+          ],
+          "latestAcceptanceId": "f08165b0-c232-4596-813f-6a72ca167800"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "f44ff766-21c4-4f4a-9fd0-d07395762ef2",
+          "title": "A54 最终发布包",
+          "status": "accepted",
+          "version": 7,
+          "planId": "af7b4c88-0fdd-4b39-9223-53735442fd40",
+          "workflowId": "c56402f6-f6b8-51ba-9604-288809f935c2",
+          "nodeId": "aw1-build",
+          "latestReportId": "b56c3dc3-d13a-4a2c-9cb5-059bdc1bb74b",
+          "latestAcceptanceId": "389058ce-c56e-4bac-9c8c-4e3f489f2cd8",
+          "reviewerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "participants": [
+            "b861062d-ef8c-48ea-a591-0445000bb32d"
+          ]
+        },
+        {
+          "id": "9a770abe-8cbc-42bc-9ba1-3b12b749a9c6",
+          "title": "A52 整合说明与质量材料",
+          "status": "accepted",
+          "version": 5,
+          "planId": "af7b4c88-0fdd-4b39-9223-53735442fd40",
+          "workflowId": "c56402f6-f6b8-51ba-9604-288809f935c2",
+          "nodeId": "aw1-int",
+          "latestReportId": "ebac4cb3-760d-44f4-a2af-4a98fdafe28a",
+          "latestAcceptanceId": "0009a958-b12d-4188-beb0-6473a51966de",
+          "reviewerIdentityId": "af739ffe-a283-4caf-b0ab-67e903e55704",
+          "participants": [
+            "2a2888fd-4c5b-457b-a622-33b358ca640c"
+          ]
+        },
+        {
+          "id": "8088acb5-e3b6-48f5-b5f7-885b5a5ae78b",
+          "title": "A53 联合回归",
+          "status": "accepted",
+          "version": 6,
+          "planId": "af7b4c88-0fdd-4b39-9223-53735442fd40",
+          "workflowId": "c56402f6-f6b8-51ba-9604-288809f935c2",
+          "nodeId": "aw1-test-a",
+          "latestReportId": "609a9099-af51-4113-9363-2885e8abb82d",
+          "latestAcceptanceId": "507af02b-4ae4-42c5-9cd7-3b0561526224",
+          "reviewerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "participants": [
+            "846abe01-c033-40a1-8b80-63102eacf4ca",
+            "af739ffe-a283-4caf-b0ab-67e903e55704"
+          ]
+        },
+        {
+          "id": "7739201d-eb45-4972-9385-7fac5c8933c9",
+          "title": "A51 集成已批准视觉资产",
+          "status": "accepted",
+          "version": 4,
+          "planId": "af7b4c88-0fdd-4b39-9223-53735442fd40",
+          "workflowId": "c56402f6-f6b8-51ba-9604-288809f935c2",
+          "nodeId": "aw1-fe",
+          "latestReportId": "3582f432-62a9-4ae3-aeda-a796a350e2c4",
+          "latestAcceptanceId": "e256d7d2-7e84-4d5d-b40e-10671f1cacad",
+          "reviewerIdentityId": "846abe01-c033-40a1-8b80-63102eacf4ca",
+          "participants": [
+            "ad102867-50a6-4399-8567-f3d6a8db71c4"
+          ]
+        },
+        {
+          "id": "f1813cb9-d4b5-4eec-b2f6-c669437674c0",
+          "title": "A41 故障诊断",
+          "status": "accepted",
+          "version": 4,
+          "planId": "37e495cf-7b96-49aa-848e-5ea92ae38660",
+          "workflowId": "4b1c2af6-6945-59ce-a04f-43c852313146",
+          "nodeId": "aw4-diag",
+          "latestReportId": "bffdff28-005d-487a-b9d5-7d10ef022508",
+          "latestAcceptanceId": "98019d3f-2854-4904-85fe-173a1ad64d54",
+          "reviewerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "participants": [
+            "b861062d-ef8c-48ea-a591-0445000bb32d"
+          ]
+        },
+        {
+          "id": "af5767fe-b777-484a-9831-5b403d8a1752",
+          "title": "A42 恢复与结果",
+          "status": "accepted",
+          "version": 5,
+          "planId": "37e495cf-7b96-49aa-848e-5ea92ae38660",
+          "workflowId": "4b1c2af6-6945-59ce-a04f-43c852313146",
+          "nodeId": "aw4-restore",
+          "latestReportId": "90279413-bf41-4cac-8ec7-41b6632796b7",
+          "latestAcceptanceId": "3f4523b8-0976-4a33-a202-c328b73bdca7",
+          "reviewerIdentityId": "846abe01-c033-40a1-8b80-63102eacf4ca",
+          "participants": [
+            "4b02a3ee-4c71-488a-a985-827d641558f7"
+          ]
+        },
+        {
+          "id": "ab8a25ab-e64a-4be0-9dd7-36202c018b82",
+          "title": "A43 恢复验证和复盘",
+          "status": "accepted",
+          "version": 5,
+          "planId": "37e495cf-7b96-49aa-848e-5ea92ae38660",
+          "workflowId": "4b1c2af6-6945-59ce-a04f-43c852313146",
+          "nodeId": "aw4-review",
+          "latestReportId": "631d92ef-6110-4a21-a330-9537640560a7",
+          "latestAcceptanceId": "f2eeb4c8-73fe-4ce0-950f-53ca57f5fa8e",
+          "reviewerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "participants": [
+            "af739ffe-a283-4caf-b0ab-67e903e55704"
+          ]
+        },
+        {
+          "id": "f118d0a6-cb9c-42fa-8a78-60947a1bf739",
+          "title": "A33 独立性能比较",
+          "status": "accepted",
+          "version": 5,
+          "planId": "a82fd017-a411-47e1-975e-ff4565070273",
+          "workflowId": "a56f66a0-ef11-5797-b244-34a18d43c322",
+          "nodeId": "aw3-compare",
+          "latestReportId": "9cf5b493-42fe-4c89-8d4e-bb8762062070",
+          "latestAcceptanceId": "e119876c-c196-4911-b860-b0b27c35fca0",
+          "reviewerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "participants": [
+            "846abe01-c033-40a1-8b80-63102eacf4ca"
+          ]
+        },
+        {
+          "id": "adee2423-ea4c-4852-9f94-33dd791f8014",
+          "title": "A31 固定基准与性能目标",
+          "status": "accepted",
+          "version": 4,
+          "planId": "a82fd017-a411-47e1-975e-ff4565070273",
+          "workflowId": "a56f66a0-ef11-5797-b244-34a18d43c322",
+          "nodeId": "aw3-base",
+          "latestReportId": "3a3f786d-81f5-4d26-b6c7-bdccfeac0fa1",
+          "latestAcceptanceId": "a635b672-7ea2-4ef2-9ccd-b6a5ad5148cb",
+          "reviewerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "participants": [
+            "af739ffe-a283-4caf-b0ab-67e903e55704"
+          ]
+        },
+        {
+          "id": "558dea8f-1473-4618-b6c4-fc7e64d76869",
+          "title": "A32 列表性能改进",
+          "status": "accepted",
+          "version": 5,
+          "planId": "a82fd017-a411-47e1-975e-ff4565070273",
+          "workflowId": "a56f66a0-ef11-5797-b244-34a18d43c322",
+          "nodeId": "aw3-opt",
+          "latestReportId": "4a7f29a1-fdfe-4ed7-b1ca-cd1adcfbee24",
+          "latestAcceptanceId": "01841f0f-2c86-4951-9c95-cfc7528ed332",
+          "reviewerIdentityId": "846abe01-c033-40a1-8b80-63102eacf4ca",
+          "participants": [
+            "4b02a3ee-4c71-488a-a985-827d641558f7"
+          ]
+        },
+        {
+          "id": "8b355144-610b-4349-8031-662cb3174ee0",
+          "title": "A24 v0.1.1 补丁交付包",
+          "status": "accepted",
+          "version": 5,
+          "planId": "1c27d436-d46b-492f-90d1-7e87181ffedd",
+          "workflowId": "217ef1ef-c862-5dd1-9bb1-83e5633d7fea",
+          "nodeId": "aw2-patch",
+          "latestReportId": "1fe0cc55-579e-4df6-ad7d-4cbd9e9269eb",
+          "latestAcceptanceId": "2d17e37c-61ba-40e7-9b5f-02b6c2c32d40",
+          "reviewerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "participants": [
+            "b861062d-ef8c-48ea-a591-0445000bb32d"
+          ]
+        },
+        {
+          "id": "5d122599-59b0-45b7-ae41-92c14648afeb",
+          "title": "A23 补丁独立回归",
+          "status": "accepted",
+          "version": 5,
+          "planId": "1c27d436-d46b-492f-90d1-7e87181ffedd",
+          "workflowId": "217ef1ef-c862-5dd1-9bb1-83e5633d7fea",
+          "nodeId": "aw2-reg",
+          "latestReportId": "c6196c90-c763-49ba-a6c1-3e7c56134010",
+          "latestAcceptanceId": "11872951-fed2-4c8a-80fd-21ac315d66f2",
+          "reviewerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "participants": [
+            "846abe01-c033-40a1-8b80-63102eacf4ca"
+          ]
+        },
+        {
+          "id": "51f2d5ad-d241-4faa-ba12-7e7d1ef9b158",
+          "title": "A22 极大页码修复",
+          "status": "accepted",
+          "version": 5,
+          "planId": "1c27d436-d46b-492f-90d1-7e87181ffedd",
+          "workflowId": "217ef1ef-c862-5dd1-9bb1-83e5633d7fea",
+          "nodeId": "aw2-fix",
+          "latestReportId": "61189adc-e2ad-42c2-9c47-81dc86217255",
+          "latestAcceptanceId": "a2182a1d-e9b6-4077-9628-f9189d78ac63",
+          "reviewerIdentityId": "846abe01-c033-40a1-8b80-63102eacf4ca",
+          "participants": [
+            "4b02a3ee-4c71-488a-a985-827d641558f7"
+          ]
+        },
+        {
+          "id": "4b5478a9-8267-4c5a-b951-c3dcbd360a48",
+          "title": "A21 极大页码缺陷复现",
+          "status": "accepted",
+          "version": 4,
+          "planId": "1c27d436-d46b-492f-90d1-7e87181ffedd",
+          "workflowId": "217ef1ef-c862-5dd1-9bb1-83e5633d7fea",
+          "nodeId": "aw2-repro",
+          "latestReportId": "a068cfcd-273a-402d-b0b5-e46ac8f1c2bf",
+          "latestAcceptanceId": "664c01f6-6fb1-4fbb-86d9-6d6fdabe2582",
+          "reviewerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "participants": [
+            "af739ffe-a283-4caf-b0ab-67e903e55704"
+          ]
+        },
+        {
+          "id": "f3309487-a97d-4880-95ab-6eb1d290e69c",
+          "title": "A12 API 实现",
+          "status": "accepted",
+          "version": 7,
+          "planId": "c6308a0a-32c1-4f4b-9717-3755aaa81d00",
+          "workflowId": "c56402f6-f6b8-51ba-9604-288809f935c2",
+          "nodeId": "aw1-be",
+          "latestReportId": "332f38c3-585c-4310-b0a8-c323f51cb9fa",
+          "latestAcceptanceId": "efcd056b-870b-42de-a18c-30d0c519e8d5",
+          "reviewerIdentityId": "af739ffe-a283-4caf-b0ab-67e903e55704",
+          "participants": [
+            "4b02a3ee-4c71-488a-a985-827d641558f7"
+          ]
+        },
+        {
+          "id": "d110d23f-d64a-4fc9-925a-5fa221e356c3",
+          "title": "A11 需求与验收标准",
+          "status": "accepted",
+          "version": 4,
+          "planId": "c6308a0a-32c1-4f4b-9717-3755aaa81d00",
+          "workflowId": "c56402f6-f6b8-51ba-9604-288809f935c2",
+          "nodeId": "aw1-req",
+          "latestReportId": "a42cd19a-380c-4024-a736-26db3a5ae84c",
+          "latestAcceptanceId": "155e3029-1b94-472a-8fc0-e81836f41cc2",
+          "reviewerIdentityId": "af739ffe-a283-4caf-b0ab-67e903e55704",
+          "participants": [
+            "2a2888fd-4c5b-457b-a622-33b358ca640c"
+          ]
+        },
+        {
+          "id": "aa59f89c-3890-4a7f-92fa-82d4c2b62e66",
+          "title": "A14 接口与异常测试",
+          "status": "accepted",
+          "version": 5,
+          "planId": "c6308a0a-32c1-4f4b-9717-3755aaa81d00",
+          "workflowId": "c56402f6-f6b8-51ba-9604-288809f935c2",
+          "nodeId": "aw1-test-a",
+          "latestReportId": "206bdfad-6d06-4806-8a32-aea2d629bdf6",
+          "latestAcceptanceId": "c1a8ff3e-7ea5-4916-a425-76886b8542ed",
+          "reviewerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "participants": [
+            "af739ffe-a283-4caf-b0ab-67e903e55704"
+          ]
+        },
+        {
+          "id": "824d965b-d994-4440-9a59-56aab99ca708",
+          "title": "A15 桌面测试",
+          "status": "accepted",
+          "version": 5,
+          "planId": "c6308a0a-32c1-4f4b-9717-3755aaa81d00",
+          "workflowId": "c56402f6-f6b8-51ba-9604-288809f935c2",
+          "nodeId": "aw1-test-b",
+          "latestReportId": "4f082fef-890a-4dd7-b3eb-e05fdf9f58ee",
+          "latestAcceptanceId": "80a791f4-b829-4f9a-ba17-08ece68a3200",
+          "reviewerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "participants": [
+            "846abe01-c033-40a1-8b80-63102eacf4ca"
+          ]
+        },
+        {
+          "id": "6e009085-d73c-4fb5-bc03-8328915abf7b",
+          "title": "A16 构建与交付包",
+          "status": "accepted",
+          "version": 5,
+          "planId": "c6308a0a-32c1-4f4b-9717-3755aaa81d00",
+          "workflowId": "c56402f6-f6b8-51ba-9604-288809f935c2",
+          "nodeId": "aw1-build",
+          "latestReportId": "83fbebce-5990-451f-85dd-1f67e30b17df",
+          "latestAcceptanceId": "3c39b33c-d1b2-497e-bb82-58b7b82df6f1",
+          "reviewerIdentityId": "2a2888fd-4c5b-457b-a622-33b358ca640c",
+          "participants": [
+            "b861062d-ef8c-48ea-a591-0445000bb32d"
+          ]
+        },
+        {
+          "id": "3309af7c-36cf-4b38-8292-a3d3b232fdf7",
+          "title": "A13 桌面页面与交互",
+          "status": "accepted",
+          "version": 8,
+          "planId": "c6308a0a-32c1-4f4b-9717-3755aaa81d00",
+          "workflowId": "c56402f6-f6b8-51ba-9604-288809f935c2",
+          "nodeId": "aw1-fe",
+          "latestReportId": "4740cde6-7369-4d0b-b730-d79a80e42389",
+          "latestAcceptanceId": "8f61058a-daed-4642-9800-65eb02a6e845",
+          "reviewerIdentityId": "846abe01-c033-40a1-8b80-63102eacf4ca",
+          "participants": [
+            "ad102867-50a6-4399-8567-f3d6a8db71c4"
+          ]
+        }
+      ]
+    },
+    {
+      "scene": "B",
+      "projectId": "f8071fd6-1ffb-40ec-9a15-cfdd1492c93c",
+      "plans": [
+        {
+          "id": "bf8f77bf-f97a-4e69-9aab-82b15ad042be",
+          "title": "B-P2 适配与交付素材",
+          "status": "accepted",
+          "version": 2,
+          "ownerIdentityId": "16c0f8ec-5834-4333-b0f4-d25fa4b22200",
+          "referenceTaskIds": [],
+          "latestAcceptanceId": "712bfeb9-3cbb-4a8a-b791-b7922eacdb92"
+        },
+        {
+          "id": "806d7717-982e-4b2d-a57b-f6f473e16fe5",
+          "title": "B-P1 首版视觉方案",
+          "status": "accepted",
+          "version": 2,
+          "ownerIdentityId": "16c0f8ec-5834-4333-b0f4-d25fa4b22200",
+          "referenceTaskIds": [],
+          "latestAcceptanceId": "43ec1c18-1506-40d8-98c3-ac73aaa67a39"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "f8e45d61-9c82-4f08-b3c3-cf00bf0f82ae",
+          "title": "B22 透明素材与导出清单",
+          "status": "accepted",
+          "version": 9,
+          "planId": "bf8f77bf-f97a-4e69-9aab-82b15ad042be",
+          "workflowId": "0413a648-b641-5f14-8a87-fd1a751188b8",
+          "nodeId": "m3",
+          "latestReportId": "b63a4e31-17bb-40ec-b9de-8ecd023e1519",
+          "latestAcceptanceId": "a70e92e8-c9e7-4e57-b9b7-587625bd907d",
+          "reviewerIdentityId": "cc17bc73-9fba-48ec-8a95-089e529c74a8",
+          "participants": [
+            "c28db39f-0401-464a-b7a2-d8b8884369b1"
+          ]
+        },
+        {
+          "id": "7ea567c7-a627-469b-98c0-16bca6764ae8",
+          "title": "B11 设计约束和需求",
+          "status": "accepted",
+          "version": 6,
+          "planId": "806d7717-982e-4b2d-a57b-f6f473e16fe5",
+          "workflowId": "52e29e0f-9fca-5604-bd9e-3a05da264914",
+          "nodeId": "n1",
+          "latestReportId": "3f26ee15-e9a4-44d6-bc4c-1bd354d0672e",
+          "latestAcceptanceId": "ec19df2c-2297-4d9c-a47f-ac1dd21dd14e",
+          "reviewerIdentityId": "cc17bc73-9fba-48ec-8a95-089e529c74a8",
+          "participants": [
+            "16c0f8ec-5834-4333-b0f4-d25fa4b22200"
+          ]
+        },
+        {
+          "id": "4be4384c-83a2-4848-ad4c-dbfb844fded6",
+          "title": "B12 PNG主视觉和SVG可编辑标识源",
+          "status": "accepted",
+          "version": 5,
+          "planId": "806d7717-982e-4b2d-a57b-f6f473e16fe5",
+          "workflowId": "52e29e0f-9fca-5604-bd9e-3a05da264914",
+          "nodeId": "n2",
+          "latestReportId": "97defe13-a870-4ffe-b847-be6a2d380e8e",
+          "latestAcceptanceId": "a6a559b9-890a-4023-b50f-f0caa2a17f6b",
+          "reviewerIdentityId": "cc17bc73-9fba-48ec-8a95-089e529c74a8",
+          "participants": [
+            "c28db39f-0401-464a-b7a2-d8b8884369b1"
+          ]
+        },
+        {
+          "id": "23f305d9-12f0-463a-b5e1-acbcc03f0306",
+          "title": "B13 独立品牌审阅报告",
+          "status": "accepted",
+          "version": 5,
+          "planId": "806d7717-982e-4b2d-a57b-f6f473e16fe5",
+          "workflowId": "52e29e0f-9fca-5604-bd9e-3a05da264914",
+          "nodeId": "n3",
+          "latestReportId": "e061aeee-8a07-4cea-b972-2eb456d5396a",
+          "latestAcceptanceId": "26dffba6-f995-4259-a6f4-969eebaff678",
+          "reviewerIdentityId": "16c0f8ec-5834-4333-b0f4-d25fa4b22200",
+          "participants": [
+            "cc17bc73-9fba-48ec-8a95-089e529c74a8"
+          ]
+        },
+        {
+          "id": "23ac5aee-b255-48d7-ac65-40c59b28c253",
+          "title": "B21 桌面尺寸和布局变体",
+          "status": "accepted",
+          "version": 5,
+          "planId": "bf8f77bf-f97a-4e69-9aab-82b15ad042be",
+          "workflowId": "0413a648-b641-5f14-8a87-fd1a751188b8",
+          "nodeId": "m2",
+          "latestReportId": "6f5837d1-34a1-4ebf-b10e-c1045ee40c1b",
+          "latestAcceptanceId": "6d63996c-dd57-4311-9282-876bcc52089c",
+          "reviewerIdentityId": "cc17bc73-9fba-48ec-8a95-089e529c74a8",
+          "participants": [
+            "c28db39f-0401-464a-b7a2-d8b8884369b1"
+          ]
+        }
+      ]
+    },
+    {
+      "scene": "C",
+      "projectId": "8154db15-2f0f-4b37-971f-cc71a5241948",
+      "plans": [
+        {
+          "id": "9059b518-c5b4-4a68-96ca-bc5d4861de70",
+          "title": "C-P1 质量分析报告",
+          "status": "accepted",
+          "version": 2,
+          "ownerIdentityId": "f911778f-501a-4861-93c1-d83734ed1b3f",
+          "referenceTaskIds": [],
+          "latestAcceptanceId": "c9a5401c-a649-4919-8d33-c5dd1db5c499"
+        },
+        {
+          "id": "5180b053-7dda-48ef-af99-213d6fb52aad",
+          "title": "C-P2 发布汇报材料",
+          "status": "accepted",
+          "version": 2,
+          "ownerIdentityId": "f911778f-501a-4861-93c1-d83734ed1b3f",
+          "referenceTaskIds": [],
+          "latestAcceptanceId": "7282ee00-0147-4dae-bc91-6cdb9ae95fa3"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "def1e574-dd80-439c-a922-534410defcf2",
+          "title": "C11 多工作表 XLSX 公式图表",
+          "status": "accepted",
+          "version": 4,
+          "planId": "9059b518-c5b4-4a68-96ca-bc5d4861de70",
+          "workflowId": "e2d434f6-d54a-535a-a66e-dc3bf80ff9d3",
+          "nodeId": "c2",
+          "latestReportId": "ebd7aa66-1f2c-4633-bfb9-311b94327293",
+          "latestAcceptanceId": "2dc3e3b6-b4e4-43cd-8b29-c2174de00059",
+          "reviewerIdentityId": "f911778f-501a-4861-93c1-d83734ed1b3f",
+          "participants": [
+            "c266da46-f3c9-4965-b430-eb6529b603e3"
+          ]
+        },
+        {
+          "id": "d1c1b08a-c6d3-4ea2-8cec-a2b75f23e184",
+          "title": "C13 来源/数值一致性核对报告",
+          "status": "accepted",
+          "version": 5,
+          "planId": "9059b518-c5b4-4a68-96ca-bc5d4861de70",
+          "workflowId": "e2d434f6-d54a-535a-a66e-dc3bf80ff9d3",
+          "nodeId": "c4",
+          "latestReportId": "3197486c-b986-47c3-9db7-26d7e4d5967d",
+          "latestAcceptanceId": "3e3f9221-0ba0-4a98-a21e-14a60e67bbc0",
+          "reviewerIdentityId": "c266da46-f3c9-4965-b430-eb6529b603e3",
+          "participants": [
+            "f911778f-501a-4861-93c1-d83734ed1b3f"
+          ]
+        },
+        {
+          "id": "307d744f-a78c-4d46-8c12-e51cca86a6fe",
+          "title": "C12 DOCX 质量报告及 PDF",
+          "status": "accepted",
+          "version": 7,
+          "planId": "9059b518-c5b4-4a68-96ca-bc5d4861de70",
+          "workflowId": "e2d434f6-d54a-535a-a66e-dc3bf80ff9d3",
+          "nodeId": "c3",
+          "latestReportId": "c978d614-2f82-40ce-ac10-9f6fd8172479",
+          "latestAcceptanceId": "1cabd12b-81e7-400e-a0fa-07b0ffdda1a9",
+          "reviewerIdentityId": "f911778f-501a-4861-93c1-d83734ed1b3f",
+          "participants": [
+            "d8757069-0691-46bb-8f61-ba190518be2a"
+          ]
+        },
+        {
+          "id": "26b562af-2d3a-4017-a5d8-4be790fffc0f",
+          "title": "C21 PPTX 汇报及 PDF",
+          "status": "accepted",
+          "version": 8,
+          "planId": "5180b053-7dda-48ef-af99-213d6fb52aad",
+          "workflowId": "225a9143-d20f-5988-8b56-087df7172974",
+          "nodeId": "p3",
+          "latestReportId": "b20e1062-a5c1-4727-8355-94d015a02eef",
+          "latestAcceptanceId": "018ad00f-5179-4b2f-8a9a-4a1ab7517408",
+          "reviewerIdentityId": "f911778f-501a-4861-93c1-d83734ed1b3f",
+          "participants": [
+            "d8757069-0691-46bb-8f61-ba190518be2a"
+          ]
+        },
+        {
+          "id": "032040de-9efd-49c6-8175-246d781d9263",
+          "title": "C22 图表/数值/版面核对报告",
+          "status": "accepted",
+          "version": 7,
+          "planId": "5180b053-7dda-48ef-af99-213d6fb52aad",
+          "workflowId": "225a9143-d20f-5988-8b56-087df7172974",
+          "nodeId": "p4",
+          "latestReportId": "fe13f595-23bc-42eb-bead-b3e390d760dd",
+          "latestAcceptanceId": "98a7789e-f41c-45cf-8927-6722f371559c",
+          "reviewerIdentityId": "c266da46-f3c9-4965-b430-eb6529b603e3",
+          "participants": [
+            "f911778f-501a-4861-93c1-d83734ed1b3f"
+          ]
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "plans": 9,
+    "tasks": 30,
+    "acceptedPlans": 9,
+    "acceptedTasks": 30
+  }
+}

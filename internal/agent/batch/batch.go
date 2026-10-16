@@ -29,10 +29,12 @@ import (
 	"github.com/kakj-go/Judex/internal/material"
 	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
 	"github.com/kakj-go/Judex/internal/work"
+	"github.com/kakj-go/Judex/internal/workflow"
 )
 
 // Executor runs one discussion batch end-to-end.
 type Executor struct {
+	Workflows    *workflow.Service
 	Pool         *pgxpool.Pool
 	Runner       *runner.Runner
 	Provider     model.Provider
@@ -68,14 +70,20 @@ func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUI
 	var taskID *uuid.UUID
 	var sourceText string
 	var maxRounds int
+	var requireAnalysis bool
 	if err := e.Pool.QueryRow(ctx, `SELECT COALESCE(b.topic_id,'00000000-0000-0000-0000-000000000000'::uuid),COALESCE(s.text,r.progress_hint,''),b.max_rounds,b.task_id FROM discussion_batches b LEFT JOIN submissions s ON s.id=b.source_submission_id AND s.project_id=b.project_id LEFT JOIN work_reports r ON r.id=b.source_report_id AND r.project_id=b.project_id WHERE b.id=$1 AND b.project_id=$2`, batchID, projectID).Scan(&topicID, &sourceText, &maxRounds, &taskID); err != nil {
 		return err
 	}
 	coordinator := e.coordinatorID(ctx, projectID)
+	if err := e.Pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM task_analyses WHERE project_id=$1 AND batch_id=$2)`, projectID, batchID).Scan(&requireAnalysis); err != nil {
+		return err
+	}
 	var sessionID uuid.UUID
 	var err error
 	if taskID != nil && topicID == uuid.Nil {
 		sessionID, err = e.ensureTaskSession(ctx, projectID, *taskID, coordinator)
+	} else if topicID == uuid.Nil {
+		sessionID, err = e.ensureProjectSession(ctx, projectID, coordinator)
 	} else {
 		sessionID, err = e.ensureSession(ctx, projectID, topicID, coordinator)
 	}
@@ -116,7 +124,10 @@ func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUI
 		}
 		var priorTools bool
 		if oldState == "queued" && reserved > 0 {
-			if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM tool_calls WHERE run_id IN(SELECT id FROM agent_runs WHERE batch_id=$1))`, batchID).Scan(&priorTools); err != nil {
+			// A manager extension has a new root run and a fresh round. Earlier
+			// roots' completed tools are history, not evidence that this run was
+			// interrupted. A retry of the same root still restores its own tools.
+			if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM tool_calls WHERE run_id=$1)`, runID).Scan(&priorTools); err != nil {
 				return err
 			}
 		}
@@ -201,7 +212,7 @@ func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUI
 	}
 	if len(restored) > 0 {
 		last := restored[len(restored)-1]
-		if last.Role == "assistant" && len(last.ToolCalls) == 0 {
+		if !requireAnalysis && last.Role == "assistant" && len(last.ToolCalls) == 0 {
 			return e.commit(ctx, projectID, topicID, batchID, runID, sessionID, coordinator, runner.Outcome{State: "succeeded", Summary: last.Content}, lease)
 		}
 	}
@@ -220,10 +231,14 @@ func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUI
 	}
 	registry := tools.New()
 	tools.RegisterDefaults(registry)
-	caller := &positionCaller{executor: e, project: projectID, topic: topicID, batch: batchID, parent: runID, task: taskID}
+	scope, err := collaboration.ReadAnalysisScope(ctx, e.Pool, projectID, batchID)
+	if err != nil {
+		return err
+	}
+	caller := &positionCaller{executor: e, project: projectID, topic: topicID, batch: batchID, parent: runID, task: taskID, plan: scope.PlanID}
 	tools.RegisterCallAgent(registry, caller)
 	harness := &runner.Runner{Provider: provider, Registry: registry, Clock: e.Clock}
-	env := e.toolEnv(projectID, topicID)
+	env := e.toolEnv(projectID, topicID, taskID, scope.PlanID)
 	runSandbox := e.newRunSandbox(runID, projectID)
 	env.Sandbox = runSandbox
 	defer runSandbox.Close(context.WithoutCancel(ctx))
@@ -231,9 +246,9 @@ func (e *Executor) ExecuteBatch(ctx context.Context, projectID, batchID uuid.UUI
 	defer cancel()
 	go e.watchCancellation(runCtx, cancel, projectID, runID, lease)
 	journal := &journal{pool: e.Pool, project: projectID, run: runID, session: sessionID, batch: batchID, lease: lease}
-	outcome := harness.Run(runCtx, runner.RunRequest{Lease: lease, History: restored, StartAttempt: startAttempt, RunID: runID, SessionID: sessionID, ProjectID: projectID, IdentityID: coordinator, ModelName: modelName, Manifest: manifest,
+	outcome := harness.Run(runCtx, runner.RunRequest{PrincipalKind: "coordinator", Lease: lease, History: restored, StartAttempt: startAttempt, RunID: runID, SessionID: sessionID, ProjectID: projectID, IdentityID: coordinator, ModelName: modelName, Manifest: manifest,
 		Budget: runner.Budget{MaxRounds: maxRounds, MaxModelAttempts: runner.BatchMaxModelAttempts, MaxTotalTokens: runner.BatchMaxTotalTokens, MaxWallClock: 30 * time.Minute}, MaxInputTokens: maxIn, MaxOutputTokens: maxOut, Env: &env,
-		Journal: journal, Prepare: e.prepareCall(journal, topicID, sourceText),
+		Journal: journal, Prepare: e.prepareCall(journal, topicID, sourceText), RequireAnalysisRecord: requireAnalysis,
 	})
 	if outcome.State == "succeeded" && len(caller.failures) > 0 {
 		outcome.State = "waiting_human"
@@ -285,28 +300,43 @@ func (e *Executor) gatherFacts(ctx context.Context, projectID, topicID uuid.UUID
 }
 
 // toolEnv wires read-only DB projections for the coordinator run (05 §6).
-func (e *Executor) toolEnv(projectID, topicID uuid.UUID) tools.Env {
+func (e *Executor) toolEnv(projectID, topicID uuid.UUID, scopedTask ...*uuid.UUID) tools.Env {
+	var task *uuid.UUID
+	var plan *uuid.UUID
+	if len(scopedTask) > 0 {
+		task = scopedTask[0]
+	}
+	if task == nil && len(scopedTask) > 1 {
+		plan = scopedTask[1]
+	}
 	env := tools.Env{
-		QueryWorkPage: e.queryWorkPage,
-		ProjectID:     projectID.String(),
+		QueryWorkPage: func(ctx context.Context, project string, args map[string]any) (map[string]any, error) {
+			return e.queryWorkPageForPlan(ctx, project, args, plan)
+		},
+		ProjectID: projectID.String(),
 		ListAgents: func(ctx context.Context, pid string) ([]map[string]any, error) {
 			rows, err := e.Pool.Query(ctx, `
 				SELECT i.id::text, i.kind, COALESCE(u.display_name,'') AS holder,
-				       COALESCE((SELECT name FROM position_templates t WHERE t.id=i.template_id),'') AS position
+				       COALESCE((SELECT name FROM position_templates t WHERE t.id=i.template_id),'') AS position,
+				       COALESCE(i.template_id::text,''),COALESCE((SELECT jsonb_agg(jsonb_build_object('workflowId',n.workflow_id,'nodeId',n.node_id) ORDER BY n.workflow_id,n.node_id) FROM position_node_bindings n WHERE n.project_id=i.project_id AND n.template_id=i.template_id),'[]')
 				FROM agent_identities i
-				LEFT JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version
-				LEFT JOIN users u ON u.id=b.user_id
-				WHERE i.project_id=$1`, pid)
+				JOIN position_templates t ON t.id=i.template_id AND t.status='active'
+				JOIN identity_bindings b ON b.identity_id=i.id AND b.binding_version=i.current_binding_version AND b.valid_until IS NULL
+				JOIN users u ON u.id=b.user_id AND u.status='active'
+				JOIN project_members m ON m.project_id=i.project_id AND m.user_id=b.user_id AND m.state='active'
+				WHERE i.project_id=$1 AND i.status='active' AND i.kind='position'
+				AND ($2::uuid IS NULL OR i.id IN (`+taskAllowedIdentitiesSQL+`)) ORDER BY i.id`, pid, task)
 			if err != nil {
 				return nil, err
 			}
 			defer rows.Close()
 			var out []map[string]any
 			for rows.Next() {
-				var id, kind, holder, position string
-				if rows.Scan(&id, &kind, &holder, &position) == nil {
+				var id, kind, holder, position, positionID string
+				var bindings json.RawMessage
+				if rows.Scan(&id, &kind, &holder, &position, &positionID, &bindings) == nil {
 					out = append(out, map[string]any{"identityId": id, "kind": kind,
-						"holder": holder, "position": position})
+						"holder": holder, "position": position, "positionId": positionID, "nodeBindings": bindings})
 				}
 			}
 			return out, nil
@@ -343,8 +373,17 @@ func (e *Executor) toolEnv(projectID, topicID uuid.UUID) tools.Env {
 			return out, nil
 		},
 		ReadMaterial: e.readMaterial,
+		MaterialInfo: e.materialInfo,
 		ProposeDraft: func(ctx context.Context, pid string, draft map[string]any) (string, error) {
 			// Draft-only effect (05 §6)：仅创建草稿，不提交人工投票。
+			kind := "work_arrangement"
+			if raw, present := draft["kind"]; present {
+				value, valid := raw.(string)
+				if !valid || (value != "work_arrangement" && value != "work_change") {
+					return "", apierrors.Fields("kind", "enum")
+				}
+				kind = value
+			}
 			id := uuid.New()
 			changes, _ := json.Marshal(draft["changes"])
 			var typed []decision.Change
@@ -377,8 +416,8 @@ func (e *Executor) toolEnv(projectID, topicID uuid.UUID) tools.Env {
 			changes, _ = json.Marshal(typed)
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO proposals (project_id, id, topic_id,kind, status, reason, created_at, updated_at)
-				VALUES ($1,$2,$5,'work_arrangement','draft',$3,$4,$4)`,
-				pid, id, draft["reason"], e.now(), origin); err != nil {
+				VALUES ($1,$2,$5,$6,'draft',$3,$4,$4)`,
+				pid, id, draft["reason"], e.now(), origin, kind); err != nil {
 				return "", err
 			}
 			if _, err := tx.Exec(ctx, `
@@ -394,6 +433,7 @@ func (e *Executor) toolEnv(projectID, topicID uuid.UUID) tools.Env {
 	}
 	e.contextTools(&env, projectID)
 	e.activityTools(&env, projectID)
+	e.workflowTools(&env, projectID)
 	return env
 }
 
@@ -457,7 +497,7 @@ func (e *Executor) commit(ctx context.Context, projectID, topicID, batchID, runI
 		if err := tx.QueryRow(ctx, `SELECT task_id FROM discussion_batches WHERE id=$1 AND project_id=$2`, batchID, projectID).Scan(&activityTask); err != nil {
 			return err
 		}
-		if activityTask != nil {
+		if activityTask != nil || topicID == uuid.Nil {
 			if err := collaboration.FinishTaskAnalysis(ctx, tx, projectID, batchID, batchState, content, now); err != nil {
 				return err
 			}

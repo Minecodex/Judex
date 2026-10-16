@@ -134,6 +134,7 @@ func (s *Service) decideTaskAcceptanceTx(ctx context.Context, tx pgx.Tx, request
 		}
 		now := s.now()
 		nextStatus := "rework"
+		var accepted *uuid.UUID
 		if accept {
 			if len(snapshot.Reports) == 0 {
 				return apierrors.New(apierrors.RequirementUnmet, "current agreement has no evidence")
@@ -150,6 +151,7 @@ func (s *Service) decideTaskAcceptanceTx(ctx context.Context, tx pgx.Tx, request
 			}
 			nextStatus = "accepted"
 			acceptanceID := uuid.New()
+			accepted = &acceptanceID
 			rawManifest := snapshot.Manifest
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO task_acceptances (project_id, id, task_id, task_version, reviewer_identity_id,
@@ -179,6 +181,9 @@ func (s *Service) decideTaskAcceptanceTx(ctx context.Context, tx pgx.Tx, request
 			Operation:  "task." + map[bool]string{true: "accept", false: "reject"}[accept],
 			ObjectType: "task", ObjectID: taskID.String(), Reason: reasonPtr(reason), OccurredAt: now,
 		}); err != nil {
+			return err
+		}
+		if err := recordFormalFeedback(ctx, tx, projectID, requester, taskID, "task", map[bool]string{true: "accept", false: "reject"}[accept], reason, version, nullUUIDPtr(reviewerIdentity), snapshot.Manifest, reviewHash, accepted, nil, now); err != nil {
 			return err
 		}
 		*out = Task{ID: taskID, Status: nextStatus, Version: version + 1}
@@ -258,6 +263,9 @@ func (s *Service) ReopenTask(ctx context.Context, requester, projectID, taskID u
 		}); err != nil {
 			return err
 		}
+		if err := recordFormalFeedback(ctx, tx, projectID, requester, taskID, "task", "reopen", reason, expectedVersion, nullUUIDPtr(reviewerIdentity), nil, "", nil, &acceptanceID, now); err != nil {
+			return err
+		}
 		out = Task{ID: taskID, Status: "rework", Version: expectedVersion + 1}
 		return nil
 	})
@@ -330,11 +338,13 @@ func (s *Service) DecidePlanAcceptance(ctx context.Context, requester, projectID
 		}
 		acceptanceIDs := snapshot.TaskAcceptanceIDs
 		now := s.now()
+		var accepted *uuid.UUID
 		if accept {
 			if len(snapshot.Blockers) > 0 {
 				return apierrors.New(apierrors.RequirementUnmet, "tasks have not all been accepted").WithDetails(map[string]any{"blockers": snapshot.Blockers})
 			}
 			acceptanceID := uuid.New()
+			accepted = &acceptanceID
 			refs, _ := jsonMarshal(acceptanceIDs)
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO plan_acceptances (project_id, id, plan_id, plan_version, owner_identity_id,
@@ -360,6 +370,9 @@ func (s *Service) DecidePlanAcceptance(ctx context.Context, requester, projectID
 		}); err != nil {
 			return err
 		}
+		if err := recordFormalFeedback(ctx, tx.Tx, projectID, requester, planID, "plan", map[bool]string{true: "accept", false: "reject"}[accept], reason, version, nullUUIDPtr(owner), snapshot.Manifest, reviewHash, accepted, nil, now); err != nil {
+			return err
+		}
 		out = Plan{ID: planID, Status: map[bool]string{true: "accepted", false: "active"}[accept]}
 		return nil
 	})
@@ -381,8 +394,9 @@ func (s *Service) ReopenPlan(ctx context.Context, requester, projectID, planID u
 		}
 		var status string
 		var owner, latest *uuid.UUID
-		if err := tx.QueryRow(ctx, `SELECT status,owner_identity_id,latest_acceptance_id FROM plans WHERE id=$1 AND project_id=$2 FOR UPDATE`,
-			planID, projectID).Scan(&status, &owner, &latest); err != nil {
+		var version int64
+		if err := tx.QueryRow(ctx, `SELECT status,owner_identity_id,latest_acceptance_id,version FROM plans WHERE id=$1 AND project_id=$2 FOR UPDATE`,
+			planID, projectID).Scan(&status, &owner, &latest, &version); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apierrors.New(apierrors.NotFound, "plan not found")
 			}
@@ -417,6 +431,9 @@ func (s *Service) ReopenPlan(ctx context.Context, requester, projectID, planID u
 			Source: audit.SourceWeb, Operation: "plan.reopen",
 			ObjectType: "plan", ObjectID: planID.String(), Reason: &reason, OccurredAt: now,
 		}); err != nil {
+			return err
+		}
+		if err := recordFormalFeedback(ctx, tx.Tx, projectID, requester, planID, "plan", "reopen", reason, version, owner, nil, "", nil, &acceptanceID, now); err != nil {
 			return err
 		}
 		out = Plan{ID: planID, Status: "active"}

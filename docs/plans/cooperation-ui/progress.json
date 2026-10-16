@@ -230,7 +230,7 @@
         ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
         ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
         ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
-        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/REVIEW-AFTER-CLOSURE-20261008.md",
         ".cache/cooperation-ui/remediation2-20261008/completion.json",
         ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
         ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
@@ -239,12 +239,12 @@
         ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
         ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
         ".cache/k8s/judex-ui-e90921fa/manifest.json",
-        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md"
+        "docs/plans/cooperation-ui/records/REMEDIATION2-20261008.md"
       ],
       "notes": "2026-10-08 收尾后复核重新打开：R2-01: AI 建议及安排 link_topic 追加绕过 linksVersion，旧关联编辑可覆盖新关联。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。",
       "postClosureReview": {
         "date": "2026-10-08",
-        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "document": "records/REVIEW-AFTER-CLOSURE-20261008.md",
         "reason": "R2-01: AI 建议及安排 link_topic 追加绕过 linksVersion，旧关联编辑可覆盖新关联。"
       }
     },
@@ -271,7 +271,7 @@
         ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
         ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
         ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
-        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/REVIEW-AFTER-CLOSURE-20261008.md",
         ".cache/cooperation-ui/remediation2-20261008/completion.json",
         ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
         ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
@@ -280,12 +280,12 @@
         ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
         ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
         ".cache/k8s/judex-ui-e90921fa/manifest.json",
-        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md"
+        "docs/plans/cooperation-ui/records/REMEDIATION2-20261008.md"
       ],
       "notes": "2026-10-08 收尾后复核重新打开：R2-04: waiting/revise 必须按本人来源状态筛选，当前使用整个交接状态。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。",
       "postClosureReview": {
         "date": "2026-10-08",
-        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "document": "records/REVIEW-AFTER-CLOSURE-20261008.md",
         "reason": "R2-04: waiting/revise 必须按本人来源状态筛选，当前使用整个交接状态。"
       }
     },
@@ -351,7 +351,7 @@
         ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
         ".cache/cooperation-ui/implementation-20261008/final-acceptance-loop.log",
         ".cache/cooperation-ui/implementation-20261008/offline-performance.log",
-        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/CLOSURE-20261008.md",
         ".cache/cooperation-ui/closure-20261008/desktop-final.log",
         ".cache/cooperation-ui/closure-20261008/web-release.log",
         ".cache/k8s/judex-ui-d9facb1b/manifest.json"
@@ -365,7 +365,7 @@
           "R06"
         ],
         "evidence": [
-          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          "docs/plans/cooperation-ui/records/REVIEW-20261008.md",
           ".cache/cooperation-ui/review-20261008/browser-results.json"
         ],
         "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
@@ -492,7 +492,7 @@
         ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
         ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
         ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
-        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/REVIEW-AFTER-CLOSURE-20261008.md",
         ".cache/cooperation-ui/remediation2-20261008/completion.json",
         ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
         ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
@@ -501,11 +501,11 @@
         ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
         ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
         ".cache/k8s/judex-ui-e90921fa/manifest.json",
-        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md",
+        "docs/plans/cooperation-ui/records/REMEDIATION2-20261008.md",
         ".cache/cooperation-ui/final-review-20261008/evidence-audit.json",
         ".cache/cooperation-ui/final-review-20261008/browser-results.json",
         ".cache/cooperation-ui/final-review-20261008/recheck-race.json",
-        "docs/plans/cooperation-ui/REVIEW3-20261008.md",
+        "docs/plans/cooperation-ui/records/REVIEW3-20261008.md",
         ".cache/cooperation-ui/remediation3-20261008/completion.json",
         ".cache/cooperation-ui/remediation3-20261008/desktop-full-attempt1.log",
         ".cache/cooperation-ui/remediation3-20261008/api-attempt1.log",
@@ -513,17 +513,17 @@
         ".cache/cooperation-ui/remediation3-20261008/visual/results.json",
         "tests/e2e/cooperation-scope-fixes.spec.ts",
         "tests/e2e/business.cooperation-scope-fixes.spec.ts",
-        "docs/plans/cooperation-ui/REMEDIATION3-20261008.md"
+        "docs/plans/cooperation-ui/records/REMEDIATION3-20261008.md"
       ],
       "notes": "2026-10-08 收尾后复核重新打开：R2-04: 多发送者的个人交接筛选误归类，正式 PostgreSQL 已复现。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。\n2026-10-08 第三次复核重开：R3-03: 多参与者交接未明确选择来源发送职责。\n2026-10-08 第三次复核修复完成：对象生命周期、附件作用域、核对请求作废、交接与报告职责选择补回归；当前镜像完成 20 项隔离业务及真实模型检查。",
       "postClosureReview": {
         "date": "2026-10-08",
-        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "document": "records/REVIEW-AFTER-CLOSURE-20261008.md",
         "reason": "R2-04: 多发送者的个人交接筛选误归类，正式 PostgreSQL 已复现。"
       },
       "review3": {
         "date": "2026-10-08",
-        "document": "REVIEW3-20261008.md",
+        "document": "records/REVIEW3-20261008.md",
         "reason": "R3-03: 多参与者交接未明确选择来源发送职责。"
       }
     },
@@ -565,7 +565,7 @@
         ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
         ".cache/cooperation-ui/implementation-20261008/visual/comparison.json",
         ".cache/cooperation-ui/implementation-20261008/offline-performance.log",
-        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/CLOSURE-20261008.md",
         ".cache/cooperation-ui/closure-20261008/desktop-final.log",
         ".cache/cooperation-ui/closure-20261008/web-release.log",
         ".cache/k8s/judex-ui-d9facb1b/manifest.json"
@@ -581,7 +581,7 @@
           "R07"
         ],
         "evidence": [
-          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          "docs/plans/cooperation-ui/records/REVIEW-20261008.md",
           ".cache/cooperation-ui/review-20261008/browser-results.json"
         ],
         "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
@@ -671,7 +671,7 @@
         ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
         ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
         ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
-        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/REVIEW-AFTER-CLOSURE-20261008.md",
         ".cache/cooperation-ui/remediation2-20261008/completion.json",
         ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
         ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
@@ -680,11 +680,11 @@
         ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
         ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
         ".cache/k8s/judex-ui-e90921fa/manifest.json",
-        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md",
+        "docs/plans/cooperation-ui/records/REMEDIATION2-20261008.md",
         ".cache/cooperation-ui/final-review-20261008/evidence-audit.json",
         ".cache/cooperation-ui/final-review-20261008/browser-results.json",
         ".cache/cooperation-ui/final-review-20261008/recheck-race.json",
-        "docs/plans/cooperation-ui/REVIEW3-20261008.md",
+        "docs/plans/cooperation-ui/records/REVIEW3-20261008.md",
         ".cache/cooperation-ui/remediation3-20261008/completion.json",
         ".cache/cooperation-ui/remediation3-20261008/desktop-full-attempt1.log",
         ".cache/cooperation-ui/remediation3-20261008/api-attempt1.log",
@@ -692,17 +692,17 @@
         ".cache/cooperation-ui/remediation3-20261008/visual/results.json",
         "tests/e2e/cooperation-scope-fixes.spec.ts",
         "tests/e2e/business.cooperation-scope-fixes.spec.ts",
-        "docs/plans/cooperation-ui/REMEDIATION3-20261008.md"
+        "docs/plans/cooperation-ui/records/REMEDIATION3-20261008.md"
       ],
       "notes": "2026-10-08 收尾后复核重新打开：R2-02/R2-03: 报告旧版本缺明确重新核对；多职责启动缺身份选择。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。\n2026-10-08 第三次复核重开：R3-01/R3-02/R3-03: 任务详情状态、核对请求与发送职责的组合场景未闭环。\n2026-10-08 第三次复核修复完成：对象生命周期、附件作用域、核对请求作废、交接与报告职责选择补回归；当前镜像完成 20 项隔离业务及真实模型检查。",
       "postClosureReview": {
         "date": "2026-10-08",
-        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "document": "records/REVIEW-AFTER-CLOSURE-20261008.md",
         "reason": "R2-02/R2-03: 报告旧版本缺明确重新核对；多职责启动缺身份选择。"
       },
       "review3": {
         "date": "2026-10-08",
-        "document": "REVIEW3-20261008.md",
+        "document": "records/REVIEW3-20261008.md",
         "reason": "R3-01/R3-02/R3-03: 任务详情状态、核对请求与发送职责的组合场景未闭环。"
       }
     },
@@ -724,7 +724,7 @@
         ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
         ".cache/cooperation-ui/implementation-20261008/visual/comparison.json",
         ".cache/cooperation-ui/implementation-20261008/backend-projections.log",
-        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/CLOSURE-20261008.md",
         ".cache/cooperation-ui/closure-20261008/desktop-final.log",
         ".cache/cooperation-ui/closure-20261008/web-release.log",
         ".cache/k8s/judex-ui-d9facb1b/manifest.json"
@@ -739,7 +739,7 @@
           "R07"
         ],
         "evidence": [
-          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          "docs/plans/cooperation-ui/records/REVIEW-20261008.md",
           ".cache/cooperation-ui/review-20261008/browser-results.json"
         ],
         "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
@@ -808,7 +808,7 @@
         ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
         ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
         ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
-        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/REVIEW-AFTER-CLOSURE-20261008.md",
         ".cache/cooperation-ui/remediation2-20261008/completion.json",
         ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
         ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
@@ -817,12 +817,12 @@
         ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
         ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
         ".cache/k8s/judex-ui-e90921fa/manifest.json",
-        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md"
+        "docs/plans/cooperation-ui/records/REMEDIATION2-20261008.md"
       ],
       "notes": "2026-10-08 收尾后复核重新打开：R2-01: 关联版本未覆盖全部追加用例，无法保护编辑窗口与 AI 确认之间的并发。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。",
       "postClosureReview": {
         "date": "2026-10-08",
-        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "document": "records/REVIEW-AFTER-CLOSURE-20261008.md",
         "reason": "R2-01: 关联版本未覆盖全部追加用例，无法保护编辑窗口与 AI 确认之间的并发。"
       }
     },
@@ -843,7 +843,7 @@
         ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
         ".cache/cooperation-ui/implementation-20261008/api-browser-attempt3.log",
         ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
-        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/CLOSURE-20261008.md",
         ".cache/cooperation-ui/closure-20261008/desktop-final.log",
         ".cache/cooperation-ui/closure-20261008/web-release.log",
         ".cache/k8s/judex-ui-d9facb1b/manifest.json"
@@ -857,7 +857,7 @@
           "R04"
         ],
         "evidence": [
-          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          "docs/plans/cooperation-ui/records/REVIEW-20261008.md",
           ".cache/cooperation-ui/review-20261008/browser-results.json"
         ],
         "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
@@ -880,14 +880,14 @@
         ".cache/cooperation-ui/implementation-20261008/k8s-final.log",
         ".cache/cooperation-ui/implementation-20261008/api-browser-attempt3.log",
         ".cache/cooperation-ui/implementation-20261008/go-tests-final.log",
-        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/CLOSURE-20261008.md",
         ".cache/cooperation-ui/closure-20261008/desktop-final.log",
         ".cache/cooperation-ui/closure-20261008/web-release.log",
         ".cache/k8s/judex-ui-d9facb1b/manifest.json",
         ".cache/cooperation-ui/final-review-20261008/evidence-audit.json",
         ".cache/cooperation-ui/final-review-20261008/browser-results.json",
         ".cache/cooperation-ui/final-review-20261008/recheck-race.json",
-        "docs/plans/cooperation-ui/REVIEW3-20261008.md",
+        "docs/plans/cooperation-ui/records/REVIEW3-20261008.md",
         ".cache/cooperation-ui/remediation3-20261008/completion.json",
         ".cache/cooperation-ui/remediation3-20261008/desktop-full-attempt1.log",
         ".cache/cooperation-ui/remediation3-20261008/api-attempt1.log",
@@ -895,7 +895,7 @@
         ".cache/cooperation-ui/remediation3-20261008/visual/results.json",
         "tests/e2e/cooperation-scope-fixes.spec.ts",
         "tests/e2e/business.cooperation-scope-fixes.spec.ts",
-        "docs/plans/cooperation-ui/REMEDIATION3-20261008.md"
+        "docs/plans/cooperation-ui/records/REMEDIATION3-20261008.md"
       ],
       "notes": "\n2026-10-08 第三次复核重开：R3-01: 任务对象变化时附件进入另一对象的上报草稿。\n2026-10-08 第三次复核修复完成：对象生命周期、附件作用域、核对请求作废、交接与报告职责选择补回归；当前镜像完成 20 项隔离业务及真实模型检查。",
       "review": {
@@ -906,14 +906,14 @@
           "R05"
         ],
         "evidence": [
-          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          "docs/plans/cooperation-ui/records/REVIEW-20261008.md",
           ".cache/cooperation-ui/review-20261008/browser-results.json"
         ],
         "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
       },
       "review3": {
         "date": "2026-10-08",
-        "document": "REVIEW3-20261008.md",
+        "document": "records/REVIEW3-20261008.md",
         "reason": "R3-01: 任务对象变化时附件进入另一对象的上报草稿。"
       }
     },
@@ -960,7 +960,7 @@
         ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
         ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
         ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
-        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/REVIEW-AFTER-CLOSURE-20261008.md",
         ".cache/cooperation-ui/remediation2-20261008/completion.json",
         ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
         ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
@@ -969,12 +969,12 @@
         ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
         ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
         ".cache/k8s/judex-ui-e90921fa/manifest.json",
-        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md"
+        "docs/plans/cooperation-ui/records/REMEDIATION2-20261008.md"
       ],
       "notes": "2026-10-08 收尾后复核重新打开：R2-01/R2-05: 建议追加关联需统一版本；已有讨论选择缺项目范围检索和分页。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。",
       "postClosureReview": {
         "date": "2026-10-08",
-        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "document": "records/REVIEW-AFTER-CLOSURE-20261008.md",
         "reason": "R2-01/R2-05: 建议追加关联需统一版本；已有讨论选择缺项目范围检索和分页。"
       }
     },
@@ -1136,7 +1136,7 @@
         ".cache/cooperation-ui/implementation-20261008/visual/final-style-check.json",
         ".cache/cooperation-ui/implementation-20261008/release-build.log",
         ".cache/cooperation-ui/implementation-20261008/release-demo-build.log",
-        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/CLOSURE-20261008.md",
         ".cache/cooperation-ui/closure-20261008/desktop-final.log",
         ".cache/cooperation-ui/closure-20261008/web-release.log",
         ".cache/k8s/judex-ui-d9facb1b/manifest.json"
@@ -1150,7 +1150,7 @@
           "R08"
         ],
         "evidence": [
-          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          "docs/plans/cooperation-ui/records/REVIEW-20261008.md",
           ".cache/cooperation-ui/review-20261008/browser-results.json"
         ],
         "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
@@ -1185,7 +1185,7 @@
         ".cache/cooperation-ui/implementation-20261008/visual/final-style-check.json",
         ".cache/cooperation-ui/implementation-20261008/release-build.log",
         ".cache/cooperation-ui/implementation-20261008/release-demo-build.log",
-        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/CLOSURE-20261008.md",
         ".cache/cooperation-ui/closure-20261008/desktop-final.log",
         ".cache/cooperation-ui/closure-20261008/web-release.log",
         ".cache/k8s/judex-ui-d9facb1b/manifest.json"
@@ -1199,7 +1199,7 @@
           "R09"
         ],
         "evidence": [
-          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          "docs/plans/cooperation-ui/records/REVIEW-20261008.md",
           ".cache/cooperation-ui/review-20261008/browser-results.json"
         ],
         "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
@@ -1249,7 +1249,7 @@
         ".cache/cooperation-ui/implementation-20261008/visual/final-style-check.json",
         ".cache/cooperation-ui/implementation-20261008/release-build.log",
         ".cache/cooperation-ui/implementation-20261008/release-demo-build.log",
-        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/CLOSURE-20261008.md",
         ".cache/cooperation-ui/closure-20261008/desktop-final.log",
         ".cache/cooperation-ui/closure-20261008/web-release.log",
         ".cache/k8s/judex-ui-d9facb1b/manifest.json"
@@ -1263,7 +1263,7 @@
           "R10"
         ],
         "evidence": [
-          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          "docs/plans/cooperation-ui/records/REVIEW-20261008.md",
           ".cache/cooperation-ui/review-20261008/browser-results.json"
         ],
         "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
@@ -1295,7 +1295,7 @@
         ".cache/cooperation-ui/implementation-20261008/visual/final-style-check.json",
         ".cache/cooperation-ui/implementation-20261008/release-build.log",
         ".cache/cooperation-ui/implementation-20261008/release-demo-build.log",
-        "docs/plans/cooperation-ui/CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/CLOSURE-20261008.md",
         ".cache/cooperation-ui/closure-20261008/desktop-final.log",
         ".cache/cooperation-ui/closure-20261008/web-release.log",
         ".cache/k8s/judex-ui-d9facb1b/manifest.json",
@@ -1303,7 +1303,7 @@
         ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
         ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
         ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
-        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/REVIEW-AFTER-CLOSURE-20261008.md",
         ".cache/cooperation-ui/remediation2-20261008/completion.json",
         ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
         ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
@@ -1312,11 +1312,11 @@
         ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
         ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
         ".cache/k8s/judex-ui-e90921fa/manifest.json",
-        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md",
+        "docs/plans/cooperation-ui/records/REMEDIATION2-20261008.md",
         ".cache/cooperation-ui/final-review-20261008/evidence-audit.json",
         ".cache/cooperation-ui/final-review-20261008/browser-results.json",
         ".cache/cooperation-ui/final-review-20261008/recheck-race.json",
-        "docs/plans/cooperation-ui/REVIEW3-20261008.md",
+        "docs/plans/cooperation-ui/records/REVIEW3-20261008.md",
         ".cache/cooperation-ui/remediation3-20261008/completion.json",
         ".cache/cooperation-ui/remediation3-20261008/desktop-full-attempt1.log",
         ".cache/cooperation-ui/remediation3-20261008/api-attempt1.log",
@@ -1324,7 +1324,7 @@
         ".cache/cooperation-ui/remediation3-20261008/visual/results.json",
         "tests/e2e/cooperation-scope-fixes.spec.ts",
         "tests/e2e/business.cooperation-scope-fixes.spec.ts",
-        "docs/plans/cooperation-ui/REMEDIATION3-20261008.md"
+        "docs/plans/cooperation-ui/records/REMEDIATION3-20261008.md"
       ],
       "notes": "2026-10-08 收尾后复核重新打开：R2-01 至 R2-05: 补旧草稿、多职责、跨范围建议选择和多发送者筛选回归。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。\n2026-10-08 第三次复核重开：新增任务切换、迟到核对响应和同任务多发送职责回归。\n2026-10-08 第三次复核修复完成：对象生命周期、附件作用域、核对请求作废、交接与报告职责选择补回归；当前镜像完成 20 项隔离业务及真实模型检查。",
       "review": {
@@ -1337,19 +1337,19 @@
           "R11"
         ],
         "evidence": [
-          "docs/plans/cooperation-ui/REVIEW-20261008.md",
+          "docs/plans/cooperation-ui/records/REVIEW-20261008.md",
           ".cache/cooperation-ui/review-20261008/browser-results.json"
         ],
         "note": "收尾实现与补测完成，详见 CLOSURE-20261008.md。"
       },
       "postClosureReview": {
         "date": "2026-10-08",
-        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "document": "records/REVIEW-AFTER-CLOSURE-20261008.md",
         "reason": "R2-01 至 R2-05: 补旧草稿、多职责、跨范围建议选择和多发送者筛选回归。"
       },
       "review3": {
         "date": "2026-10-08",
-        "document": "REVIEW3-20261008.md",
+        "document": "records/REVIEW3-20261008.md",
         "reason": "新增任务切换、迟到核对响应和同任务多发送职责回归。"
       }
     },
@@ -1378,7 +1378,7 @@
         ".cache/cooperation-ui/review-after-closure-20261008/browser-results.json",
         ".cache/cooperation-ui/review-after-closure-20261008/postgres-reproduction.log",
         ".cache/cooperation-ui/review-after-closure-20261008/association-reproduction-verified.log",
-        "docs/plans/cooperation-ui/REVIEW-AFTER-CLOSURE-20261008.md",
+        "docs/plans/cooperation-ui/records/REVIEW-AFTER-CLOSURE-20261008.md",
         ".cache/cooperation-ui/remediation2-20261008/completion.json",
         ".cache/cooperation-ui/remediation2-20261008/postgres-targeted.log",
         ".cache/cooperation-ui/remediation2-20261008/go-all-attempt1.log",
@@ -1387,11 +1387,11 @@
         ".cache/cooperation-ui/remediation2-20261008/k8s-attempt2.log",
         ".cache/cooperation-ui/remediation2-20261008/visual/results.json",
         ".cache/k8s/judex-ui-e90921fa/manifest.json",
-        "docs/plans/cooperation-ui/REMEDIATION2-20261008.md",
+        "docs/plans/cooperation-ui/records/REMEDIATION2-20261008.md",
         ".cache/cooperation-ui/final-review-20261008/evidence-audit.json",
         ".cache/cooperation-ui/final-review-20261008/browser-results.json",
         ".cache/cooperation-ui/final-review-20261008/recheck-race.json",
-        "docs/plans/cooperation-ui/REVIEW3-20261008.md",
+        "docs/plans/cooperation-ui/records/REVIEW3-20261008.md",
         ".cache/cooperation-ui/remediation3-20261008/completion.json",
         ".cache/cooperation-ui/remediation3-20261008/desktop-full-attempt1.log",
         ".cache/cooperation-ui/remediation3-20261008/api-attempt1.log",
@@ -1399,22 +1399,22 @@
         ".cache/cooperation-ui/remediation3-20261008/visual/results.json",
         "tests/e2e/cooperation-scope-fixes.spec.ts",
         "tests/e2e/business.cooperation-scope-fixes.spec.ts",
-        "docs/plans/cooperation-ui/REMEDIATION3-20261008.md"
+        "docs/plans/cooperation-ui/records/REMEDIATION3-20261008.md"
       ],
       "notes": "2026-10-08 收尾后复核重新打开：最新独立复核确认功能出口未全闭环，交付报告不能继续声明全部完成；环境清理证据仍有效。\n2026-10-08 修复完成：共享关联事务、报告核对、职责选择、个人来源筛选与独立讨论查询已补回归；当前镜像完成 18 项隔离业务验收及真实模型分析。\n2026-10-08 第三次复核重开：第三次复核发现尚未满足的功能出口，完整交付状态重新校准；清理与模型证据保留。\n2026-10-08 第三次复核修复完成：对象生命周期、附件作用域、核对请求作废、交接与报告职责选择补回归；当前镜像完成 20 项隔离业务及真实模型检查。",
       "postClosureReview": {
         "date": "2026-10-08",
-        "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+        "document": "records/REVIEW-AFTER-CLOSURE-20261008.md",
         "reason": "最新独立复核确认功能出口未全闭环，交付报告不能继续声明全部完成；环境清理证据仍有效。"
       },
       "review3": {
         "date": "2026-10-08",
-        "document": "REVIEW3-20261008.md",
+        "document": "records/REVIEW3-20261008.md",
         "reason": "第三次复核发现尚未满足的功能出口，完整交付状态重新校准；清理与模型证据保留。"
       }
     }
   ],
-  "acceptanceReport": "REMEDIATION3-20261008.md",
+  "acceptanceReport": "records/REMEDIATION3-20261008.md",
   "environmentEvidence": [
     ".cache/k8s/judex-ui-2bfaaae2/manifest.json",
     ".cache/k8s/judex-ui-12132b7f/manifest.json",
@@ -1425,7 +1425,7 @@
     {
       "id": "workflow-routing",
       "status": "existing_open",
-      "source": "../../职位多流程关联实测.md",
+      "source": "../../功能/职位多流程关联实测.md",
       "note": "新 UI 不表示通用多流程自动判定已验收；本轮验证明确任务分析、合法事实与诚实失败状态。"
     }
   ],
@@ -1442,7 +1442,7 @@
   "review": {
     "date": "2026-10-08",
     "result": "resolved",
-    "document": "REVIEW-20261008.md",
+    "document": "records/REVIEW-20261008.md",
     "reopenedTasks": [
       "P2-01",
       "P3-05",
@@ -1459,7 +1459,7 @@
   },
   "closure": {
     "date": "2026-10-08",
-    "document": "CLOSURE-20261008.md",
+    "document": "records/CLOSURE-20261008.md",
     "desktop": 51,
     "visualMatrix": 20,
     "web": 59,
@@ -1476,7 +1476,7 @@
   "postClosureReview": {
     "date": "2026-10-08",
     "result": "resolved",
-    "document": "REVIEW-AFTER-CLOSURE-20261008.md",
+    "document": "records/REVIEW-AFTER-CLOSURE-20261008.md",
     "reopenedTasks": [
       "P1-04",
       "P1-05",
@@ -1494,7 +1494,7 @@
   },
   "remediation2": {
     "date": "2026-10-08",
-    "document": "REMEDIATION2-20261008.md",
+    "document": "records/REMEDIATION2-20261008.md",
     "reopenedResolved": 8,
     "fixedFindings": [
       "R2-01",
@@ -1524,7 +1524,7 @@
   "review3": {
     "date": "2026-10-08",
     "result": "resolved",
-    "document": "REVIEW3-20261008.md",
+    "document": "records/REVIEW3-20261008.md",
     "reopenedTasks": [
       "P3-03",
       "P4-04",
@@ -1542,7 +1542,7 @@
   },
   "remediation3": {
     "date": "2026-10-08",
-    "document": "REMEDIATION3-20261008.md",
+    "document": "records/REMEDIATION3-20261008.md",
     "reopenedResolved": 5,
     "checks": {
       "desktop": 58,
@@ -1562,7 +1562,7 @@
   },
   "localRelease": {
     "date": "2026-10-08",
-    "document": "LOCAL-RELEASE-20261008.md",
+    "document": "records/LOCAL-RELEASE-20261008.md",
     "context": "docker-desktop",
     "namespace": "judex",
     "revision": 14,
@@ -1594,7 +1594,7 @@
   },
   "uiConsistency": {
     "date": "2026-10-08",
-    "document": "UI-CONSISTENCY-20261008.md",
+    "document": "records/UI-CONSISTENCY-20261008.md",
     "revision": 15,
     "previousRevision": 14,
     "image": "judex/server:local-ui-consistency-20261008225122-5ff295b2",

@@ -128,7 +128,10 @@ test("C02 real configured model performs role review and stores public task anal
  const context=await browser.newContext();
  try{
   const page=await context.newPage();await register(page,"真实模型核对");
-  const project=await api(page,"post","/projects",{title:"真实模型任务分析",maxDiscussionRounds:3}),root=`/projects/${project.id}`;
+  const models=(await api(page,"get","/models?limit=100")).items;
+  const selected=models.find((m:any)=>m.enabled&&m.capabilities.toolCalling&&m.capabilities.streaming&&(!process.env.JUDEX_E2E_REAL_MODEL_ID||m.id===process.env.JUDEX_E2E_REAL_MODEL_ID));
+  expect(selected,"Explicit real-model fixture needs an enabled configured model selection").toBeTruthy();
+  const project=await api(page,"post","/projects",{title:"真实模型任务分析",maxDiscussionRounds:3,defaultModelId:selected.id}),root=`/projects/${project.id}`;
   const workflow=await api(page,"post",root+"/workflows",{name:"核对流程",instructions:"任务上报后，协调者必须调用已分配岗位核对；结束前保存结构化公开分析。根据证据提出持续讨论建议，最终选择由成员确认。",nodes:[{id:"work",name:"核对",responsibility:"核对来源、缺口与当前任务条件，严禁自动验收",allowedPositionIds:[],defaultApprovalPolicy:"all"}],advisoryEdges:[]});
   const version=(await api(page,"get",root+`/workflows/${workflow.id}/versions`)).items[0];
   await api(page,"post",root+`/workflows/${workflow.id}/publish`,{expectedVersion:1,draftHash:version.draftHash});

@@ -44,6 +44,7 @@ func (e *Executor) watchCancellation(ctx context.Context, cancel context.CancelF
 
 type positionCaller struct {
 	task                          *uuid.UUID
+	plan                          *uuid.UUID
 	mu                            sync.Mutex
 	failures                      []string
 	localSessions                 sync.Map
@@ -52,8 +53,9 @@ type positionCaller struct {
 }
 
 func (c *positionCaller) CallPositionAgent(ctx context.Context, project, position, question, material string) (answer string, callErr error) {
+	childStarted := false
 	defer func() {
-		if callErr != nil {
+		if callErr != nil && childStarted {
 			c.mu.Lock()
 			c.failures = append(c.failures, position+": "+callErr.Error())
 			c.mu.Unlock()
@@ -104,6 +106,8 @@ func (c *positionCaller) CallPositionAgent(ctx context.Context, project, positio
 	var session uuid.UUID
 	if c.task != nil && c.topic == uuid.Nil {
 		session, err = e.ensureTaskSession(ctx, c.project, *c.task, identity)
+	} else if c.topic == uuid.Nil {
+		session, err = e.ensureProjectSession(ctx, c.project, identity)
 	} else {
 		session, err = e.ensureSession(ctx, c.project, c.topic, identity)
 	}
@@ -130,9 +134,10 @@ func (c *positionCaller) CallPositionAgent(ctx context.Context, project, positio
 		return "", err
 	}
 	defer e.releaseSession(session, run)
+	childStarted = true
 	registry := tools.New()
 	tools.RegisterDefaults(registry) // no recursive delegation
-	env := e.toolEnv(c.project, c.topic)
+	env := e.toolEnv(c.project, c.topic, c.task, c.plan)
 	sandbox := e.newRunSandbox(run, c.project)
 	env.Sandbox = sandbox
 	defer sandbox.Close(context.WithoutCancel(ctx))
@@ -148,7 +153,7 @@ func (c *positionCaller) CallPositionAgent(ctx context.Context, project, positio
 	go e.watchCancellation(childCtx, cancel, c.project, run, lease)
 	harness := runner.Runner{Provider: provider, Registry: registry, Clock: e.Clock}
 	journal := &journal{pool: e.Pool, project: c.project, run: run, session: session, batch: c.batch, lease: lease}
-	outcome := harness.Run(childCtx, runner.RunRequest{Lease: lease, RunID: run, SessionID: session, ProjectID: c.project, IdentityID: identity, ModelName: name, Manifest: agentcontext.Build(facts),
+	outcome := harness.Run(childCtx, runner.RunRequest{PrincipalKind: "position", Lease: lease, RunID: run, SessionID: session, ProjectID: c.project, IdentityID: identity, ModelName: name, Manifest: agentcontext.Build(facts),
 		Budget: runner.Budget{MaxRounds: 1, MaxModelAttempts: 8, MaxTotalTokens: 100000, MaxWallClock: 5 * time.Minute}, MaxInputTokens: maxIn, MaxOutputTokens: maxOut, Env: &env,
 		Journal: journal, Prepare: e.prepareCall(journal, c.topic, question+"\n"+material),
 	})
