@@ -1,0 +1,346 @@
+{
+  "status": "passed",
+  "scope": "project-settings-builtin-library-and-local-upgrade",
+  "version": "0.2.0-local.20261020.v2.16",
+  "protocol": 2,
+  "schema": 13,
+  "at": "2026-10-20T10:19:37.183Z",
+  "source": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.16",
+    "sourceTreeHash": "9633557feeeadfb1f3c4807ec9692b6cc4047ec98587b878287d5d7d78b6af6b",
+    "sourceFiles": 182,
+    "allSourceFilesIncludingTests": 200,
+    "maxLines": {
+      "file": "web/src/lib/api/schema-operations-0.d.ts",
+      "lines": 1779
+    },
+    "allSourcesWithin2000Lines": true,
+    "checkedAt": "2026-10-20T10:19:36.590Z"
+  },
+  "release": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.16",
+    "sourceTreeHash": "9633557feeeadfb1f3c4807ec9692b6cc4047ec98587b878287d5d7d78b6af6b",
+    "checksumsVerified": 56,
+    "nativeCLI": {
+      "schemaVersion": "2",
+      "ok": true,
+      "data": {
+        "cli": "0.2.0-local.20261020.v2.16",
+        "commit": "a475fdf-dirty",
+        "protocol": "2"
+      }
+    },
+    "skillVersion": "0.2.0-local.20261020.v2.16",
+    "serverPlatform": "linux-arm64",
+    "at": "2026-10-20T10:19:36.767Z"
+  },
+  "suites": {
+    "service": {
+      "status": "passed",
+      "count": 14,
+      "checks": [
+        "direct-membership",
+        "hidden-parent",
+        "three-levels",
+        "idempotency",
+        "human-mentions",
+        "zero-ordinary-trigger",
+        "platform-dm",
+        "archive-discussion",
+        "permission-revocation",
+        "binary-byte-idempotency",
+        "file-versions",
+        "same-name-files",
+        "exact-share",
+        "remove-preserves-history"
+      ]
+    },
+    "presets": {
+      "status": "passed",
+      "count": 16,
+      "checks": [
+        "complete-20-scenarios-118-roles-51-workflows",
+        "manager-only-import-and-project-isolation",
+        "atomic-mixed-batch-and-idempotent-replay",
+        "advisory-content-and-persistent-provenance",
+        "renamed-edited-cross-locale-import-does-not-overwrite",
+        "simultaneous-import-single-copy",
+        "stale-catalog-rejected",
+        "invalid-batch-rolls-back-all",
+        "duplicate-selection-rejected",
+        "manual-name-match-preserved",
+        "entire-catalog-importable-without-auto-groups-or-runs",
+        "imported-role-version-history",
+        "personal-prompt-create-update-version-conflicts",
+        "personal-prompt-isolated-from-other-members",
+        "project-membership-notifications-retained",
+        "demoted-manager-cannot-replay-import"
+      ]
+    },
+    "cli": {
+      "status": "passed",
+      "count": 13,
+      "checks": [
+        "native-device-login",
+        "protocol-2",
+        "project-scope-metadata-filter",
+        "project-group-selection",
+        "upload-download-sha",
+        "record-only-zero-trigger",
+        "single-combined-file-message",
+        "CLI-source",
+        "public-context",
+        "event-follow",
+        "reply-to-zero-trigger",
+        "precise-AI-mention",
+        "revocation"
+      ]
+    },
+    "sse": {
+      "status": "passed",
+      "count": 6,
+      "checks": [
+        "conversation-SSE",
+        "disconnected-cursor-replay",
+        "duplicate-message-no-event",
+        "unjoined-SSE-denied",
+        "revocation-closes-stream",
+        "revoked-command-replay-denied"
+      ]
+    },
+    "controlledAgents": {
+      "status": "passed",
+      "count": 19,
+      "checks": [
+        "ten-loop-atomic-pause",
+        "paused-trigger-merge",
+        "multi-role-own-push",
+        "same-position-distinct-agents",
+        "versioned-continue",
+        "second-allowance-20",
+        "terminate-rejects-late-publication",
+        "seven-real-tools",
+        "immutable-group-projection",
+        "unjoined-group-not-projected",
+        "sandbox-write-edit-publish",
+        "public-tool-provenance",
+        "model-call-budget-separate-from-loops",
+        "model-failure-pauses",
+        "configuration-next-call",
+        "latest-limit-next-allowance",
+        "private-prompts-excluded",
+        "shared-compaction",
+        "compressed-original-readable"
+      ]
+    },
+    "browser": {
+      "status": "passed",
+      "count": 54,
+      "checks": [
+        "real-registration-project-entry",
+        "direct-registered-member",
+        "three-independent-group-levels",
+        "ordinary-message-zero-AI",
+        "real-upload-fixed-version-side-reader",
+        "bilingual-light-dark",
+        "archive-still-writable",
+        "platform-human-DM",
+        "real-login-persisted-project-cards",
+        "notification-opens-group-from-project-list",
+        "conversation-menu-search-clear",
+        "inline-file-library",
+        "file-search-empty-and-reset",
+        "resource-browsing-preserves-draft",
+        "reader-history-and-close",
+        "knowledge-reachable-from-menu",
+        "account-menu-bilingual-theme",
+        "readable-chat-type",
+        "desktop-layout-no-overflow",
+        "wide-sectioned-project-settings",
+        "member-search-actions-removal-cancel",
+        "builtin-library-scenario-filter",
+        "role-preview-multiselect-import",
+        "role-editor-version-history",
+        "renamed-preset-source-recognition",
+        "workflow-steps-relationships-import-preview",
+        "private-prompt-editor-and-composition",
+        "group-independent-multi-role-and-workflow-selection",
+        "client-download-cards-and-contextual-commands",
+        "settings-bilingual-dark-theme-preset-identity",
+        "two-human-SSE-config-conflict",
+        "retained-group-draft",
+        "removed-member-not-restored",
+        "project-draft-original-version-without-chat",
+        "missed-config-event-conflict-refetch",
+        "conflict-close-reopen-latest",
+        "save-after-conflict",
+        "committed-truncated-response-safe-retry",
+        "acknowledged-truncated-new-intent",
+        "committed-envelope-response-safe-retry",
+        "acknowledged-envelope-new-intent",
+        "committed-upload-complete-safe-resume",
+        "batch-before-whole-no-duplicate",
+        "batch-before-whole-explicit-new-intent",
+        "batch-after-subset-no-duplicate",
+        "batch-after-subset-explicit-new-intent",
+        "batch-after-resume-no-duplicate",
+        "batch-after-resume-explicit-new-intent",
+        "file-library-failure-retry",
+        "snapshot-failure-retry",
+        "original-context-failure-retry",
+        "reply-selection-cancellation",
+        "human-explicit-reply-and-role-mention",
+        "human-wait-natural-settlement"
+      ]
+    }
+  },
+  "sameVersionScenarioCount": 122,
+  "webUnitTests": {
+    "passed": 24,
+    "failed": 0
+  },
+  "go": {
+    "test": "passed",
+    "vet": "passed",
+    "integrationWithoutDSN": "skipped; real HTTP and PostgreSQL exercised in candidate suites"
+  },
+  "desktopViewports": {
+    "verified": [
+      {
+        "footerVisible": true,
+        "scroll": 1098,
+        "viewport": {
+          "height": 720,
+          "width": 1280
+        },
+        "width": 1098
+      }
+    ],
+    "note": "Requested larger viewport was not applied by the browser; no larger size is claimed."
+  },
+  "deployment": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.16",
+    "database": "judex_v2",
+    "schema": 13,
+    "allAuthenticationRowsUnchanged": true,
+    "authentication": [
+      {
+        "table": "users",
+        "rows": 11,
+        "fullRowsMatched": true
+      },
+      {
+        "table": "password_credentials",
+        "rows": 11,
+        "fullRowsMatched": true
+      },
+      {
+        "table": "user_sessions",
+        "rows": 21,
+        "fullRowsMatched": true
+      },
+      {
+        "table": "recovery_tokens",
+        "rows": 0,
+        "fullRowsMatched": true
+      }
+    ],
+    "unchangedSecretUIDAndContent": [
+      "judex-model-catalog",
+      "judex-model-keys",
+      "judex-opensandbox-auth",
+      "judex-postgresql",
+      "judex-storage-auth"
+    ],
+    "privateBackupRetained": true,
+    "at": "2026-10-20T10:12:26.670Z"
+  },
+  "normalBrowser": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.16",
+    "checks": [
+      "existing-Chrome-session",
+      "existing-project-settings",
+      "real-builtin-library-118-roles",
+      "original-unsaved-form-preserved-in-original-tab"
+    ],
+    "at": "2026-10-20T10:15:17.413Z"
+  },
+  "cleanup": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.16",
+    "deletedNamespaces": [
+      "judex-v2-e77f25f0",
+      "judex-v2-e77f25f0-sandboxes"
+    ],
+    "remainingOwnedPersistentVolumes": 0,
+    "testPortsClosed": [
+      18100,
+      18103
+    ],
+    "sharedControllerReady": true,
+    "unrelatedDatabaseStillRunning": true,
+    "unchangedSecrets": [
+      "judex-model-catalog",
+      "judex-model-keys",
+      "judex-opensandbox-auth",
+      "judex-postgresql",
+      "judex-storage-auth"
+    ],
+    "workloads": [
+      {
+        "name": "judex",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-judex-opensandbox-server",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-material-converter",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-postgresql",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-seaweedfs",
+        "desired": 1,
+        "ready": 1
+      }
+    ],
+    "privateBackupRetained": true,
+    "normalURL": "http://127.0.0.1:18097/",
+    "ready": {
+      "scope": "http+db",
+      "status": "ready"
+    },
+    "existingChromeSessionVerified": true,
+    "originalUnsavedFormPreserved": true,
+    "viewportOverrideReset": true,
+    "checkedAt": "2026-10-20T10:19:37.181Z"
+  },
+  "screenshots": [
+    ".cache/v2-settings-refresh/k8s/settings-library.png",
+    ".cache/v2-settings-refresh/k8s/settings-members.png",
+    ".cache/v2-settings-refresh/k8s/workflow-preview.png",
+    ".cache/v2-settings-refresh/k8s/group-members.png",
+    ".cache/v2-settings-refresh/k8s/settings-dark-en.png"
+  ],
+  "limitations": {
+    "liveAPIMartNotRerun": true,
+    "fullFormatsPermissionsAndRestartMatrixNotRerun": true,
+    "previousFullEvidence": "FOURTH-FOLLOWUP-20261020.md",
+    "remoteCINotTriggered": true,
+    "otherCLIPlatformsCrossBuiltOnly": true,
+    "preExistingDiffCheckWarning": "web/src/features/auth/AccessPages.tsx:58: new blank line at EOF."
+  }
+}

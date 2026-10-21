@@ -1,308 +1,117 @@
-// SPDX-License-Identifier: Apache-2.0
-
-// Package app assembles runtime resources: HTTP transport, PostgreSQL pool,
-// job engine workers, graceful shutdown. Entry points stay thin
-// (docs/plans/v1/01 §1).
+// Package app assembles the V2 modular monolith. Entry points stay thin.
 package app
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/kakj-go/Judex/internal/agent"
+	"github.com/kakj-go/Judex/internal/agent/peer"
+	"github.com/kakj-go/Judex/internal/collab"
+	"github.com/kakj-go/Judex/internal/config"
+	"github.com/kakj-go/Judex/internal/identity"
+	"github.com/kakj-go/Judex/internal/infrastructure/objectstore"
+	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
+	"github.com/kakj-go/Judex/internal/job"
+	httptransport "github.com/kakj-go/Judex/internal/transport/http"
+	"github.com/kakj-go/Judex/internal/transport/http/middleware"
 	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
 	"sync/atomic"
-
-	"github.com/google/uuid"
 	"time"
-
-	"github.com/kakj-go/Judex/internal/agent"
-	"github.com/kakj-go/Judex/internal/agent/batch"
-	"github.com/kakj-go/Judex/internal/agent/runner"
-	"github.com/kakj-go/Judex/internal/agent/tools"
-	"github.com/kakj-go/Judex/internal/collaboration"
-	"github.com/kakj-go/Judex/internal/config"
-	"github.com/kakj-go/Judex/internal/decision"
-	"github.com/kakj-go/Judex/internal/discussion"
-	"github.com/kakj-go/Judex/internal/handoff"
-	"github.com/kakj-go/Judex/internal/identity"
-	"github.com/kakj-go/Judex/internal/infrastructure/model"
-	"github.com/kakj-go/Judex/internal/infrastructure/objectstore"
-	"github.com/kakj-go/Judex/internal/infrastructure/opensandbox"
-	"github.com/kakj-go/Judex/internal/infrastructure/postgres"
-	"github.com/kakj-go/Judex/internal/infrastructure/projectvolume"
-	"github.com/kakj-go/Judex/internal/job"
-	"github.com/kakj-go/Judex/internal/material"
-	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
-	"github.com/kakj-go/Judex/internal/project"
-	httptransport "github.com/kakj-go/Judex/internal/transport/http"
-	"github.com/kakj-go/Judex/internal/transport/http/middleware"
-	"github.com/kakj-go/Judex/internal/work"
-	"github.com/kakj-go/Judex/internal/workflow"
 )
 
 type Application struct {
 	Server   *http.Server
 	Draining *atomic.Bool
 	Config   config.Config
-
-	pool          *postgres.Pool
-	identity      *identity.Service
-	projects      *project.Service
-	workflows     *workflow.Service
-	materials     *material.Service
-	discussion    *discussion.Service
-	work          *work.Service
-	decisions     *decision.Service
-	handoffs      *handoff.Service
-	objects       material.ObjectStore
-	engine        *job.Engine
-	root          *os.Root
-	workers       []context.CancelFunc
-	handlers      []job.Handler
-	batchExecutor func(context.Context, job.Job) error
+	pool     *postgres.Pool
+	identity *identity.Service
+	collab   *collab.Service
+	engine   *job.Engine
+	root     *os.Root
+	workers  []context.CancelFunc
+	handlers []job.Handler
 }
 
-// New builds the application per config mode. When persistence is enabled it
-// opens the pool immediately (fail fast on bad DSN).
-func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
+func New(cfg config.Config, logger *slog.Logger) (app *Application, err error) {
 	if logger == nil {
 		logger = slog.Default()
 	}
+	app = &Application{Draining: &atomic.Bool{}, Config: cfg}
+	defer func() {
+		if err != nil {
+			app.Close(context.Background())
+		}
+	}()
 	var assets fs.FS
 	root, err := os.OpenRoot(cfg.WebDirectory)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, err
+		return app, err
 	}
+	err = nil
 	if root != nil {
+		app.root = root
 		assets = root.FS()
-	} else {
-		logger.Info("web build absent; API-only development mode")
 	}
-	draining := &atomic.Bool{}
-
-	app := &Application{Draining: draining, Config: cfg, root: root}
-
 	if cfg.NeedsDatabase() {
-		pool, err := postgres.Open(context.Background(), postgres.Options{URL: cfg.DatabaseURL}, logger)
+		app.pool, err = postgres.Open(context.Background(), postgres.Options{URL: cfg.DatabaseURL}, logger)
 		if err != nil {
-			if root != nil {
-				root.Close()
-			}
-			return nil, err
+			return app, err
 		}
-		if cfg.ObjectStorage.Endpoint != "" {
-			store, err := objectstore.New(context.Background(), objectstore.Options{
-				Endpoint: cfg.ObjectStorage.Endpoint, Region: cfg.ObjectStorage.Region,
-				AccessKeyID: cfg.ObjectStorage.AccessKeyID, SecretAccessKey: cfg.ObjectStorage.SecretAccessKey,
-				Bucket: cfg.ObjectStorage.Bucket, PathStyle: cfg.ObjectStorage.PathStyle,
-			})
-			if err != nil {
-				pool.Close()
-				if root != nil {
-					root.Close()
-				}
-				return nil, err
-			}
-			app.objects = store
+		if err = app.pool.Migrate(context.Background()); err != nil {
+			return app, err
 		}
 		if cfg.ModelCatalogFile != "" {
-			if err := pool.Migrate(context.Background()); err != nil {
-				pool.Close()
-				if root != nil {
-					root.Close()
-				}
-				return nil, err
+			entries, e := agent.LoadCatalogFile(cfg.ModelCatalogFile)
+			if e != nil {
+				return app, e
 			}
-			entries, err := agent.LoadCatalogFile(cfg.ModelCatalogFile)
+			if err = agent.SyncCatalog(context.Background(), app.pool, entries, time.Now().UTC()); err != nil {
+				return app, err
+			}
+		}
+		app.identity = identity.NewService(app.pool, identity.NewRateLimiter(app.pool.Pool, nil), identity.Options{RegisterPerIP: cfg.RegisterPerIP}, nil)
+		app.collab = &collab.Service{Pool: app.pool, ConverterURL: cfg.MaterialConverterURL}
+		app.identity.ProfileChanged = app.collab.ProfileChanged
+		if cfg.ObjectStorage.Endpoint != "" {
+			app.collab.Objects, err = objectstore.New(context.Background(), objectstore.Options{Endpoint: cfg.ObjectStorage.Endpoint, Region: cfg.ObjectStorage.Region, AccessKeyID: cfg.ObjectStorage.AccessKeyID, SecretAccessKey: cfg.ObjectStorage.SecretAccessKey, Bucket: cfg.ObjectStorage.Bucket, PathStyle: cfg.ObjectStorage.PathStyle})
 			if err != nil {
-				pool.Close()
-				if root != nil {
-					root.Close()
-				}
-				return nil, err
-			}
-			if err := agent.SyncCatalog(context.Background(), pool, entries, time.Now().UTC()); err != nil {
-				pool.Close()
-				if root != nil {
-					root.Close()
-				}
-				return nil, err
-			}
-			logger.Info("model catalog synced", "entries", len(entries))
-		}
-		app.pool = pool
-		limiter := identity.NewRateLimiter(pool.Pool, nil)
-		app.identity = identity.NewService(pool, limiter, identity.Options{RegisterPerIP: cfg.RegisterPerIP}, nil)
-		app.projects = project.NewService(pool, nil)
-		app.workflows = workflow.NewService(pool, nil)
-		app.materials = material.NewService(pool, app.objects, material.DefaultLimits(), nil)
-		app.materials.SetConverterURL(os.Getenv("JUDEX_MATERIAL_CONVERTER_URL"))
-		app.handlers = append(app.handlers, app.materials.PreviewHandler())
-		app.discussion = discussion.NewService(pool, nil)
-		app.work = work.NewService(pool, nil)
-		app.decisions = decision.NewService(pool, nil, 86400)
-		app.handoffs = handoff.NewService(pool, nil)
-		handler := decision.TimeoutJobHandler{Service: app.decisions}
-		app.handlers = append(app.handlers, handler)
-		if cfg.ModelGateway.Protocol != "" || cfg.ModelCatalogFile != "" {
-			provider, err := model.NewProvider(model.GatewayConfig{
-				Protocol: cfg.ModelGateway.Protocol,
-				BaseURL:  cfg.ModelGateway.BaseURL,
-				APIKey:   cfg.ModelGateway.APIKey,
-			})
-			if err == nil || cfg.ModelCatalogFile != "" {
-				registry := tools.New()
-				tools.RegisterDefaults(registry)
-				executor := &batch.Executor{
-					Workflows: app.workflows,
-					Pool:      pool.Pool, Provider: provider, ModelName: cfg.ModelGateway.Model,
-					Objects: app.objects, ResolveModel: agent.Resolver(pool, cfg.ModelGateway),
-					Runner: runner.NewRunnerForTest(provider, registry),
-				}
-				if cfg.Sandbox.Endpoint != "" {
-					var projection *projectvolume.Client
-					if cfg.Sandbox.MaterialNamespace != "" {
-						projection, err = projectvolume.InCluster(cfg.Sandbox.MaterialNamespace, cfg.Sandbox.MaterialImage, cfg.Sandbox.MaterialStorageClass)
-						if err != nil {
-							return nil, fmt.Errorf("material projection setup: %w", err)
-						}
-					}
-					executor.SandboxFactory = func(runID, projectID uuid.UUID) *opensandbox.RunSandbox {
-						options := opensandbox.Config{Endpoint: cfg.Sandbox.Endpoint, APIKey: cfg.Sandbox.APIKey, Image: cfg.Sandbox.Image, CPU: cfg.Sandbox.CPU, Memory: cfg.Sandbox.Memory}
-						sandbox := &opensandbox.RunSandbox{RunID: runID, ProjectID: projectID}
-						if projection != nil {
-							options.ProjectPVC = projectvolume.Claim(projectID)
-							sandbox.BeforeCreate = func(ctx context.Context) error {
-								files, err := executor.ProjectFiles(ctx, projectID)
-								if err != nil {
-									return err
-								}
-								return projection.Prepare(ctx, projectID, runID, files)
-							}
-						}
-						sandbox.AfterCreate = func(ctx context.Context, id string) error { return executor.RecordSandbox(ctx, projectID, runID, id) }
-						sandbox.AfterClose = func(ctx context.Context, err error) { executor.SandboxClosed(ctx, runID, err) }
-						sandbox.Client = opensandbox.New(options)
-						return sandbox
-					}
-				}
-				app.batchExecutor = executor.ExecuteJob
+				return app, err
 			}
 		}
+		app.handlers = append(app.handlers, app.collab.PreviewJob(), app.collab.WorkflowDraftJob(agent.Resolver(app.pool, cfg.ModelGateway)))
+		executor := &peer.Executor{Service: app.collab, ResolveModel: agent.Resolver(app.pool, cfg.ModelGateway)}
+		if err = app.wireSandbox(executor); err != nil {
+			return app, err
+		}
+		app.handlers = append(app.handlers, executor.Handler())
 	}
-
-	if app.pool != nil {
-		app.handlers = append(app.handlers, job.HandlerFunc{KindName: "discussion.batch", Attempts: 3, ExecuteFn: func(ctx context.Context, j job.Job) error {
-			if app.batchExecutor != nil {
-				return app.batchExecutor(ctx, j)
-			}
-			var payload struct {
-				ProjectID uuid.UUID `json:"projectId"`
-				BatchID   uuid.UUID `json:"batchId"`
-			}
-			if err := json.Unmarshal(j.Payload, &payload); err != nil {
-				return err
-			}
-			unavailable := batch.Service{Pool: app.pool}
-			if err := unavailable.MarkUnavailable(ctx, payload.ProjectID, payload.BatchID); err != nil {
-				return err
-			}
-			return apierrors.New(apierrors.ModelUnavailable, "model gateway not configured")
-		}})
-		if cfg.Sandbox.Endpoint != "" {
-			cleaner := batch.Executor{Pool: app.pool.Pool}
-			client := opensandbox.New(opensandbox.Config{Endpoint: cfg.Sandbox.Endpoint, APIKey: cfg.Sandbox.APIKey})
-			app.handlers = append(app.handlers, job.HandlerFunc{KindName: "sandbox.cleanup", Attempts: 5, ExecuteFn: cleaner.CleanupSandbox(client)})
-		}
-	}
-
 	if cfg.RunsHTTP() {
-		var authOpts *httptransport.AuthOptions
-		spec, err := httptransport.NewSpecRouter(logger)
-		if err != nil {
-			app.Close(context.Background())
-			return nil, err
+		spec, e := httptransport.NewSpecRouter(logger)
+		if e != nil {
+			return app, e
 		}
+		var authOpts *httptransport.AuthOptions
 		if app.identity != nil {
 			spec.CommandPool = app.pool
-			authCfg := middleware.AuthConfig{
-				Development:    cfg.Environment == "development" || cfg.Environment == "test",
-				AllowedOrigins: cfg.AllowedOrigins,
-			}
+			authCfg := middleware.AuthConfig{Development: cfg.Environment != "production", AllowedOrigins: cfg.AllowedOrigins}
 			httptransport.NewIdentityHandlers(app.identity, authCfg, authCfg.Development).Register(spec)
-			projectHandlers := httptransport.NewProjectHandlers(app.projects,
-				func(ctx context.Context, id uuid.UUID) error {
-					_, err := agent.ModelEnabled(ctx, app.pool, id)
-					return err
-				},
-				func(ctx context.Context) ([]agent.PublicModel, error) { return agent.ListPublicModels(ctx, app.pool) },
-			)
-			projectHandlers.Work = app.work
-			projectHandlers.Register(spec)
-			httptransport.NewMemberHandlers(app.projects).Register(spec)
-			httptransport.NewWorkflowHandlers(app.workflows).Register(spec)
-			httptransport.NewPositionHandlers(app.projects).Register(spec)
-			httptransport.NewMaterialHandlers(app.materials).Register(spec)
-			httptransport.NewDiscussionHandlers(app.discussion).Register(spec)
-			collaborationService := collaboration.NewService(app.pool)
-			httptransport.NewCollaborationHandlers(collaborationService, app.discussion).Register(spec)
-			httptransport.NewSSEHandlers(app.pool.Pool).Register(spec)
-			httptransport.NewWorkHandlers(app.work).Register(spec)
-			httptransport.NewCooperationHandlers(app.work, app.discussion).Register(spec)
-			httptransport.NewProposalHandlers(app.decisions).Register(spec)
-			httptransport.NewHandoffHandlers(app.handoffs, app.work).Register(spec)
-			httptransport.NewResearchHandlers(app.work).Register(spec)
-			intentHandlers := httptransport.NewIntentHandlers(app.decisions, app.work)
-			intentHandlers.Projects = app.projects
-			intentHandlers.Handoffs = app.handoffs
-			intentHandlers.Workflows = app.workflows
-			intentHandlers.Collaboration = collaborationService
-			intentHandlers.Discussion = app.discussion
-			intentHandlers.Register(spec)
-			httptransport.NewAgentHandlers(app.pool).Register(spec)
-			idSvc := app.identity
-			authOpts = &httptransport.AuthOptions{
-				Config:        authCfg,
-				Resolver:      idSvc.ResolveSession,
-				GrantResolver: idSvc.ResolveGrant,
-			}
+			httptransport.V2Handlers{Service: app.collab, PreviewOrigin: cfg.PreviewOrigin}.Register(spec)
+			authOpts = &httptransport.AuthOptions{Config: authCfg, Resolver: app.identity.ResolveSession, GrantResolver: app.identity.ResolveGrant}
 		}
-		httptransport.PreviewOrigin = cfg.PreviewOrigin
-		router, err := httptransport.NewRouter(httptransport.Options{
-			Logger: logger, Assets: assets, Draining: draining,
-			ReadyCheck:     app.readyCheck,
-			Auth:           authOpts,
-			PreviewService: app.materials, PreviewOrigin: cfg.PreviewOrigin,
-			// 按实际接线如实上报能力（未配置模型网关时 agentExecution=false）。
-			Capabilities: map[string]bool{
-				"identity": app.identity != nil, "projects": app.projects != nil,
-				"persistence": app.pool != nil, "agentExecution": app.batchExecutor != nil,
-			},
-		}, spec)
-		if err != nil {
-			app.Close(context.Background())
-			return nil, err
+		router, e := httptransport.NewRouter(httptransport.Options{Logger: logger, Assets: assets, Draining: app.Draining, ReadyCheck: app.readyCheck, Auth: authOpts, PreviewService: app.collab, PreviewOrigin: cfg.PreviewOrigin, Capabilities: map[string]bool{"identity": app.identity != nil, "projects": app.collab != nil, "persistence": app.pool != nil, "agentExecution": cfg.ModelCatalogFile != "" || cfg.ModelGateway.Model != ""}}, spec)
+		if e != nil {
+			return app, e
 		}
 		if app.pool != nil {
-			if err := spec.ValidateRegistration(); err != nil {
-				app.Close(context.Background())
-				return nil, err
+			if e = spec.ValidateRegistration(); e != nil {
+				return app, e
 			}
 		}
-		app.Server = &http.Server{
-			Addr: cfg.HTTPAddress, Handler: router,
-			ReadHeaderTimeout: 5 * time.Second,
-			ReadTimeout:       30 * time.Second,
-			// SSE/streaming handlers override the write deadline per request;
-			// the global cap only bounds ordinary requests (docs/plans/v1/00).
-			WriteTimeout:   30 * time.Second,
-			IdleTimeout:    60 * time.Second,
-			MaxHeaderBytes: 1 << 20,
-		}
+		app.Server = &http.Server{Addr: cfg.HTTPAddress, Handler: router, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	}
 	return app, nil
 }
@@ -319,8 +128,14 @@ func (a *Application) readyCheck(ctx context.Context) error {
 	}
 	pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	var one int
-	return a.pool.QueryRow(pingCtx, "SELECT 1").Scan(&one)
+	var schema int
+	if err := a.pool.QueryRow(pingCtx, "SELECT version FROM judex_schema").Scan(&schema); err != nil {
+		return err
+	}
+	if schema != 2 {
+		return errors.New("unsupported database schema")
+	}
+	return nil
 }
 
 // RunMigrations applies all embedded migrations under the advisory lock.
@@ -337,13 +152,31 @@ func (a *Application) StartWorkers(ctx context.Context, logger *slog.Logger) {
 	if a.pool == nil || a.Config.Mode == config.ModeAPI {
 		return
 	}
-	a.engine = job.NewEngine(a.pool.Pool, job.Options{}, logger, nil)
+	a.engine = job.NewEngine(a.pool.Pool, job.Options{Kinds: []string{"role.delivery", "workflow.draft"}}, logger, nil)
+	backgroundHandlers := []job.Handler{}
+	backgroundKinds := []string{}
 	for _, h := range append(append([]job.Handler{}, jobHandlers...), a.handlers...) {
-		a.engine.Register(h)
+		if h.Kind() == "role.delivery" || h.Kind() == "workflow.draft" {
+			a.engine.Register(h)
+		} else {
+			backgroundHandlers = append(backgroundHandlers, h)
+			backgroundKinds = append(backgroundKinds, h.Kind())
+		}
+	}
+	// Model I/O can occupy both role slots for minutes. Previews must still
+	// progress without raising the configured model concurrency.
+	if len(backgroundHandlers) > 0 {
+		background := job.NewEngine(a.pool.Pool, job.Options{Kinds: backgroundKinds}, logger, nil)
+		for _, h := range backgroundHandlers {
+			background.Register(h)
+		}
+		bctx, cancel := context.WithCancel(ctx)
+		a.workers = append(a.workers, cancel)
+		go background.Run(bctx)
 	}
 	maintenanceCtx, cancelMaintenance := context.WithCancel(ctx)
 	a.workers = append(a.workers, cancelMaintenance)
-	go batch.MaintainModelObservations(maintenanceCtx, a.pool.Pool, logger)
+	go a.maintain(maintenanceCtx, logger)
 	for i := 0; i < a.Config.WorkerCount; i++ {
 		wctx, cancel := context.WithCancel(ctx)
 		a.workers = append(a.workers, cancel)

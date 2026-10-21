@@ -1,0 +1,941 @@
+components:
+  schemas:
+    V2ProjectInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 32000
+        defaultModelId:
+          type: string
+          format: uuid
+          nullable: true
+        loopLimit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+      required:
+        - name
+    V2MemberRoles:
+      type: object
+      additionalProperties: false
+      properties:
+        userId:
+          type: string
+          format: uuid
+        positionIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - userId
+        - positionIds
+    V2GroupInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        purpose:
+          type: string
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+        workflowIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/V2MemberRoles'
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+      required:
+        - name
+    V2Mention:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          enum:
+            - human
+            - role_agent
+        targetId:
+          type: string
+          format: uuid
+        requiresResponse:
+          type: boolean
+      required:
+        - kind
+        - targetId
+    V2MessageInput:
+      type: object
+      additionalProperties: false
+      properties:
+        confirmation:
+          type: object
+          additionalProperties: false
+          required: [title]
+          properties:
+            title:
+              type: string
+              minLength: 1
+              maxLength: 240
+        decision:
+          type: object
+          additionalProperties: false
+          required: [choice, expectedVersion]
+          properties:
+            choice:
+              type: string
+              enum: [agree, changes, comment]
+            expectedVersion:
+              type: integer
+              enum: [1]
+        body:
+          type: string
+          maxLength: 65536
+        replyTo:
+          type: string
+          format: uuid
+          nullable: true
+        mentions:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/V2Mention'
+        fileVersionIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 20
+        recordOnly:
+          type: boolean
+      required: []
+    V2TemplateInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        prompt:
+          type: string
+        content:
+          type: string
+        modelId:
+          type: string
+          format: uuid
+          nullable: true
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+        graph:
+          $ref: '#/components/schemas/V2WorkflowGraph'
+      required:
+        - name
+    V2UploadInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        mime:
+          type: string
+        size:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 104857600
+        sha256:
+          type: string
+          pattern: ^[a-fA-F0-9]{64}$
+        fileId:
+          type: string
+          format: uuid
+          nullable: true
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+      required:
+        - name
+        - size
+        - sha256
+    V2ShareInput:
+      type: object
+      additionalProperties: false
+      properties:
+        targetGroupId:
+          type: string
+          format: uuid
+        messageId:
+          type: string
+          format: uuid
+          nullable: true
+        fileVersionIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        summary:
+          type: string
+      required:
+        - targetGroupId
+    V2ControlInput:
+      type: object
+      additionalProperties: false
+      properties:
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+        action:
+          type: string
+          enum:
+            - continue
+            - terminate
+        feedback:
+          type: string
+          maxLength: 16000
+      required:
+        - expectedVersion
+        - action
+    V2Envelope:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data: {}
+        meta:
+          $ref: '#/components/schemas/RequestMeta'
+    V2Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - group
+            - direct
+        messageSeq:
+          type: integer
+          format: int64
+        eventSeq:
+          type: integer
+          format: int64
+        knowledgeSeq:
+          type: integer
+          format: int64
+      required:
+        - id
+        - kind
+        - messageSeq
+        - eventSeq
+        - knowledgeSeq
+    V2Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+        defaultModelId:
+          type: string
+          format: uuid
+          nullable: true
+        loopLimit:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 100
+        version:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+        role:
+          type: string
+          enum:
+            - owner
+            - admin
+            - member
+        memberCount:
+          type: integer
+          format: int64
+      required:
+        - id
+        - name
+        - description
+        - ownerId
+        - defaultModelId
+        - loopLimit
+        - version
+        - createdAt
+        - role
+        - memberCount
+    V2ProjectMember:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        version:
+          type: integer
+          format: int64
+        avatarVersion:
+          type: integer
+          minimum: 0
+      required:
+        - userId
+        - displayName
+        - email
+        - role
+        - version
+    V2RoleAgent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        positionId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        version:
+          type: integer
+          format: int64
+      required:
+        - id
+        - positionId
+        - name
+        - version
+    V2GroupMembership:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        version:
+          type: integer
+          format: int64
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/V2RoleAgent'
+        avatarVersion:
+          type: integer
+          minimum: 0
+      required:
+        - userId
+        - displayName
+        - version
+        - roles
+    V2Group:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Null when the parent is not joined. Never disclose an unjoined ancestor identifier or name.
+        depth:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 3
+        name:
+          type: string
+        purpose:
+          type: string
+        archived:
+          type: boolean
+        version:
+          type: integer
+          format: int64
+        workflowIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/V2GroupMembership'
+        messageSeq:
+          type: integer
+          format: int64
+        eventSeq:
+          type: integer
+          format: int64
+        unread:
+          type: integer
+          format: int64
+        preview:
+          type: string
+          nullable: true
+      required:
+        - id
+        - projectId
+        - parentId
+        - depth
+        - name
+        - purpose
+        - archived
+        - version
+        - workflowIds
+        - members
+        - messageSeq
+        - eventSeq
+        - unread
+        - preview
+    V2Position:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        version:
+          type: integer
+          format: int64
+        revision:
+          type: integer
+          format: int64
+        prompt:
+          type: string
+        modelId:
+          type: string
+          format: uuid
+          nullable: true
+        presetId:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+        - version
+        - revision
+        - prompt
+        - modelId
+    V2Workflow:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        version:
+          type: integer
+          format: int64
+        revision:
+          type: integer
+          format: int64
+        content:
+          type: string
+        presetId:
+          type: string
+          nullable: true
+        graph:
+          $ref: '#/components/schemas/V2WorkflowGraph'
+      required:
+        - id
+        - name
+        - version
+        - revision
+        - content
+    V2FileReference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fileId:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          format: int64
+        name:
+          type: string
+        mime:
+          type: string
+        size:
+          type: integer
+          format: int64
+      required:
+        - id
+        - fileId
+        - revision
+        - name
+        - mime
+        - size
+    V2FileVersion:
+      allOf:
+        - $ref: '#/components/schemas/V2FileReference'
+        - type: object
+          properties:
+            sha256:
+              type: string
+            version:
+              type: integer
+              format: int64
+            owned:
+              type: boolean
+            removed:
+              type: boolean
+            createdAt:
+              type: string
+              format: date-time
+            authorUserId:
+              type: string
+              format: uuid
+            authorName:
+              type: string
+            authorAvatarVersion:
+              type: integer
+              format: int64
+            previewState:
+              type: string
+            previewData:
+              type: object
+              additionalProperties: true
+          required:
+            - sha256
+            - version
+            - owned
+            - removed
+            - createdAt
+            - authorUserId
+            - authorName
+            - authorAvatarVersion
+            - previewState
+            - previewData
+    V2Message:
+      type: object
+      properties:
+        confirmation:
+          type: object
+          nullable: true
+          properties:
+            title: {type: string}
+            version: {type: integer}
+            closed: {type: boolean}
+            responses:
+              type: array
+              items:
+                type: object
+                properties:
+                  userId: {type: string, format: uuid}
+                  messageId: {type: string, format: uuid}
+                  choice: {type: string, enum: [agree, changes, comment]}
+                  body: {type: string}
+                  createdAt: {type: string, format: date-time}
+        decision:
+          type: object
+          nullable: true
+          properties:
+            choice: {type: string, enum: [agree, changes, comment]}
+            requestMessageId: {type: string, format: uuid}
+        id:
+          type: string
+          format: uuid
+        seq:
+          type: integer
+          format: int64
+        body:
+          type: string
+        authorUserId:
+          type: string
+          format: uuid
+        authorName:
+          type: string
+        roleAgentId:
+          type: string
+          format: uuid
+          nullable: true
+        positionName:
+          type: string
+          nullable: true
+        source:
+          type: string
+          enum:
+            - web
+            - cli
+            - agent
+            - share
+            - system
+        origin:
+          type: object
+          additionalProperties: true
+        replyTo:
+          type: string
+          format: uuid
+          nullable: true
+        discussionId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        mentions:
+          type: array
+          items:
+            $ref: '#/components/schemas/V2Mention'
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/V2FileReference'
+        avatarVersion:
+          type: integer
+          minimum: 0
+      required:
+        - id
+        - seq
+        - body
+        - authorUserId
+        - authorName
+        - roleAgentId
+        - positionName
+        - source
+        - origin
+        - replyTo
+        - discussionId
+        - createdAt
+        - mentions
+        - files
+    V2MessageResult:
+      type: object
+      properties:
+        message:
+          $ref: '#/components/schemas/V2Message'
+        warnings:
+          type: array
+          items:
+            type: string
+      required:
+        - message
+        - warnings
+    V2Discussion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum:
+            - active
+            - paused
+            - settled
+            - terminated
+        loopCount:
+          type: integer
+          format: int64
+        allowance:
+          type: integer
+          format: int64
+        pauseReason:
+          type: string
+          nullable: true
+        version:
+          type: integer
+          format: int64
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+          nullable: true
+        waitingFor:
+          type: array
+          items:
+            type: object
+            properties:
+              messageId:
+                type: string
+                format: uuid
+              userId:
+                type: string
+                format: uuid
+              roleAgentId:
+                type: string
+                format: uuid
+            required:
+              - messageId
+              - userId
+              - roleAgentId
+        controls:
+          type: array
+          items:
+            type: object
+            properties:
+              action:
+                type: string
+              userId:
+                type: string
+                format: uuid
+              feedback:
+                type: string
+              allowance:
+                type: integer
+                format: int64
+              loopCount:
+                type: integer
+                format: int64
+              createdAt:
+                type: string
+                format: date-time
+            required:
+              - action
+              - userId
+              - feedback
+              - allowance
+              - loopCount
+              - createdAt
+      required:
+        - id
+        - state
+        - loopCount
+        - allowance
+        - pauseReason
+        - version
+        - startedAt
+        - endedAt
+        - waitingFor
+        - controls
+    V2RoleRun:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          format: int64
+        roleAgentId:
+          type: string
+          format: uuid
+        discussionId:
+          type: string
+          format: uuid
+        state:
+          type: string
+        snapshotVersion:
+          type: integer
+          format: int64
+          nullable: true
+        modelCalls:
+          type: integer
+          format: int64
+        tokens:
+          type: integer
+          format: int64
+        errorCode:
+          type: string
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - version
+        - roleAgentId
+        - discussionId
+        - state
+        - snapshotVersion
+        - modelCalls
+        - tokens
+        - errorCode
+        - errorMessage
+        - createdAt
+        - updatedAt
+    V2ContextEntry:
+      type: object
+      properties:
+        seq:
+          type: integer
+          format: int64
+        kind:
+          type: string
+        refId:
+          type: string
+        content: {}
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - seq
+        - kind
+        - refId
+        - content
+        - createdAt
+    V2ContextSnapshot:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int64
+        coveredThrough:
+          type: integer
+          format: int64
+        summary:
+          type: string
+        estimatedTokens:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - version
+        - coveredThrough
+        - summary
+        - estimatedTokens
+        - createdAt
+    V2Direct:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        messageSeq:
+          type: integer
+          format: int64
+        unread:
+          type: integer
+          format: int64
+        preview:
+          type: string
+          nullable: true
+        avatarVersion:
+          type: integer
+          minimum: 0
+      required:
+        - id
+        - userId
+        - displayName
+        - messageSeq
+        - unread
+        - preview
+    V2Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+        conversationId:
+          type: string
+          format: uuid
+          nullable: true
+        projectId:
+          type: string
+          format: uuid
+          nullable: true
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - kind
+        - data
+        - conversationId
+        - projectId
+        - readAt
+        - createdAt
+    V2PersonalPrompt:
+      type: object
+      properties:
+        positionId:
+          type: string
+          format: uuid
+        prompt:
+          type: string
+        version:
+          type: integer
+          format: int64
+      required:
+        - positionId
+        - prompt
+        - version
+    V2Event:
+      type: object
+      properties:
+        seq:
+          type: integer
+          format: int64
+        kind:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+      required:
+        - seq
+        - kind
+        - data

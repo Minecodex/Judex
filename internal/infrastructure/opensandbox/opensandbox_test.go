@@ -142,7 +142,7 @@ func TestUnavailableWithoutEndpoint(t *testing.T) {
 func TestRunSandboxLazyCreateAndKill(t *testing.T) {
 	f := &fakeOSB{apiKey: "k1"}
 	c := newTestClient(t, f)
-	rs := &RunSandbox{Client: c, RunID: uuid.New(), ProjectID: uuid.New()}
+	rs := &RunSandbox{Client: c, RunID: uuid.New(), GroupID: uuid.New()}
 	if len(f.createdIDs) != 0 {
 		t.Fatal("sandbox must not be created eagerly")
 	}

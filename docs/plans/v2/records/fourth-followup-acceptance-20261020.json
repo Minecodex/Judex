@@ -1,0 +1,244 @@
+{
+  "status": "complete",
+  "version": "0.2.0-local.20261020.v2.14",
+  "protocolVersion": "2",
+  "schema": 12,
+  "sourceTreeHash": "e10a13770acba85f3edbedb0a8457deb854bd1233e73019ddb42c59483b7d1da",
+  "phases": {
+    "P0": "complete",
+    "P1": "complete",
+    "P2": "complete",
+    "P3": "complete",
+    "P4": "complete",
+    "P5": "complete",
+    "P6": "complete",
+    "P7": "complete"
+  },
+  "closedFindings": [
+    "R1",
+    "R2",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7",
+    "R8",
+    "R9",
+    "R10",
+    "R11",
+    "R12",
+    "R13",
+    "R14"
+  ],
+  "thisRoundFindings": [
+    "R12",
+    "R13",
+    "R14"
+  ],
+  "candidate": {
+    "checks": 170,
+    "suites": [
+      {
+        "name": "HTTP",
+        "checks": 14,
+        "evidence": ".cache/v2-fourth-followup/k8s/service-result.json"
+      },
+      {
+        "name": "native CLI",
+        "checks": 13,
+        "evidence": ".cache/v2-fourth-followup/k8s/cli-result.json"
+      },
+      {
+        "name": "SSE",
+        "checks": 6,
+        "evidence": ".cache/v2-fourth-followup/k8s/sse-result.json"
+      },
+      {
+        "name": "controlled agents",
+        "checks": 19,
+        "evidence": ".cache/v2-fourth-followup/k8s/controlled-agents.json"
+      },
+      {
+        "name": "collaboration",
+        "checks": 9,
+        "evidence": ".cache/v2-fourth-followup/k8s/collaboration.json"
+      },
+      {
+        "name": "second review",
+        "checks": 15,
+        "evidence": ".cache/v2-fourth-followup/k8s/followup.json"
+      },
+      {
+        "name": "permissions",
+        "checks": 16,
+        "evidence": ".cache/v2-fourth-followup/k8s/permissions.json"
+      },
+      {
+        "name": "file formats",
+        "checks": 15,
+        "evidence": ".cache/v2-fourth-followup/k8s/formats-result.json"
+      },
+      {
+        "name": "background",
+        "checks": 3,
+        "evidence": ".cache/v2-fourth-followup/k8s/background.json"
+      },
+      {
+        "name": "composite CLI recovery",
+        "checks": 10,
+        "evidence": ".cache/v2-fourth-followup/k8s/composite-recovery-result.json"
+      },
+      {
+        "name": "desktop browser",
+        "checks": 34,
+        "evidence": ".cache/v2-fourth-followup/k8s/browser-automation.json"
+      },
+      {
+        "name": "real model",
+        "checks": 6,
+        "evidence": ".cache/v2-fourth-followup/k8s/real-model.json"
+      },
+      {
+        "name": "process restart",
+        "checks": 5,
+        "evidence": ".cache/v2-fourth-followup/k8s/restart.json"
+      },
+      {
+        "name": "nonzero closure restart",
+        "checks": 5,
+        "evidence": ".cache/v2-fourth-followup/k8s/restart-closures.json"
+      }
+    ],
+    "temporaryNamespace": "judex-v2-ab50599d",
+    "temporarySandboxNamespace": "judex-v2-ab50599d-sandboxes",
+    "realProvider": "APIMart",
+    "realModel": "glm-5.3-flash",
+    "controlledGateway": "judex/v2-gateway:20261020.r5"
+  },
+  "normal": {
+    "fromVersion": "0.2.0-local.20261020.v2.13",
+    "url": "http://127.0.0.1:18097/",
+    "checks": 13,
+    "evidence": ".cache/v2-fourth-followup/normal/verification.json",
+    "authentication": [
+      {
+        "table": "users",
+        "rows": 10,
+        "fullRowsMatched": true
+      },
+      {
+        "table": "password_credentials",
+        "rows": 10,
+        "fullRowsMatched": true
+      },
+      {
+        "table": "user_sessions",
+        "rows": 18,
+        "fullRowsMatched": true
+      },
+      {
+        "table": "recovery_tokens",
+        "rows": 0,
+        "fullRowsMatched": true
+      }
+    ],
+    "allAuthenticationRowsUnchanged": true,
+    "unchangedSecretUIDAndContent": [
+      "judex-model-catalog",
+      "judex-model-keys",
+      "judex-opensandbox-auth",
+      "judex-postgresql",
+      "judex-storage-auth"
+    ],
+    "completion": {
+      "status": "passed",
+      "version": "0.2.0-local.20261020.v2.14",
+      "activeOriginalAccounts": 1,
+      "activeOriginalSessions": 1,
+      "syntheticAccountsDisabled": 2,
+      "syntheticGroupArchived": true,
+      "syntheticAuditRetained": true,
+      "oldBusinessDatabaseStillAbsent": true,
+      "currentV2DatabasePreserved": true,
+      "completedAt": "2026-10-20T08:05:06.665Z"
+    },
+    "screenshot": ".cache/v2-fourth-followup/normal/workspace-final.png"
+  },
+  "build": {
+    "checksumsVerified": 56,
+    "nativeCLI": "darwin-arm64",
+    "runtimeServer": "linux-arm64",
+    "allSourceFilesIncludingTests": 188,
+    "maxSourceLines": 1770,
+    "fullGoRaceWithIsolatedPostgreSQL": "passed",
+    "goVet": "passed",
+    "webTypeAndProductionBuild": "passed",
+    "webUnitTests": 24,
+    "ciHarnessTests": 4,
+    "newDeadlinePostgreSQLCases": 7,
+    "newCompositeCLICases": 4,
+    "newWebRecoveryTests": 11,
+    "newBrowserRecoveryChecks": 6
+  },
+  "cleanup": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.14",
+    "deletedNamespaces": [
+      "judex-v2-ab50599d",
+      "judex-v2-ab50599d-sandboxes"
+    ],
+    "remainingOwnedPersistentVolumes": 0,
+    "remainingOwnedDeveloperContainers": 0,
+    "normalSandboxPodsAndVolumes": 0,
+    "unchangedSecrets": [
+      "judex-model-catalog",
+      "judex-model-keys",
+      "judex-opensandbox-auth",
+      "judex-postgresql",
+      "judex-storage-auth"
+    ],
+    "sharedControllerReady": true,
+    "unrelatedDatabaseStillRunning": true,
+    "workloads": [
+      {
+        "name": "judex",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-judex-opensandbox-server",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-material-converter",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-postgresql",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-seaweedfs",
+        "desired": 1,
+        "ready": 1
+      }
+    ],
+    "privateBackupRetained": true,
+    "syntheticCLIConfigRemoved": true,
+    "checkedAt": "2026-10-20T08:06:44.791Z",
+    "temporaryPortsReleased": [
+      18100,
+      18102,
+      18103,
+      60366
+    ],
+    "temporaryBrowserTabsAndProxyClosed": true,
+    "normalLoginTabRetained": true,
+    "finalizedAt": "2026-10-20T08:07:41.427Z"
+  },
+  "scope": "Local same-version end-to-end acceptance; other release platforms cross-built and checksummed, remote GitHub CI not run.",
+  "completedAt": "2026-10-20T08:07:41.467Z"
+}

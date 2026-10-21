@@ -1,113 +1,84 @@
+// Package workflow defines advisory graphs. It does not execute a state machine.
 package workflow
 
 import (
+	"encoding/json"
 	"fmt"
-	apierrors "github.com/kakj-go/Judex/internal/platform/errors"
+	"io"
+	"regexp"
 	"strings"
-	"unicode/utf8"
 )
 
-func forwardEdges(edges []Edge) []Edge {
-	out := []Edge{}
-	for _, edge := range edges {
-		if edge.Kind != "feedback" {
-			out = append(out, edge)
-		}
-	}
-	return out
+type Node struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Kind           string `json:"kind"`
+	Phase          string `json:"phase"`
+	Responsibility string `json:"responsibility"`
+}
+type Edge struct {
+	From  string `json:"from"`
+	To    string `json:"to"`
+	Label string `json:"label"`
+	Kind  string `json:"kind"`
+}
+type Graph struct {
+	Nodes []Node `json:"nodes"`
+	Edges []Edge `json:"edges"`
+}
+type Draft struct {
+	Name    string `json:"name"`
+	Content string `json:"content"`
+	Graph   Graph  `json:"graph"`
 }
 
-func validateGraphAnnotations(body Body) error {
-	nodes := map[string]Node{}
-	for _, node := range body.Nodes {
-		if node.Kind != "" && node.Kind != "activity" && node.Kind != "decision" {
-			return apierrors.Fields("nodes[].kind", "enum")
-		}
-		if utf8.RuneCountInString(node.Phase) > 120 {
-			return apierrors.Fields("nodes[].phase", "length")
-		}
-		nodes[node.ID] = node
+var nodeID = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,80}$`)
+
+// Cycles and parallel branches are valid reference relationships.
+func (g Graph) Validate() error {
+	raw, _ := json.Marshal(g)
+	if len(g.Nodes) > 100 || len(g.Edges) > 300 || len(raw) > 128000 {
+		return fmt.Errorf("graph exceeds 100 nodes, 300 edges or 128 KB")
 	}
-	adj := map[string][]string{}
-	for _, edge := range forwardEdges(body.AdvisoryEdges) {
-		adj[edge.From] = append(adj[edge.From], edge.To)
+	ids := map[string]bool{}
+	for _, n := range g.Nodes {
+		if !nodeID.MatchString(n.ID) || ids[n.ID] || strings.TrimSpace(n.Name) == "" || len(n.Name) > 240 || len(n.Phase) > 240 || len(n.Responsibility) > 4000 {
+			return fmt.Errorf("invalid or duplicate node")
+		}
+		switch n.Kind {
+		case "activity", "decision", "start", "end":
+		default:
+			return fmt.Errorf("invalid node kind")
+		}
+		ids[n.ID] = true
 	}
-	reachable := func(from, to string) bool {
-		visited := map[string]bool{}
-		var visit func(string) bool
-		visit = func(id string) bool {
-			if id == to {
-				return true
-			}
-			if visited[id] {
-				return false
-			}
-			visited[id] = true
-			for _, next := range adj[id] {
-				if visit(next) {
-					return true
-				}
-			}
-			return false
+	edges := map[string]bool{}
+	for _, e := range g.Edges {
+		key := e.From + "\x00" + e.To + "\x00" + e.Label
+		if !ids[e.From] || !ids[e.To] || e.From == e.To || edges[key] || len(e.Label) > 240 || (e.Kind != "sequence" && e.Kind != "feedback") {
+			return fmt.Errorf("invalid or duplicate connection")
 		}
-		return visit(from)
-	}
-	for _, edge := range body.AdvisoryEdges {
-		if edge.Kind != "" && edge.Kind != "sequence" && edge.Kind != "feedback" {
-			return apierrors.Fields("advisoryEdges[].kind", "enum")
-		}
-		if utf8.RuneCountInString(edge.Label) > 200 {
-			return apierrors.Fields("advisoryEdges[].label", "length")
-		}
-		if edge.Kind == "feedback" {
-			if nodes[edge.From].Kind != "decision" || strings.TrimSpace(edge.Label) == "" || !reachable(edge.To, edge.From) {
-				return apierrors.Fields("advisoryEdges", "feedback must return from a decision to an earlier node with a label")
-			}
-		}
+		edges[key] = true
 	}
 	return nil
 }
 
-// Annotations are a collaboration reference; feedback never becomes a
-// cyclic task prerequisite, expression, delegation or automatic approval.
-func GenerateMermaid(body Body) string {
-	var b strings.Builder
-	b.WriteString("flowchart LR\n")
-	ids := map[string]string{}
-	phases, order := map[string][]Node{}, []string{}
-	for i, node := range body.Nodes {
-		ids[node.ID] = fmt.Sprintf("node%d", i)
-		if _, exists := phases[node.Phase]; !exists {
-			order = append(order, node.Phase)
-		}
-		phases[node.Phase] = append(phases[node.Phase], node)
-	}
-	label := func(value string) string {
-		return strings.NewReplacer("\"", "'", "\n", " ", "\r", " ", "<", " ", ">", " ").Replace(value)
-	}
-	for i, phase := range order {
-		if phase != "" {
-			fmt.Fprintf(&b, "  subgraph phase%d[\"%s\"]\n", i, label(phase))
-		}
-		for _, node := range phases[phase] {
-			if node.Kind == "decision" {
-				fmt.Fprintf(&b, "  %s{\"%s\"}\n", ids[node.ID], label(node.Name))
-			} else {
-				fmt.Fprintf(&b, "  %s[\"%s\"]\n", ids[node.ID], label(node.Name))
-			}
-		}
-		if phase != "" {
-			b.WriteString("  end\n")
+func ParseDraft(text string) (Draft, error) {
+	var out Draft
+	text = strings.TrimSpace(text)
+	if strings.HasPrefix(text, "```") {
+		if i := strings.Index(text, "\n"); i >= 0 {
+			text = strings.TrimSuffix(strings.TrimSpace(text[i+1:]), "```")
 		}
 	}
-	for _, edge := range body.AdvisoryEdges {
-		if edge.Kind == "feedback" {
-			fmt.Fprintf(&b, "  %s -. \"%s\" .-> %s\n", ids[edge.From], label(edge.Label), ids[edge.To])
-		} else if edge.Label != "" {
-			fmt.Fprintf(&b, "  %s -->|\"%s\"| %s\n", ids[edge.From], label(edge.Label), ids[edge.To])
-		} else {
-			fmt.Fprintf(&b, "  %s --> %s\n", ids[edge.From], ids[edge.To])
-		}
+	d := json.NewDecoder(strings.NewReader(text))
+	d.DisallowUnknownFields()
+	if err := d.Decode(&out); err != nil {
+		return out, fmt.Errorf("model did not return a graph")
 	}
-	return b.String()
+	var extra any
+	if d.Decode(&extra) != io.EOF || strings.TrimSpace(out.Name) == "" || len(out.Name) > 120 || len(out.Content) > 32000 || len(out.Graph.Nodes) == 0 {
+		return out, fmt.Errorf("invalid workflow draft")
+	}
+	return out, out.Graph.Validate()
 }

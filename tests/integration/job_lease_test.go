@@ -35,3 +35,34 @@ func TestJobLeaseCannotBeImmediatelyStolen(t *testing.T) {
 		t.Fatalf("renewed lease stolen: %v", err)
 	}
 }
+
+func TestPreviewWorkerDoesNotCompeteForModelSlots(t *testing.T) {
+	fixture := integration.StartPG(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	if err := fixture.Pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
+		for _, kind := range []string{"role.delivery", "role.delivery", "file.preview"} {
+			if _, err := job.Enqueue(ctx, tx, kind, nil, nil, now, now); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	roles := job.NewEngine(fixture.Pool.Pool, job.Options{Kinds: []string{"role.delivery"}}, nil, nil)
+	for i := 0; i < 2; i++ {
+		j, err := roles.Claim(ctx)
+		if err != nil || j.Kind != "role.delivery" {
+			t.Fatalf("role claim: %v", err)
+		}
+	}
+	if _, err := roles.Claim(ctx); err != job.ErrNoJob {
+		t.Fatal("role worker stole preview")
+	}
+	previews := job.NewEngine(fixture.Pool.Pool, job.Options{Kinds: []string{"file.preview"}}, nil, nil)
+	j, err := previews.Claim(ctx)
+	if err != nil || j.Kind != "file.preview" {
+		t.Fatalf("preview blocked by active model leases: %v", err)
+	}
+}

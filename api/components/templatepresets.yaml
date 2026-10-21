@@ -1,0 +1,191 @@
+components:
+  schemas:
+    V2PresetText:
+      type: object
+      properties:
+        zh:
+          type: string
+        en:
+          type: string
+      required:
+        - zh
+        - en
+    V2PresetRole:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          $ref: '#/components/schemas/V2PresetText'
+        summary:
+          $ref: '#/components/schemas/V2PresetText'
+        prompt:
+          $ref: '#/components/schemas/V2PresetText'
+      required:
+        - id
+        - name
+        - summary
+        - prompt
+    V2PresetNode:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          $ref: '#/components/schemas/V2PresetText'
+        phase:
+          $ref: '#/components/schemas/V2PresetText'
+        kind:
+          type: string
+        responsibility:
+          $ref: '#/components/schemas/V2PresetText'
+      required:
+        - id
+        - name
+        - phase
+        - kind
+        - responsibility
+    V2PresetEdge:
+      type: object
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        kind:
+          type: string
+        label:
+          $ref: '#/components/schemas/V2PresetText'
+      required:
+        - from
+        - to
+        - kind
+        - label
+    V2PresetWorkflow:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          $ref: '#/components/schemas/V2PresetText'
+        summary:
+          $ref: '#/components/schemas/V2PresetText'
+        instructions:
+          $ref: '#/components/schemas/V2PresetText'
+        complexity:
+          type: string
+        scenarioIds:
+          type: array
+          items:
+            type: string
+        roleIds:
+          type: array
+          items:
+            type: string
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/V2PresetNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/V2PresetEdge'
+      required:
+        - id
+        - name
+        - summary
+        - instructions
+        - complexity
+        - scenarioIds
+        - roleIds
+        - nodes
+        - edges
+    V2PresetScenario:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          $ref: '#/components/schemas/V2PresetText'
+        description:
+          $ref: '#/components/schemas/V2PresetText'
+        roleIds:
+          type: array
+          items:
+            type: string
+        workflowIds:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - name
+        - description
+        - roleIds
+        - workflowIds
+    V2PresetCatalog:
+      type: object
+      properties:
+        version:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/V2PresetRole'
+        workflows:
+          type: array
+          items:
+            $ref: '#/components/schemas/V2PresetWorkflow'
+        scenarios:
+          type: array
+          items:
+            $ref: '#/components/schemas/V2PresetScenario'
+      required:
+        - version
+        - roles
+        - workflows
+        - scenarios
+    V2PresetImport:
+      type: object
+      properties:
+        catalogVersion:
+          type: string
+        locale:
+          type: string
+          enum:
+            - zh-CN
+            - en
+        positionIds:
+          type: array
+          items:
+            type: string
+          maxItems: 200
+          uniqueItems: true
+        workflowIds:
+          type: array
+          items:
+            type: string
+          maxItems: 200
+          uniqueItems: true
+      required:
+        - catalogVersion
+        - locale
+        - positionIds
+        - workflowIds
+      additionalProperties: false
+    V2PresetResult:
+      type: object
+      properties:
+        created:
+          type: integer
+        skipped:
+          type: integer
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - created
+        - skipped
+        - ids

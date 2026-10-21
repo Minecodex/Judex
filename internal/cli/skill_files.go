@@ -14,7 +14,7 @@ import (
 
 const receiptName = ".judex-install.json"
 
-var skillFiles = []string{"SKILL.md", "manifest.json", "references/commands.md", "references/reporting.md", "references/human-decisions.md"}
+var skillFiles = []string{"SKILL.md", "manifest.json", "references/commands.md", "references/reporting.md", "references/discussion.md"}
 
 type skillReceipt struct {
 	Name    string            `json:"name"`

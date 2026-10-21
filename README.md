@@ -1,78 +1,45 @@
 # Judex
 
-Judex 是面向团队的项目协同平台。成员在本地完成实际工作，平台负责记录成果、共享资料、分析和提醒；正式安排、交接和验收由有权人员确认。
+Judex V2 是让人和岗位 AI 在群里一起工作的协作平台。登录后从项目卡片进入工作空间：左侧群聊／平台私聊，中间真实消息与文件，右侧并排阅读固定版本内容。成员在本地工作，通过 CLI 把进展送回群。
 
-当前桌面 Web 入口按“项目列表 → 项目协同与计划 → 任务路线／计划或任务讨论”组织。讨论区保留会话、分叉和附件草稿，右栏通过标签查看计划、任务概览、记录、流程参考和共享资料；项目设置使用独立页面。正式模式与示例预览共用组件和主题，支持中英文、深浅配色。
+项目保留成员、职位、参考工作流与个人职位提示词；群成员独立、子群最多三层。普通消息不调用 AI，明确提及岗位 AI 才唤醒目标；本地推送触发本人全部本群岗位。各岗位共享公共知识，讨论到达闭环上限后由人继续或终止。工作是否完成由人决定，旧计划、任务、交接、审批和验收领域已移除。
 
-仓库：[Minecodex/Judex](https://github.com/Minecodex/Judex)。主分支 `main` 使用保护规则，修改应提交到工作分支并通过 PR 合并。
+正式工程：Go/Gin 模块化单体、PostgreSQL、S3、数据库持久队列和 OpenSandbox；桌面 Web 使用 React／HeroUI／Tailwind／TanStack Query／Zustand，支持中文、英文、深浅主题。API 前缀 `/api/v1`，协议版本 **2**。
 
-## 当前能力
+## 开发与验证
 
-- 项目、计划和任务：依赖图、路线全屏与只读预览，多参与职责、交接、人工验收和重开。
-- 工作安排：版本化草稿编辑和丢弃，正式变更提案及逐人确认；管理员可审阅影响后跳过／恢复任务，保留原阶段和依据。
-- 讨论与记录：对象范围会话、共享历史分叉、原始报告与独立 AI 分析、来源定位及阅读位置恢复。
-- 共享资料：上传、固定版本、内容预览、用途关联和历史；支持 PDF、图片、文本／源码、目录和压缩包等场景，权限由真实 API 校验。
-- 配置与本地接入：职位与流程场景模板、人工发布、个人职位工作偏好、CLI／Skill 上报及需要人工决定的确认入口。
-
-对应实现与验收见 [Demo4 逐项复核](docs/plans/demo4/STATUS.md)、[共享资料体验收尾](docs/plans/materials/records/RELEASE-20261009.md)及[文档索引](docs/README.md)。各记录说明自身范围与制品，整套 V1 的运行门槛另见实施计划。
-
-## 正式工程入口
-
-工程组成：`cmd/` 放 server 与 CLI 入口（Agent harness 位于 `internal/agent`，随 server 进程运行）；`internal/` 放 Go + Gin 模块化单体；`web/` 放 React + HeroUI + Tailwind + Zustand + TanStack Query；`tests/` 集中测试；`deploy/` 放 Docker / Helm；`scripts/` 放生成、发行和运维辅助工具；`docs/` 为统一文档入口。
-
-需要 Go **1.26+**、Node.js **22.12+**、npm；正式前端构建还需要 Python 3（可通过 `JUDEX_PYTHON` 指定），用于 CLI／Skill 下载包生成。
+需要 Go 1.26+、Node 22.12+、npm；发行下载包需要 Python 3，部署需要 Docker／Kubernetes／Helm。
 
 ```sh
-git clone https://github.com/Minecodex/Judex.git
-cd Judex
-go mod download
 npm ci
-```
-
-启动前按 [.env.example](.env.example) 设置进程环境变量。程序不会自动读取 `.env`：业务服务需要 PostgreSQL，资料功能需要 S3 兼容对象存储，平台 Agent 需要模型目录或网关；沙箱能力使用 OpenSandbox。依赖部署与 Secret 配置见 [部署说明](deploy/README.md)。在两个终端分别运行：
-
-```sh
-# API http://127.0.0.1:8080
+go mod download
+# 程序不自动读取 .env，先导出 .env.example 中的进程配置
 go run ./cmd/judex-server
-```
-
-```sh
-# 真实 API 开发前端 http://127.0.0.1:5173
+# 另一个终端启动真实 API 前端
 npm run dev
 ```
 
-生产构建执行 `npm run build`，由 Go 服务托管，使用真实 API。开发模式也默认 API；演示需显式执行 `npm run dev:demo --workspace @judex/web`。当前实现和验证边界见 [修复记录](docs/plans/v1/records/REMEDIATION.md) 与 [验证报告](docs/plans/v1/STATUS.md)。
-
 ```sh
+npm run gen:api
 go test ./...
 go vet ./...
 npm run test:web
 npm run build
+# 独立 Docker 数据依赖、真实服务、原生 CLI 和 SSE，完成后回收
 npm run test:e2e
-go run ./cmd/judex --server http://127.0.0.1:8080 status
 ```
 
-安装 GNU Make 后可使用 `make deps`、`make api`、`make web`、`make check`、`make image`。API 配置见 [.env.example](.env.example)，程序不自动加载 .env。
+设置 `JUDEX_V2_TEST_DSN` 后，Go 测试会建立独立数据库，验证账号一致导入、岗位闭环、预算、公共压缩与未知副作用恢复。完整桌面浏览器、七工具、格式、K8s 重启与真实模型检查见 [测试入口](tests/README.md)。
 
-- [前端工程](web/README.md) · [测试说明](tests/README.md)
-- [Helm 部署](deploy/README.md) · [工程实现状态](docs/详细设计/13-工程实现与验收状态.md)
-- [Apache-2.0](LICENSE) · [NOTICE](NOTICE) · [部署依赖](deploy/helm/UPSTREAM.md)
+## 文档与交付
 
-## 完整业务实施计划
+- [产品](docs/产品/README.md) · [界面](docs/界面/README.md) · [架构](docs/详细设计/README.md)
+- [V2 实施与验收状态](docs/plans/v2/IMPLEMENTATION.md) · [领域／权限／API／执行合同](docs/plans/v2/CONTRACTS.md)
+- [部署与切换](deploy/README.md) · [运维](docs/运维/README.md) · [文档索引](docs/README.md)
+- [前端](web/README.md) · [CLI／Skill](skills/judex/SKILL.md)
 
-后端、CLI／Skill、注册登录和正式前端联调的实施合同见 [V1 开发计划](docs/plans/v1/README.md)，包括 8 阶段、56 项任务及真实验收门槛。计划是实现与验收合同；当前证据和剩余项见上述修复记录，不能按历史任务完成数判断整套 V1 已验收。
+发行：`node scripts/release/build.mjs VERSION` 生成同版 Server／Web／六平台 CLI／Skill／Chart／OpenAPI 与校验和。`scripts/deploy/load-local-image.mjs` 按实际 Kubernetes 节点架构导入 Docker Desktop 镜像。
 
-## 设计与实现边界
+V2 计划及 R1～R14 已完成，本机正式版本 `0.2.0-local.20261020.v2.15` 运行于 [Judex](http://127.0.0.1:18097/)。正式界面已按 Kylon 的聊天、菜单和文件侧栏调整，支持双语深浅主题。本轮 95 项同版服务／浏览器检查与 24 项前端单元测试通过，升级保持认证数据和基础设施 Secret；见[界面改造验收](docs/plans/v2/records/UI-REFRESH-20261020.md)及[实施状态](docs/plans/v2/IMPLEMENTATION.md)。v2.14 的 170 项完整候选／13 项升级证据保留于[第四次收尾记录](docs/plans/v2/records/FOURTH-FOLLOWUP-20261020.md)，不计为本轮重新执行。
 
-正式前端工程统一在 `web/`。历史 `docs/demo` 已删除；交互决策原型保存在 [项目协同](docs/plans/cooperation-ui/demo.html)、[共享资料 Demo3](docs/plans/materials/demo3.html)和[计划任务 Demo4](docs/plans/demo4/demo4.html)，其示例人物和模拟数据只用于对照。
-
-原型源代码位于 `web/cooperation-preview`、`web/material-preview` 和 `web/task-route-preview`，HTML 输出到各自的计划目录。例如执行 `node web/task-route-preview/build.mjs` 生成 `docs/plans/demo4/demo4.html` 后，运行 `node tests/task-route-preview/server.mjs`，可在 `http://127.0.0.1:5396/demo4.html` 查看交互原型。全部入口见[计划与原型索引](docs/plans/README.md)。
-
-- [文档索引](docs/README.md)
-- [详细设计总览与技术基线](docs/详细设计/README.md)
-- [工作室 2.0 卡片树与闭环](docs/plans/cooperation-ui/README.md)
-- [工作室交互闭环](docs/plans/cooperation-ui/README.md)
-- [工程实现与验收状态](docs/详细设计/13-工程实现与验收状态.md)
-- [产品主线](docs/产品/README.md)
-- [设计讨论与决策记录](docs/产品/决策答复.md)
-- [Agent 协同架构](docs/详细设计/06-Agent执行与上下文.md)
+历史原型 HTML 和原型 13 项证据留在各计划目录；正式页面不使用示例内容。仓库 [Minecodex/Judex](https://github.com/Minecodex/Judex)，许可证 [Apache-2.0](LICENSE)。

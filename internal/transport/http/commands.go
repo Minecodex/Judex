@@ -29,75 +29,39 @@ var publicOperations = map[string]bool{
 // CLI grants narrow both the user's authority and channel. Unlisted writes
 // require a browser, even if that user's normal web session could perform them.
 var cliWrites = map[string]string{
-	"prepareFilePreview":  auth.ScopeMaterialsRead,
-	"retryTaskAnalysis":   auth.ScopeAgentRequest,
-	"createUploadSession": auth.ScopeMaterialsWrite, "uploadPart": auth.ScopeMaterialsWrite,
-	"completeUpload": auth.ScopeMaterialsWrite, "cancelUpload": auth.ScopeMaterialsWrite,
-	"createReleaseReport": auth.ScopeReportsWrite, "cancelAgentRun": auth.ScopeAgentRequest,
-	"createSubmission": auth.ScopeSubmissionsWrite, "createTaskReport": auth.ScopeReportsWrite,
-	"createProposal": auth.ScopeProposalsDraft, "updateProposalDraft": auth.ScopeProposalsDraft,
-	"createProposalRevision": auth.ScopeProposalsDraft, "createPlan": auth.ScopeProposalsDraft,
-	"createTask": auth.ScopeProposalsDraft, "startAgentRun": auth.ScopeAgentRequest,
-	"createConfirmationIntent": auth.ScopeIntentsCreate,
+	"postMessage": auth.ScopeMessagesWrite, "pushGroup": auth.ScopeAgentRequest, "markConversationRead": auth.ScopeMessagesWrite,
+	"createGroupUpload": auth.ScopeMaterialsWrite, "uploadGroupPart": auth.ScopeMaterialsWrite, "completeGroupUpload": auth.ScopeMaterialsWrite, "cancelGroupUpload": auth.ScopeMaterialsWrite,
+	"retryFilePreview": auth.ScopeMaterialsRead, "createFilePreview": auth.ScopeMaterialsRead, "copyFileVersion": auth.ScopeMaterialsWrite,
 }
 
 func authorizeOperation(c *gin.Context, op string) error {
-	p := principalFrom(c)
 	if publicOperations[op] {
 		return nil
 	}
+	p := principalFrom(c)
 	if p == nil {
 		return apierrors.New(apierrors.Unauthenticated, "authentication required")
 	}
 	if p.Kind != auth.KindCLI {
 		return nil
 	}
-	if op == "createGlobalConfirmationIntent" || op == "getGlobalConfirmationIntent" {
-		if !p.HasScope(auth.ScopeProjectsCreate) || !p.HasScope(auth.ScopeIntentsCreate) {
-			return apierrors.New(apierrors.Forbidden, "projects:create and intents:create required")
-		}
+	if op == "getSession" || (op == "revokeClientGrant" && c.Param("grantId") == p.GrantID.String()) {
 		return nil
-	}
-	if raw := projectScopeParam(c); raw != "" {
-		id, e := uuid.Parse(raw)
-		if e != nil {
-			return apierrors.Fields("projectId", "invalid")
-		}
-		if !p.InProjectScope(id) {
-			return apierrors.New(apierrors.Forbidden, "project outside grant scope")
-		}
-	}
-	if op == "revokeClientGrant" && c.Param("grantId") == p.GrantID.String() {
-		return nil
-	}
-	if strings.HasPrefix(c.FullPath(), "/api/v1/me/") && op != "listMyActions" && op != "listRecentTopics" {
-		return apierrors.New(apierrors.Forbidden, "account operation requires browser session")
-	}
-	if op == "resolveInvitation" {
-		return apierrors.New(apierrors.Forbidden, "invitation review requires browser session")
 	}
 	scope := cliWrites[op]
 	if c.Request.Method == http.MethodGet {
 		scope = auth.ScopeContextRead
-		path := c.FullPath()
-		switch {
-		case op == "listProjects" || op == "getProject" || op == "getProjectBootstrap":
+		switch op {
+		case "listProjects", "getProject", "listModels":
 			scope = auth.ScopeProjectsRead
-		case strings.Contains(path, "/material") || op == "listUploadSessions":
+		case "listGroupFiles", "listFileVersions", "getFileVersion", "fileVersionContent", "fileVersionPreview", "fileVersionEntry":
 			scope = auth.ScopeMaterialsRead
-			if op == "listUploadSessions" && p.HasScope(auth.ScopeMaterialsWrite) {
-				scope = auth.ScopeMaterialsWrite
-			}
-		case strings.HasSuffix(path, "/events"):
+		case "conversationEvents", "personalEvents":
 			scope = auth.ScopeEventsRead
-		case op == "getConfirmationIntent":
-			scope = auth.ScopeIntentsCreate
-		case op == "getSession":
-			return nil
 		}
 	}
 	if scope == "" {
-		return apierrors.New(apierrors.HumanConfirmNeeded, "this operation requires browser confirmation")
+		return apierrors.New(apierrors.Forbidden, "browser session required")
 	}
 	if !p.HasScope(scope) {
 		return apierrors.New(apierrors.Forbidden, "grant lacks scope: "+scope)
@@ -135,7 +99,7 @@ func (s *SpecRouter) guardOperation(op string, h Handler) Handler {
 			c.Request = c.Request.WithContext(ctx)
 		}
 		// No transaction is held for reads, streams, or anonymous authentication.
-		if s.CommandPool == nil || p == nil || publicOperations[op] || c.Request.Method == "GET" || c.Request.Method == "HEAD" || op == "uploadPart" || strings.Contains(c.FullPath(), "/auth/") {
+		if s.CommandPool == nil || p == nil || publicOperations[op] || c.Request.Method == "GET" || c.Request.Method == "HEAD" || strings.Contains(c.FullPath(), "/auth/") {
 			h(c)
 			return
 		}
@@ -171,7 +135,11 @@ func (w *commandResponse) Written() bool { return w.status != 0 }
 func (s *SpecRouter) runCommand(c *gin.Context, op string, h Handler) {
 	ctx := c.Request.Context()
 	p := principalFrom(c)
-	raw, err := io.ReadAll(http.MaxBytesReader(c.Writer, c.Request.Body, maxJSONBody))
+	bodyLimit := int64(maxJSONBody)
+	if op == "uploadGroupPart" {
+		bodyLimit = 8 << 20
+	}
+	raw, err := io.ReadAll(http.MaxBytesReader(c.Writer, c.Request.Body, bodyLimit))
 	if err != nil {
 		respond{}.error(c, apierrors.New(apierrors.PayloadTooLarge, "request body too large"))
 		return
@@ -180,7 +148,7 @@ func (s *SpecRouter) runCommand(c *gin.Context, op string, h Handler) {
 	// Canonical JSON makes insignificant whitespace irrelevant on retry.
 	var value any
 	canonical := raw
-	if json.Unmarshal(raw, &value) == nil {
+	if op != "uploadGroupPart" && json.Unmarshal(raw, &value) == nil {
 		canonical, _ = json.Marshal(value)
 	}
 	hash := sha256.Sum256(append([]byte(c.Request.URL.RequestURI()+"\n"), canonical...))
@@ -228,6 +196,14 @@ func (s *SpecRouter) runCommand(c *gin.Context, op string, h Handler) {
 		}
 	}
 	actor := string(p.Kind) + ":" + p.UserID.String()
+	// Replayed responses contain data too. Current resource authority must be
+	// checked before looking up a cached command, not only inside its handler.
+	if s.ResourceCheck != nil {
+		if e := s.ResourceCheck(c, op, raw); e != nil {
+			respond{}.error(c, e)
+			return
+		}
+	}
 	if key != "" {
 		decision, status, body, e := idempotency.Begin(ctx, tx, actor, op, key, hash[:], 24*time.Hour, time.Now().UTC())
 		if e != nil {
@@ -277,10 +253,4 @@ func projectScopeParam(c *gin.Context) string {
 	return c.Query("projectId")
 }
 
-var pagedOperations = map[string]bool{
-	"listTaskAcceptances": true, "listPlanAcceptances": true,
-	"listMaterialUsages": true,
-	"listTaskActivity":   true, "listDiscussionSuggestions": true,
-	"listDeliveries": true, "listProjects": true, "listRecentTopics": true, "listModels": true, "listMyActions": true, "listNotifications": true,
-	"listPlans": true, "listTasks": true, "listProposals": true, "listTopics": true, "listHandoffs": true, "listMaterials": true, "listMaterialVersions": true, "listUploadSessions": true, "listPositions": true, "listProjectMembers": true, "listMembers": true, "listIdentities": true, "listInvitations": true, "listMyInvitations": true, "listSessions": true, "listClientGrants": true, "listRepositories": true, "listReleaseReports": true, "listAudit": true, "listTaskReports": true, "listWorkflows": true, "listWorkflowVersions": true,
-}
+var pagedOperations = map[string]bool{"listModels": true, "listSessions": true, "listClientGrants": true}

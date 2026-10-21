@@ -44,13 +44,13 @@ func (s *Service) ResolveSession(ctx context.Context, secret string) (ResolvedSe
 		SELECT ses.id, ses.csrf_token, ses.expires_at, ses.last_seen_at,
 		       ses.revoked_at, ses.auth_version,
 		       u.id, u.display_name, u.email_display, u.locale, u.status,
-		       u.auth_version, u.version, u.created_at
+		       u.auth_version, u.version, u.created_at, CASE WHEN u.avatar_png IS NULL THEN 0 ELSE u.avatar_version END
 		FROM user_sessions ses JOIN users u ON u.id = ses.user_id
 		WHERE ses.secret_hash = $1`, keys.Hash(secret)).
 		Scan(&rs.SessionID, &rs.CSRFToken, &rs.ExpiresAt, &rs.LastSeen,
 			&revoked, &sessionAuthVer,
 			&rs.User.ID, &rs.User.DisplayName, &rs.User.Email, &rs.User.Locale, &rs.User.Status,
-			&rs.User.AuthVersion, &rs.User.Version, &rs.User.CreatedAt)
+			&rs.User.AuthVersion, &rs.User.Version, &rs.User.CreatedAt, &rs.User.AvatarVersion)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ResolvedSession{}, apierrors.New(apierrors.Unauthenticated, "invalid session")
 	}
@@ -138,12 +138,12 @@ func (s *Service) SessionProjection(ctx context.Context, sessionID uuid.UUID) (U
 	)
 	err := s.pool.QueryRow(ctx, `
 		SELECT u.id, u.display_name, u.email_display, u.locale, u.status,
-		       u.auth_version, u.version, u.created_at,
+		       u.auth_version, u.version, u.created_at, CASE WHEN u.avatar_png IS NULL THEN 0 ELSE u.avatar_version END,
 		       ses.expires_at, ses.revoked_at, ses.auth_version
 		FROM user_sessions ses JOIN users u ON u.id = ses.user_id
 		WHERE ses.id = $1`, sessionID).
 		Scan(&user.ID, &user.DisplayName, &user.Email, &user.Locale, &user.Status,
-			&user.AuthVersion, &user.Version, &user.CreatedAt,
+			&user.AuthVersion, &user.Version, &user.CreatedAt, &user.AvatarVersion,
 			&expiresAt, &revoked, &authVer)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, time.Time{}, apierrors.New(apierrors.Unauthenticated, "invalid session")

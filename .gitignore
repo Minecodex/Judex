@@ -1,7 +1,4 @@
-/.idea/.gitignore
-/.idea/Judex.iml
-/.idea/modules.xml
-/.idea/vcs.xml
+/.idea/
 
 # Build output, dependencies and local-only configuration
 node_modules/

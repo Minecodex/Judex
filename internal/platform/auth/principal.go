@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Package auth defines the server-side Principal model from docs/plans/v1/06
-// §1 and P0-02: who is acting, through which channel, with which narrowed
+// Package auth defines the server-side Principal model for V2: who is acting, through which channel, with which narrowed
 // scope. Principals are ALWAYS resolved by the server from the session
 // cookie or the CLI bearer grant — a client can never assert its own actor.
 package auth
@@ -17,27 +16,23 @@ const (
 	// KindWeb is a browser session (opaque cookie, CSRF-protected writes).
 	KindWeb Kind = "web"
 	// KindCLI is a device grant access token (restricted scopes, never
-	// allowed to confirm human decisions by itself).
+	// allowed to change group configuration or discussion controls).
 	KindCLI Kind = "cli"
 	// KindOperator is a server-side operator command (recovery/disable),
 	// audited separately and never carrying business approval rights.
 	KindOperator Kind = "operator"
 )
 
-// Well-known CLI grant scopes (docs/plans/v1/07 §3). Scopes narrow what a
+// V2 CLI grant scopes. Scopes narrow what a
 // grant may request; membership/binding checks are still per call.
 const (
-	ScopeProjectsRead     = "projects:read"
-	ScopeProjectsCreate   = "projects:create"
-	ScopeContextRead      = "context:read"
-	ScopeMaterialsRead    = "materials:read"
-	ScopeMaterialsWrite   = "materials:write"
-	ScopeSubmissionsWrite = "submissions:write"
-	ScopeReportsWrite     = "reports:write"
-	ScopeProposalsDraft   = "proposals:draft"
-	ScopeAgentRequest     = "agent:request"
-	ScopeEventsRead       = "events:read"
-	ScopeIntentsCreate    = "intents:create"
+	ScopeMessagesWrite  = "messages:write"
+	ScopeProjectsRead   = "projects:read"
+	ScopeContextRead    = "context:read"
+	ScopeMaterialsRead  = "materials:read"
+	ScopeMaterialsWrite = "materials:write"
+	ScopeAgentRequest   = "agent:request"
+	ScopeEventsRead     = "events:read"
 )
 
 // HasScope reports whether the principal's channel allows the scope. Web
@@ -94,9 +89,7 @@ type Principal struct {
 	ProjectScope  []uuid.UUID
 }
 
-// CanConfirmHumanDecision reports whether this channel may execute a human
-// confirmation (browser session only; CLI grants create intents instead —
-// docs/plans/v1/07 §5).
+// CanConfirmHumanDecision restricts account/device confirmation to Web sessions.
 func (p *Principal) CanConfirmHumanDecision() bool {
 	return p != nil && p.Kind == KindWeb
 }

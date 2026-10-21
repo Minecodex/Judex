@@ -1,0 +1,4 @@
+let queue:Promise<unknown>=Promise.resolve();
+export function renderDiagram(id:string,source:string){
+ const job=queue.catch(()=>{}).then(async()=>{const {default:mermaid}=await import('mermaid');const style=getComputedStyle(document.documentElement),token=(key:string)=>style.getPropertyValue('--v2-'+key).trim();mermaid.initialize({startOnLoad:false,securityLevel:'strict',maxTextSize:50000,maxEdges:500,theme:'base',flowchart:{htmlLabels:false,useMaxWidth:false},themeVariables:{fontFamily:token('font'),fontSize:getComputedStyle(document.body).fontSize,primaryColor:token('surface'),primaryTextColor:token('ink'),primaryBorderColor:token('reader-line'),lineColor:token('accent'),secondaryColor:token('accent-soft'),tertiaryColor:token('soft'),edgeLabelBackground:token('soft')}});return mermaid.render(id,source);});queue=job;return job;
+}

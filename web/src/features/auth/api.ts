@@ -1,11 +1,12 @@
-import { request, requestAll, setCSRFToken, clearCSRFToken, type APIError } from "../../lib/api/client";
+import { request, requestAll, setCSRFToken, clearCSRFToken, APIError } from "../../lib/api/client";
 import type { components } from "../../lib/api/schema";
 
 export type PublicUser = components["schemas"]["PublicUser"];
 export type SessionInfo = components["schemas"]["SessionInfo"];
-export type Project = components["schemas"]["Project"];
+export type Project = import("../workspace/types").Project;
 
 export async function fetchSession(): Promise<SessionInfo> {
+  const system=await request<{protocolVersion:string}>('/system');if(system.protocolVersion!=='2')throw new APIError(409,'UNSUPPORTED_SCHEMA','Judex V2 requires protocol 2');
   const session = await request<SessionInfo>("/auth/session");
   setCSRFToken(session.csrfToken);
   return session;

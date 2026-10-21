@@ -48,14 +48,15 @@ func (o Options) withDefaults() Options {
 
 // User is the public projection (no credentials).
 type User struct {
-	ID          uuid.UUID `json:"id"`
-	DisplayName string    `json:"displayName"`
-	Email       string    `json:"email"`
-	Locale      string    `json:"locale"`
-	Status      string    `json:"status"`
-	AuthVersion int64     `json:"-"`
-	Version     int64     `json:"version"`
-	CreatedAt   time.Time `json:"createdAt"`
+	AvatarVersion int64     `json:"avatarVersion"`
+	ID            uuid.UUID `json:"id"`
+	DisplayName   string    `json:"displayName"`
+	Email         string    `json:"email"`
+	Locale        string    `json:"locale"`
+	Status        string    `json:"status"`
+	AuthVersion   int64     `json:"-"`
+	Version       int64     `json:"version"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 // SessionToken pairs the once-only secret with its DB row id.
@@ -68,10 +69,11 @@ type SessionToken struct {
 
 // Service implements accounts + credentials + sessions over PostgreSQL.
 type Service struct {
-	pool    *postgres.Pool
-	limiter *RateLimiter
-	opts    Options
-	now     func() time.Time
+	ProfileChanged func(context.Context, uuid.UUID) error
+	pool           *postgres.Pool
+	limiter        *RateLimiter
+	opts           Options
+	now            func() time.Time
 }
 
 func NewService(pool *postgres.Pool, limiter *RateLimiter, opts Options, now func() time.Time) *Service {
@@ -195,11 +197,11 @@ func (s *Service) Login(ctx context.Context, email, password, clientIP string) (
 	)
 	err := s.pool.QueryRow(ctx, `
 		SELECT u.id, u.display_name, u.email_display, u.locale, u.status,
-		       u.auth_version, u.version, u.created_at, p.argon2id_hash
+		       u.auth_version, u.version, u.created_at, CASE WHEN u.avatar_png IS NULL THEN 0 ELSE u.avatar_version END, p.argon2id_hash
 		FROM users u JOIN password_credentials p ON p.user_id = u.id
 		WHERE u.email_normalized = $1`, normalized).
 		Scan(&user.ID, &user.DisplayName, &user.Email, &user.Locale, &user.Status,
-			&authVer, &user.Version, &user.CreatedAt, &credHash)
+			&authVer, &user.Version, &user.CreatedAt, &user.AvatarVersion, &credHash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Burn comparable CPU so unknown accounts are not timing-distinguishable.
 		_, _ = VerifyPassword("$argon2id$v=19$m=65536,t=3,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", password)

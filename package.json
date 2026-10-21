@@ -1,6 +1,6 @@
 {
   "name": "judex",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
@@ -12,9 +12,14 @@
     "build": "npm run build --workspace @judex/web",
     "test:web": "npm test --workspace @judex/web",
     "test:ci": "node --test tests/ci/*.test.mjs",
-    "test:e2e": "playwright test --config tests/e2e/chat.config.ts && node tests/e2e/business.setup.mjs",
+    "test:e2e": "node tests/v2/local.mjs",
     "gen:api": "node api/generate.mjs && node api/generate-types.mjs",
-    "release:build": "node scripts/release/build.mjs"
+    "release:build": "node scripts/release/build.mjs",
+    "build:v2": "node web/v2-preview/build.mjs",
+    "preview:v2": "node tests/v2-preview/server.mjs",
+    "test:v2": "npm run build:v2 && playwright test --config tests/v2-preview/playwright.config.mjs",
+    "test:v2:service": "node tests/v2/service.mjs",
+    "test:v2:agents": "node tests/v2/agents.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

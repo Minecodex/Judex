@@ -38,6 +38,10 @@ func TestConcurrentCLIProcessesRotateCredentialsOnce(t *testing.T) {
 	var reads atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/api/v1/system" {
+			w.Write([]byte(`{"data":{"protocolVersion":"2"}}`))
+			return
+		}
 		if r.URL.Path == "/api/v1/auth/token/refresh" {
 			if rotations.Add(1) != 1 {
 				w.WriteHeader(401)

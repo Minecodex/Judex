@@ -47,7 +47,7 @@ run('helm', ['package', 'deploy/helm/judex', '--destination', out, '--version', 
 fs.copyFileSync('api/openapi.yaml', path.join(out, 'openapi.yaml')); entries.push('openapi.yaml');
 fs.copyFileSync('LICENSE', path.join(out, 'LICENSE')); fs.copyFileSync('NOTICE', path.join(out, 'NOTICE'));
 if(sourceFingerprint()!==sourceTreeHash)throw new Error("Release inputs changed during build; build again from a stable tree");
-const manifest = {version, commit, sourceTreeHash, protocolVersion: '1', components: ['server', 'web', 'cli', 'skill', 'chart', 'openapi'], artifacts: entries};
+const manifest = {version, commit, sourceTreeHash, protocolVersion: '2', components: ['server', 'web', 'cli', 'skill', 'chart', 'openapi'], artifacts: entries};
 fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 const files = [];
 function walk(directory) { for (const item of fs.readdirSync(directory, {withFileTypes: true})) { const target = path.join(directory, item.name); if (item.isDirectory()) walk(target); else files.push(target); } }

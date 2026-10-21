@@ -35,9 +35,7 @@ func (s *Service) StartDeviceAuthorization(ctx context.Context, deviceName strin
 	}
 	for _, scope := range requestedScopes {
 		switch scope {
-		case auth.ScopeProjectsRead, auth.ScopeProjectsCreate, auth.ScopeContextRead, auth.ScopeMaterialsRead, auth.ScopeMaterialsWrite,
-			auth.ScopeSubmissionsWrite, auth.ScopeReportsWrite, auth.ScopeProposalsDraft, auth.ScopeAgentRequest,
-			auth.ScopeEventsRead, auth.ScopeIntentsCreate:
+		case auth.ScopeProjectsRead, auth.ScopeContextRead, auth.ScopeMaterialsRead, auth.ScopeMaterialsWrite, auth.ScopeMessagesWrite, auth.ScopeAgentRequest, auth.ScopeEventsRead:
 		default:
 			return "", "", 0, 0, apierrors.Newf(apierrors.Validation, "scope %q 不在支持列表", scope)
 		}

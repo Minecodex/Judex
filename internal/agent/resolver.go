@@ -17,9 +17,9 @@ func Resolver(pool *postgres.Pool, fallback config.ModelGatewayConfig) func(cont
 	return func(ctx context.Context, project, identity uuid.UUID) (model.Provider, string, int64, int64, error) {
 		var selected *uuid.UUID
 		err := pool.QueryRow(ctx, `SELECT COALESCE(v.model_id,p.default_model_id) FROM projects p
-   LEFT JOIN agent_identities i ON i.id=$2 AND i.project_id=p.id
-   LEFT JOIN position_templates t ON t.id=i.template_id
-   LEFT JOIN position_versions v ON v.template_id=t.id AND v.revision=t.current_version
+   LEFT JOIN role_agents i ON i.id=$2 AND i.group_id IN(SELECT id FROM groups WHERE project_id=p.id)
+   LEFT JOIN positions t ON t.id=i.position_id
+   LEFT JOIN position_versions v ON v.position_id=t.id AND v.revision=t.current_version
    WHERE p.id=$1 AND p.status='active'`, project, identity).Scan(&selected)
 		if err != nil {
 			return nil, "", 0, 0, apierrors.New(apierrors.ModelUnavailable, "project unavailable")
@@ -64,7 +64,7 @@ func Resolver(pool *postgres.Pool, fallback config.ModelGatewayConfig) func(cont
 		for _, fallbackID := range fallbackIDs {
 			target, err := resolveQuotaTarget(ctx, pool, fallbackID)
 			if err != nil {
-				break
+				continue
 			} // A disabled/unconfigured fallback never blocks the primary.
 			alternatives = append(alternatives, target)
 		}

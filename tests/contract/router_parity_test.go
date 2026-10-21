@@ -34,7 +34,7 @@ func TestSpecRouterParity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(specRoutes) < 100 {
+	if len(specRoutes) < 70 {
 		t.Fatalf("contract too small: %d routes", len(specRoutes))
 	}
 	for _, row := range specRoutes {

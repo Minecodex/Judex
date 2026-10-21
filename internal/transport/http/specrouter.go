@@ -25,11 +25,12 @@ type Handler func(*gin.Context)
 // document so spec<->router parity holds by construction; the contract test
 // still verifies it against the live route table.
 type SpecRouter struct {
-	doc          *openapi3.T
-	handlers     map[string]Handler
-	logger       *slog.Logger
-	CommandPool  *postgres.Pool
-	requiredKeys map[string]bool
+	doc           *openapi3.T
+	handlers      map[string]Handler
+	logger        *slog.Logger
+	CommandPool   *postgres.Pool
+	ResourceCheck func(*gin.Context, string, []byte) error
+	requiredKeys  map[string]bool
 }
 
 func NewSpecRouter(logger *slog.Logger) (*SpecRouter, error) {

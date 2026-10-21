@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -61,6 +60,7 @@ func (e *CLIError) ExitCode() int {
 
 // Client talks to a Judex server.
 type Client struct {
+	protocol        protocolCheck
 	OutboxDirectory string
 	Server          string // base URL, e.g. https://judex.internal
 	Token           string // short-lived bearer access token
@@ -86,6 +86,11 @@ type envelope struct {
 // Do performs one API call; JSON bodies in, unwrapped data out. Write
 // operations generate an idempotency key automatically unless given.
 func (c *Client) Do(ctx context.Context, method, path string, body any, out any, idempotencyKey string) error {
+	if path != "/system" {
+		if err := c.CheckProtocol(ctx); err != nil {
+			return err
+		}
+	}
 	var rawBody []byte
 	if body != nil {
 		var err error
@@ -116,8 +121,10 @@ func (c *Client) Do(ctx context.Context, method, path string, body any, out any,
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	if err := c.authorize(ctx, req); err != nil {
-		return err
+	if path != "/system" {
+		if err := c.authorize(ctx, req); err != nil {
+			return err
+		}
 	}
 	if idempotencyKey != "" {
 		req.Header.Set("Idempotency-Key", idempotencyKey)
@@ -131,18 +138,25 @@ func (c *Client) Do(ctx context.Context, method, path string, body any, out any,
 	if err != nil {
 		return &CLIError{Status: resp.StatusCode, Code: "NETWORK", Message: err.Error(), Retryable: true}
 	}
+	if resp.StatusCode == http.StatusNoContent {
+		retireCommand(pendingFile)
+		return nil
+	}
 	var env envelope
 	if err := json.Unmarshal(raw, &env); err != nil {
 		return &CLIError{Status: resp.StatusCode, Code: "HTTP_ERROR", Message: strings.TrimSpace(string(raw))}
 	}
 	if resp.StatusCode >= 400 {
-		if resp.StatusCode < 500 {
+		if resp.StatusCode < 500 && env.Error != nil && env.Error.Code != "" {
 			retireCommand(pendingFile)
 		}
 		if env.Error != nil {
 			return &CLIError{Status: resp.StatusCode, Code: env.Error.Code, Message: env.Error.Message, Retryable: env.Error.Retryable}
 		}
 		return &CLIError{Status: resp.StatusCode, Code: "HTTP_ERROR"}
+	}
+	if env.Error != nil || len(env.Data) == 0 {
+		return &CLIError{Status: resp.StatusCode, Code: "INVALID_RESPONSE", Message: "response could not be confirmed; retry the same operation", Retryable: true}
 	}
 	if out != nil && len(env.Data) > 0 {
 		if err := json.Unmarshal(env.Data, out); err != nil {
@@ -239,27 +253,4 @@ func (c *Client) UploadPart(ctx context.Context, projectID, uploadID string, par
 		return &CLIError{Status: resp.StatusCode, Code: "HTTP_ERROR", Message: strings.TrimSpace(string(raw))}
 	}
 	return nil
-}
-
-// Download streams a material version entry to w.
-func (c *Client) Download(ctx context.Context, projectID, materialID, versionID, entry string, w io.Writer) error {
-	req, err := http.NewRequestWithContext(ctx, "GET",
-		fmt.Sprintf("%s/api/v1/projects/%s/materials/%s/versions/%s/content?entry=%s",
-			c.Server, projectID, materialID, versionID, url.QueryEscape(entry)), nil)
-	if err != nil {
-		return err
-	}
-	if err := c.authorize(ctx, req); err != nil {
-		return err
-	}
-	resp, err := c.HTTP.Do(req)
-	if err != nil {
-		return &CLIError{Status: 0, Code: "NETWORK", Message: err.Error(), Retryable: true}
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return &CLIError{Status: resp.StatusCode, Code: "HTTP_ERROR", Message: resp.Status}
-	}
-	_, err = io.Copy(w, resp.Body)
-	return err
 }

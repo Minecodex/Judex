@@ -1,0 +1,128 @@
+components:
+  schemas:
+    V2WorkflowGraph:
+      type: object
+      additionalProperties: false
+      properties:
+        nodes:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                maxLength: 80
+                pattern: ^[a-zA-Z0-9_-]{1,80}$
+              name:
+                type: string
+                maxLength: 240
+                minLength: 1
+              kind:
+                type: string
+                enum:
+                  - start
+                  - activity
+                  - decision
+                  - end
+              phase:
+                type: string
+                maxLength: 240
+              responsibility:
+                type: string
+                maxLength: 4000
+            required:
+              - id
+              - name
+              - kind
+              - phase
+              - responsibility
+        edges:
+          type: array
+          maxItems: 300
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              from:
+                type: string
+                maxLength: 80
+              to:
+                type: string
+                maxLength: 80
+              kind:
+                type: string
+                enum:
+                  - sequence
+                  - feedback
+              label:
+                type: string
+                maxLength: 240
+            required:
+              - from
+              - to
+              - kind
+              - label
+      required:
+        - nodes
+        - edges
+    V2WorkflowDraft:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        content:
+          type: string
+          maxLength: 32000
+        graph:
+          $ref: '#/components/schemas/V2WorkflowGraph'
+      required:
+        - name
+        - content
+        - graph
+    V2WorkflowDraftInput:
+      type: object
+      additionalProperties: false
+      properties:
+        instruction:
+          type: string
+          maxLength: 8000
+          minLength: 1
+        locale:
+          type: string
+          enum:
+            - zh-CN
+            - en
+        current:
+          $ref: '#/components/schemas/V2WorkflowDraft'
+      required:
+        - instruction
+        - locale
+    V2WorkflowDraftResult:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum:
+            - queued
+            - running
+            - ready
+            - failed
+        result:
+          $ref: '#/components/schemas/V2WorkflowDraft'
+          nullable: true
+        error:
+          type: string
+          nullable: true
+      required:
+        - id
+        - state
+        - result
+        - error

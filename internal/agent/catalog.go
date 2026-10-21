@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package agent hosts the platform Agent domain: the deployment-synced
-// model catalog here, the execution harness in later stages (P5).
+// deployment model catalog; independent role execution lives in agent/peer.
 package agent
 
 import (

@@ -18,7 +18,7 @@ import (
 type RunSandbox struct {
 	Client       Sandbox
 	RunID        uuid.UUID
-	ProjectID    uuid.UUID
+	GroupID      uuid.UUID
 	BeforeCreate func(context.Context) error
 	AfterCreate  func(context.Context, string) error
 	AfterClose   func(context.Context, error)
@@ -37,7 +37,7 @@ func (r *RunSandbox) Exec(ctx context.Context, command string, timeoutMs int) (e
 				return
 			}
 		}
-		r.external, r.createErr = r.Client.Create(ctx, r.RunID, r.ProjectID)
+		r.external, r.createErr = r.Client.Create(ctx, r.RunID, r.GroupID)
 		if r.external != "" && r.AfterCreate != nil {
 			recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 			defer cancel()
@@ -70,6 +70,9 @@ func (r *RunSandbox) Close(ctx context.Context) {
 
 // ExternalID reports the provisioned sandbox ID ("" when none was created).
 func (r *RunSandbox) ExternalID() string { return r.external }
+
+// Attach resumes a previously recorded sandbox without creating another one.
+func (r *RunSandbox) Attach(id string) { r.once.Do(func() { r.external = id }) }
 
 // Unavailable is a RunSandbox that fails every call — used when the
 // deployment has no sandbox configured so tool output stays honest.

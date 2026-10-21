@@ -1,0 +1,35 @@
+/* Dropdowns and Select popovers share one surface and interaction treatment.
+   React Aria's focus-visible state distinguishes keyboard use from pointer hover.
+   Focus stays inside the row so scrolling/clipping never cuts through its border. */
+.judex-v2-action-popover,.judex-v2-choice-popover{
+ padding:var(--v2-s2);background:var(--v2-surface);color:var(--v2-ink);
+ border:var(--v2-stroke) solid var(--v2-line);border-radius:var(--v2-r-md);
+ box-shadow:var(--v2-shadow-popover);font-family:var(--v2-font);outline:none;
+}
+.judex-v2-action-popover{min-width:var(--v2-menu-width);z-index:150;}
+.judex-v2-choice-popover{z-index:200;}
+.judex-v2-action-popover .dropdown__menu,.judex-v2-choice-popover .list-box{
+ padding:0;gap:var(--v2-stroke-bold);outline:none;
+}
+.judex-v2-action-popover .menu-item,.judex-v2-choice-popover .list-box-item{
+ min-height:var(--v2-s9);padding:var(--v2-s2) var(--v2-s3);gap:var(--v2-s3);
+ border:0;border-radius:var(--v2-r-xs);font-size:var(--v2-text-sm);
+ outline:none;outline-offset:0;box-shadow:none;transform:none;
+ transition:background-color var(--v2-duration),box-shadow var(--v2-duration);
+}
+.judex-v2-action-popover .menu-item:has(.menu-item__indicator){padding-inline-start:var(--v2-s7);}
+.judex-v2-choice-popover .list-box-item:has(.list-box-item__indicator){padding-inline-end:var(--v2-s7);}
+.judex-v2-action-popover .menu-item:not([data-disabled=true]):is([data-hovered=true],[data-focused=true]),
+.judex-v2-choice-popover .list-box-item:not([data-disabled=true]):is([data-hovered=true],[data-focused=true]){background:var(--v2-soft);}
+.judex-v2-choice-popover .list-box-item[aria-selected=true]{color:var(--v2-accent-ink);background:var(--v2-accent-soft);}
+.judex-v2-action-popover .menu-item[data-focus-visible=true],
+.judex-v2-choice-popover .list-box-item[data-focus-visible=true],
+.judex-v2-action-popover .menu-item:focus-visible:not([data-focused]),
+.judex-v2-choice-popover .list-box-item:focus-visible:not([data-focused]){box-shadow:inset 0 0 0 var(--v2-stroke) var(--v2-accent);}
+.judex-v2-action-popover svg{width:var(--v2-icon);height:var(--v2-icon);color:var(--v2-muted);stroke-width:1.65;}
+.judex-v2-action-popover .menu-item--danger,.judex-v2-action-popover .menu-item--danger svg,.judex-v2-action-popover .menu-item--danger .label{color:var(--v2-danger);}
+.judex-v2-choice .select__trigger{outline:none;outline-offset:0;}
+.judex-v2-choice .select__trigger:is([data-hovered=true],[aria-expanded=true]){border-color:var(--v2-strong-line);}
+.judex-v2-choice .select__trigger[data-focus-visible=true],
+.judex-v2-choice .select__trigger:focus-visible:not([data-focused]){border-color:var(--v2-accent);box-shadow:inset 0 0 0 var(--v2-stroke) var(--v2-accent);}
+@media(prefers-reduced-motion:reduce){.judex-v2-action-popover .menu-item,.judex-v2-choice-popover .list-box-item{transition:none;}}

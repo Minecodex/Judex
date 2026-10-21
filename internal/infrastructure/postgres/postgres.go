@@ -20,7 +20,7 @@ import (
 	"github.com/pressly/goose/v3"
 )
 
-//go:embed migrations/*.up.sql
+//go:embed v2/*.up.sql
 var migrationsFS embed.FS
 
 // Options mirrors the DB configuration contract (docs/plans/v1/11 §2).
@@ -99,10 +99,17 @@ func (p *Pool) Migrate(ctx context.Context) error {
 		return fmt.Errorf("postgres: migration lock: %w", err)
 	}
 	defer conn.Exec(context.WithoutCancel(ctx), "SELECT pg_advisory_unlock($1)", MigrationLockKey)
+	var legacy bool
+	if err := conn.QueryRow(ctx, `SELECT to_regclass('public.users') IS NOT NULL AND to_regclass('public.judex_schema') IS NULL`).Scan(&legacy); err != nil {
+		return err
+	}
+	if legacy {
+		return errors.New("V1 database detected: create a clean V2 database and import accounts with judex-account-import; refusing to change legacy business data")
+	}
 
 	db := stdlib.OpenDBFromPool(p.Pool)
 	defer db.Close()
-	migrationRoot, err := fs.Sub(migrationsFS, "migrations")
+	migrationRoot, err := fs.Sub(migrationsFS, "v2")
 	if err != nil {
 		return fmt.Errorf("postgres: migration fs: %w", err)
 	}
@@ -113,6 +120,10 @@ func (p *Pool) Migrate(ctx context.Context) error {
 	}
 	if _, err := provider.Up(ctx); err != nil {
 		return fmt.Errorf("postgres: migrate up: %w", err)
+	}
+	var version int
+	if err = conn.QueryRow(ctx, `SELECT version FROM judex_schema`).Scan(&version); err != nil || version != 2 {
+		return fmt.Errorf("postgres: unsupported application schema version %d", version)
 	}
 	return nil
 }

@@ -56,6 +56,7 @@ func (h HandlerFunc) Execute(ctx context.Context, j Job) error { return h.Execut
 
 // Options tunes the engine; zero fields fall back to 01 §5 defaults.
 type Options struct {
+	Kinds        []string // Empty claims all kinds; production pools partition model and preview work.
 	PollInterval time.Duration
 	LeaseTTL     time.Duration
 	Heartbeat    time.Duration
@@ -65,6 +66,9 @@ type Options struct {
 }
 
 func (o Options) withDefaults() Options {
+	if o.Kinds == nil {
+		o.Kinds = []string{}
+	}
 	if o.PollInterval == 0 {
 		o.PollInterval = 2 * time.Second
 	}
@@ -165,14 +169,15 @@ func (e *Engine) Claim(ctx context.Context) (*Job, error) {
 			updated_at = $2
 		WHERE id = (
 			SELECT id FROM background_jobs
-			WHERE (state = 'queued' AND run_after <= $2)
-			   OR (state = 'running' AND lease_until < $2)
+			WHERE ((state = 'queued' AND run_after <= $2)
+			   OR (state = 'running' AND lease_until < $2))
+			 AND (cardinality($4::text[])=0 OR kind=ANY($4::text[]))
 			ORDER BY run_after
 			FOR UPDATE SKIP LOCKED
 			LIMIT 1
 		)
 		RETURNING id, kind, payload, attempt, max_attempts, fencing_token, lease_owner, run_after, last_error_code`,
-		e.owner, e.now(), e.now().Add(e.opts.LeaseTTL)).Scan(
+		e.owner, e.now(), e.now().Add(e.opts.LeaseTTL), e.opts.Kinds).Scan(
 		&j.ID, &j.Kind, &j.Payload, &j.Attempt, &j.MaxAttempts,
 		&j.FencingToken, &j.LeaseOwner, &j.RunAfter, &j.LastErrorCode)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -302,7 +307,11 @@ func (e *Engine) execute(ctx context.Context, handler Handler, j *Job) {
 			}
 		}
 	}()
-	execCtx, cancel := context.WithTimeout(hbCtx, 10*time.Minute)
+	deadline := 10 * time.Minute
+	if j.Kind == "role.delivery" {
+		deadline = 31 * time.Minute
+	}
+	execCtx, cancel := context.WithTimeout(hbCtx, deadline)
 	defer cancel()
 	err := handler.Execute(execCtx, *j)
 	if err := e.Finish(context.WithoutCancel(ctx), j, err); err != nil {

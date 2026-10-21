@@ -1,0 +1,29 @@
+.judex-panes{display:flex;flex:1;min-width:0;height:100%;overflow:hidden;}
+.judex-pane{display:flex;flex-basis:0;min-width:0;overflow:hidden;position:relative;}
+.judex-pane[hidden]{display:none;}
+.judex-pane>.judex-v2-sidebar,.judex-pane>.judex-v2-chat,.judex-pane>.judex-v2-chat-empty,.judex-pane>.judex-v2-resource-panel{width:100%;min-width:0;max-width:none;flex:1;}
+.judex-pane>.judex-v2-sidebar{border:0;}
+.judex-pane>.judex-v2-reader{width:calc(100% - var(--v2-s3));min-width:0;max-width:none;flex:1;margin-left:0;}
+.judex-pane-divider{position:relative;z-index:6;flex:0 0 var(--v2-stroke);cursor:col-resize;touch-action:none;outline:none;background:var(--v2-line);}
+.judex-pane-divider:before{content:"";position:absolute;inset:0 calc(var(--v2-s1)*-1);}
+.judex-pane-divider:hover,.judex-pane-divider:focus-visible,.judex-panes-dragging .judex-pane-divider{background:var(--v2-accent);box-shadow:0 0 0 var(--v2-stroke) var(--v2-accent);}
+.judex-panes-dragging{cursor:col-resize;user-select:none;}
+.judex-panes-dragging iframe{pointer-events:none;}
+.judex-pane-collapse-preview{opacity:.35;}
+.judex-v2-frame-reading .judex-pane>.judex-v2-reader{position:relative;inset:auto;z-index:auto;margin:var(--v2-s3);box-shadow:none;}
+.judex-pane .judex-v2-chat-header{gap:var(--v2-s2);padding-inline:var(--v2-s5);}
+.judex-pane .judex-v2-chat-heading{min-width:0;}
+.judex-pane .judex-v2-chat-heading>div{min-width:0;}
+.judex-pane .judex-v2-chat-title{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+.judex-pane-controls{display:flex;align-items:center;gap:var(--v2-s1);flex-shrink:0;}
+.judex-pane-controls .judex-v2-icon-button{width:var(--v2-s8);height:var(--v2-s8);min-width:var(--v2-s8);color:var(--v2-muted);}
+.judex-pane-controls .judex-v2-icon-button>svg{width:var(--v2-icon-sm);height:var(--v2-icon-sm);}
+.judex-pane-empty-header{display:flex;justify-content:flex-end;align-items:center;min-height:var(--v2-header);padding:var(--v2-s5);}
+.judex-v2-reader-header>span{flex:1;}
+.judex-v2-reader-header>span>.judex-v2-tooltip-anchor{flex-shrink:0;}
+
+.judex-pane-controls .judex-pane-toggle{border-radius:var(--v2-r-sm);}
+.judex-pane-controls .judex-pane-toggle[aria-pressed="true"]{background:var(--v2-accent-soft);color:var(--v2-accent-ink);}
+.judex-pane-controls .judex-pane-toggle[aria-pressed="false"]{background:transparent;color:var(--v2-muted);}
+.judex-pane-controls .judex-pane-toggle[aria-pressed="false"]:hover{background:var(--v2-soft);color:var(--v2-ink);}

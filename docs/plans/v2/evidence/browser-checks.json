@@ -1,0 +1,68 @@
+{
+  "date": "2026-10-19",
+  "artifact": "docs/plans/v2/demo.html",
+  "browser": "Codex in-app browser",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "execution": "CUA Playwright facade; shared tests/v2-preview/scenarios.mjs",
+  "passed": 13,
+  "checks": [
+    {
+      "name": "项目卡片入口与按需文件阅读",
+      "result": "passed"
+    },
+    {
+      "name": "分享固定版本，目标群只能读取已分享版本",
+      "result": "passed"
+    },
+    {
+      "name": "显式更新文件版本，历史消息保留原版；同名上传生成独立文件",
+      "result": "passed"
+    },
+    {
+      "name": "自由建群、可选目的和零工作流；普通消息与 @ 人不触发 AI",
+      "result": "passed"
+    },
+    {
+      "name": "明确 @ 岗位 AI 仅唤醒指定身份",
+      "result": "passed"
+    },
+    {
+      "name": "本地只记录不触发，普通推送唤醒本人所有本群岗位",
+      "result": "passed"
+    },
+    {
+      "name": "群公共知识记录工具来源，切换岗位保持公共背景相同",
+      "result": "passed"
+    },
+    {
+      "name": "多个同级子群与三层上限，子群独立配置",
+      "result": "passed"
+    },
+    {
+      "name": "父群级联归档全部子孙群，归档后仍可讨论",
+      "result": "passed"
+    },
+    {
+      "name": "循环保护：带意见继续、空意见继续、终止与重新 @",
+      "result": "passed"
+    },
+    {
+      "name": "平台级人类私聊、附件阅读与跨项目复用",
+      "result": "passed"
+    },
+    {
+      "name": "深浅配色、中英文与桌面布局",
+      "result": "passed"
+    },
+    {
+      "name": "项目配置、岗位和个人提示词保存，示例邀请可用于组群",
+      "result": "passed"
+    }
+  ],
+  "browserErrors": [],
+  "scenarioSha256": "f3263944fc247a4e5ada88af7bbfbeb2fbe0dba3e033bc960d07012f52e2ce66",
+  "artifactSha256": "1ec4018ee167cb4926bf23cd02291bc05692f53a191f89f6ad7775db1b7302c6"
+}

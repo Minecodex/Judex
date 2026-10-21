@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -9,18 +9,15 @@ import {
 import { Card } from "@heroui/react";
 import { Button } from "../components/ui/Button";
 import { AuthStory, Brand, PreferenceControls } from "../components/ui/Presentation";
-// Demo workspace is code-split: the production bundle never ships the
-// simulated business tree (docs/plans/v1/08 §9).
-const DemoPreviewApp = import.meta.env.VITE_DATA_MODE === "demo" ? lazy(() => import("./DemoPreviewApp")) : null;
 import { usePreferences } from "../stores/preferences";
 import { translate, type Key } from "../i18n";
 import { AuthProvider, useAuth } from "../features/auth/AuthProvider";
 import { LoginPage } from "../features/auth/LoginPage";
 import { RegisterPage } from "../features/auth/RegisterPage";
 import { RecoverPage } from "../features/auth/RecoverPage";
-import { DevicePage, InvitePage } from "../features/auth/AccessPages";
-import { ConfirmPage } from "../features/auth/ConfirmPage";
-import { WorkspaceShell } from "../features/auth/WorkspaceShell";
+import { DevicePage } from "../features/auth/AccessPages";
+
+import WorkspaceApp from "../features/workspace/Workspace";
 
 export default function App() {
   const { locale, theme, setLocale, setTheme } = usePreferences();
@@ -29,8 +26,6 @@ export default function App() {
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [locale, theme]);
-  // 演示模式保留完整旧工作区（tests/e2e fixture）；生产 bundle 走真实认证。
-  if (DemoPreviewApp) return <Suspense fallback={<main className="judex-entry" />}><DemoPreviewApp /></Suspense>;
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -103,7 +98,7 @@ function AuthRoutes({ controls }: { controls: React.ReactNode }) {
           )
         }
       />
-      {[{ path: "/device", element: <DevicePage /> }, { path: "/invite/:token", element: <InvitePage /> }, { path: "/confirm/:intentId", element: <ConfirmPage /> }].map((entry) => (
+      {[{ path: "/device", element: <DevicePage /> }].map((entry) => (
         <Route key={entry.path} path={entry.path} element={phase === "authenticated"
           ? <EntryLayout controls={controls}>{entry.element}</EntryLayout>
           : <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />} />
@@ -120,7 +115,7 @@ function AuthRoutes({ controls }: { controls: React.ReactNode }) {
         path="/*"
         element={
           phase === "authenticated" ? (
-            <WorkspaceShell />
+            <WorkspaceApp />
           ) : (
             <Navigate
               to="/login"

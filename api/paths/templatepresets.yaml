@@ -1,0 +1,75 @@
+paths:
+  /template-presets:
+    get:
+      operationId: listTemplatePresets
+      summary: listTemplatePresets
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: Versioned V2 advisory templates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2PresetCatalog'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/template-presets:
+    post:
+      operationId: importTemplatePresets
+      summary: importTemplatePresets
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      responses:
+        '200':
+          description: Versioned V2 advisory templates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2PresetResult'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2PresetImport'

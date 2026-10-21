@@ -1,9 +1,9 @@
 apiVersion: v2
 name: judex
-description: Judex scaffold with optional embedded data services and OpenSandbox
+description: Judex V2 group collaboration with peer role agents and OpenSandbox
 type: application
-version: 0.1.0
-appVersion: 0.1.0
+version: 0.2.0
+appVersion: 0.2.0
 annotations:
   artifacthub.io/license: Apache-2.0
 dependencies:

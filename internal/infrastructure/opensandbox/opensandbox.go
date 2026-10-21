@@ -46,13 +46,13 @@ const DefaultExecImage = "docker.io/library/alpine:3.20"
 
 // Config mirrors the deployment Sandbox section (11 §2).
 type Config struct {
-	Endpoint   string // OpenSandbox server root, e.g. http://osb-server:80
-	APIKey     string
-	Image      string // allowlist entry, pinned digest at deploy time
-	CPU        string // K8s quantity, e.g. 500m
-	Memory     string // K8s quantity, e.g. 256Mi
-	HTTP       *http.Client
-	ProjectPVC string // pre-provisioned project projection claim; never auto-deleted
+	Endpoint string // OpenSandbox server root, e.g. http://osb-server:80
+	APIKey   string
+	Image    string // allowlist entry, pinned digest at deploy time
+	CPU      string // K8s quantity, e.g. 500m
+	Memory   string // K8s quantity, e.g. 256Mi
+	HTTP     *http.Client
+	GroupPVC string // pre-provisioned group snapshot projection claim; never auto-deleted
 }
 
 // SandboxResult reports command execution outcomes; unknown outcomes must be
@@ -68,7 +68,7 @@ type SandboxResult struct {
 // platform credentials inside.
 type Sandbox interface {
 	// Create starts a sandbox and waits until Running (or fails).
-	Create(ctx context.Context, runID, projectID uuid.UUID) (externalID string, err error)
+	Create(ctx context.Context, runID, groupID uuid.UUID) (externalID string, err error)
 	// Exec runs one shell command; a lost stream marks Unknown=true so
 	// callers do NOT blindly re-run side-effectful commands (05 §8).
 	Exec(ctx context.Context, externalID, command string, timeout time.Duration) (SandboxResult, error)
@@ -155,7 +155,7 @@ type sandboxObject struct {
 // Create starts one sandbox for a run and polls until Running (05 §7).
 // The entrypoint is only the keep-alive workload; execd + bootstrap are
 // injected by the controller regardless of image.
-func (c *client) Create(ctx context.Context, runID, projectID uuid.UUID) (string, error) {
+func (c *client) Create(ctx context.Context, runID, groupID uuid.UUID) (string, error) {
 	body := map[string]any{
 		"image":      map[string]any{"uri": c.cfg.Image},
 		"entrypoint": []string{"sleep", "infinity"},
@@ -165,11 +165,11 @@ func (c *client) Create(ctx context.Context, runID, projectID uuid.UUID) (string
 		"timeout":       1800,
 		"networkPolicy": map[string]any{"defaultAction": "deny", "egress": []any{}},
 		"metadata": map[string]string{
-			"app": "judex", "runId": runID.String(), "projectId": projectID.String(),
+			"app": "judex", "runId": runID.String(), "groupId": groupID.String(),
 		},
 	}
-	if c.cfg.ProjectPVC != "" {
-		body["volumes"] = []any{map[string]any{"name": "project", "pvc": map[string]any{"claimName": c.cfg.ProjectPVC, "createIfNotExists": false, "deleteOnSandboxTermination": false}, "mountPath": "/workspace/project", "readOnly": true}}
+	if c.cfg.GroupPVC != "" {
+		body["volumes"] = []any{map[string]any{"name": "group", "pvc": map[string]any{"claimName": c.cfg.GroupPVC, "createIfNotExists": false, "deleteOnSandboxTermination": false}, "mountPath": "/workspace/group", "readOnly": true}}
 	}
 	_, raw, err := c.do(ctx, "POST", "/sandboxes", body)
 	if err != nil {

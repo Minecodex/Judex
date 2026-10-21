@@ -1,0 +1,6 @@
+import {Sparkles} from 'lucide-react';
+export function ProjectArt({ tone, variant }: { tone: string; variant: number }) {
+ return <div className={`judex-v2-project-art judex-v2-tone-${tone}`} aria-hidden="true"><div className="judex-v2-art-orbit"/><div className="judex-v2-art-dot judex-v2-art-dot-a"/><div className="judex-v2-art-dot judex-v2-art-dot-b"/>
+  {variant % 3 === 0 ? <><div className="judex-v2-art-paper judex-v2-art-paper-back"/><div className="judex-v2-art-paper"><div className="judex-v2-art-window"><i/><i/><i/></div><div className="judex-v2-art-chat"><span/><div><b/><i/><i/></div></div><div className="judex-v2-art-chat"><span/><div><b/><i/></div></div><div className="judex-v2-art-file"><span/><i/><i/></div></div><div className="judex-v2-art-bubble"><Sparkles/><span>Better, together.</span></div></> : variant % 3 === 1 ? <><div className="judex-v2-art-poster"><span>a</span><i>make it feel human.</i></div><div className="judex-v2-art-swatch"><i/><i/><i/></div><div className="judex-v2-art-star">✳</div></> : <><div className="judex-v2-art-orbits"><i/><i/><b/></div><div className="judex-v2-art-note"><Sparkles/><span>What if…</span><i/><i/></div><div className="judex-v2-art-spark">✧</div></>}
+ </div>;
+}

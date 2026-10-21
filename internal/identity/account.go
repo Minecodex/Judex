@@ -14,15 +14,28 @@ import (
 func (s *Service) GrantProjection(ctx context.Context, user, grant uuid.UUID) (User, time.Time, error) {
 	var out User
 	var expires time.Time
-	err := s.pool.QueryRow(ctx, `SELECT u.id,u.display_name,u.email_display,u.locale,u.status,u.version,u.created_at,g.expires_at FROM users u JOIN client_grants g ON g.user_id=u.id WHERE u.id=$1 AND g.id=$2 AND u.status='active' AND u.auth_version=g.auth_version AND g.revoked_at IS NULL AND g.expires_at>now()`, user, grant).Scan(&out.ID, &out.DisplayName, &out.Email, &out.Locale, &out.Status, &out.Version, &out.CreatedAt, &expires)
+	err := s.pool.QueryRow(ctx, `SELECT u.id,u.display_name,u.email_display,u.locale,u.status,u.version,u.created_at,CASE WHEN u.avatar_png IS NULL THEN 0 ELSE u.avatar_version END,g.expires_at FROM users u JOIN client_grants g ON g.user_id=u.id WHERE u.id=$1 AND g.id=$2 AND u.status='active' AND u.auth_version=g.auth_version AND g.revoked_at IS NULL AND g.expires_at>now()`, user, grant).Scan(&out.ID, &out.DisplayName, &out.Email, &out.Locale, &out.Status, &out.Version, &out.CreatedAt, &out.AvatarVersion, &expires)
 	if err != nil {
 		return out, expires, apierrors.New(apierrors.Unauthenticated, "grant unavailable")
 	}
 	return out, expires, nil
 }
 
-func (s *Service) UpdateProfile(ctx context.Context, user uuid.UUID, version int64, name, locale *string) (User, error) {
+func (s *Service) UpdateProfile(ctx context.Context, user uuid.UUID, version int64, name, locale *string, avatars ...*string) (User, error) {
 	var out User
+	var avatar []byte
+	changeAvatar := len(avatars) > 0 && avatars[0] != nil
+	if changeAvatar {
+		var err error
+		avatar, err = NormalizeAvatar(*avatars[0])
+		if err != nil {
+			return out, err
+		}
+	}
+	if name != nil {
+		value := strings.TrimSpace(*name)
+		name = &value
+	}
 	if name != nil && (strings.TrimSpace(*name) == "" || utf8.RuneCountInString(*name) > 80) {
 		return out, apierrors.Fields("displayName", "length")
 	}
@@ -30,10 +43,15 @@ func (s *Service) UpdateProfile(ctx context.Context, user uuid.UUID, version int
 		return out, apierrors.Fields("locale", "enum")
 	}
 	err := s.pool.Transact(ctx, func(ctx context.Context, tx postgres.Tx) error {
-		err := tx.QueryRow(ctx, `UPDATE users SET display_name=COALESCE($3,display_name),locale=COALESCE($4,locale),version=version+1,updated_at=now()
-   WHERE id=$1 AND version=$2 AND status='active' RETURNING id,display_name,email_display,locale,status,version,created_at`, user, version, name, locale).Scan(&out.ID, &out.DisplayName, &out.Email, &out.Locale, &out.Status, &out.Version, &out.CreatedAt)
+		err := tx.QueryRow(ctx, `UPDATE users SET display_name=COALESCE($3,display_name),locale=COALESCE($4,locale),avatar_png=CASE WHEN $5 THEN $6 ELSE avatar_png END,avatar_version=avatar_version+CASE WHEN $5 THEN 1 ELSE 0 END,version=version+1,updated_at=now()
+   WHERE id=$1 AND version=$2 AND status='active' RETURNING id,display_name,email_display,locale,status,version,created_at,CASE WHEN avatar_png IS NULL THEN 0 ELSE avatar_version END`, user, version, name, locale, changeAvatar, avatar).Scan(&out.ID, &out.DisplayName, &out.Email, &out.Locale, &out.Status, &out.Version, &out.CreatedAt, &out.AvatarVersion)
 		if err != nil {
 			return apierrors.New(apierrors.VersionConflict, "account changed")
+		}
+		if s.ProfileChanged != nil {
+			if err := s.ProfileChanged(ctx, user); err != nil {
+				return err
+			}
 		}
 		return audit.Append(ctx, tx, audit.Entry{ActorType: audit.ActorUser, ActorUserID: &user, Source: audit.SourceWeb, Operation: "identity.profile.update", ObjectType: "user", ObjectID: user.String(), OccurredAt: s.now()})
 	})

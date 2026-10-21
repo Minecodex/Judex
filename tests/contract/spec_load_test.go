@@ -31,8 +31,8 @@ func TestSpecLoadsAndValidates(t *testing.T) {
 			ops++
 		}
 	}
-	if ops < 100 {
-		t.Fatalf("expected >=100 operations, got %d", ops)
+	if ops < 70 {
+		t.Fatalf("expected >=70 operations, got %d", ops)
 	}
 	t.Logf("paths=%d operations=%d", len(doc.Paths.Map()), ops)
 }

@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const sessionQuery = useQuery({
     queryKey: ["auth", "session"],
-    queryFn: refresh,
+    queryFn: async () => { await refresh(); return null; },
     staleTime: 60_000,
     retry: false,
     enabled: phase === "bootstrapping",

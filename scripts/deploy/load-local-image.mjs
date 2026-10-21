@@ -9,11 +9,11 @@ if(!image||!/^\w[\w./:-]*:[\w.-]+$/.test(image))throw new Error('Pass a tagged l
 const run=(name,args,options={})=>execFileSync(name,args,{encoding:'utf8',windowsHide:true,timeout:240000,...options});
 if(run('kubectl',['config','current-context']).trim()!=='docker-desktop')throw new Error('Select the docker-desktop context before importing');
 const inspected=JSON.parse(run('docker',['image','inspect',image]))[0];
-if(inspected.Os!=='linux'||inspected.Architecture!=='amd64')throw new Error('The local Docker Desktop node requires a linux/amd64 image');
+const nodes=JSON.parse(run('kubectl',['get','nodes','-o','json']));const architectures=[...new Set(nodes.items.map(n=>n.status.nodeInfo.architecture))];if(architectures.length!==1)throw new Error('This loader requires a single node architecture');const platform='linux/'+architectures[0];if(inspected.Os!=='linux'||inspected.Architecture!==architectures[0])throw new Error('Image architecture does not match '+platform);
 const archive=path.resolve(process.argv[3]??`.cache/deploy/image-${randomUUID()}.tar`);
 if(fs.existsSync(archive))throw new Error('Image archive already exists; choose a fresh path');
 fs.mkdirSync(path.dirname(archive),{recursive:true});
-run('docker',['image','save','--platform','linux/amd64','-o',archive,image]);
+run('docker',['image','save','--platform',platform,'-o',archive,image]);
 run('docker',['exec','-i','desktop-control-plane','ctr','-n','k8s.io','images','import','--all-platforms','-'],{input:fs.readFileSync(archive),stdio:['pipe','inherit','inherit']});
 const imported=run('docker',['exec','desktop-control-plane','ctr','-n','k8s.io','images','list','-q']).split(/\r?\n/);
 const reference=image.includes('/')&&!image.split('/')[0].includes('.')&&!image.split('/')[0].includes(':')?'docker.io/'+image:image;
