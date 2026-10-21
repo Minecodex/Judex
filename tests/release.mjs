@@ -1,19 +1,13 @@
 // Verify packaged checksums, native CLI metadata and installer ownership.
 import fs from 'node:fs';
 import path from 'node:path';
-import {createHash, randomUUID} from 'node:crypto';
+import {randomUUID} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
+import {imageDefinitions, verifyRelease} from '../scripts/release/artifacts.mjs';
 const directory = path.resolve(process.argv[2] ?? '');
-const manifest = JSON.parse(fs.readFileSync(path.join(directory, 'manifest.json'), 'utf8'));
-let checked = 0;
-for (const line of fs.readFileSync(path.join(directory, 'checksums.txt'), 'utf8').trim().split('\n')) {
-  const [expected, relative] = line.trim().split('  ');
-  const file = path.resolve(directory, relative);
-  if (!file.startsWith(directory + path.sep)) throw new Error('Checksum path escapes release');
-  const actual = createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-  if (actual !== expected) throw new Error('Checksum mismatch: ' + relative);
-  checked++;
-}
+const manifest = verifyRelease(directory);
+const checked = fs.readFileSync(path.join(directory, 'checksums.txt'), 'utf8').trim().split('\n').length;
+if (!/^[a-f0-9]{40}$/.test(manifest.sourceCommit ?? '') || JSON.stringify(manifest.images) !== JSON.stringify(imageDefinitions(manifest.version))) throw new Error('Release provenance or image version mismatch');
 const root = path.resolve('.cache/release-tests', randomUUID());
 fs.mkdirSync(root, {recursive: true});
 const platform = {win32: 'windows', linux: 'linux', darwin: 'darwin'}[process.platform];
@@ -32,7 +26,7 @@ if (JSON.parse(fs.readFileSync(path.join(installed, 'manifest.json'))).version !
 fs.writeFileSync(path.join(installed, 'personal-note.txt'), 'preserve');
 invoke('skill', 'uninstall', '--target', 'path', '--path', installed);
 if (fs.existsSync(path.join(installed, 'SKILL.md')) || fs.readFileSync(path.join(installed, 'personal-note.txt'), 'utf8') !== 'preserve') throw new Error('Installer ownership failed');
-const result = {version: manifest.version, sourceTreeHash: manifest.sourceTreeHash, checksumsVerified: checked, nativePlatform: `${platform}-${arch}`, installedPackagedSkillVersionMatches: true, uninstallPreservesUserFiles: true};
+const result = {version: manifest.version, sourceCommit: manifest.sourceCommit, sourceTreeHash: manifest.sourceTreeHash, checksumsVerified: checked, nativePlatform: `${platform}-${arch}`, installedPackagedSkillVersionMatches: true, uninstallPreservesUserFiles: true};
 fs.writeFileSync(path.join(root, 'manifest.json'), JSON.stringify(result, null, 2) + '\n');
 console.log(JSON.stringify(result, null, 2));
 console.log('Evidence:', root);

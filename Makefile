@@ -2,8 +2,8 @@ GO ?= go
 NPM ?= npm
 HELM ?= helm
 KUBECTL ?= kubectl
-VERSION ?= 0.1.0-dev
-IMAGE ?= judex/server
+VERSION ?= 0.0.1-beta
+IMAGE ?= docker.io/kakj/judex-server
 CHART := deploy/helm/judex
 HELM_FLAGS := --repository-config deploy/helm/repositories.yaml --repository-cache .cache/helm
 ifeq ($(OS),Windows_NT)
@@ -55,8 +55,8 @@ helm-template-dev:
 helm-template-prod:
 	$(HELM) $(HELM_FLAGS) template judex $(CHART) -n judex-prod -f $(CHART)/values-prod.yaml
 image:
-	docker build -f deploy/docker/server.Dockerfile --build-arg VERSION=$(VERSION) -t $(IMAGE):$(VERSION) .
+	docker build -f deploy/docker/server.Dockerfile --build-arg VERSION=$(VERSION) -t $(IMAGE):v$(VERSION) .
 deploy-dev:
-	$(HELM) $(HELM_FLAGS) upgrade --install judex $(CHART) -n judex-dev --create-namespace -f $(CHART)/values-dev.yaml --set image.repository=$(IMAGE) --set image.tag=$(VERSION) --wait --timeout 10m
+	$(HELM) $(HELM_FLAGS) upgrade --install judex $(CHART) -n judex-dev --create-namespace -f $(CHART)/values-dev.yaml --set image.repository=$(IMAGE) --set image.tag=v$(VERSION) --wait --timeout 10m
 deploy-prod:
-	$(HELM) $(HELM_FLAGS) upgrade --install judex $(CHART) -n judex-prod --create-namespace -f $(CHART)/values-prod.yaml --set image.repository=$(IMAGE) --set image.tag=$(VERSION) --wait --timeout 10m
+	$(HELM) $(HELM_FLAGS) upgrade --install judex $(CHART) -n judex-prod --create-namespace -f $(CHART)/values-prod.yaml --set image.repository=$(IMAGE) --set image.tag=v$(VERSION) --wait --timeout 10m

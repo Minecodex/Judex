@@ -20,6 +20,7 @@
 | 当前 v2.22 区域图标与选中状态 | [范围](plans/v2/PANE-ICONS-20261021.md)、[验收](plans/v2/records/PANE-ICONS-20261021.md)、[机器记录](plans/v2/records/pane-icons-acceptance-20261021.json) |
 | 多 Codex 会话与真实公司业务联测 | [范围](plans/v2/COMPANY-SIMULATION-20261020.md)、[实际结果](plans/v2/records/COMPANY-SIMULATION-20261020.md)、[机器记录](plans/v2/records/company-simulation-acceptance-20261020.json) |
 | 构建、部署、备份、恢复与 CI | [运维](运维/README.md)、[部署](../deploy/README.md) |
+| 公开 Beta 安装、镜像与发行 | [v0.0.1-beta](releases/v0.0.1-beta.md)、[发行流程](运维/releases.md) |
 | 自动化与真实环境测试 | [测试入口](../tests/README.md) |
 | 早期 V2 视觉原型 | [原型](plans/v2/PREVIEW.md)、[历史 13 项原型证据](plans/v2/evidence/README.md) |
 | 旧版历史 | [计划索引](plans/README.md)、[V1](plans/v1/README.md) |

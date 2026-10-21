@@ -1,5 +1,7 @@
 # V2 运维
 
+公开发行入口：[v0.0.1-beta](../releases/v0.0.1-beta.md)、[构建与 Docker Hub 发布](releases.md)。公开 SemVer 与下方内部 V2 阶段编号分别管理，首次安装使用 Release 中的 Helm Chart 与配置示例。
+
 部署、认证导入和本机切换见 [部署说明](../../deploy/README.md)。当前实现与已执行验收见 [V2 状态](../plans/v2/IMPLEMENTATION.md)。历史 [2026-10-19 本机 V1 启动](本机启动-20261019.md)仅记录切换前基线。
 
 [2026-10-20 V2 发布记录](../plans/v2/records/RELEASE-20261020.md)记录已完成的账号／会话导入、真实模型验证、旧库删除、Secret 保持与临时资源回收。[后续收尾升级](../plans/v2/records/FOLLOWUP-20261020.md)完成 v2.11／schema 12、最终同版重启、逐行凭据保持和临时资源清理。正常入口仍为 `http://127.0.0.1:18097/`。

@@ -1,7 +1,5 @@
 # Configuration baseline only: not an HA or business-production-readiness claim.
 environment: production
-image:
-  tag: 0.1.0
 resources:
   requests: {cpu: 250m, memory: 256Mi}
   limits: {cpu: "2", memory: 1Gi}

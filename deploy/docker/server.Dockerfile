@@ -1,7 +1,7 @@
 # Web is built on the host (`npm run build`) so the image build stays
 # platform-independent; CI may swap this for a full node stage later.
 FROM alpine:3.22 AS web
-ARG VERSION=0.1.0-dev
+ARG VERSION=0.0.1-beta
 COPY web/dist /dist
 RUN test -f /dist/downloads/manifest.json && grep -Fq "\"version\": \"${VERSION}\"" /dist/downloads/manifest.json
 
@@ -11,7 +11,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY cmd/ cmd/
 COPY internal/ internal/
-ARG VERSION=0.1.0-dev
+ARG VERSION=0.0.1-beta
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X github.com/kakj-go/Judex/internal/version.Version=${VERSION}" -o /out/judex-server ./cmd/judex-server
 
 FROM alpine:3.22

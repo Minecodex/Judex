@@ -1,6 +1,6 @@
 {
   "name": "judex",
-  "version": "0.1.0-dev",
+  "version": "0.0.1-beta",
   "protocolRange": "2",
   "cli": "judex",
   "entry": "SKILL.md",

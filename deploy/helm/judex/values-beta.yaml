@@ -1,0 +1,25 @@
+# Public v0.0.1-beta installation. Credentials belong in Kubernetes Secrets.
+environment: production
+image:
+  repository: docker.io/kakj/judex-server
+  tag: v0.0.1-beta
+  pullPolicy: IfNotPresent
+postgresql:
+  database: judex_v2
+server:
+  allowedOrigins:
+    - http://127.0.0.1:18097
+    - http://localhost:18097
+  modelCatalogSecret: judex-model-catalog
+  modelEnvSecret: judex-model-keys
+  sandboxImage: docker.io/kakj/judex-analysis-sandbox:v0.0.1-beta
+  sandboxMemory: 768Mi
+  materialPreview:
+    enabled: true
+    image: docker.io/kakj/judex-material-converter:v0.0.1-beta
+  materialProjection:
+    enabled: true
+# If a compatible OpenSandbox Controller already owns the cluster CRDs:
+# opensandbox:
+#   opensandbox-controller:
+#     enabled: false

@@ -4,8 +4,8 @@ global:
   sandboxAPIKeyManaged: true
 replicaCount: 1
 image:
-  repository: judex/server
-  tag: 0.1.0-dev
+  repository: docker.io/kakj/judex-server
+  tag: v0.0.1-beta
   pullPolicy: IfNotPresent
 service:
   port: 8080
@@ -55,8 +55,8 @@ opensandbox:
     controller:
       replicaCount: 1
       image:
-        repository: sandbox-registry.cn-zhangjiakou.cr.aliyuncs.com/opensandbox/controller
-        tag: latest
+        repository: docker.io/opensandbox/controller
+        tag: release-1.1.1
   opensandbox-server:
     server:
       volumes:
@@ -101,7 +101,7 @@ opensandbox:
 server:
   materialPreview:
     enabled: false
-    image: judex/material-converter:local-materials
+    image: docker.io/kakj/judex-material-converter:v0.0.1-beta
   materialProjection:
     enabled: true
     storageClass: ""
@@ -120,6 +120,6 @@ server:
     model: ""
     apiKeyKey: ""
   # Agent 运行沙箱（entrypoint 仅作保活；execd 由平台注入，端口 44772）。
-  sandboxImage: "docker.io/library/alpine:3.20"
+  sandboxImage: "docker.io/kakj/judex-analysis-sandbox:v0.0.1-beta"
   sandboxCPU: "500m"
   sandboxMemory: "256Mi"
