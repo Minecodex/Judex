@@ -1,0 +1,15 @@
+# Replace the endpoint, model and limits with your provider's actual settings.
+# Keep the UUID stable after projects start referencing this model.
+# The API key belongs in Secret judex-model-keys, key JUDEX_MODEL_KEY_DEFAULT.
+models:
+  - id: "00000000-0000-4000-8000-000000000001"
+    displayName: "团队默认模型"
+    provider: "openai-compatible"
+    baseUrl: "https://your-model-gateway.example/v1"
+    apiKeyEnv: "JUDEX_MODEL_KEY_DEFAULT"
+    model: "your-model-name"
+    maxInputTokens: 32000
+    maxOutputTokens: 4096
+    toolCalling: true
+    streaming: true
+    vision: false

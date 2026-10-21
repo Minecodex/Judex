@@ -2,8 +2,8 @@ apiVersion: v2
 name: judex
 description: Judex V2 group collaboration with peer role agents and OpenSandbox
 type: application
-version: 0.2.0
-appVersion: 0.2.0
+version: 0.0.1-beta
+appVersion: 0.0.1-beta
 annotations:
   artifacthub.io/license: Apache-2.0
 dependencies:

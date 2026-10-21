@@ -27,7 +27,7 @@ function archive(source,target) {
   run(process.env.JUDEX_PYTHON??'python',['-c',code,source,target]);
 }
 
-export function buildClientDownloads({version='0.1.0-dev',commit,output=path.join(root,'web/dist/downloads')}={}) {
+export function buildClientDownloads({version='0.0.1-beta',commit,output=path.join(root,'web/dist/downloads')}={}) {
   if(!/^[0-9A-Za-z][0-9A-Za-z.+-]*$/.test(version))throw new Error('Invalid client release version');
   commit??=String(run('git',['rev-parse','--short','HEAD'],{encoding:'utf8'})).trim()+(String(run('git',['status','--porcelain'],{encoding:'utf8'})).trim()?'-dirty':'');
   const sourceHash=fingerprint(version,commit);
@@ -69,5 +69,5 @@ export function buildClientDownloads({version='0.1.0-dev',commit,output=path.joi
   console.log('Client downloads ready:',version,path.relative(root,output));return catalog;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
-  buildClientDownloads({version:process.env.JUDEX_RELEASE_VERSION??'0.1.0-dev',output:path.resolve(process.cwd(),process.argv[2]??'web/dist/downloads')});
+  buildClientDownloads({version:process.env.JUDEX_RELEASE_VERSION??'0.0.1-beta',output:path.resolve(process.cwd(),process.argv[2]??'web/dist/downloads')});
 }
