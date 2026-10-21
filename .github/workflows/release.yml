@@ -145,7 +145,7 @@ jobs:
           sudo install /tmp/minikube /usr/local/bin/minikube
           minikube start -p judex-release-${{ github.run_id }} --driver=docker --cpus=4 --memory=12000 --kubernetes-version=v1.36.1
           minikube -p judex-release-${{ github.run_id }} image load "$JUDEX_TEST_IMAGE" "$JUDEX_TEST_GATEWAY_IMAGE" judex/analysis-sandbox:ci judex/material-converter:ci
-          helm upgrade --install judex-ci-operator deploy/helm/judex/charts/opensandbox-0.2.2-judex.1.tgz --namespace judex-ci-operator --create-namespace --set opensandbox-server.server.replicaCount=0 --wait --timeout=5m
+          helm upgrade --install judex-ci-operator deploy/helm/judex/charts/opensandbox-0.2.2-judex.1.tgz --namespace judex-ci-operator --create-namespace --set opensandbox-server.server.replicaCount=0 --set opensandbox-controller.controller.image.repository=docker.io/opensandbox/controller --set opensandbox-controller.controller.image.tag=release-1.1.1 --wait --timeout=5m
       - name: Verify the candidate server, V2 group, role, file and bounded recovery flows
         run: |
           python3 -c 'import zipfile,os; zipfile.ZipFile("candidate/judex-linux-${{ matrix.arch }}-${{ needs.package.outputs.version }}.zip").extractall("candidate/native"); os.chmod("candidate/native/judex",0o755)'

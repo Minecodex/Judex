@@ -15,6 +15,10 @@ import (
 	"github.com/kakj-go/Judex/internal/job"
 )
 
+// Leave time for the real database claim/snapshot/journal preparation on
+// shared CI runners. The provider still waits for the persisted deadline.
+const inFlightDeadlineAllowance = 3 * time.Second
+
 func deadlineWork(t *testing.T, f fixture, remaining time.Duration) time.Time {
 	t.Helper()
 	if _, err := f.s.Post(f.ctx, f.group, collab.MessageInput{Body: "deadline work", Mentions: []collab.Mention{{Kind: "role_agent", TargetID: f.a}}}, false); err != nil {
@@ -46,8 +50,10 @@ func TestPersistedDeadlineCancelsInFlightModel(t *testing.T) {
 	for _, mode := range []string{"stream-creation", "stalled-stream", "continuous-no-finish", "late-result"} {
 		t.Run(mode, func(t *testing.T) {
 			f := setup(t)
-			started := deadlineWork(t, f, 500*time.Millisecond)
+			started := deadlineWork(t, f, inFlightDeadlineAllowance)
+			called := false
 			p := attemptProvider(func(ctx context.Context, req model.Request) (<-chan model.Event, error) {
+				called = true
 				deadline, ok := ctx.Deadline()
 				if !ok || deadline.Sub(started.Add(30*time.Minute)).Abs() > time.Millisecond {
 					t.Fatal("provider did not receive the persisted deadline")
@@ -84,6 +90,9 @@ func TestPersistedDeadlineCancelsInFlightModel(t *testing.T) {
 				}
 			})
 			f.step(t, f.executor(p))
+			if !called {
+				t.Fatal("test allowance expired before an in-flight model call was exercised")
+			}
 			assertTimePause(t, f)
 			var unknown int
 			if err := f.s.Pool.QueryRow(f.ctx, `SELECT count(*) FROM role_model_calls WHERE state='started' AND reserved_tokens>0 AND charged_tokens IS NULL`).Scan(&unknown); err != nil || unknown != 1 {
@@ -101,7 +110,7 @@ func TestDeadlineDuringSharedCompression(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	deadlineWork(t, f, 800*time.Millisecond)
+	deadlineWork(t, f, inFlightDeadlineAllowance)
 	called := false
 	e := f.executor(attemptProvider(func(ctx context.Context, req model.Request) (<-chan model.Event, error) {
 		called = true
@@ -136,7 +145,7 @@ func (*deadlineSandbox) Kill(context.Context, string) error { return nil }
 
 func TestDeadlineToolEffectRequiresReconciliationAfterContinue(t *testing.T) {
 	f := setup(t)
-	deadlineWork(t, f, 500*time.Millisecond)
+	deadlineWork(t, f, inFlightDeadlineAllowance)
 	provider := attemptProvider(func(context.Context, model.Request) (<-chan model.Event, error) {
 		out := make(chan model.Event, 2)
 		out <- model.Event{Type: "toolCallReady", ToolCallID: "shell-deadline", ToolName: "bash", ArgsJSON: `{"command":"do-something"}`}
