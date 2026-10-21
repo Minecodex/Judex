@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'.',testMatch:'browser.spec.mjs',fullyParallel:false,workers:1,timeout:180000,use:{actionTimeout:15000,baseURL:process.env.JUDEX_V2_URL||'http://localhost:18100',viewport:{width:1600,height:1000},trace:'retain-on-failure',screenshot:'only-on-failure'},reporter:[['list'],['json',{outputFile:'.cache/v2-browser/results.json'}]],outputDir:'.cache/v2-browser/artifacts'});

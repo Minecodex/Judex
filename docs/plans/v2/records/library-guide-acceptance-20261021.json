@@ -1,0 +1,256 @@
+{
+  "status": "passed",
+  "version": "0.2.0-local.20261021.v2.19",
+  "protocol": 2,
+  "schema": 15,
+  "at": "2026-10-20T23:48:36.302Z",
+  "checks": {
+    "libraryGuide": [
+      "latest-per-file-and-same-name-independent",
+      "version-specific-author-time-avatar",
+      "stable-group-member-order",
+      "shared-version-list-does-not-leak-newer-version-or-group",
+      "four-member-avatar-and-two-member-layout",
+      "card-bottom-version-switch-updates-contributor-and-time",
+      "selected-revision-opens-fixed-content-library-reopens-latest",
+      "search-cards-and-light-layout",
+      "membership-event-refreshes-avatar-and-revokes-files-history-keeps-author",
+      "guide-copy-uses-real-clipboard",
+      "documentation-first-contextual-CLI-and-skill-examples",
+      "matching-client-and-skill-downloads",
+      "english-dark-cards-and-guide"
+    ],
+    "desktopRegression": [
+      "real-registration-project-entry",
+      "direct-registered-member",
+      "three-independent-group-levels",
+      "ordinary-message-zero-AI",
+      "real-upload-fixed-version-side-reader",
+      "bilingual-light-dark",
+      "archive-still-writable",
+      "platform-human-DM",
+      "real-login-persisted-project-cards",
+      "notification-opens-group-from-project-list",
+      "conversation-menu-search-clear",
+      "inline-file-library",
+      "file-search-empty-and-reset",
+      "resource-browsing-preserves-draft",
+      "reader-history-and-close",
+      "knowledge-reachable-from-menu",
+      "account-menu-bilingual-theme",
+      "readable-chat-type",
+      "desktop-layout-no-overflow",
+      "wide-sectioned-project-settings",
+      "member-search-actions-removal-cancel",
+      "builtin-library-scenario-filter",
+      "role-preview-multiselect-import",
+      "role-editor-version-history",
+      "renamed-preset-source-recognition",
+      "workflow-steps-relationships-import-preview",
+      "private-prompt-editor-and-composition",
+      "group-independent-multi-role-and-workflow-selection",
+      "client-download-cards-and-contextual-commands",
+      "settings-bilingual-dark-theme-preset-identity",
+      "global-90-percent-density",
+      "role-and-workflow-actions-one-row",
+      "back-button-balanced-background",
+      "AI-draft-apply-edit-and-save",
+      "flowchart-preview-fit-and-immutable-history",
+      "nickname-and-uploaded-portrait-persist-after-reload",
+      "portrait-removal-and-fallback",
+      "flowchart-english-dark-theme",
+      "home-account-only-in-bottom-rail",
+      "two-human-SSE-config-conflict",
+      "retained-group-draft",
+      "removed-member-not-restored",
+      "project-draft-original-version-without-chat",
+      "missed-config-event-conflict-refetch",
+      "conflict-close-reopen-latest",
+      "save-after-conflict",
+      "committed-truncated-response-safe-retry",
+      "acknowledged-truncated-new-intent",
+      "committed-envelope-response-safe-retry",
+      "acknowledged-envelope-new-intent",
+      "committed-upload-complete-safe-resume",
+      "batch-before-whole-no-duplicate",
+      "batch-before-whole-explicit-new-intent",
+      "batch-after-subset-no-duplicate",
+      "batch-after-subset-explicit-new-intent",
+      "batch-after-resume-no-duplicate",
+      "batch-after-resume-explicit-new-intent",
+      "file-library-failure-recovery",
+      "snapshot-failure-retry",
+      "original-context-failure-retry",
+      "reply-selection-cancellation",
+      "human-explicit-reply-and-role-mention",
+      "human-wait-natural-settlement"
+    ],
+    "service": [
+      "direct-membership",
+      "hidden-parent",
+      "three-levels",
+      "idempotency",
+      "human-mentions",
+      "zero-ordinary-trigger",
+      "platform-dm",
+      "archive-discussion",
+      "permission-revocation",
+      "binary-byte-idempotency",
+      "file-versions",
+      "same-name-files",
+      "exact-share",
+      "remove-preserves-history"
+    ],
+    "nativeCLI": [
+      "native-device-login",
+      "protocol-2",
+      "project-scope-metadata-filter",
+      "project-group-selection",
+      "upload-download-sha",
+      "record-only-zero-trigger",
+      "single-combined-file-message",
+      "CLI-source",
+      "public-context",
+      "event-follow",
+      "reply-to-zero-trigger",
+      "precise-AI-mention",
+      "revocation"
+    ],
+    "packagedSkill": [
+      "downloaded-macos-wrapper-native-version",
+      "bundled-skill-custom-path-install",
+      "skill-manifest-same-version"
+    ],
+    "normalSmoke": [
+      "version-and-protocol",
+      "HTTP-database-ready",
+      "login-and-same-release-web-bytes",
+      "same-release-download-manifest",
+      "schema-15-confirmation-table",
+      "converter-ready"
+    ],
+    "webUnit": 27,
+    "goTest": "passed",
+    "goVet": "passed",
+    "typescript": "passed"
+  },
+  "source": {
+    "status": "passed",
+    "version": "0.2.0-local.20261021.v2.19",
+    "sourceTreeHash": "32aacae70edfd6b7b231f92b9373b1b4d1fc4cb73af92f4d46a876700100308f",
+    "sourceFiles": 212,
+    "allSourceFilesIncludingTests": 234,
+    "maxLines": {
+      "file": "web/src/lib/api/schema-operations-0.d.ts",
+      "lines": 1801
+    },
+    "allSourcesWithin2000Lines": true,
+    "checkedAt": "2026-10-20T23:48:25.193Z"
+  },
+  "artifacts": {
+    "status": "passed",
+    "version": "0.2.0-local.20261021.v2.19",
+    "sourceTreeHash": "32aacae70edfd6b7b231f92b9373b1b4d1fc4cb73af92f4d46a876700100308f",
+    "checksumsVerified": 56,
+    "nativeCLI": {
+      "schemaVersion": "2",
+      "ok": true,
+      "data": {
+        "cli": "0.2.0-local.20261021.v2.19",
+        "commit": "a475fdf-dirty",
+        "protocol": "2"
+      }
+    },
+    "skillVersion": "0.2.0-local.20261021.v2.19",
+    "serverPlatform": "linux-arm64",
+    "at": "2026-10-20T23:48:25.350Z"
+  },
+  "production": {
+    "status": "passed",
+    "version": "0.2.0-local.20261021.v2.19",
+    "database": "judex_v2",
+    "schema": 15,
+    "allExistingAuthenticationFieldsUnchanged": true,
+    "authentication": [
+      {
+        "table": "users",
+        "rows": 17,
+        "allPriorFieldsMatched": true
+      },
+      {
+        "table": "password_credentials",
+        "rows": 17,
+        "allPriorFieldsMatched": true
+      },
+      {
+        "table": "user_sessions",
+        "rows": 91,
+        "allPriorFieldsMatched": true
+      },
+      {
+        "table": "recovery_tokens",
+        "rows": 0,
+        "allPriorFieldsMatched": true
+      }
+    ],
+    "unchangedSecretUIDAndContent": [
+      "judex-model-catalog",
+      "judex-model-keys",
+      "judex-opensandbox-auth",
+      "judex-postgresql",
+      "judex-storage-auth"
+    ],
+    "privateBackupRetained": true,
+    "at": "2026-10-20T23:45:15.401Z"
+  },
+  "cleanup": {
+    "namespaces": [
+      "judex-v2-c955eb0b",
+      "judex-v2-c955eb0b-sandboxes"
+    ],
+    "namespaceRemoved": true,
+    "ownedPVRemoved": true,
+    "ownedClusterResourcesRemoved": true,
+    "testPortsClosed": true
+  },
+  "workloads": [
+    {
+      "name": "judex",
+      "desired": 1,
+      "ready": 1
+    },
+    {
+      "name": "judex-judex-opensandbox-server",
+      "desired": 1,
+      "ready": 1
+    },
+    {
+      "name": "judex-material-converter",
+      "desired": 1,
+      "ready": 1
+    },
+    {
+      "name": "judex-postgresql",
+      "desired": 1,
+      "ready": 1
+    },
+    {
+      "name": "judex-seaweedfs",
+      "desired": 1,
+      "ready": 1
+    }
+  ],
+  "sharedControllerReady": true,
+  "notRerun": [
+    "full-model-context-and-restart-matrix",
+    "all-preview-format-matrix",
+    "live-APIMart-provider"
+  ],
+  "screenshots": [
+    ".cache/v2-library/library-light.png",
+    ".cache/v2-library/library-versions.png",
+    ".cache/v2-library/library-dark.png",
+    ".cache/v2-library/guide-skill.png",
+    ".cache/v2-library/guide-dark.png"
+  ]
+}

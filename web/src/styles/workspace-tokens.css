@@ -1,0 +1,38 @@
+:root {
+ --v2-settings-width: 68.75rem; --v2-settings-height: 53.75rem; --v2-settings-nav: 14rem; --v2-member-access: 8.25rem;
+ --v2-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+ --v2-mono: "SFMono-Regular", Consolas, monospace;
+ --v2-s0: 0; --v2-s1: 0.25rem; --v2-s2: 0.5rem; --v2-s3: 0.75rem; --v2-s4: 1rem; --v2-s5: 1.25rem; --v2-s6: 1.5rem; --v2-s7: 1.75rem; --v2-s8: 2rem; --v2-s9: 2.25rem; --v2-s10: 2.5rem; --v2-s11: 2.75rem; --v2-s12: 3rem; --v2-s14: 3.5rem; --v2-s16: 4rem; --v2-s18: 4.5rem; --v2-s20: 5rem; --v2-s24: 6rem; --v2-s28: 7rem; --v2-s32: 8rem;
+ --v2-text-2xs: 0.75rem; --v2-text-xs: 0.8125rem; --v2-text-sm: 0.875rem; --v2-text-base: 0.9375rem; --v2-text-md: 1rem; --v2-text-lg: 1.125rem; --v2-text-xl: 1.25rem; --v2-text-2xl: 1.5rem; --v2-text-3xl: 2rem; --v2-text-4xl: 2.5rem; --v2-text-art: 6rem;
+ --v2-leading: 1.65; --v2-leading-title: 1.25; --v2-tracking: -.035em;
+ --v2-r-xs: 0.375rem; --v2-r-sm: 0.625rem; --v2-r-md: 0.875rem; --v2-r-lg: 1.125rem; --v2-r-xl: 1.5rem; --v2-r-2xl: 1.875rem; --v2-pill: 62.4375rem;
+ --v2-stroke: 0.0625rem; --v2-stroke-bold: 0.125rem;
+ --v2-desktop-min: 73.75rem; --v2-rail: 3.75rem; --v2-sidebar: clamp(18.75rem, 25vw, 26.25rem); --v2-project-max: 78.5rem; --v2-message-max: 57.5rem;
+ --v2-reader-min: 25rem; --v2-reader-max: 37.5rem; --v2-reader-fluid: 33vw; --v2-chat-min: 22.5rem;
+ --v2-project-art-height: 13.625rem; --v2-project-card-min: 25.625rem; --v2-icon: 1.1875rem; --v2-icon-sm: 0.9375rem; --v2-portrait: 2.375rem; --v2-avatar-sm: 1.75rem; --v2-avatar-lg: 2.875rem;
+ --v2-file-card: 24.875rem; --v2-file-thumb: 7.875rem; --v2-file-column: 9.375rem; --v2-mention-width: 23.875rem; --v2-mention-max: 21.25rem; --v2-dialog-md: 34.375rem; --v2-dialog-lg: 47.5rem;
+ --v2-header: 5rem; --v2-panel-top: 5rem; --v2-menu-width: 15rem; --v2-control: 2.375rem; --v2-content-gap: 1.75rem;
+ --v2-duration: 180ms; --v2-ease: cubic-bezier(.2,.75,.3,1);
+ --v2-canvas: #f7f6f2; --v2-surface: #ffffff; --v2-soft: #f4f4f2; --v2-hover: #eeefeb; --v2-ink: #22231f; --v2-muted: #76746c; --v2-faint: #939087; --v2-line: #ededea; --v2-strong-line: #d9dad4;
+ --v2-accent: #72774f; --v2-accent-hover: #606641; --v2-on-accent: #ffffff; --v2-accent-soft: #edf1e3; --v2-accent-ink: #53603a;
+ --v2-reader: #f1fae6; --v2-reader-line: #cfd9c0; --v2-peach: #fbefe4; --v2-peach-ink: #a46c44; --v2-lilac: #eeebf5; --v2-lilac-ink: #83739c; --v2-blue: #eaf0f3; --v2-blue-ink: #64808c; --v2-rose: #f3e8e5; --v2-rose-ink: #a07670; --v2-sand: #efece0; --v2-sand-ink: #8b8062;
+ --v2-danger: #ac5c50; --v2-art-paper: #fffefa; --v2-art-ink: #788456; --v2-art-line: #d7ddc8; --v2-art-fill: #e0e6d2; --v2-art-white: #ffffff;
+ --v2-skin: #e5b391; --v2-hair: #4a3a2b; --v2-lip: #925d49;
+ --v2-shadow: 0 0.5rem 2.5rem #363a2910; --v2-shadow-popover: 0 0.75rem 3.125rem #272b251a; --v2-shadow-art: 0 0.75rem 1.5rem #494b2920; --v2-backdrop: #17181580;
+ --background: var(--v2-surface); --foreground: var(--v2-ink); --surface: var(--v2-surface); --surface-foreground: var(--v2-ink); --surface-secondary: var(--v2-soft); --surface-secondary-foreground: var(--v2-ink); --overlay: var(--v2-surface); --overlay-foreground: var(--v2-ink); --accent: var(--v2-accent); --accent-foreground: var(--v2-on-accent); --accent-soft: var(--v2-accent-soft); --accent-soft-foreground: var(--v2-accent-ink); --border: var(--v2-line); --separator: var(--v2-line); --default: var(--v2-soft); --default-foreground: var(--v2-ink); --field-background: var(--v2-soft); --field-foreground: var(--v2-ink); --field-placeholder: var(--v2-faint); --field-border: var(--v2-line); --focus: var(--v2-accent); --muted: var(--v2-muted); --radius: var(--v2-r-sm); --font-sans: var(--v2-font);
+}
+:root[data-theme="dark"] {
+ color-scheme: dark;
+ --v2-canvas: #1a1b18; --v2-surface: #232420; --v2-soft: #2c2d28; --v2-hover: #353730; --v2-ink: #eceee4; --v2-muted: #b0b4a5; --v2-faint: #858b7b; --v2-line: #393e32; --v2-strong-line: #4e5741;
+ --v2-accent: #b6c78b; --v2-accent-hover: #c8d8a1; --v2-on-accent: #27301c; --v2-accent-soft: #3a432c; --v2-accent-ink: #c5d6a5;
+ --v2-reader: #303b25; --v2-reader-line: #566744; --v2-peach: #44382e; --v2-peach-ink: #e0b38f; --v2-lilac: #393441; --v2-lilac-ink: #bdafd1; --v2-blue: #2c3c42; --v2-blue-ink: #a0c3cf; --v2-rose: #423430; --v2-rose-ink: #d6a99e; --v2-sand: #3e3c30; --v2-sand-ink: #c7bd9c;
+ --v2-danger: #e3a197; --v2-art-paper: #444b35; --v2-art-ink: #ccd5b2; --v2-art-line: #66724f; --v2-art-fill: #596744; --v2-art-white: #e3e7d8;
+ --v2-shadow: 0 0.5rem 2.5rem #080c042e; --v2-shadow-popover: 0 0.75rem 3.125rem #05070370; --v2-shadow-art: 0 0.75rem 1.5rem #090d0430; --v2-backdrop: #0b1008a6;
+}
+
+.judex-v2-tone-olive{--tone:var(--v2-accent-soft);--tone-ink:var(--v2-accent-ink);--avatar-bg:#dce2cb;--avatar-shirt:#647352;--avatar-hair:#493a2d;--avatar-skin:#e4b78e;--avatar-lip:#9a6552;}
+.judex-v2-tone-sand{--tone:var(--v2-sand);--tone-ink:var(--v2-sand-ink);--avatar-bg:#e3d6be;--avatar-shirt:#856d4d;--avatar-hair:#423028;--avatar-skin:#d9a178;--avatar-lip:#8d5946;}
+.judex-v2-tone-rose{--tone:var(--v2-rose);--tone-ink:var(--v2-rose-ink);--avatar-bg:#eddbcf;--avatar-shirt:#ab7e72;--avatar-hair:#573f2e;--avatar-skin:#edc2a1;--avatar-lip:#a37262;}
+.judex-v2-tone-blue{--tone:var(--v2-blue);--tone-ink:var(--v2-blue-ink);--avatar-bg:#d3e0df;--avatar-shirt:#64868d;--avatar-hair:#594134;--avatar-skin:#eac3a1;--avatar-lip:#a5755b;}
+.judex-v2-tone-lilac{--tone:var(--v2-lilac);--tone-ink:var(--v2-lilac-ink);--avatar-bg:#ddd8e4;--avatar-shirt:#8a7e9b;--avatar-hair:#4b3c37;--avatar-skin:#d6ab89;--avatar-lip:#966b52;}
+.judex-v2-tone-peach{--tone:var(--v2-peach);--tone-ink:var(--v2-peach-ink);--avatar-bg:#e9d8ba;--avatar-shirt:#b28d5c;--avatar-hair:#5f4830;--avatar-skin:#efc9a4;--avatar-lip:#a17354;}

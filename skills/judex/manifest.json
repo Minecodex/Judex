@@ -1,13 +1,13 @@
 {
   "name": "judex",
   "version": "0.1.0-dev",
-  "protocolRange": "1",
+  "protocolRange": "2",
   "cli": "judex",
   "entry": "SKILL.md",
   "references": [
     "references/commands.md",
     "references/reporting.md",
-    "references/human-decisions.md"
+    "references/discussion.md"
   ],
   "install": {
     "codex": "~/.agents/skills/judex",

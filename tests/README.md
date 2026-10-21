@@ -1,35 +1,39 @@
-# 测试入口
+# V2 测试入口
 
-`tests/fixtures/real-provider-gateway` 仅供隔离验收：一次受控429后原样转发真实APImart/high请求，并在内存比较平台消息前缀，仅导出无提示词/凭据/逐请求ID的聚合。原生宿主使用工作区捆绑Python/Node及库，覆盖仅当前测试进程的PATH；保留系统工具，不修改全局环境。实际执行记录见[本轮完整回归](../docs/plans/real-host/records/FULL-REGRESSION-20261015.md)。
+测试必须使用独立数据库、带归属标签的 Docker 依赖或 namespace。真实模型和受控网关证据分别记录，不把缺少依赖导致的 skip 视为通过。
 
-| 范围 | 命令 | 覆盖 |
+| 范围 | 入口 | 证据 |
 | --- | --- | --- |
-| API全操作契约 | `go test ./tests/integration -run TestProductionHTTPResponsesMatchOpenAPI` | 157/157成功请求和响应、149匿名401；真实PG，受控S3/分析状态；SSE实际帧、原件字节核对，未覆盖新操作直接失败 |
-| Go | `go test ./...`、`go vet ./...` | 领域、HTTP 契约、真实 PG、模型/沙箱受控测试；live 测试另需真实配置 |
-| 原件解析 | 在解析镜像中挂载并执行 `tests/agent/material_parser_test.py` | 7项，含平台无扩展名content原件、位置/分页、公式缓存非重算、SHA和归档边界；旧镜像失败与真实模型复测见[升级记录](../docs/plans/real-host/records/MODEL-UPGRADE-20261015.md) |
-| Web | `npm run test:web` | 状态、认证、布局、工作权限、资料与模板逻辑；数量以当前输出为准 |
-| 浏览器全套 | `npm run test:e2e` | 桌面 demo 与真实生产业务两套入口 |
-| 生产浏览器 | `node tests/e2e/business.setup.mjs` | 真实 PG/S3、Office 转换、双用户业务、CLI、全表／对象恢复校验；可传入 spec 或 grep 限定场景 |
-| 部署模板 | `go test ./tests/deploy` | 四种 PG/S3 配置、资源边界和无效配置 |
-| K8s 探针 | `node tests/k8s/smoke.mjs` | 指定 JUDEX_TEST_IMAGE，临时 namespace 部署与生产 capability 检查 |
-| K8s 矩阵 | `node tests/k8s/matrix.mjs` | 真实服务 JUDEX_TEST_IMAGE 与独立 JUDEX_TEST_GATEWAY_IMAGE，四存储组合及组件故障；真实模型使用 live.mjs |
-| Skill 发现 | `node tests/skill-hosts.mjs` | 原生安装卸载、实际 Codex app-server 发现；无模型调用 |
-| AI 宿主 | `node tests/skill-agent-hosts.mjs` | 需明确授权及 JUDEX_RUN_AGENT_HOST_TESTS=1；限定隔离目录会话，尚未运行 |
-| Kimi 前置核查 | [2026-10-09 历史记录](../docs/plans/real-host/READINESS.md) | 保留当时准入边界；30任务/9计划接受与后续限定实测见 [尾项结果](../docs/plans/real-host/records/ENDURANCE-20261015.md) |
-| Coding Plan 宿主观测协议 | `node --test tests/real-host/model-usage-relay.test.mjs` | 受控回环透传、压缩/原始字节、累计usage、未知/零缓存、鉴权及错误不重试；真实Kimi路径另记 [执行状态](../docs/plans/real-host/IMPLEMENTATION.md) |
-| CLI持续写入 | `node tests/real-host/cli-storage-soak.mjs ROOT` + `node tests/real-host/cli-storage-restarts.mjs ROOT` | 已授权隔离环境中的60分钟原生CLI上传/下载、128初始/512突发积压与组件重启；冻结计划、逐调用日志及前置环境见 [尾项记录](../docs/plans/real-host/records/ENDURANCE-20261015.md) |
-| 发行 | `node tests/release.mjs dist/release/VERSION` | 全包校验和、本机包解压/版本、附带 Skill 安装卸载 |
+| Go 与基础设施 | `go test ./...`、`go vet ./...` | 认证、模型流、存储、解析、沙箱、部署与合同 |
+| V2 独立 PostgreSQL | `JUDEX_V2_TEST_DSN=postgres://… go test -race ./...` | 认证一致导入、同时继续、并行最后额度、多个闭环延后结算、已提交工具丢检查点恢复、公共压缩与未知副作用核对 |
+| Web 单元 | `npm run test:web` | 真实输入校验、分页失败／游标循环、正文损坏／截断／错误封装、幂等重试与新意图、批次确认状态与整批／单项恢复 |
+| HTTP／原生 CLI／SSE | `npm run test:e2e` | `tests/v2/local.mjs` 创建并回收独立 Docker 依赖，真实服务与原生 CLI |
+| CI 桌面浏览器 | `JUDEX_V2_BROWSER=1 npm run test:e2e` | 真实注册、项目、三级群、上传并排阅读、归档、私聊、主题语言；双人仅改配置的 SSE 冲突、漏收事件的 409 恢复、提交后响应损坏与文件完成重试、查询失败、人工回复与等待收束 |
+| 已部署环境 | `JUDEX_V2_URL=http://… node tests/v2/service.mjs` | 配置相同 URL 后可分别运行 cli.mjs、sse.mjs、formats.mjs |
+| 完整 K8s | `node tests/v2/cluster.mjs` | 创建有归属 namespace，使用共享 Controller；HTTP／CLI／SSE／七工具／格式／Pod 重启，finally 核对 UID 并清理 |
+| 受控岗位 | `node tests/v2/agents.mjs` | 十轮暂停、分支共享、暂停合并、技术预算、配置更新、七个真实工具、共享压缩 |
+| 人工分支与并发 | `node tests/v2/collaboration.mjs` | 多人部分回应、原生 CLI 回复并提及、自然收束、并行分支共用额度、真正同时提交继续 |
+| 第二次复核回归 | `node tests/v2/followup.mjs`、`internal/agent/peer/followup_test.go` | 缩小设备 scope 与重放、撤销任职自然收束、摘要重压缩、实际额度回退与小窗口、非额度错误不切换、逐次成本与技术预算 |
+| 第四次复核恢复 | `tests/web/uploads.test.mjs`、`tests/v2/browser-batch.mjs`、`tests/v2/composite-recovery.mjs`、`internal/agent/peer/deadline_test.go` | 批次整批／子集恢复、原生 CLI 跨进程多附件恢复与新意图、执行中期限、压缩／工具耗尽与过期拒绝发布 |
+| 正式界面与菜单 | `tests/v2/browser-appearance.mjs`（由 `browser.spec.mjs` 调用） | 会话搜索开关、文件库侧栏与搜索、草稿保持、固定版本阅读、知识菜单、头像语言／主题切换、90% 聊天字号与桌面溢出；9 项 |
+| 内置库与项目设置 | `tests/v2/presets.mjs`、`tests/v2/browser-settings.mjs` | 服务端 16 项目录／权限／并发／幂等／去重／私人提示词检查；浏览器新增 11 项筛选预览、导入编辑、成员、版本、多岗、下载及双语主题，该阶段共享浏览器合计 54 项；已纳入 local／cluster 流程 |
+| 完整权限矩阵 | `node tests/v2/permissions.mjs` | 隐藏父群、真实沙箱边界、运行中撤权、HTTP／CLI／SSE／上下文／预览失效、跨项目指定版本分享和私聊隔离 |
+| 进程故障恢复 | `node tests/v2/restart.mjs`、`node tests/v2/restart-closures.mjs` | 前者验证未知调用成本和唯一发布，后者在已有 2 轮时强制重启，恢复后准确 20 条岗位发言、10 轮暂停 |
+| 真实模型 | `JUDEX_V2_REAL_MODEL=1 node tests/v2/real-model.mjs` | 已授权隔离环境内 APIMart `glm-5.3-flash`，实际工具／文件／岗位协作／压缩 |
+| 发行 | `node tests/release.mjs dist/release/VERSION` | 校验和、原生平台包版本、Skill 安装卸载与用户文件保持 |
 
-桌面 demo 浏览器默认 Microsoft Edge，可用 PLAYWRIGHT_CHANNEL=chromium；生产浏览器使用 Chromium。生产测试默认启动受控模型网关，验证真实 PG/S3、CLI 和业务调用，不把受控模型结果作为真实模型验收。设置 JUDEX_E2E_COLLABORATION_GATEWAY=0 可禁用网关，需只运行不依赖模型建议的场景；真实模型测试以JUDEX_REAL_MODEL_SMOKE=1明确启用，并提供JUDEX_MODEL_CATALOG_FILE或完整provider环境配置，未配置直接失败，不回退受控网关。模型目录可用apiKeyEnv引用仅在子进程内提供的Key，并声明thinking/reasoning参数。
+`JUDEX_V2_CLI` 指定同版原生 CLI；`JUDEX_V2_EVIDENCE` 指定本轮证据目录，默认 `.cache/v2-k8s`，`JUDEX_V2_ENV` 可显式指定 environment.json。cluster 必须用 `JUDEX_TEST_IMAGE` 指定本地已导入的同版 server 镜像，`JUDEX_TEST_CHART` 可指定对应发行 Chart；网关／沙箱／转换器镜像可通过 JUDEX_TEST_GATEWAY_IMAGE、JUDEX_SANDBOX_IMAGE、JUDEX_CONVERTER_IMAGE 指定。重启测试放在其他 HTTP／浏览器／真实模型检查之后执行，普通端口转发会随 Pod 终止，需要重新连接。
 
-像素检查依赖 Python 3 和 Pillow，测试前在所用 Python 环境执行 `python -m pip install -r tests/e2e/requirements.txt`；可用 JUDEX_PYTHON 指定解释器。CI 使用同一份依赖清单。桌面测试显式启用正常动效；嵌套选择器选择完成后等待退出动画、DOM 移除及焦点恢复，再操作外层弹层。像素采样先核对所有目标边框颜色稳定，避免与截图结束过渡动画后的状态不一致。
+浏览器测试通过仅监听 loopback 的 `browser-proxy.mjs` 注入指定 GET 查询失败、屏蔽配置事件及破坏已真实提交的写响应，不在正式产品增加故障开关。localhost 与 127.0.0.1 使用独立 Cookie，双人修改均通过真实表单，测试夹具在浏览器之外建立合成项目；本机由 CUA 调用与 CI 共享的操作流程，不启动额外浏览器驱动。
 
-测试使用独立端口、容器和带所有权标签的 namespace，日志/trace/备份放在忽略的 .cache 或 tests/results。不得将依赖缺失导致的 skip 算作实测通过。
+文件格式使用 `tests/fixtures/materials` 的真实 PDF、图片、Office 和 ZIP；模型夹具 `tests/fixtures/v2-gateway` 只用于确定性断言，不冒充真实模型。原型的 13 项记录仍在 `tests/v2-preview`，与正式验收分开。GitHub CI 运行 backend、web、business；发行另运行同版双架构制品和独立 Kubernetes 回归。
 
-生产浏览器入口默认构建并启动独立 Office 转换容器，按源文件摘要复用构建镜像；可用 JUDEX_TEST_CONVERTER_IMAGE 指定已有镜像，或用 JUDEX_MATERIAL_CONVERTER_URL 指定测试转换服务。数据库 SQL 夹具在 Docker 和 Kubernetes 两种入口都先校验本次运行的所有权，测试结束只清理所属容器／namespace。
+流程图与账号资料：`tests/v2/workflow-profile.mjs` 提供 14 项真实 API 检查；`browser-flow-profile.mjs` 提供 9 项按钮/密度/AI 草稿/历史/昵称头像/双语主题检查，已接入 CI 浏览器流程。`tests/web/workflow-graph.test.mjs` 检查中文标签、分支、反馈和语法注入边界。local/cluster 服务回归已加入新用例，K8s 受控网关更新为 r6。真实模型自然语言生成与受控输出分别记录。本轮实际浏览器执行范围见对应 records，未执行的旧矩阵不计入本轮。
 
-生产浏览器使用固定 `chrislusf/seaweedfs:4.47`，与 Helm 默认对象存储一致；每次运行生成独立 S3 凭据，认证接口就绪后再初始化 bucket，并完成真实上传、Range、分片和对象恢复核对。GitHub CI 分别运行 `backend`、`web`、`business`，三项均通过才允许汇总检查通过；本地 `npm run test:e2e` 仍顺序执行界面和业务两套测试。
+分栏／阅读器／确认卡片：构建 `deploy/material-converter` 镜像后，在已有隔离环境设置 `JUDEX_V2_EVIDENCE`、`JUDEX_V2_URL`、`JUDEX_V2_CLI`、`JUDEX_CONVERTER_IMAGE`，运行 `node tests/v2/readers.mjs`；`JUDEX_V2_BROWSER=1` 加跑 1600×1000 桌面浏览器。完整 `cluster.mjs` 可通过 `JUDEX_V2_READERS=1` 纳入该流程。测试创建真实旧 Office、OpenDocument、工作簿、编码 CSV、图像、音视频与归档样本，验证内容摘要／授权／受控岗位及确认分支，再检查实际 UI 操作；不把扩展名数量当成实测样本数量。
 
-K8s 矩阵需要 JUDEX_TEST_IMAGE 指向真实服务候选，JUDEX_TEST_GATEWAY_IMAGE 指向独立受控模型夹具。测试需要已存在的兼容 Operator/CRD，不部署第二个 Controller，不停止业务服务；finally 按所有权清理。版本 CI 在每个运行自己的临时集群中先安装 Operator，再执行同一入口并删除所属集群；本地既有集群的规则保持所有权约束。当前证据及剩余边界见 [验收报告](../docs/plans/v1/STATUS.md)。
 
-持续写入入口要求ROOT中的environment.json明确namespace、UID、test-run、同版CLI/配置目录及自有port-forward；soak-plan.json预先固定projectId、60分钟时长、4线程、每线程4秒、64KiB载荷、前55分钟生产、20分钟512积压及四项故障时间。恢复线120秒、非计划原生调用失败率0.5%、哈希/重复ready原件/OOM为0。两入口在独立进程运行：先启动写入，再启动重启控制。每次原生调用保留起止时间和全部错误，重启控制以实际上传、下载与SHA校验确认恢复；测试只创建独立原件，不提交分析或正式工作。结束还需核对服务端原件UUID/SHA清单、正式业务不变、所有故障均完成、采样状态及归档清理，不能只看计时结束或HTTP200。
+文件卡片／组合头像／使用文档：在完整隔离 V2 部署上运行 `JUDEX_V2_URL=http://127.0.0.1:18100 JUDEX_V2_EVIDENCE=.cache/v2-library npx playwright test --config tests/v2/library-guide.config.mjs`。测试自行注册合成用户，覆盖不可变版本、提交人、指定版本分享边界、成员撤销、SSE 头像刷新、六章节示例和下载，输出截图与 JSON 记录。仅在测试 namespace 使用，不在正常项目注入示例数据。
+
+
+完整桌面流程包含 `tests/v2/browser-menus.mjs`：验证布局、设置 Select、文件版本菜单的指针悬停无外扩描边、键盘内侧焦点、选项留白及 Escape／Enter 行为，覆盖深浅主题；截图输出到 `JUDEX_V2_EVIDENCE`。

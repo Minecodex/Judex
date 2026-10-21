@@ -1,3 +1,5 @@
+/* Shared desktop density: rem-based tokens and HeroUI scale together. */
+html { font-size: 90%; }
 * {
   box-sizing: border-box;
 }
@@ -698,16 +700,6 @@ button {
 .judex-settings-bindings .judex-binding-button {
   margin: var(--s0);
   font-size: var(--text-xs);
-}
-.judex-settings-actions {
-  margin-top: var(--s6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s4);
-  align-items: stretch;
-}
-.judex-settings-actions > p {
-  font-size: var(--text-sm);
 }
 .judex-reset-confirm {
   padding: var(--s4);

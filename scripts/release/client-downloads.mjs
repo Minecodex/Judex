@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const run=(command,args,options={})=>execFileSync(command,args,{cwd:root,windowsHide:true,...options});
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
-const skillFiles=['SKILL.md','manifest.json','references/commands.md','references/reporting.md','references/human-decisions.md'];
+const skillFiles=['SKILL.md','manifest.json','references/commands.md','references/reporting.md','references/discussion.md'];
 
 function fingerprint(version,commit) {
   const records=[];
@@ -51,7 +51,7 @@ export function buildClientDownloads({version='0.1.0-dev',commit,output=path.joi
     }
     fs.writeFileSync(path.join(windows,'judex.cmd'),'@echo off\r\nif /I "%PROCESSOR_ARCHITECTURE%"=="ARM64" goto arm64\r\nif /I "%PROCESSOR_ARCHITEW6432%"=="ARM64" goto arm64\r\n"%~dp0windows-amd64\\judex.exe" %*\r\nexit /b %ERRORLEVEL%\r\n:arm64\r\n"%~dp0windows-arm64\\judex.exe" %*\r\nexit /b %ERRORLEVEL%\r\n');
     fs.writeFileSync(path.join(macos,'judex'),'#!/bin/sh\nset -eu\nROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\ncase "$(uname -m)" in\n  arm64|aarch64) exec "$ROOT/macos-arm64/judex" "$@" ;;\n  x86_64|amd64) exec "$ROOT/macos-amd64/judex" "$@" ;;\n  *) echo "Unsupported macOS architecture" >&2; exit 1 ;;\nesac\n');
-    const instructions=`Judex ${version}\n\nWindows: extract and run .\\judex.cmd version\nmacOS: extract and run ./judex version (Intel and Apple Silicon are selected automatically).\nIf an extraction tool drops execute permissions: chmod +x judex macos-*/judex\n\nConnect: judex --server YOUR_TEAM_URL auth login\nInstall the bundled skill: judex skill install --target codex\nOr: judex skill install --target claude-code\n\nThe CLI works locally. Business approval is confirmed in the browser.\n`;
+    const instructions=`Judex ${version}\n\nWindows: extract and run .\\judex.cmd version\nmacOS: extract and run ./judex version (Intel and Apple Silicon are selected automatically).\nIf an extraction tool drops execute permissions: chmod +x judex macos-*/judex\n\nConnect: judex --server YOUR_TEAM_URL auth login\nInstall the bundled skill: judex skill install --target codex\nOr: judex skill install --target claude-code\n\nThe CLI works locally. Paused AI discussions are controlled by people in the browser.\n`;
     for(const directory of [windows,macos]){fs.writeFileSync(path.join(directory,'README.txt'),instructions);for(const name of ['LICENSE','NOTICE'])fs.copyFileSync(path.join(root,name),path.join(directory,name));}
     copySkill(path.join(skill,'judex'),version);
     fs.writeFileSync(path.join(skill,'README.txt'),'Copy the judex folder into your host skill directory, or install the matching CLI and run judex skill install.\n');

@@ -106,7 +106,7 @@ jobs:
           - {os: ubuntu-24.04-arm, arch: arm64, minikube_sha: 202f331cb677761c5aec81c58472d16d65707358b9f66226210be3fe3275b1c3}
     env:
       JUDEX_TEST_IMAGE: judex/server:ci-${{ github.run_id }}
-      JUDEX_TEST_GATEWAY_IMAGE: judex/gateway-fixture:ci-${{ github.run_id }}
+      JUDEX_TEST_GATEWAY_IMAGE: judex/v2-gateway:ci-${{ github.run_id }}
       PLAYWRIGHT_CHANNEL: chromium
     steps:
       - uses: actions/checkout@v4
@@ -133,7 +133,9 @@ jobs:
         run: |
           python3 -c 'import zipfile; zipfile.ZipFile("candidate/web.zip").extractall("candidate/web")'
           docker build -f deploy/docker/server.release.Dockerfile --build-arg TARGETARCH=${{ matrix.arch }} -t "$JUDEX_TEST_IMAGE" .
-          docker build -f tests/fixtures/gateway/Dockerfile -t "$JUDEX_TEST_GATEWAY_IMAGE" .
+          docker build -f tests/fixtures/v2-gateway/Dockerfile -t "$JUDEX_TEST_GATEWAY_IMAGE" .
+          docker build -f deploy/analysis-sandbox/Dockerfile -t judex/analysis-sandbox:ci .
+          docker build -f deploy/material-converter/Dockerfile -t judex/material-converter:ci deploy/material-converter
       - name: Create an owned disposable Kubernetes cluster
         env:
           MINIKUBE_SHA: ${{ matrix.minikube_sha }}
@@ -142,19 +144,19 @@ jobs:
           echo "$MINIKUBE_SHA  /tmp/minikube" | sha256sum --check
           sudo install /tmp/minikube /usr/local/bin/minikube
           minikube start -p judex-release-${{ github.run_id }} --driver=docker --cpus=4 --memory=12000 --kubernetes-version=v1.36.1
-          minikube -p judex-release-${{ github.run_id }} image load "$JUDEX_TEST_IMAGE" "$JUDEX_TEST_GATEWAY_IMAGE"
+          minikube -p judex-release-${{ github.run_id }} image load "$JUDEX_TEST_IMAGE" "$JUDEX_TEST_GATEWAY_IMAGE" judex/analysis-sandbox:ci judex/material-converter:ci
           helm upgrade --install judex-ci-operator deploy/helm/judex/charts/opensandbox-0.2.2-judex.1.tgz --namespace judex-ci-operator --create-namespace --set opensandbox-server.server.replicaCount=0 --wait --timeout=5m
-      - name: Verify the candidate server, four storage combinations and bounded failures
+      - name: Verify the candidate server, V2 group, role, file and bounded recovery flows
         run: |
-          node tests/k8s/smoke.mjs
-          node tests/k8s/matrix.mjs
+          python3 -c 'import zipfile,os; zipfile.ZipFile("candidate/judex-linux-${{ matrix.arch }}-${{ needs.package.outputs.version }}.zip").extractall("candidate/native"); os.chmod("candidate/native/judex",0o755)'
+          JUDEX_TEST_DISPOSABLE_CLUSTER=1 JUDEX_SANDBOX_IMAGE=judex/analysis-sandbox:ci JUDEX_CONVERTER_IMAGE=judex/material-converter:ci JUDEX_V2_CLI="$PWD/candidate/native/judex" node tests/v2/cluster.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: judex-kubernetes-${{ matrix.arch }}-${{ github.sha }}
           path: |
-            .cache/k8s/**/manifest.json
-            .cache/k8s/**/*.png
+            .cache/v2-k8s/*.json
+            .cache/v2-browser
           include-hidden-files: true
       - name: Delete only this run's cluster
         if: always()

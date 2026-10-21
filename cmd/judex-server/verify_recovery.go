@@ -83,7 +83,7 @@ func verifyRecovery() error {
 		}
 		result[table] = digest{Rows: count, SHA256: hex.EncodeToString(hash.Sum(nil))}
 	}
-	rows, err = tx.Query(ctx, `SELECT e.object_key,e.size,e.sha256 FROM material_entries e JOIN material_versions v ON v.id=e.version_id WHERE v.state='ready' ORDER BY e.object_key`)
+	rows, err = tx.Query(ctx, `SELECT object_key,size,sha256 FROM file_versions UNION ALL SELECT object_key,size,sha256 FROM file_entries ORDER BY object_key`)
 	if err != nil {
 		return err
 	}

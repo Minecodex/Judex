@@ -4,6 +4,7 @@ package httptransport
 
 import (
 	"github.com/kakj-go/Judex/internal/platform/paging"
+	"log/slog"
 	"net/http"
 	"reflect"
 	"time"
@@ -52,6 +53,7 @@ func (respond) error(c *gin.Context, err error) {
 		c.Set("judex.commit_conflict", true)
 	}
 	if apiErr.Code == apierrors.Internal {
+		slog.ErrorContext(c.Request.Context(), "request failed", "requestId", c.GetString(requestIDKey), "error", err)
 		c.AbortWithStatusJSON(apiErr.HTTPStatus(), gin.H{
 			"error": gin.H{
 				"code":      string(apierrors.Internal),

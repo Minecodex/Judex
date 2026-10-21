@@ -1,45 +1,7 @@
-# PR 与 CI 合并规则
+# V2 CI 门槛
 
-默认分支要求 PR、固定 GitHub Actions `CI`、同步主分支及解决审查讨论；失败、取消、意外跳过均不能通过。禁止强推、删除或管理员绕过。
+源代码 CI 的 backend／web／business 必须全部成功。backend 设置独立 PostgreSQL 管理 DSN，执行 vet、race 测试和 cmd 构建，包含认证导入、预算及岗位恢复。web 执行现行单元测试与正式构建。business 建立有归属的临时 Docker PG／S3，运行真实 HTTP、原生设备 CLI、SSE 和桌面浏览器。
 
-默认主分支为 `main`。
-| 阶段 | 范围 |
-| --- | --- |
-| PR / main push | Go vet/race/契约/编译，Web 单测/类型/生产构建；Chat、标签、协同、工作、讨论规则和设置六组核心桌面规格 |
-| 每个 PR 的真实业务 | 隔离 PostgreSQL、SeaweedFS、Office 转换容器和受控模型；真实 API、双用户、CLI 和业务恢复 |
-| v* / 手动 release | 同一提交基础与完整 21 组桌面规格；同一批六平台 CLI/Skill 候选，双架构临时 K8s 四存储组合及故障矩阵 |
-| 独立环境 | 真实模型质量、真实 Agent/Skill 宿主及其专用账户/凭据 |
+发行按固定源树构建同版组件和校验和，六种原生 CLI 平台解压并验证版本与 Skill 安装卸载。独立临时 Kubernetes 集群部署候选，复用该集群自有 Controller，运行群权限、文件格式、七工具、闭环、公共压缩与 Pod 重启；finally 清理测试 namespace 与集群。
 
-通过 `JUDEX_E2E_PROFILE=pr|release` 选择桌面范围，未知值直接失败。本地默认 release 全套，`CI full` 与发布 source-ci 显式使用完整范围。源代码、存储与实际生产业务的原断言不减少。
-
-发布仅由版本标签或手动候选触发，`ci:release` 标签不再让每次 PR 提交重跑完整矩阵。固定 `Release CI` 汇总同一候选，失败、取消、意外跳过都失败；只保存内部制品，不创建公开版本。
-
-服务镜像使用实际候选字节，受控网关保持独立测试镜像；CI 只在本次自建集群安装 Operator/CRD，并按所有权清理。Actions 不要求额外专用环境配置。受控模型不证明真实提供商质量，真实模型与宿主的执行范围及剩余边界见 [实机验收](../plans/real-host/README.md)。入口见 [tests/README.md](../../tests/README.md)。没有定时任务。
-
-## 分支与失败处理
-
-日常开发从最新 `origin/main` 创建功能分支，推送到组织仓库后创建 PR。手动检查在 Actions 页面的 Run workflow 选择待检查的分支；功能分支首次引入新工作流时，先创建 PR 触发检查。
-
-CI 失败会阻止合并。修复后在同一功能分支继续提交并重新运行检查；不能删除必需检查或使用管理员绕过。检查只验证实际提交的代码，本地未提交改动及独立环境结果需要另附证据。
-
-## 执行与诊断约定
-
-业务 job 显式拉取固定存储镜像，避免本地缓存掩盖公共仓库授权或可用性问题。原 MinIO 镜像匿名拉取返回拒绝，测试使用项目既有 SeaweedFS；应用仍通过同一 S3 API 读写、分片与恢复。
-
-镜像拉取通过 `scripts/ci/pull-images.mjs` 对 HTTP 5xx、限流和临时网络错误最多尝试三次，间隔 2 秒、4 秒，始终使用相同镜像引用；认证、缺失 manifest、摘要校验及未知错误立即失败，重试耗尽仍阻止 CI。`npm run test:ci` 用故障注入核对这些边界。
-
-提交前的 Go 检查应包含 `go test -race -timeout=20m ./...`；普通 `go test` 不能替代竞态检查。原生 CLI 的 HTTP 夹具按子用例隔离不可变期望及版本，跨 handler 和测试协程共享的请求计数使用原子操作。Windows 本地 `CGO_ENABLED=0` 无法运行 race 时，必须以 Linux Actions 的实际结果确认，不能标记为已通过。
-
-业务脚本直接用 Node 启动时，从 Windows 的 Node 目录或 Linux/macOS 的 `lib/node_modules` 定位 npm CLI，不依赖 npm 父进程注入 `npm_execpath`。
-
-每次运行的凭据目录权限为 0700，S3 认证文件只读挂载并允许镜像内非 root 用户读取。失败时保存所属容器状态与脱敏启动日志，再按运行标签清理。CI 仅上传这些诊断及浏览器结果，不上传认证配置或数据库备份。
-
-CLI `--no-wait` 确认测试仅点击一次浏览器确认，再轮询只读回执直到 `committed` 并核对结果引用；点击返回不等于服务端已经提交。
-
-跨多任务前置、四次任务验收、计划验收与重开的完整界面旅程使用 120 秒整项预算；每次状态核对限 10 秒，普通界面用例默认 45 秒，业务断言不变。
-
-锁文件在无 node_modules 的干净目录从固定的 workspace 依赖生成，保留已有版本及全部平台原生可选包，避免 Windows 锁文件遗漏 Linux TypeScript 或构建工具依赖。
-
-Web job 用 Python 3.12 和 `tests/e2e/requirements.txt` 安装像素检查所需 Pillow。桌面浏览器显式使用正常动效，选择器及账户弹层通过 DOM 移除和焦点恢复确认关闭；像素采样等待全部目标边框颜色稳定，保留原采样覆盖与阈值。
-
-E2E 共用 `openTool` 助手在右栏“＋”打开的菜单内选择入口，选择器限定于当前菜单，避免与中央讨论中的同名动作混淆。
+真实 APIMart 联测需要明确启用并注入 Secret，在授权环境单独记录；不能把受控网关输出或 CI 未来配置视为本轮真实模型证据。当前执行记录在 [V2 状态](../plans/v2/IMPLEMENTATION.md)。

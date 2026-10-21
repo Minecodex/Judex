@@ -6,13 +6,14 @@ func (h *IdentityHandlers) updateMe(c *gin.Context) {
 	var req struct {
 		ExpectedVersion int64   `json:"expectedVersion"`
 		DisplayName     *string `json:"displayName"`
+		AvatarData      *string `json:"avatarData"`
 		Locale          *string `json:"locale"`
 	}
 	if err := bindJSON(c, &req); err != nil {
 		respond{}.error(c, err)
 		return
 	}
-	out, err := h.Service.UpdateProfile(c.Request.Context(), principalFrom(c).UserID, req.ExpectedVersion, req.DisplayName, req.Locale)
+	out, err := h.Service.UpdateProfile(c.Request.Context(), principalFrom(c).UserID, req.ExpectedVersion, req.DisplayName, req.Locale, req.AvatarData)
 	if err != nil {
 		respond{}.error(c, err)
 		return
@@ -35,4 +36,16 @@ func (h *IdentityHandlers) changePassword(c *gin.Context) {
 	}
 	h.setSessionCookie(c, token.Secret, token.ExpiresAt)
 	respond{}.ok(c, gin.H{"user": user, "sessionExpiresAt": token.ExpiresAt})
+}
+
+func (h *IdentityHandlers) avatar(c *gin.Context) {
+	id := v2id(c, "userId")
+	out, err := h.Service.Avatar(c.Request.Context(), id)
+	if err != nil {
+		respond{}.error(c, err)
+		return
+	}
+	c.Header("Cache-Control", "private, no-store")
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Data(200, "image/png", out)
 }

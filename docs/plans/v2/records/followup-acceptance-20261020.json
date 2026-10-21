@@ -1,0 +1,473 @@
+{
+  "status": "requires-follow-up",
+  "version": "0.2.0-local.20261020.v2.11",
+  "protocolVersion": "2",
+  "recordedAt": "2026-10-20T00:23:44.376Z",
+  "sourceTreeHash": "a22372fcffbd0f68318059179544254ff3220b457b281394e3b0ab1d250f5414",
+  "normalURL": "http://127.0.0.1:18097/",
+  "resolvedReview": "REVIEW-20261020.md",
+  "record": "FOLLOWUP-20261020.md",
+  "closedFindings": [
+    "R1",
+    "R2",
+    "R3",
+    "R4",
+    "R5"
+  ],
+  "finalCandidateChecks": 131,
+  "normalUpgradeChecks": 13,
+  "suites": [
+    {
+      "name": "HTTP",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.11",
+      "checks": [
+        "direct-membership",
+        "hidden-parent",
+        "three-levels",
+        "idempotency",
+        "human-mentions",
+        "zero-ordinary-trigger",
+        "platform-dm",
+        "archive-discussion",
+        "permission-revocation",
+        "binary-byte-idempotency",
+        "file-versions",
+        "same-name-files",
+        "exact-share",
+        "remove-preserves-history"
+      ],
+      "localEvidence": ".cache/v2-followup/k8s/service.log"
+    },
+    {
+      "name": "native CLI",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.11",
+      "checks": [
+        "native-device-login",
+        "protocol-2",
+        "project-scope-metadata-filter",
+        "project-group-selection",
+        "upload-download-sha",
+        "record-only-zero-trigger",
+        "single-combined-file-message",
+        "CLI-source",
+        "public-context",
+        "event-follow",
+        "reply-to-zero-trigger",
+        "precise-AI-mention",
+        "revocation"
+      ],
+      "localEvidence": ".cache/v2-followup/k8s/cli.log"
+    },
+    {
+      "name": "SSE",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.11",
+      "checks": [
+        "conversation-SSE",
+        "disconnected-cursor-replay",
+        "duplicate-message-no-event",
+        "unjoined-SSE-denied",
+        "revocation-closes-stream",
+        "revoked-command-replay-denied"
+      ],
+      "localEvidence": ".cache/v2-followup/k8s/sse.log"
+    },
+    {
+      "name": "controlled-agents",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.11",
+      "checks": [
+        "ten-loop-atomic-pause",
+        "paused-trigger-merge",
+        "multi-role-own-push",
+        "same-position-distinct-agents",
+        "versioned-continue",
+        "second-allowance-20",
+        "terminate-rejects-late-publication",
+        "seven-real-tools",
+        "immutable-group-projection",
+        "unjoined-group-not-projected",
+        "sandbox-write-edit-publish",
+        "public-tool-provenance",
+        "model-call-budget-separate-from-loops",
+        "model-failure-pauses",
+        "configuration-next-call",
+        "latest-limit-next-allowance",
+        "private-prompts-excluded",
+        "shared-compaction",
+        "compressed-original-readable"
+      ],
+      "completedAt": "2026-10-20T00:06:50.444Z",
+      "localEvidence": ".cache/v2-followup/k8s/controlled-agents.json"
+    },
+    {
+      "name": "collaboration",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.11",
+      "checks": [
+        "human-wait-branch-metadata",
+        "ordinary-context-zero-trigger",
+        "partial-human-response",
+        "native-reply-to-and-explicit-role",
+        "answered-discussion-settles",
+        "parallel-branches-shared-limit",
+        "atomic-final-allowance",
+        "simultaneous-human-continue-one-winner",
+        "continued-branches-same-discussion"
+      ],
+      "completedAt": "2026-10-20T00:06:59.793Z",
+      "localEvidence": ".cache/v2-followup/k8s/collaboration.json"
+    },
+    {
+      "name": "permissions",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.11",
+      "checks": [
+        "hidden-parent-name-and-ID",
+        "project-owner-not-implicit-group-member",
+        "unjoined-project-and-outsider-denied",
+        "search-and-file-boundary",
+        "actual-child-sandbox-projection",
+        "live-membership-revocation-cancels-run",
+        "revoked-HTTP-preview-content-context",
+        "revoked-native-CLI-and-SSE",
+        "revoked-run-cannot-publish-late",
+        "revoked-projection-reclaimed",
+        "sibling-membership-independent",
+        "cross-project-exact-version-share",
+        "share-does-not-expand-context",
+        "project-removal-revokes-all-own-groups",
+        "other-project-and-existing-share-retained",
+        "platform-DM-third-party-denied"
+      ],
+      "completedAt": "2026-10-20T00:07:23.335Z",
+      "localEvidence": ".cache/v2-followup/k8s/permissions.json"
+    },
+    {
+      "name": "formats",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.11",
+      "checks": [
+        "preview-md",
+        "preview-json",
+        "preview-png",
+        "preview-pdf",
+        "preview-docx",
+        "preview-xlsx",
+        "preview-pptx",
+        "preview-zip",
+        "html-resource-bundle-relative-assets",
+        "source-code-preview",
+        "immutable-version-filename-and-format",
+        "html-isolation-capability-bound-to-version",
+        "multipart-hash",
+        "unsafe-archive-and-corrupt-office-rejected",
+        "preview-capability-revoked-with-membership"
+      ],
+      "completedAt": "2026-10-20T00:07:55.858Z",
+      "localEvidence": ".cache/v2-followup/k8s/formats.json"
+    },
+    {
+      "name": "background",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.11",
+      "checks": [
+        "two-model-slots",
+        "independent-preview-worker",
+        "terminate-in-flight"
+      ],
+      "localEvidence": ".cache/v2-followup/k8s/background.json"
+    },
+    {
+      "name": "browser-automation",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.11",
+      "checks": [
+        "real-registration-project-entry",
+        "direct-registered-member",
+        "three-independent-group-levels",
+        "ordinary-message-zero-AI",
+        "real-upload-fixed-version-side-reader",
+        "bilingual-light-dark",
+        "archive-still-writable",
+        "platform-human-DM",
+        "real-login-persisted-project-cards",
+        "notification-opens-group-from-project-list",
+        "two-human-SSE-config-conflict",
+        "retained-group-draft",
+        "removed-member-not-restored",
+        "project-draft-original-version",
+        "file-library-failure-retry",
+        "snapshot-failure-retry",
+        "original-context-failure-retry",
+        "reply-selection-cancellation",
+        "human-explicit-reply-and-role-mention",
+        "human-wait-natural-settlement"
+      ],
+      "completedAt": "2026-10-20T00:11:47.823Z",
+      "localEvidence": ".cache/v2-followup/k8s/browser-automation.json"
+    },
+    {
+      "name": "real-model",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.11",
+      "checks": [
+        "real-seven-tools",
+        "real-source-file-read",
+        "real-published-report",
+        "real-structured-peer-collaboration",
+        "real-shared-compaction",
+        "real-original-reference-read"
+      ],
+      "completedAt": "2026-10-20T00:14:00.233Z",
+      "localEvidence": ".cache/v2-followup/k8s/real-model.json"
+    },
+    {
+      "name": "restart",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.11",
+      "checks": [
+        "server-process-restart",
+        "persistent-delivery-and-checkpoint",
+        "unknown-model-cost-retained",
+        "single-final-publication",
+        "no-duplicate-loop-count"
+      ],
+      "completedAt": "2026-10-20T00:16:17.693Z",
+      "localEvidence": ".cache/v2-followup/k8s/restart.json"
+    },
+    {
+      "name": "restart-closures",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.11",
+      "checks": [
+        "restart-with-two-existing-closures",
+        "same-discussion-after-restart",
+        "unknown-call-retained",
+        "exactly-twenty-causal-publications",
+        "atomic-ten-loop-pause-after-recovery"
+      ],
+      "completedAt": "2026-10-20T00:18:05.195Z",
+      "localEvidence": ".cache/v2-followup/k8s/restart-closures.json"
+    },
+    {
+      "name": "normal local upgrade",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.11",
+      "checks": [
+        "old-Web-session",
+        "same-user-UUID",
+        "same-CSRF",
+        "old-password-login",
+        "same-version-Web-Server-CLI",
+        "protocol-2",
+        "native-reply-to-zero-trigger",
+        "native-device-reauthorization",
+        "record-only-zero-trigger",
+        "native-file-push",
+        "real-APIMart-response",
+        "real-sandbox-original-read",
+        "one-combined-push-message"
+      ],
+      "completedAt": "2026-10-20T00:19:48.118Z",
+      "localEvidence": ".cache/v2-followup/normal/verification.json"
+    }
+  ],
+  "nonzeroRestart": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.11",
+    "checks": [
+      "restart-with-two-existing-closures",
+      "same-discussion-after-restart",
+      "unknown-call-retained",
+      "exactly-twenty-causal-publications",
+      "atomic-ten-loop-pause-after-recovery"
+    ],
+    "loopsAtRestart": 2,
+    "interruptedRunId": "35a1adc8-bcf5-4d44-9c1a-3c16e5163f50",
+    "oldPodUID": "2638576e-7436-4cb9-8271-e490823ccd92",
+    "groupId": "355da71b-2fc1-40fe-bd3d-d6d3cf2ed16b",
+    "loopsAfterRestart": 10,
+    "publicAgentMessages": 20,
+    "recoveredModelCalls": 3,
+    "completedAt": "2026-10-20T00:18:05.195Z"
+  },
+  "authenticationUpgrade": {
+    "database": "judex_v2",
+    "schema": 12,
+    "fullRowsMatched": [
+      {
+        "table": "users",
+        "rows": 4,
+        "fullRowsMatched": true
+      },
+      {
+        "table": "password_credentials",
+        "rows": 4,
+        "fullRowsMatched": true
+      },
+      {
+        "table": "user_sessions",
+        "rows": 6,
+        "fullRowsMatched": true
+      },
+      {
+        "table": "recovery_tokens",
+        "rows": 0,
+        "fullRowsMatched": true
+      }
+    ],
+    "allRowsUnchanged": true,
+    "unchangedSecretUIDAndContent": [
+      "judex-model-catalog",
+      "judex-model-keys",
+      "judex-opensandbox-auth",
+      "judex-postgresql",
+      "judex-storage-auth"
+    ],
+    "privateBackupRetained": true
+  },
+  "normalService": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.11",
+    "activeOriginalAccounts": 1,
+    "activeOriginalSessions": 1,
+    "syntheticAccountsDisabled": 2,
+    "syntheticGroupArchived": true,
+    "syntheticAuditRetained": true,
+    "oldBusinessDatabaseStillAbsent": true,
+    "currentV2DatabasePreserved": true,
+    "completedAt": "2026-10-20T00:20:21.523Z"
+  },
+  "cleanup": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.11",
+    "deletedNamespaces": [
+      "judex-v2-24d91c19",
+      "judex-v2-24d91c19-sandboxes"
+    ],
+    "remainingOwnedPersistentVolumes": 0,
+    "remainingOwnedDeveloperContainers": 0,
+    "normalSandboxPodsAndVolumes": 0,
+    "unchangedSecrets": [
+      "judex-model-catalog",
+      "judex-model-keys",
+      "judex-opensandbox-auth",
+      "judex-postgresql",
+      "judex-storage-auth"
+    ],
+    "sharedControllerReady": true,
+    "unrelatedDatabaseStillRunning": true,
+    "workloads": [
+      {
+        "name": "judex",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-judex-opensandbox-server",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-material-converter",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-postgresql",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-seaweedfs",
+        "desired": 1,
+        "ready": 1
+      }
+    ],
+    "checkedAt": "2026-10-20T00:20:22.509Z",
+    "temporaryPortsReleased": [
+      18100,
+      18102,
+      18103,
+      15443
+    ],
+    "temporaryBrowserTabsAndProxyClosed": true,
+    "finalizedAt": "2026-10-20T00:23:25.768Z"
+  },
+  "otherChecks": {
+    "goAllRaceWithIsolatedPostgreSQL": "passed",
+    "goVet": "passed",
+    "webTypecheckAndProductionBuild": "passed",
+    "webUnitTests": 5,
+    "ciHarnessTests": 4,
+    "releaseChecksumEntries": 56,
+    "sourceFilesWithin2000Lines": 179,
+    "maxSourceLines": 1771,
+    "nativeCLIPlatform": "darwin-arm64",
+    "arm64ImageBuiltImportedAndDeployed": true
+  },
+  "screenshot": ".cache/v2-followup/normal/workspace-final.png",
+  "limits": [
+    "Only Darwin ARM64 CLI and Linux ARM64 Server were executed here; remaining platform targets were cross-built and checksum-verified.",
+    "No remote GitHub Actions run was dispatched.",
+    "The original human password was not requested; complete authentication rows matched exactly, and a synthetic pre-upgrade account verified its old password, Cookie, UUID and CSRF."
+  ],
+  "historicalAcceptance": "acceptance-20261020.json",
+  "originalCompletionClaim": "complete",
+  "secondReview": {
+    "reviewedAt": "2026-10-20T02:06:27.063Z",
+    "record": "SECOND-REVIEW-20261020.md",
+    "conclusion": "Four additional defects confirmed; previous R1-R5 fixes and recorded test results remain valid.",
+    "issues": [
+      {
+        "id": "R6",
+        "priority": "high",
+        "area": "CLI AI side-effect scope",
+        "status": "reproduced-unfixed"
+      },
+      {
+        "id": "R7",
+        "priority": "high",
+        "area": "summary-only recompression after smaller budget",
+        "status": "reproduced-unfixed"
+      },
+      {
+        "id": "R8",
+        "priority": "medium",
+        "area": "discussion settlement after role unassignment",
+        "status": "reproduced-unfixed"
+      },
+      {
+        "id": "R9",
+        "priority": "medium",
+        "area": "configured quota fallback execution",
+        "status": "reproduced-unfixed"
+      }
+    ],
+    "isolatedDatabaseAndQueueReproductions": 3,
+    "nativeCLIAndHTTPReproductions": 1,
+    "normalDeploymentModified": false,
+    "localEvidence": ".cache/v2-review-2/",
+    "temporaryResourcesCleaned": true
+  },
+  "supersededBy": "final-followup-acceptance-20261020.json",
+  "finalResolution": {
+    "status": "complete",
+    "version": "0.2.0-local.20261020.v2.12",
+    "record": "FINAL-FOLLOWUP-20261020.md",
+    "closedFindings": [
+      "R1",
+      "R2",
+      "R3",
+      "R4",
+      "R5",
+      "R6",
+      "R7",
+      "R8",
+      "R9"
+    ]
+  }
+}

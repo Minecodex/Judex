@@ -1,0 +1,380 @@
+{
+  "status": "passed",
+  "scope": "flowcharts-account-profile-and-desktop-density",
+  "version": "0.2.0-local.20261020.v2.17",
+  "protocol": 2,
+  "schema": 14,
+  "at": "2026-10-20T12:32:38.447Z",
+  "source": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.17",
+    "sourceTreeHash": "57a1c1b04c04f4979e5972fb31a8bdc04cef18d15c74b291fc93a9c17b97aef1",
+    "sourceFiles": 190,
+    "allSourceFilesIncludingTests": 210,
+    "maxLines": {
+      "file": "web/src/lib/api/schema-operations-0.d.ts",
+      "lines": 1801
+    },
+    "allSourcesWithin2000Lines": true,
+    "checkedAt": "2026-10-20T12:22:25.158Z"
+  },
+  "release": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.17",
+    "sourceTreeHash": "57a1c1b04c04f4979e5972fb31a8bdc04cef18d15c74b291fc93a9c17b97aef1",
+    "checksumsVerified": 56,
+    "nativeCLI": {
+      "schemaVersion": "2",
+      "ok": true,
+      "data": {
+        "cli": "0.2.0-local.20261020.v2.17",
+        "commit": "a475fdf-dirty",
+        "protocol": "2"
+      }
+    },
+    "skillVersion": "0.2.0-local.20261020.v2.17",
+    "serverPlatform": "linux-arm64",
+    "at": "2026-10-20T12:22:25.318Z"
+  },
+  "suites": {
+    "service": {
+      "status": "passed",
+      "count": 14,
+      "checks": [
+        "direct-membership",
+        "hidden-parent",
+        "three-levels",
+        "idempotency",
+        "human-mentions",
+        "zero-ordinary-trigger",
+        "platform-dm",
+        "archive-discussion",
+        "permission-revocation",
+        "binary-byte-idempotency",
+        "file-versions",
+        "same-name-files",
+        "exact-share",
+        "remove-preserves-history"
+      ]
+    },
+    "presets": {
+      "status": "passed",
+      "count": 16,
+      "checks": [
+        "complete-20-scenarios-118-roles-51-workflows",
+        "manager-only-import-and-project-isolation",
+        "atomic-mixed-batch-and-idempotent-replay",
+        "advisory-content-and-persistent-provenance",
+        "renamed-edited-cross-locale-import-does-not-overwrite",
+        "simultaneous-import-single-copy",
+        "stale-catalog-rejected",
+        "invalid-batch-rolls-back-all",
+        "duplicate-selection-rejected",
+        "manual-name-match-preserved",
+        "entire-catalog-importable-without-auto-groups-or-runs",
+        "imported-role-version-history",
+        "personal-prompt-create-update-version-conflicts",
+        "personal-prompt-isolated-from-other-members",
+        "project-membership-notifications-retained",
+        "demoted-manager-cannot-replay-import"
+      ]
+    },
+    "workflowProfile": {
+      "status": "passed",
+      "count": 14,
+      "checks": [
+        "built-in-graph-imported",
+        "graph-and-feedback-round-trip",
+        "graph-conflict-and-dangling-link-validation",
+        "immutable-history-and-omitted-graph-preservation",
+        "generation-manager-permission",
+        "queued-controlled-AI-graph-and-idempotency",
+        "draft-does-not-save-workflow-or-trigger-discussion",
+        "draft-is-private-to-author",
+        "invalid-model-output-fails-without-overwriting",
+        "nickname-avatar-atomic-save-and-idempotency",
+        "session-and-member-profile-consistency",
+        "normalized-portrait-authenticated-read",
+        "profile-CAS-and-image-validation",
+        "portrait-removal-preserves-nickname-and-session"
+      ]
+    },
+    "cli": {
+      "status": "passed",
+      "count": 13,
+      "checks": [
+        "native-device-login",
+        "protocol-2",
+        "project-scope-metadata-filter",
+        "project-group-selection",
+        "upload-download-sha",
+        "record-only-zero-trigger",
+        "single-combined-file-message",
+        "CLI-source",
+        "public-context",
+        "event-follow",
+        "reply-to-zero-trigger",
+        "precise-AI-mention",
+        "revocation"
+      ]
+    },
+    "sse": {
+      "status": "passed",
+      "count": 6,
+      "checks": [
+        "conversation-SSE",
+        "disconnected-cursor-replay",
+        "duplicate-message-no-event",
+        "unjoined-SSE-denied",
+        "revocation-closes-stream",
+        "revoked-command-replay-denied"
+      ]
+    },
+    "controlledAgents": {
+      "status": "passed",
+      "count": 19,
+      "checks": [
+        "ten-loop-atomic-pause",
+        "paused-trigger-merge",
+        "multi-role-own-push",
+        "same-position-distinct-agents",
+        "versioned-continue",
+        "second-allowance-20",
+        "terminate-rejects-late-publication",
+        "seven-real-tools",
+        "immutable-group-projection",
+        "unjoined-group-not-projected",
+        "sandbox-write-edit-publish",
+        "public-tool-provenance",
+        "model-call-budget-separate-from-loops",
+        "model-failure-pauses",
+        "configuration-next-call",
+        "latest-limit-next-allowance",
+        "private-prompts-excluded",
+        "shared-compaction",
+        "compressed-original-readable"
+      ]
+    },
+    "browser": {
+      "status": "passed",
+      "count": 39,
+      "checks": [
+        "real-registration-project-entry",
+        "direct-registered-member",
+        "three-independent-group-levels",
+        "ordinary-message-zero-AI",
+        "real-upload-fixed-version-side-reader",
+        "bilingual-light-dark",
+        "archive-still-writable",
+        "platform-human-DM",
+        "real-login-persisted-project-cards",
+        "notification-opens-group-from-project-list",
+        "conversation-menu-search-clear",
+        "inline-file-library",
+        "file-search-empty-and-reset",
+        "resource-browsing-preserves-draft",
+        "reader-history-and-close",
+        "knowledge-reachable-from-menu",
+        "account-menu-bilingual-theme",
+        "readable-chat-type",
+        "desktop-layout-no-overflow",
+        "wide-sectioned-project-settings",
+        "member-search-actions-removal-cancel",
+        "builtin-library-scenario-filter",
+        "role-preview-multiselect-import",
+        "role-editor-version-history",
+        "renamed-preset-source-recognition",
+        "workflow-steps-relationships-import-preview",
+        "private-prompt-editor-and-composition",
+        "group-independent-multi-role-and-workflow-selection",
+        "client-download-cards-and-contextual-commands",
+        "settings-bilingual-dark-theme-preset-identity",
+        "global-90-percent-density",
+        "role-and-workflow-actions-one-row",
+        "back-button-balanced-background",
+        "AI-draft-apply-edit-and-save",
+        "flowchart-preview-fit-and-immutable-history",
+        "nickname-and-uploaded-portrait-persist-after-reload",
+        "portrait-removal-and-fallback",
+        "flowchart-english-dark-theme",
+        "home-account-only-in-bottom-rail"
+      ]
+    },
+    "realModelFlowchart": {
+      "status": "passed",
+      "count": 3,
+      "checks": [
+        "real-natural-language-generation",
+        "parallel-review-and-feedback-rendered",
+        "draft-applied-and-saved-through-browser"
+      ]
+    }
+  },
+  "sameVersionScenarioCount": 124,
+  "webUnitTests": {
+    "passed": 25,
+    "failed": 0
+  },
+  "go": {
+    "test": "passed",
+    "vet": "passed",
+    "integration": "tests/integration passed against owned dependencies; optional peer tests requiring JUDEX_V2_TEST_DSN skipped",
+    "realPostgreSQL": "candidate service and agent HTTP suites passed"
+  },
+  "browser": {
+    "automatedViewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "nativeChrome": "User desktop, 3456×2014 screenshot; no viewport override",
+    "sharedCIFlow": true
+  },
+  "realModel": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.17",
+    "provider": "APIMart",
+    "model": "00000000-0000-0000-0000-000000000001",
+    "edges": 7,
+    "nodes": 6,
+    "state": "ready",
+    "usage": {
+      "modelName": "ZHIPU/GLM-5.3-Flash",
+      "inputTokens": 285,
+      "outputTokens": 753,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": null
+    },
+    "savedGraphMatches": true,
+    "checks": [
+      "real-natural-language-generation",
+      "parallel-review-and-feedback-rendered",
+      "draft-applied-and-saved-through-browser"
+    ],
+    "at": "2026-10-20T12:18:02.263Z"
+  },
+  "deployment": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.17",
+    "database": "judex_v2",
+    "schema": 14,
+    "allExistingAuthenticationFieldsUnchanged": true,
+    "authentication": [
+      {
+        "table": "users",
+        "rows": 11,
+        "allPriorFieldsMatched": true
+      },
+      {
+        "table": "password_credentials",
+        "rows": 11,
+        "allPriorFieldsMatched": true
+      },
+      {
+        "table": "user_sessions",
+        "rows": 21,
+        "allPriorFieldsMatched": true
+      },
+      {
+        "table": "recovery_tokens",
+        "rows": 0,
+        "allPriorFieldsMatched": true
+      }
+    ],
+    "unchangedSecretUIDAndContent": [
+      "judex-model-catalog",
+      "judex-model-keys",
+      "judex-opensandbox-auth",
+      "judex-postgresql",
+      "judex-storage-auth"
+    ],
+    "privateBackupRetained": true,
+    "at": "2026-10-20T12:19:06.068Z"
+  },
+  "normalBrowser": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.17",
+    "checks": [
+      "original-Chrome-session-retained",
+      "home-duplicate-account-removed",
+      "existing-project-accessible",
+      "role-actions-one-row",
+      "workflow-actions-one-row",
+      "existing-builtin-workflow-backfilled-23-nodes-36-edges",
+      "flowchart-rendered-and-AI-authoring-visible",
+      "nickname-avatar-controls-visible"
+    ],
+    "realProfileUnchanged": true,
+    "normalDataNotModifiedByBrowserSmoke": true,
+    "at": "2026-10-20T12:23:25.355Z"
+  },
+  "cleanup": {
+    "status": "passed",
+    "deletedNamespaces": [
+      "judex-v2-bdabb337",
+      "judex-v2-bdabb337-sandboxes"
+    ],
+    "remainingOwnedPersistentVolumes": 0,
+    "remainingOwnedClusterRolesAndBindings": 0,
+    "testPortsClosed": [
+      18100,
+      18103
+    ],
+    "sharedControllerReady": true,
+    "unrelatedDatabaseStillRunning": true,
+    "unchangedSecrets": [
+      "judex-model-catalog",
+      "judex-model-keys",
+      "judex-opensandbox-auth",
+      "judex-postgresql",
+      "judex-storage-auth"
+    ],
+    "workloads": [
+      {
+        "name": "judex",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-judex-opensandbox-server",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-material-converter",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-postgresql",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-seaweedfs",
+        "desired": 1,
+        "ready": 1
+      }
+    ],
+    "privateBackupRetained": true,
+    "normalURL": "http://127.0.0.1:18097/",
+    "ready": {
+      "scope": "http+db",
+      "status": "ready"
+    },
+    "at": "2026-10-20T12:32:38.442Z"
+  },
+  "screenshots": [
+    ".cache/v2-flow-profile/k8s/workflow-real.png",
+    ".cache/v2-flow-profile/normal/settings-roles.png",
+    ".cache/v2-flow-profile/normal/workflow-preview.png",
+    ".cache/v2-flow-profile/normal/account-settings.png"
+  ],
+  "limitations": {
+    "fullFormatsPermissionsAndRestartMatrixNotRerun": true,
+    "previousFullEvidence": "FOURTH-FOLLOWUP-20261020.md",
+    "browserFaultInjectionMatrixNotRerun": true,
+    "remoteCINotTriggered": true,
+    "otherCLIPlatformsCrossBuiltOnly": true,
+    "preExistingDiffCheckWarning": "web/src/features/auth/AccessPages.tsx:58: new blank line at EOF."
+  }
+}

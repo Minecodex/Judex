@@ -1,0 +1,2265 @@
+paths:
+  /system:
+    get:
+      operationId: getSystem
+      summary: getSystem
+      tags:
+        - v2
+      security: []
+      parameters: []
+      responses:
+        '200': &ref_0
+          description: V2 resource. Lists use data.items; immutable references retain their exact version.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V2Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /capabilities:
+    get:
+      operationId: getCapabilities
+      summary: getCapabilities
+      tags:
+        - v2
+      security: []
+      parameters: []
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /models:
+    get:
+      operationId: listModels
+      summary: listModels
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters: []
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /users:
+    get:
+      operationId: searchUsers
+      summary: searchUsers
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects:
+    get:
+      operationId: listProjects
+      summary: listProjects
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters: []
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2Project'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      operationId: createProject
+      summary: createProject
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2Project'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2ProjectInput'
+  /projects/{projectId}:
+    get:
+      operationId: getProject
+      summary: getProject
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: &ref_1
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2Project'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    patch:
+      operationId: updateProject
+      summary: updateProject
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2Project'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                description:
+                  type: string
+                  maxLength: 32000
+                defaultModelId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                loopLimit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                expectedVersion: &ref_4
+                  type: integer
+                  format: int64
+                  minimum: 1
+              required:
+                - name
+                - description
+                - defaultModelId
+                - loopLimit
+                - expectedVersion
+  /projects/{projectId}/members:
+    get:
+      operationId: listProjectMembers
+      summary: listProjectMembers
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2ProjectMember'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      operationId: saveProjectMember
+      summary: saveProjectMember
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                userId: *ref_1
+                role:
+                  type: string
+                  enum:
+                    - admin
+                    - member
+                expectedVersion: &ref_2
+                  type: integer
+                  format: int64
+                  minimum: 1
+              required:
+                - userId
+                - role
+  /projects/{projectId}/members/{userId}:
+    delete:
+      operationId: removeProjectMember
+      summary: removeProjectMember
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: userId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                expectedVersion: *ref_2
+              required:
+                - expectedVersion
+  /projects/{projectId}/positions:
+    get:
+      operationId: listPositions
+      summary: listPositions
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2Position'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      operationId: createPosition
+      summary: createPosition
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2TemplateInput'
+  /projects/{projectId}/positions/{templateId}:
+    patch:
+      operationId: updatePosition
+      summary: updatePosition
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: templateId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: &ref_3
+                  type: string
+                prompt: *ref_3
+                content: *ref_3
+                modelId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                expectedVersion: *ref_4
+              required:
+                - name
+                - prompt
+                - modelId
+                - expectedVersion
+  /projects/{projectId}/positions/{templateId}/versions:
+    get:
+      operationId: listPositionVersions
+      summary: listPositionVersions
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: templateId
+          required: true
+          schema: *ref_1
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/workflows:
+    get:
+      operationId: listWorkflows
+      summary: listWorkflows
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2Workflow'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      operationId: createWorkflow
+      summary: createWorkflow
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2TemplateInput'
+  /projects/{projectId}/workflows/{templateId}:
+    patch:
+      operationId: updateWorkflow
+      summary: updateWorkflow
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: templateId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/V2TemplateInput'
+                - type: object
+                  required:
+                    - name
+                    - content
+                    - expectedVersion
+  /projects/{projectId}/workflows/{templateId}/versions:
+    get:
+      operationId: listWorkflowVersions
+      summary: listWorkflowVersions
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: templateId
+          required: true
+          schema: *ref_1
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/personal-prompts:
+    get:
+      operationId: listPersonalPrompts
+      summary: listPersonalPrompts
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2PersonalPrompt'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}/personal-prompts/{positionId}:
+    put:
+      operationId: savePersonalPrompt
+      summary: savePersonalPrompt
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: positionId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                prompt: &ref_6
+                  type: string
+                expectedVersion:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                  description: Use 0 for a new personal prompt; updates require its current version.
+              required:
+                - prompt
+  /projects/{projectId}/groups:
+    get:
+      operationId: listGroups
+      summary: listGroups
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2Group'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      operationId: createGroup
+      summary: createGroup
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2Group'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2GroupInput'
+  /projects/{projectId}/groups/{groupId}:
+    patch:
+      operationId: updateGroup
+      summary: updateGroup
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: groupId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2Group'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: *ref_3
+                purpose: *ref_3
+                parentId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                workflowIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                members:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/V2MemberRoles'
+                expectedVersion: *ref_4
+              required:
+                - name
+                - purpose
+                - workflowIds
+                - expectedVersion
+  /groups/{groupId}:
+    get:
+      operationId: getGroup
+      summary: getGroup
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2Group'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /groups/{groupId}/archive:
+    post:
+      operationId: archiveGroup
+      summary: archiveGroup
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                expectedVersion: *ref_2
+                archived:
+                  type: boolean
+              required:
+                - expectedVersion
+                - archived
+  /direct-conversations:
+    get:
+      operationId: listDirectConversations
+      summary: listDirectConversations
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters: []
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2Direct'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      operationId: createDirectConversation
+      summary: createDirectConversation
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                userId: *ref_1
+              required:
+                - userId
+  /conversations/{conversationId}/messages:
+    get:
+      operationId: listMessages
+      summary: listMessages
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: query
+          name: after
+          schema:
+            type: integer
+        - in: query
+          name: before
+          schema:
+            type: integer
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2Message'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      operationId: postMessage
+      summary: postMessage
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2MessageResult'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2MessageInput'
+  /conversations/{conversationId}/messages/{messageId}:
+    get:
+      operationId: getMessage
+      summary: getMessage
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: messageId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2Message'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /conversations/{conversationId}/read:
+    post:
+      operationId: markConversationRead
+      summary: markConversationRead
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                seq:
+                  type: integer
+                  format: int64
+                  minimum: 0
+              required:
+                - seq
+  /conversations/{conversationId}/events:
+    get:
+      operationId: conversationEvents
+      summary: conversationEvents
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: query
+          name: after
+          schema:
+            type: integer
+        - in: header
+          name: Last-Event-ID
+          schema:
+            type: string
+            pattern: ^[0-9]+$
+      responses:
+        '200':
+          description: >-
+            SSE: persistent sequence id, named event, JSON data. Last-Event-ID or after resumes. Access is rechecked
+            during streaming.
+          content:
+            text/event-stream:
+              schema: &ref_5
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /me/events:
+    get:
+      operationId: personalEvents
+      summary: personalEvents
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: query
+          name: after
+          schema:
+            type: integer
+        - in: header
+          name: Last-Event-ID
+          schema:
+            type: string
+            pattern: ^[0-9]+$
+      responses:
+        '200':
+          description: >-
+            SSE: persistent sequence id, named event, JSON data. Last-Event-ID or after resumes. Access is rechecked
+            during streaming.
+          content:
+            text/event-stream:
+              schema: *ref_5
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /me/notifications:
+    get:
+      operationId: listNotifications
+      summary: listNotifications
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters: []
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2Notification'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /me/notifications/{notificationId}/read:
+    post:
+      operationId: readNotification
+      summary: readNotification
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: notificationId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties: {}
+              required: []
+  /groups/{groupId}/context:
+    get:
+      operationId: getGroupContext
+      summary: getGroupContext
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: *ref_1
+        - in: query
+          name: after
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2ContextEntry'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /groups/{groupId}/context/reference:
+    get:
+      operationId: readGroupReference
+      summary: readGroupReference
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: *ref_1
+        - in: query
+          name: kind
+          schema:
+            type: string
+        - in: query
+          name: ref
+          schema:
+            type: string
+        - in: query
+          name: offset
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /groups/{groupId}/snapshots:
+    get:
+      operationId: listContextSnapshots
+      summary: listContextSnapshots
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2ContextSnapshot'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /groups/{groupId}/push:
+    post:
+      operationId: pushGroup
+      summary: pushGroup
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2MessageResult'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2MessageInput'
+  /groups/{groupId}/runs:
+    get:
+      operationId: listGroupRuns
+      summary: listGroupRuns
+      tags: &ref_12
+        - v2
+      security: &ref_13
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: *ref_1
+      responses: &ref_14
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2RoleRun'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /groups/{groupId}/discussions:
+    get:
+      operationId: listDiscussions
+      summary: listDiscussions
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2Discussion'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /groups/{groupId}/discussions/{discussionId}/control:
+    post:
+      operationId: controlDiscussion
+      summary: controlDiscussion
+      tags: &ref_15
+        - v2
+      security: &ref_16
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: discussionId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses: &ref_19
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2ControlInput'
+  /groups/{groupId}/shares:
+    post:
+      operationId: shareGroupContent
+      summary: shareGroupContent
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2Message'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2ShareInput'
+  /conversations/{conversationId}/uploads:
+    post:
+      operationId: createGroupUpload
+      summary: createGroupUpload
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2UploadInput'
+  /conversations/{conversationId}/uploads/{uploadId}/parts/{part}:
+    put:
+      operationId: uploadGroupPart
+      summary: uploadGroupPart
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: uploadId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: part
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+  /conversations/{conversationId}/uploads/{uploadId}/complete:
+    post:
+      operationId: completeGroupUpload
+      summary: completeGroupUpload
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: uploadId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2FileVersion'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                publishMessage:
+                  type: boolean
+                  default: true
+                  description: >-
+                    Announce an uploaded file immediately; CLI combined messages use false and attach it once in the
+                    following message.
+              required: []
+  /conversations/{conversationId}/uploads/{uploadId}:
+    delete:
+      operationId: cancelGroupUpload
+      summary: cancelGroupUpload
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: uploadId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties: {}
+              required: []
+  /conversations/{conversationId}/files:
+    get:
+      operationId: listGroupFiles
+      summary: listGroupFiles
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2FileVersion'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /conversations/{conversationId}/files/{fileId}/versions:
+    get:
+      operationId: listFileVersions
+      summary: listFileVersions
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: fileId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/V2FileVersion'
+                    required:
+                      - items
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /conversations/{conversationId}/files/{fileId}:
+    delete:
+      operationId: removeGroupFile
+      summary: removeGroupFile
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: fileId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                expectedVersion: *ref_2
+              required:
+                - expectedVersion
+  /conversations/{conversationId}/file-versions/{versionId}:
+    get:
+      operationId: getFileVersion
+      summary: getFileVersion
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: versionId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2FileVersion'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /conversations/{conversationId}/file-versions/{versionId}/content:
+    get:
+      operationId: fileVersionContent
+      summary: fileVersionContent
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: versionId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authenticated content stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /conversations/{conversationId}/file-versions/{versionId}/preview:
+    get:
+      operationId: fileVersionPreview
+      summary: fileVersionPreview
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: versionId
+          required: true
+          schema: *ref_1
+      responses:
+        '200':
+          description: Authenticated content stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /conversations/{conversationId}/file-versions/{versionId}/entry:
+    get:
+      operationId: fileVersionEntry
+      summary: fileVersionEntry
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: versionId
+          required: true
+          schema: *ref_1
+        - in: query
+          name: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Authenticated content stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /conversations/{conversationId}/file-versions/{versionId}/retry-preview:
+    post:
+      operationId: retryFilePreview
+      summary: retryFilePreview
+      tags: &ref_7
+        - v2
+      security: &ref_8
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters: &ref_9
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: versionId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses: &ref_10
+        '200': *ref_0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody: &ref_11
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties: {}
+              required: []
+  /conversations/{conversationId}/file-versions/{versionId}/copy:
+    post:
+      operationId: copyFileVersion
+      summary: copyFileVersion
+      tags:
+        - v2
+      security:
+        - sessionCookie: []
+        - bearerGrant: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: *ref_1
+        - in: path
+          name: versionId
+          required: true
+          schema: *ref_1
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses:
+        '200':
+          description: Authorized V2 resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/V2FileVersion'
+                  meta:
+                    $ref: '#/components/schemas/RequestMeta'
+                required:
+                  - data
+                  - meta
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: *ref_6
+              required: []
+  /conversations/{conversationId}/file-versions/{versionId}/preview-session:
+    post:
+      operationId: createFilePreview
+      summary: Create a short-lived version-only HTML preview capability
+      tags: *ref_7
+      security: *ref_8
+      parameters: *ref_9
+      responses: *ref_10
+      requestBody: *ref_11
+  /groups/{groupId}/runs/{runId}/tools:
+    get:
+      operationId: listRunToolCalls
+      summary: Read own private tool journal for effect reconciliation
+      tags: *ref_12
+      security: *ref_13
+      parameters:
+        - &ref_17
+          in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - &ref_18
+          in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses: *ref_14
+  /groups/{groupId}/runs/{runId}/tools/{callId}/reconcile:
+    post:
+      operationId: reconcileToolCall
+      summary: Role owner records a verified unknown tool outcome before continuing
+      tags: *ref_15
+      security: *ref_16
+      parameters:
+        - *ref_17
+        - *ref_18
+        - in: path
+          name: callId
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKeyParam'
+      responses: *ref_19
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - expectedVersion
+                - resolution
+                - reason
+              properties:
+                expectedVersion:
+                  type: integer
+                  format: int64
+                  minimum: 1
+                resolution:
+                  type: string
+                  enum:
+                    - completed
+                    - retry
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 4000
+                result: {}

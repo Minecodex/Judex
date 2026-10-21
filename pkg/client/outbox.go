@@ -43,13 +43,6 @@ func (c *Client) prepareCommand(method, path string, raw []byte, key string) (pe
 			return command, "", err
 		}
 	}
-	if method == "POST" && strings.HasSuffix(path, "/submissions") {
-		var body map[string]any
-		if json.Unmarshal(raw, &body) == nil && body["clientSubmissionId"] == nil {
-			body["clientSubmissionId"] = key
-			command.Body, _ = json.Marshal(body)
-		}
-	}
 	if filename == "" {
 		return command, "", nil
 	}

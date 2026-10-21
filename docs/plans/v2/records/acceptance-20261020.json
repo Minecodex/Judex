@@ -1,0 +1,360 @@
+{
+  "status": "requires-follow-up",
+  "version": "0.2.0-local.20261020.v2.10",
+  "protocolVersion": "2",
+  "recordedAt": "2026-10-19T18:17:04.051Z",
+  "sourceTreeHash": "6a55fd0a7b95a809da52dec9aeb8389ca4e88aec6d8dd4be53569f2a6d945d8e",
+  "normalURL": "http://127.0.0.1:18097/",
+  "suites": [
+    {
+      "name": "HTTP",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.10",
+      "checks": [
+        "direct-membership",
+        "hidden-parent",
+        "three-levels",
+        "idempotency",
+        "human-mentions",
+        "zero-ordinary-trigger",
+        "platform-dm",
+        "archive-discussion",
+        "permission-revocation",
+        "binary-byte-idempotency",
+        "file-versions",
+        "same-name-files",
+        "exact-share",
+        "remove-preserves-history"
+      ],
+      "localEvidence": ".cache/v2-k8s/service-delivery.log"
+    },
+    {
+      "name": "native CLI",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.10",
+      "checks": [
+        "native-device-login",
+        "protocol-2",
+        "project-group-selection",
+        "upload-download-sha",
+        "record-only-zero-trigger",
+        "single-combined-file-message",
+        "CLI-source",
+        "public-context",
+        "event-follow",
+        "precise-AI-mention",
+        "revocation"
+      ],
+      "localEvidence": ".cache/v2-k8s/cli-delivery.log"
+    },
+    {
+      "name": "SSE",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.10",
+      "checks": [
+        "conversation-SSE",
+        "disconnected-cursor-replay",
+        "duplicate-message-no-event",
+        "unjoined-SSE-denied",
+        "revocation-closes-stream",
+        "revoked-command-replay-denied"
+      ],
+      "localEvidence": ".cache/v2-k8s/sse-delivery.log"
+    },
+    {
+      "name": "formats",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.10",
+      "checks": [
+        "preview-md",
+        "preview-json",
+        "preview-png",
+        "preview-pdf",
+        "preview-docx",
+        "preview-xlsx",
+        "preview-pptx",
+        "preview-zip",
+        "html-resource-bundle-relative-assets",
+        "source-code-preview",
+        "immutable-version-filename-and-format",
+        "html-isolation-capability-bound-to-version",
+        "multipart-hash",
+        "unsafe-archive-and-corrupt-office-rejected",
+        "preview-capability-revoked-with-membership"
+      ],
+      "completedAt": "2026-10-19T18:04:41.356Z",
+      "localEvidence": ".cache/v2-k8s/formats.json"
+    },
+    {
+      "name": "background",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.10",
+      "checks": [
+        "two-model-slots",
+        "independent-preview-worker",
+        "terminate-in-flight"
+      ],
+      "localEvidence": ".cache/v2-k8s/background.json"
+    },
+    {
+      "name": "controlled-agents",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.10",
+      "checks": [
+        "ten-loop-atomic-pause",
+        "paused-trigger-merge",
+        "multi-role-own-push",
+        "same-position-distinct-agents",
+        "versioned-continue",
+        "second-allowance-20",
+        "terminate-rejects-late-publication",
+        "seven-real-tools",
+        "immutable-group-projection",
+        "unjoined-group-not-projected",
+        "sandbox-write-edit-publish",
+        "public-tool-provenance",
+        "model-call-budget-separate-from-loops",
+        "model-failure-pauses",
+        "configuration-next-call",
+        "latest-limit-next-allowance",
+        "private-prompts-excluded",
+        "shared-compaction",
+        "compressed-original-readable"
+      ],
+      "completedAt": "2026-10-19T18:04:53.574Z",
+      "localEvidence": ".cache/v2-k8s/controlled-agents.json"
+    },
+    {
+      "name": "browser-automation",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.10",
+      "checks": [
+        "real-registration-project-entry",
+        "direct-registered-member",
+        "three-independent-group-levels",
+        "ordinary-message-zero-AI",
+        "real-upload-fixed-version-side-reader",
+        "bilingual-light-dark",
+        "archive-still-writable",
+        "platform-human-DM",
+        "real-login-persisted-project-cards",
+        "notification-opens-group-from-project-list"
+      ],
+      "localEvidence": ".cache/v2-k8s/browser-automation.json"
+    },
+    {
+      "name": "real-model",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.10",
+      "checks": [
+        "real-seven-tools",
+        "real-source-file-read",
+        "real-published-report",
+        "real-structured-peer-collaboration",
+        "real-shared-compaction",
+        "real-original-reference-read"
+      ],
+      "completedAt": "2026-10-19T18:08:45.816Z",
+      "localEvidence": ".cache/v2-k8s/real-model.json"
+    },
+    {
+      "name": "forced server restart",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.9",
+      "checks": [
+        "server-process-restart",
+        "persistent-delivery-and-checkpoint",
+        "unknown-model-cost-retained",
+        "single-final-publication",
+        "no-duplicate-loop-count"
+      ],
+      "completedAt": "2026-10-19T17:59:58.229Z",
+      "localEvidence": ".cache/v2-k8s/restart.json"
+    },
+    {
+      "name": "normal local cutover",
+      "status": "passed",
+      "verifiedVersion": "0.2.0-local.20261020.v2.10",
+      "checks": [
+        "old-Web-session",
+        "same-user-UUID",
+        "same-CSRF",
+        "old-password-login",
+        "same-version-Web-Server-CLI",
+        "protocol-2",
+        "native-device-reauthorization",
+        "record-only-zero-trigger",
+        "native-file-push",
+        "real-APIMart-response",
+        "real-sandbox-original-read",
+        "one-combined-push-message"
+      ],
+      "completedAt": "2026-10-19T18:12:33.999Z",
+      "localEvidence": ".cache/v2-cutover/verification.json"
+    }
+  ],
+  "accountImport": [
+    {
+      "table": "users",
+      "rows": 2,
+      "fullRowsMatched": true
+    },
+    {
+      "table": "password_credentials",
+      "rows": 2,
+      "fullRowsMatched": true
+    },
+    {
+      "table": "user_sessions",
+      "rows": 2,
+      "fullRowsMatched": true
+    },
+    {
+      "table": "recovery_tokens",
+      "rows": 0,
+      "fullRowsMatched": true
+    }
+  ],
+  "normalService": {
+    "database": "judex_v2",
+    "oldDatabaseRemoved": true,
+    "originalActiveAccounts": 1,
+    "originalActiveWebSessions": 1,
+    "syntheticAccountsDisabled": 2,
+    "syntheticGroupArchived": true,
+    "privateBackupRetained": true,
+    "legacyObjectCount": 0,
+    "unchangedSecrets": [
+      "judex-model-catalog",
+      "judex-model-keys",
+      "judex-opensandbox-auth",
+      "judex-postgresql",
+      "judex-storage-auth"
+    ]
+  },
+  "cleanup": {
+    "status": "passed",
+    "checkedAt": "2026-10-19T18:15:47.243Z",
+    "deletedNamespaces": [
+      "judex-v2-d6502603",
+      "judex-v2-d6502603-sandboxes"
+    ],
+    "remainingOwnedPersistentVolumes": 0,
+    "remainingOwnedDeveloperContainers": 0,
+    "normalSandboxPodsAndVolumes": 0,
+    "sharedControllerReady": true,
+    "unrelatedDatabaseStillPresent": true,
+    "workloads": [
+      {
+        "name": "judex",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-judex-opensandbox-server",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-material-converter",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-postgresql",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-seaweedfs",
+        "desired": 1,
+        "ready": 1
+      }
+    ]
+  },
+  "otherChecks": {
+    "goAllWithIsolatedPostgreSQL": "passed",
+    "goVet": "passed",
+    "focusedGoRace": "passed",
+    "webTypecheckAndProductionBuild": "passed",
+    "webUnitTests": 5,
+    "ciHarnessTests": 4,
+    "releaseChecksumEntries": 56,
+    "sourceFilesWithin2000Lines": 177,
+    "nativeCLIPlatform": "darwin-arm64",
+    "arm64ImageBuiltImportedAndDeployed": true
+  },
+  "limits": [
+    "Pod restart proof was executed on v2.9; final v2.10 changes binary upload idempotency handling and has separate final functional and cutover evidence.",
+    "Only darwin-arm64 CLI was executed here. Other five CLI targets and linux server binaries were cross-built; their checksum verification is not a runtime test.",
+    "GitHub workflows were updated and local harness tests passed; no remote GitHub run was dispatched.",
+    "The original human password was not available. All imported authentication rows were matched exactly, and a synthetic V1 account verified old password, cookie, UUID and CSRF after import."
+  ],
+  "screenshot": ".cache/v2-cutover/workspace-final.png",
+  "originalCompletionClaim": "complete",
+  "review": {
+    "date": "2026-10-20",
+    "reviewedAt": "2026-10-19T23:37:30.680Z",
+    "record": "REVIEW-20261020.md",
+    "conclusion": "Core implementation and local cutover delivered; full-plan completion reopened.",
+    "issues": [
+      {
+        "id": "R1",
+        "area": "CLI project scope",
+        "status": "reproduced-unfixed"
+      },
+      {
+        "id": "R2",
+        "area": "human reply and waiting branch",
+        "status": "reproduced-unfixed"
+      },
+      {
+        "id": "R3",
+        "area": "editing baseline version",
+        "status": "code-confirmed-browser-reproduction-pending"
+      },
+      {
+        "id": "R4",
+        "area": "query failure states",
+        "status": "code-confirmed-fault-injection-pending"
+      },
+      {
+        "id": "R5",
+        "area": "acceptance coverage",
+        "status": "additional-evidence-required"
+      }
+    ],
+    "isolatedDatabaseReproductions": 2,
+    "localEvidence": ".cache/v2-review/reproductions.log",
+    "normalDeploymentChanged": false
+  },
+  "supersededBy": "final-followup-acceptance-20261020.json",
+  "followupResolution": {
+    "status": "closed",
+    "version": "0.2.0-local.20261020.v2.11",
+    "record": "FOLLOWUP-20261020.md",
+    "closedFindings": [
+      "R1",
+      "R2",
+      "R3",
+      "R4",
+      "R5"
+    ]
+  },
+  "finalResolution": {
+    "status": "complete",
+    "version": "0.2.0-local.20261020.v2.12",
+    "record": "FINAL-FOLLOWUP-20261020.md",
+    "closedFindings": [
+      "R1",
+      "R2",
+      "R3",
+      "R4",
+      "R5",
+      "R6",
+      "R7",
+      "R8",
+      "R9"
+    ]
+  }
+}

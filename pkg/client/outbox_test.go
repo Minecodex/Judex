@@ -13,9 +13,14 @@ import (
 
 func TestOutboxReplaysLostResponseAcrossClients(t *testing.T) {
 	var mu sync.Mutex
-	var key, submission string
+	var key, message string
 	attempts, effects := 0, 0
+	allowRetry := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/system" {
+			w.Write([]byte(`{"data":{"protocolVersion":"2"}}`))
+			return
+		}
 		mu.Lock()
 		defer mu.Unlock()
 		attempts++
@@ -25,8 +30,12 @@ func TestOutboxReplaysLostResponseAcrossClients(t *testing.T) {
 		current := r.Header.Get("Idempotency-Key")
 		if key == "" {
 			key = current
-			submission, _ = payload["clientSubmissionId"].(string)
+			message, _ = payload["body"].(string)
 			effects++
+		} else if current != key || payload["body"] != message {
+			effects++
+		}
+		if !allowRetry {
 			conn, _, err := w.(http.Hijacker).Hijack()
 			if err != nil {
 				t.Error(err)
@@ -35,9 +44,7 @@ func TestOutboxReplaysLostResponseAcrossClients(t *testing.T) {
 			conn.Close()
 			return
 		}
-		if current != key || payload["clientSubmissionId"] != submission {
-			effects++
-		}
+
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"data":{"id":"original"}}`))
 	}))
@@ -45,15 +52,18 @@ func TestOutboxReplaysLostResponseAcrossClients(t *testing.T) {
 	directory := t.TempDir()
 	first := New(server.URL)
 	first.OutboxDirectory = directory
-	body := map[string]any{"purpose": "message", "text": "local selected report"}
+	body := map[string]any{"body": "local selected report"}
 	var result map[string]any
-	if err := first.Do(context.Background(), "POST", "/projects/p/submissions", body, &result, NewKey()); err == nil {
+	if err := first.Do(context.Background(), "POST", "/groups/g/push", body, &result, NewKey()); err == nil {
 		t.Fatal("expected lost response")
 	}
 	entries, _ := os.ReadDir(directory)
 	if len(entries) != 1 {
 		t.Fatal("pending command not persisted")
 	}
+	mu.Lock()
+	allowRetry = true
+	mu.Unlock()
 	second := New(server.URL)
 	second.OutboxDirectory = directory
 	pending, err := second.PendingCommands()
@@ -66,7 +76,7 @@ func TestOutboxReplaysLostResponseAcrossClients(t *testing.T) {
 	}
 	result = resumed.(map[string]any)
 
-	if effects != 1 || attempts != 2 || result["id"] != "original" || submission == "" {
+	if effects != 1 || attempts < 2 || result["id"] != "original" || message == "" {
 		t.Fatalf("duplicate effect or missing result: effects=%d attempts=%d result=%v", effects, attempts, result)
 	}
 	entries, _ = os.ReadDir(directory)

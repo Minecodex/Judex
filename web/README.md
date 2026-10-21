@@ -1,32 +1,14 @@
-# Web 工程
+# Judex V2 Web
 
-当前界面与实施入口见 [项目协同前端重构计划](../docs/plans/cooperation-ui/README.md)：项目列表先进入计划协同页，计划／任务卡分别进入路线与对象范围 Chatbox。正式源码已按该流程实施，项目设置保留完整功能。任务抽屉、记录／流程参考、全屏和右栏标签的最新对照见 [Demo4 复核](../docs/plans/demo4/STATUS.md)，资料预览与用途关联见 [体验收尾](../docs/plans/materials/records/RELEASE-20261009.md)。
+React 19、HeroUI v3、Tailwind、TanStack Query、Zustand。正式工程在 `src/`，真实 API 默认同源 `/api/v1`，开发 Vite 代理到 Go；不存在生产模拟数据模式。`v2-preview/` 仅保留早期交互原型。
 
-会话与任务协作的最新三栏实现见 [设计与验收](../docs/功能/会话任务协作与分叉.md)。计划主讨论、专项导航、消息分叉、任务时间线和流程参考使用同一生产/demo 组件树；正式模式从真实 API 获取数据，模拟推送只在 demo 出现。前端新增回归位于 tests/e2e/collaboration.spec.ts，真实双用户 API/CLI 流程位于 business.collaboration.spec.ts。
+```sh
+npm ci
+npm run dev
+npm run build
+npm run test:web
+```
 
-React / TypeScript / Vite，HeroUI 是唯一基础 UI 库，Tailwind 负责工具样式。业务样式位于 `src/styles`，自定义类名使用 `.judex-*`，样式值来自 token。
+默认中文，模块 i18n 在 `src/i18n/index.ts` 注册，偏好 `argus.locale`。桌面三栏工作区、项目卡片和设置共用统一 token 与 HeroUI 组件；深浅主题持久化。设计见 [界面规范](../docs/界面/README.md)。
 
-- `src/app`：应用入口、真实 API 壳层、登录 / 注册表单。
-- `src/components/ui`：HeroUI 适配组件；Button、Modal、Input、TextArea、Select、Checkbox、Card、Chip、Alert、Disclosure 统一来自 HeroUI，Tab / Popover 等直接组合 HeroUI。
-- `src/features/chat`：当前聊天主界面、工作提案与逐人确认、执行顺序图、按需工作区。
-- `src/features/work`：共用的项目/职位/流程配置、交接与验收组件；demo 状态规则（seed/actions）与 api 数据源（`apiModel.ts` 映射、`apiStore.ts`、`apiActions.ts` 真实 REST 动作）在此装配。旧工作室导航、层级图及 WorkPanel 等旧真实 API 面板已移除。
-- `src/lib/api`：统一请求、错误模型、数据源边界。
-- `src/stores`：Zustand 保存语言 / 主题等客户端偏好。
-- `src/i18n`：中文 / 英文模块清单。延续 `argus.locale` 偏好键。
-- `src/styles`：HeroUI / Tailwind 入口、design tokens、业务样式。
-
-目标架构由 TanStack Query 管理服务器状态，Zustand 保存客户端偏好；demo（`VITE_DATA_MODE=demo`）继续运行在演示状态模型，api 模式已由统一 ChatWorkspace 树经 `WorkProvider` 分发到真实数据源（`useApiWorkbench`）。预览数据通过独立 Query key 读取，以 `judex.web.preview.v1` 保存在浏览器；这不是正式后端数据协议，生产数据源不使用预览 mutation。
-
-从根目录安装依赖并运行 `npm run dev`。默认 5173，代理 API 到 8080，可用 `JUDEX_API_PROXY` 调整。只有显式 `VITE_DATA_MODE=demo` 才允许进入预览；`.env.development`、`.env.e2e`、`.env.preview` 已明确声明，普通生产构建默认为 API。
-
-任务图按执行先后排列，父子拆分不表示依赖。聊天可以整理提案、固定人员与版本、逐人决定并生成正式工作；交接接收不替代任务和计划最终验收。api 模式的正式决定以服务端 review 与冻结引用为准，业务动作全部经 `apiActions.ts` 走真实 REST（幂等键 + 分片上传）；预览与真实接口的分界由 `WorkProvider` 按模式分发。
-
-纯前端浏览器回归：在根目录执行 `npm exec -- playwright test --config tests/e2e/chat.config.ts`，仅启动隔离的前端服务，不启动后端。覆盖聊天、提案、依赖图、项目配置及原有交接/验收路径。最新产品边界见 [聊天协作前端重构](../docs/界面/聊天工作区.md)。
-
-正式与 demo 数据模式共用组件；独立设计原型源位于 `cooperation-preview`、`material-preview`、`task-route-preview`，静态参考分别保存在 `docs/plans/cooperation-ui`、`docs/plans/materials`、`docs/plans/demo4`，构建与预览见[原型索引](../docs/plans/README.md#离线原型)。原生 DOM 仅用于语义结构、图形和浏览器能力；`FilePicker.tsx` 保留隐藏的 `input[type=file]` 获取 FileList，可见入口使用 HeroUI Button。表单共享适配见 `FormControls.tsx`，统一样式见 `styles/controls.css`。
-
-生产模式的认证会话、工作区入口、服务器读写、实时事件与真实材料上传均已接入；具体专项验收与未关闭的整套 V1 门槛见[工程状态](../docs/详细设计/13-工程实现与验收状态.md)。
-
-2026-10-07 已按用户接受的视觉基准统一正式登录、项目列表、三栏协作与其余业务模块；保留多标签、完整设置和默认功能选择页。当前[项目协同原型](../docs/plans/cooperation-ui/demo.html)继续用于入口对照，源码与早期视觉验收见 [界面统一改造](../docs/plans/cooperation-ui/records/视觉统一-20261007.md)，主题及组件规则见 [统一界面组件规范](../docs/界面/README.md)。独立 `design-preview/` 用于重新生成视觉参考；正式生产与 demo 数据源继续共用 ChatWorkspace 树。
-
-正式构建需要项目要求的 Go 工具链与 Python 3（可通过 `JUDEX_PYTHON` 指定解释器）。正式 `build` 的 postbuild 会交叉构建 Windows/macOS 双架构 CLI 和独立 Skills ZIP，生成 `dist/downloads`；本地 AI 接入页读取真实清单并下载。部署时 `JUDEX_RELEASE_VERSION` 必须与服务端 Docker `VERSION` 一致。原生发行校验执行 `node tests/client-downloads.mjs`；开发服务的 `/downloads` 与 API 使用同一代理目标，可通过 `JUDEX_API_PROXY` 指向当前后端。
+服务端状态由 TanStack Query 与 SSE 更新；草稿按人和会话隔离，失败保留。消息结构化提及、固定文件版本、分享、只读预览、岗位讨论控制全部使用真实 API。自动化入口 `tests/v2/browser.spec.mjs`，隔离依赖与浏览器入口见 [测试文档](../tests/README.md)。当前正式范围仅桌面 Web。

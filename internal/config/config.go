@@ -94,12 +94,13 @@ func FromEnv(get func(string) string) (Config, error) {
 		return fallback
 	}
 	c := Config{
-		Environment:  value("JUDEX_ENV", "development"),
-		HTTPAddress:  value("JUDEX_HTTP_ADDR", "127.0.0.1:8080"),
-		WebDirectory: value("JUDEX_WEB_DIR", "web/dist"),
-		Mode:         Mode(value("JUDEX_MODE", string(ModeAll))),
-		DatabaseURL:  value("JUDEX_DATABASE_URL", ""),
-		LogLevel:     value("JUDEX_LOG_LEVEL", "info"),
+		Environment:          value("JUDEX_ENV", "development"),
+		HTTPAddress:          value("JUDEX_HTTP_ADDR", "127.0.0.1:8080"),
+		WebDirectory:         value("JUDEX_WEB_DIR", "web/dist"),
+		Mode:                 Mode(value("JUDEX_MODE", string(ModeAll))),
+		DatabaseURL:          value("JUDEX_DATABASE_URL", ""),
+		LogLevel:             value("JUDEX_LOG_LEVEL", "info"),
+		MaterialConverterURL: value("JUDEX_MATERIAL_CONVERTER_URL", ""),
 	}
 	if c.Environment != "development" && c.Environment != "production" && c.Environment != "test" {
 		return c, fmt.Errorf("JUDEX_ENV must be development, production, or test")

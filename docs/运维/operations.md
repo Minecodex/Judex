@@ -1,25 +1,15 @@
-# 运维手册（P7-03）
+# V2 运维操作
 
-## 备份
+Server 使用环境配置，启动执行 V2 migrations 并校验 schema 能力 2，`/readyz` 检查数据库和排空状态。`all` 同时运行 API 与数据库 worker，`api`／`worker` 可分离部署。初始岗位并发为 2。
 
-- `scripts/operations/backup.sh <namespace> <release> <directory>` 导出 PG 全库、全部 S3 对象字节与每对象清单、SHA256SUMS。清单本身不能恢复文件，因此必须保留 `objects.tar`。
-- 数据库先快照，对象随后导出；材料是不可变版本，备份期间暂停对象 GC。精确的全表前后摘要比对还需暂停 API 写流量及 worker。
-- 默认使用内置 PostgreSQL Pod；外部数据库需要部署方用对应 pg_dump/pg_restore 连接信息执行。脚本不声称外部数据库已实测。
-- 频率和保留策略由部署方设定；原始归档按敏感业务数据保护。
+账号维护命令保持 `judex-server account` 的 enable／disable／recovery-code 等能力；恢复码属于认证恢复，不是业务审批。升级不修改密码摘要，迁移工具按完整行校验认证数据。CLI 资源与权限合同变化，V1 grant 不导入，客户端重新登录。
 
-## 恢复
+暂停讨论保留投递、检查点、运行目录和未知工具日志。岗位本人通过 Web 核对未知副作用，登记结果后单独继续；直接重启不会自动重放未知 shell。数据库队列和岗位运行分别有租约与 fence，组件重启按日志恢复。完成／终止后后台回收自有沙箱和群投影 PVC。
 
-1. 创建独立 namespace/空数据库/空对象桶，以 `server.mode=api` 启动、不开放用户流量。API 模式连接 PG 但不启动 worker。
-2. 运行 `scripts/operations/restore.sh <new-namespace> <release> <backup-directory>`。脚本拒绝覆盖含用户的数据库或非空桶；先校验归档，恢复对象和数据库。
-3. `judex-server verify-recovery` 校验所有 ready 材料条目的字节长度及 SHA256，并输出全表行数和摘要。脚本保存为 `restore-verification.json`。与已静默的来源摘要比较，可检查审批/验收/截止时间/运行记录完全保留。
-4. 检查未知工具记录和 pending 审批，恢复 worker 后观察一次到期结算；未知副作用不得重新执行以推测结果。验证后再开放流量。
-5. 本轮真实 E2E 执行了新库/新桶恢复并比对所有表、5 个材料条目。完整 K8s 故障矩阵和 RPO/RTO 尚未验收，不能由该样本推出可用性等级。
+一条公开消息可能关闭多个因果路径，超出当前额度的闭环保存在 `deliveries.closure_pending`，不能手工清除以绕过额度。继续时先在新增额度中结算这些闭环；若立即再次暂停，须查看累计计数与剩余队列。schema 12 为此增加持久字段，V2 升级不重新导入认证或清空当前项目。
 
-## 账号运维
-- 恢复码：`judex-server account recovery-code --email ... --reason ...`（15 分钟一次性）。
-- 停用：`judex-server account disable --email ...`；恢复最后负责人：`judex-server project transfer-owner --id ... --to-user ... --reason ...`。
-- 所有运维操作写审计（actor_type=operator），不授予业务权。
+文件原件不可变，移出库不清理历史引用。`judex-server objects export|import` 为备份基础，配合 PostgreSQL 一致备份。正式切换先停止旧写入、导入新 `judex_v2`、验证后清理旧业务；私有备份不提交仓库。
 
-## 已知限制
-- 内置 SeaweedFS 单实例为可恢复起点，非 HA。
-- Helm rollback 不回滚数据库迁移；升级失败走前滚修复或经验证的恢复流程。
+测试 namespace 同时检查 owner／run 标签和 UID 再删除；沙箱子命名空间也要清理并等待消失。正常服务若为缓解资源压力暂停，须保存并恢复原副本；共享 Controller 和无关服务保持运行。实际切换记录见 V2 发布记录。
+
+V2 schema 13 增加内置模板来源和项目内唯一索引。正常 V2 升级保留已有项目、文件与身份，不重新执行账号导入。目录随服务发行；已导入项目副本不会随目录变化被自动覆盖，目录版本过期的导入请求需刷新后重新选择。个人提示词新建版本为 0，更新使用当前版本。

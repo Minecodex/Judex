@@ -1,0 +1,540 @@
+{
+  "status": "passed",
+  "scope": "resizable-panes-file-readers-and-human-confirmation-cards",
+  "version": "0.2.0-local.20261020.v2.18",
+  "protocol": 2,
+  "schema": 15,
+  "at": "2026-10-20T15:25:19.546Z",
+  "source": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.18",
+    "sourceTreeHash": "c00d220aeaddc8d80a474741cbcc3cf0465c2186fa85e94453cb174c2e79d445",
+    "sourceFiles": 208,
+    "allSourceFilesIncludingTests": 230,
+    "maxLines": {
+      "file": "web/src/lib/api/schema-operations-0.d.ts",
+      "lines": 1801
+    },
+    "allSourcesWithin2000Lines": true,
+    "checkedAt": "2026-10-20T15:13:27.990Z"
+  },
+  "release": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.18",
+    "sourceTreeHash": "c00d220aeaddc8d80a474741cbcc3cf0465c2186fa85e94453cb174c2e79d445",
+    "checksumsVerified": 56,
+    "nativeCLI": {
+      "schemaVersion": "2",
+      "ok": true,
+      "data": {
+        "cli": "0.2.0-local.20261020.v2.18",
+        "commit": "a475fdf-dirty",
+        "protocol": "2"
+      }
+    },
+    "skillVersion": "0.2.0-local.20261020.v2.18",
+    "serverPlatform": "linux-arm64",
+    "at": "2026-10-20T15:13:28.114Z"
+  },
+  "converter": {
+    "image": "judex/material-converter:0.2.0-local.20261020.readers.2",
+    "sourceSHA256": "9355a603354d1568af69ccfc1554f6e08f11f0f8712dc8a9eb4748c1014546f4",
+    "deployedSourceMatches": true,
+    "build": "Local inspected converter runtime plus Debian-signed Tsinghua mirror packages; default Debian CDN build was unavailable over the local proxy."
+  },
+  "suites": {
+    "service": {
+      "status": "passed",
+      "count": 14,
+      "checks": [
+        "direct-membership",
+        "hidden-parent",
+        "three-levels",
+        "idempotency",
+        "human-mentions",
+        "zero-ordinary-trigger",
+        "platform-dm",
+        "archive-discussion",
+        "permission-revocation",
+        "binary-byte-idempotency",
+        "file-versions",
+        "same-name-files",
+        "exact-share",
+        "remove-preserves-history"
+      ]
+    },
+    "cli": {
+      "status": "passed",
+      "count": 13,
+      "checks": [
+        "native-device-login",
+        "protocol-2",
+        "project-scope-metadata-filter",
+        "project-group-selection",
+        "upload-download-sha",
+        "record-only-zero-trigger",
+        "single-combined-file-message",
+        "CLI-source",
+        "public-context",
+        "event-follow",
+        "reply-to-zero-trigger",
+        "precise-AI-mention",
+        "revocation"
+      ]
+    },
+    "sse": {
+      "status": "passed",
+      "count": 6,
+      "checks": [
+        "conversation-SSE",
+        "disconnected-cursor-replay",
+        "duplicate-message-no-event",
+        "unjoined-SSE-denied",
+        "revocation-closes-stream",
+        "revoked-command-replay-denied"
+      ]
+    },
+    "fullBrowser": {
+      "status": "passed",
+      "count": 63,
+      "checks": [
+        "real-registration-project-entry",
+        "direct-registered-member",
+        "three-independent-group-levels",
+        "ordinary-message-zero-AI",
+        "real-upload-fixed-version-side-reader",
+        "bilingual-light-dark",
+        "archive-still-writable",
+        "platform-human-DM",
+        "real-login-persisted-project-cards",
+        "notification-opens-group-from-project-list",
+        "conversation-menu-search-clear",
+        "inline-file-library",
+        "file-search-empty-and-reset",
+        "resource-browsing-preserves-draft",
+        "reader-history-and-close",
+        "knowledge-reachable-from-menu",
+        "account-menu-bilingual-theme",
+        "readable-chat-type",
+        "desktop-layout-no-overflow",
+        "wide-sectioned-project-settings",
+        "member-search-actions-removal-cancel",
+        "builtin-library-scenario-filter",
+        "role-preview-multiselect-import",
+        "role-editor-version-history",
+        "renamed-preset-source-recognition",
+        "workflow-steps-relationships-import-preview",
+        "private-prompt-editor-and-composition",
+        "group-independent-multi-role-and-workflow-selection",
+        "client-download-cards-and-contextual-commands",
+        "settings-bilingual-dark-theme-preset-identity",
+        "global-90-percent-density",
+        "role-and-workflow-actions-one-row",
+        "back-button-balanced-background",
+        "AI-draft-apply-edit-and-save",
+        "flowchart-preview-fit-and-immutable-history",
+        "nickname-and-uploaded-portrait-persist-after-reload",
+        "portrait-removal-and-fallback",
+        "flowchart-english-dark-theme",
+        "home-account-only-in-bottom-rail",
+        "two-human-SSE-config-conflict",
+        "retained-group-draft",
+        "removed-member-not-restored",
+        "project-draft-original-version-without-chat",
+        "missed-config-event-conflict-refetch",
+        "conflict-close-reopen-latest",
+        "save-after-conflict",
+        "committed-truncated-response-safe-retry",
+        "acknowledged-truncated-new-intent",
+        "committed-envelope-response-safe-retry",
+        "acknowledged-envelope-new-intent",
+        "committed-upload-complete-safe-resume",
+        "batch-before-whole-no-duplicate",
+        "batch-before-whole-explicit-new-intent",
+        "batch-after-subset-no-duplicate",
+        "batch-after-subset-explicit-new-intent",
+        "batch-after-resume-no-duplicate",
+        "batch-after-resume-explicit-new-intent",
+        "file-library-failure-recovery",
+        "snapshot-failure-retry",
+        "original-context-failure-retry",
+        "reply-selection-cancellation",
+        "human-explicit-reply-and-role-mention",
+        "human-wait-natural-settlement"
+      ]
+    },
+    "presets": {
+      "status": "passed",
+      "count": 16,
+      "checks": [
+        "complete-20-scenarios-118-roles-51-workflows",
+        "manager-only-import-and-project-isolation",
+        "atomic-mixed-batch-and-idempotent-replay",
+        "advisory-content-and-persistent-provenance",
+        "renamed-edited-cross-locale-import-does-not-overwrite",
+        "simultaneous-import-single-copy",
+        "stale-catalog-rejected",
+        "invalid-batch-rolls-back-all",
+        "duplicate-selection-rejected",
+        "manual-name-match-preserved",
+        "entire-catalog-importable-without-auto-groups-or-runs",
+        "imported-role-version-history",
+        "personal-prompt-create-update-version-conflicts",
+        "personal-prompt-isolated-from-other-members",
+        "project-membership-notifications-retained",
+        "demoted-manager-cannot-replay-import"
+      ]
+    },
+    "workflowProfile": {
+      "status": "passed",
+      "count": 14,
+      "checks": [
+        "built-in-graph-imported",
+        "graph-and-feedback-round-trip",
+        "graph-conflict-and-dangling-link-validation",
+        "immutable-history-and-omitted-graph-preservation",
+        "generation-manager-permission",
+        "queued-controlled-AI-graph-and-idempotency",
+        "draft-does-not-save-workflow-or-trigger-discussion",
+        "draft-is-private-to-author",
+        "invalid-model-output-fails-without-overwriting",
+        "nickname-avatar-atomic-save-and-idempotency",
+        "session-and-member-profile-consistency",
+        "normalized-portrait-authenticated-read",
+        "profile-CAS-and-image-validation",
+        "portrait-removal-preserves-nickname-and-session"
+      ]
+    },
+    "agents": {
+      "status": "passed",
+      "count": 19,
+      "checks": [
+        "ten-loop-atomic-pause",
+        "paused-trigger-merge",
+        "multi-role-own-push",
+        "same-position-distinct-agents",
+        "versioned-continue",
+        "second-allowance-20",
+        "terminate-rejects-late-publication",
+        "seven-real-tools",
+        "immutable-group-projection",
+        "unjoined-group-not-projected",
+        "sandbox-write-edit-publish",
+        "public-tool-provenance",
+        "model-call-budget-separate-from-loops",
+        "model-failure-pauses",
+        "configuration-next-call",
+        "latest-limit-next-allowance",
+        "private-prompts-excluded",
+        "shared-compaction",
+        "compressed-original-readable"
+      ]
+    },
+    "collaboration": {
+      "status": "passed",
+      "count": 9,
+      "checks": [
+        "human-wait-branch-metadata",
+        "ordinary-context-zero-trigger",
+        "partial-human-response",
+        "native-reply-to-and-explicit-role",
+        "answered-discussion-settles",
+        "parallel-branches-shared-limit",
+        "atomic-final-allowance",
+        "simultaneous-human-continue-one-winner",
+        "continued-branches-same-discussion"
+      ]
+    },
+    "permissions": {
+      "status": "passed",
+      "count": 16,
+      "checks": [
+        "hidden-parent-name-and-ID",
+        "project-owner-not-implicit-group-member",
+        "unjoined-project-and-outsider-denied",
+        "search-and-file-boundary",
+        "actual-child-sandbox-projection",
+        "live-membership-revocation-cancels-run",
+        "revoked-HTTP-preview-content-context",
+        "revoked-native-CLI-and-SSE",
+        "revoked-run-cannot-publish-late",
+        "revoked-projection-reclaimed",
+        "sibling-membership-independent",
+        "cross-project-exact-version-share",
+        "share-does-not-expand-context",
+        "project-removal-revokes-all-own-groups",
+        "other-project-and-existing-share-retained",
+        "platform-DM-third-party-denied"
+      ]
+    },
+    "formats": {
+      "status": "passed",
+      "count": 15,
+      "checks": [
+        "preview-md",
+        "preview-json",
+        "preview-png",
+        "preview-pdf",
+        "preview-docx",
+        "preview-xlsx",
+        "preview-pptx",
+        "preview-zip",
+        "html-resource-bundle-relative-assets",
+        "source-code-preview",
+        "immutable-version-filename-and-format",
+        "html-isolation-capability-bound-to-version",
+        "multipart-hash",
+        "unsafe-archive-and-corrupt-office-rejected",
+        "preview-capability-revoked-with-membership"
+      ]
+    },
+    "readers": {
+      "status": "passed",
+      "count": 53,
+      "checks": [
+        "structured-human-confirmation-created",
+        "confirmation-requires-recipient-and-membership",
+        "decision-idempotency-and-double-submit",
+        "independent-responses-concurrent-once-zero-auto-trigger",
+        "ordinary-explicit-reply-closes-card",
+        "invalid-card-contract-and-dm-rejected",
+        "real-format-budget.csv",
+        "real-format-budget.tsv",
+        "real-format-gbk.csv",
+        "real-format-code.ts",
+        "real-format-config.json",
+        "real-format-config.yaml",
+        "real-format-config.toml",
+        "real-format-config.xml",
+        "real-format-notes.markdown",
+        "real-format-flow.mmd",
+        "real-format-picture.png",
+        "real-format-picture.svg",
+        "real-format-picture.bmp",
+        "real-format-picture.avif",
+        "real-format-reader.zip",
+        "real-format-reader.tar",
+        "real-format-reader.tgz",
+        "real-format-reader.gz",
+        "real-format-reader.7z",
+        "real-format-workbook.xlsx",
+        "real-format-workbook.xls",
+        "real-format-workbook.ods",
+        "real-format-acceptance.doc",
+        "real-format-acceptance.odt",
+        "real-format-acceptance.rtf",
+        "real-format-acceptance.ppt",
+        "real-format-acceptance.odp",
+        "real-format-audio.mp3",
+        "real-format-audio.wav",
+        "real-format-audio.ogg",
+        "real-format-audio.m4a",
+        "real-format-audio.flac",
+        "real-format-audio.aac",
+        "real-format-audio.opus",
+        "real-format-video.mp4",
+        "real-format-video.webm",
+        "real-format-video.mov",
+        "real-format-video.mkv",
+        "real-format-video.m4v",
+        "active-svg-rejected",
+        "archive-entry-authorized-path-boundary",
+        "native-cli-confirmation-contract",
+        "real-runtime-AI-structured-confirmation",
+        "AI-card-response-only-resolves-own-branch-without-trigger",
+        "explicit-role-mention-wakes-only-target-and-keeps-other-human-branch",
+        "terminated-discussion-closes-card-and-rejects-late-response",
+        "paused-feedback-and-explicit-mention-save-without-new-allowance"
+      ]
+    },
+    "readerBrowser": {
+      "status": "passed",
+      "count": 14,
+      "checks": [
+        "reference-card-header-content-footer",
+        "csv-real-table-quoted-comma-and-multiline",
+        "drag-resizes-neighbours-with-draft-preserved",
+        "threshold-collapse-and-discreet-menu-restore",
+        "hidden-reader-restore-and-layout-draft-persistence",
+        "xlsx-sheets-merges-formatted-values-and-pdf-layout",
+        "code-highlight-line-numbers-and-search",
+        "json-yaml-toml-xml-structure",
+        "mermaid-render-and-image-zoom",
+        "archive-entry-preview-and-return",
+        "converted-audio-video-metadata-loaded",
+        "human-feedback-persisted-and-actions-completed",
+        "human-composer-creates-structured-confirmation",
+        "english-dark-card-and-layout"
+      ]
+    },
+    "realModel": {
+      "status": "passed",
+      "count": 4,
+      "checks": [
+        "real-send-message-confirmation-and-recipient",
+        "real-role-waits-for-designated-human",
+        "human-choice-recorded-without-auto-model-call",
+        "real-waiting-branch-settles"
+      ]
+    }
+  },
+  "sameVersionScenarioCount": 256,
+  "formatRegistryExtensions": 83,
+  "realNewFormatSamples": 39,
+  "webUnitTests": {
+    "passed": 27,
+    "failed": 0
+  },
+  "go": {
+    "test": "passed",
+    "vet": "passed",
+    "integration": "tests/integration passed; optional peer DSN tests not enabled"
+  },
+  "browser": {
+    "viewport": {
+      "width": 1600,
+      "height": 1000
+    },
+    "sameVersionHeadless": true,
+    "normalEntry": "Built-in browser login page loaded; no real user profile or message changed"
+  },
+  "realModel": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.18",
+    "provider": "APIMart",
+    "model": "glm-5.3-flash",
+    "checks": [
+      "real-send-message-confirmation-and-recipient",
+      "real-role-waits-for-designated-human",
+      "human-choice-recorded-without-auto-model-call",
+      "real-waiting-branch-settles"
+    ],
+    "projectId": "534fd44d-efa2-4cd4-9f3a-b8ecdabcf363",
+    "groupId": "ba5ced5d-33e8-42b6-8a8d-e3b405940e27",
+    "runs": [
+      {
+        "id": "794b435e-58c0-495c-8734-a261a6e02484",
+        "state": "completed",
+        "modelCalls": 2
+      }
+    ]
+  },
+  "deployment": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.18",
+    "database": "judex_v2",
+    "schema": 15,
+    "allExistingAuthenticationFieldsUnchanged": true,
+    "authentication": [
+      {
+        "table": "users",
+        "rows": 17,
+        "allPriorFieldsMatched": true
+      },
+      {
+        "table": "password_credentials",
+        "rows": 17,
+        "allPriorFieldsMatched": true
+      },
+      {
+        "table": "user_sessions",
+        "rows": 91,
+        "allPriorFieldsMatched": true
+      },
+      {
+        "table": "recovery_tokens",
+        "rows": 0,
+        "allPriorFieldsMatched": true
+      }
+    ],
+    "unchangedSecretUIDAndContent": [
+      "judex-model-catalog",
+      "judex-model-keys",
+      "judex-opensandbox-auth",
+      "judex-postgresql",
+      "judex-storage-auth"
+    ],
+    "privateBackupRetained": true,
+    "at": "2026-10-20T15:24:12.134Z"
+  },
+  "normalSmoke": {
+    "status": "passed",
+    "version": "0.2.0-local.20261020.v2.18",
+    "checks": [
+      "version-and-protocol",
+      "HTTP-database-ready",
+      "login-and-same-release-web-bytes",
+      "same-release-download-manifest",
+      "schema-15-confirmation-table",
+      "converter-ready",
+      "built-in-browser-login-visible"
+    ],
+    "at": "2026-10-20T15:25:19.033Z"
+  },
+  "cleanup": {
+    "status": "passed",
+    "deletedNamespaces": [
+      "judex-v2-c049c673",
+      "judex-v2-c049c673-sandboxes"
+    ],
+    "remainingOwnedPersistentVolumes": 0,
+    "remainingOwnedClusterRolesAndBindings": 0,
+    "testPortsClosed": [
+      18100,
+      18103
+    ],
+    "sharedControllerReady": true,
+    "workloads": [
+      {
+        "name": "judex",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-judex-opensandbox-server",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-material-converter",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-postgresql",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-seaweedfs",
+        "desired": 1,
+        "ready": 1
+      }
+    ],
+    "at": "2026-10-20T15:25:19.545Z"
+  },
+  "screenshots": [
+    ".cache/v2-readers/confirmation-before.png",
+    ".cache/v2-readers/three-panes-table.png",
+    ".cache/v2-readers/confirmation-dark.png"
+  ],
+  "limitations": {
+    "nativeDesignFormatsDeferred": [
+      "PSD",
+      "AI",
+      "FIG",
+      "Sketch",
+      "CAD",
+      "3D",
+      "TIFF",
+      "HEIC",
+      "EPUB"
+    ],
+    "workbook": "Saved formatted values and merges; no macro execution or formula recalculation",
+    "office": "PDF conversion, no presentation animation",
+    "archive": "Safe direct entries; no recursive nested archives or Office entry conversion",
+    "fullRestartAndCompositeRecoveryMatrixNotRerun": true,
+    "remoteCINotTriggered": true,
+    "otherCLIPlatformsCrossBuiltOnly": true
+  }
+}

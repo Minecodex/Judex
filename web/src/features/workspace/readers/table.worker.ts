@@ -1,0 +1,6 @@
+import Papa from 'papaparse';
+import {read,utils} from 'xlsx';
+self.onmessage=event=>{try{const {bytes,partial,name,workbook,encoding,delimiter}=event.data;let sheets;let warning=false;
+ if(workbook){const book=read(bytes,{type:'array',sheetRows:20001,cellDates:false,cellHTML:false,cellStyles:false,bookVBA:false});sheets=book.SheetNames.map(name=>{const sheet=book.Sheets[name],range=utils.decode_range(sheet['!ref']||'A1'),full=utils.decode_range(sheet['!fullref']||sheet['!ref']||'A1');const rows=utils.sheet_to_json<string[]>(sheet,{header:1,raw:false,defval:'',range:{s:{r:0,c:0},e:{r:Math.min(range.e.r,19999),c:Math.min(range.e.c,199)}}});return {name,rows,merges:sheet['!merges']||[],truncated:full.e.r>=20000,columnsLimited:full.e.c>=200};});}
+ else{const text=new TextDecoder(encoding).decode(bytes),result=Papa.parse<string[]>(text,{delimiter:delimiter||(/\.tsv$/i.test(name)?'\t':''),skipEmptyLines:'greedy',preview:20001});warning=result.errors.length>0;sheets=[{name,rows:result.data.slice(0,20000).map(r=>r.slice(0,200)),merges:[],truncated:partial||result.data.length>20000||result.meta.truncated,columnsLimited:result.data.some(r=>r.length>200)}];}
+ self.postMessage({sheets,warning});}catch{self.postMessage({error:true});}};

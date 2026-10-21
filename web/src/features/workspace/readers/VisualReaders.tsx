@@ -1,0 +1,11 @@
+import {useRef,useState} from 'react';
+import {Maximize2,ZoomIn,ZoomOut} from 'lucide-react';
+import {useWorkspace} from '../context';
+import {Button,IconButton} from '../ui';
+export function ImageReader({url,name}:{url:string;name:string}){
+ const w=useWorkspace(),[zoom,setZoom]=useState(100),[failed,setFailed]=useState(false),image=useRef<HTMLImageElement>(null),viewport=useRef<HTMLDivElement>(null),drag=useRef<{x:number;y:number;left:number;top:number}|null>(null);
+ return <section className="judex-reader-image"><div className="judex-reader-toolbar"><IconButton label={w.t('readerZoomOut')} isDisabled={zoom<=25} onPress={()=>setZoom(z=>Math.max(25,z-25))}><ZoomOut/></IconButton><small>{Math.round(zoom)}%</small><IconButton label={w.t('readerZoomIn')} isDisabled={zoom>=400} onPress={()=>setZoom(z=>Math.min(400,z+25))}><ZoomIn/></IconButton><IconButton label={w.t('readerFit')} onPress={()=>setZoom(100)}><Maximize2/></IconButton><Button onPress={()=>setZoom(Math.max(25,Math.min(400,(image.current?.naturalWidth||1)/(viewport.current?.clientWidth||1)*100)))}>{w.t('readerActual')}</Button></div>
+ {failed?<p role="alert">{w.t('readerFailed')}</p>:<div ref={viewport} className="judex-reader-image-viewport" onPointerDown={e=>{if(e.button!==0)return;e.currentTarget.setPointerCapture(e.pointerId);drag.current={x:e.clientX,y:e.clientY,left:e.currentTarget.scrollLeft,top:e.currentTarget.scrollTop};}} onPointerMove={e=>{const d=drag.current;if(d){e.currentTarget.scrollLeft=d.left+d.x-e.clientX;e.currentTarget.scrollTop=d.top+d.y-e.clientY;}}} onPointerUp={()=>{drag.current=null;}} onPointerCancel={()=>{drag.current=null;}}><img ref={image} src={url} alt={name} draggable={false} style={{width:`${zoom}%`}} onError={()=>setFailed(true)}/></div>}
+ </section>;
+}
+export function MediaReader({url,name,kind}:{url:string;name:string;kind:'audio'|'video'}){const w=useWorkspace(),[failed,setFailed]=useState(false);return <div className="judex-reader-media">{kind==='audio'?<audio controls preload="metadata" src={url} aria-label={name} onError={()=>setFailed(true)}/>:<video controls playsInline preload="metadata" src={url} aria-label={name} onError={()=>setFailed(true)}/>} {failed&&<p role="alert">{w.t('readerMediaFailed')}</p>}</div>;}

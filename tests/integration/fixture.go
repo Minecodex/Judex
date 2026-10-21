@@ -59,7 +59,7 @@ func startContainer() (string, error) {
 		"-e", "POSTGRES_PASSWORD="+containerPass,
 		"-e", "POSTGRES_DB=judex",
 		"-p", "127.0.0.1::5432",
-		"postgres:17-alpine"); err != nil {
+		"postgres:17.6-alpine"); err != nil {
 		return "", fmt.Errorf("docker run: %v\n%s", err, out)
 	}
 	deadline := time.Now().Add(30 * time.Second)

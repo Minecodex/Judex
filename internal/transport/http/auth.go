@@ -28,6 +28,7 @@ func NewIdentityHandlers(service *identity.Service, auth middleware.AuthConfig, 
 }
 
 func (h *IdentityHandlers) Register(spec *SpecRouter) {
+	spec.Register("getUserAvatar", withAuth(h.avatar))
 	spec.Register("updateMe", withAuth(h.updateMe))
 	spec.Register("changePassword", withAuth(h.changePassword))
 	spec.Register("register", h.register)

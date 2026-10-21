@@ -1,0 +1,20 @@
+.judex-confirmation{width:100%;max-width:var(--v2-message-max);margin-top:var(--v2-s2);border:var(--v2-stroke) solid var(--v2-strong-line);border-radius:var(--v2-r-xl);overflow:hidden;background:var(--v2-surface);}
+.judex-confirmation>header{display:flex;align-items:center;gap:var(--v2-s3);padding:var(--v2-s4) var(--v2-s5);background:var(--v2-soft);border-bottom:var(--v2-stroke) solid var(--v2-line);}
+.judex-confirmation>header>svg{width:var(--v2-s5);height:var(--v2-s5);color:var(--v2-accent);flex-shrink:0;}
+.judex-confirmation>header>strong{font-weight:600;flex:1;overflow-wrap:anywhere;font-size:var(--v2-text-md);}
+.judex-confirmation>header>span{color:var(--v2-muted);white-space:nowrap;font-size:var(--v2-text-xs);}
+.judex-confirmation-body{padding:var(--v2-s5);font-size:var(--v2-text-base);line-height:var(--v2-leading);}
+.judex-confirmation-body dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--v2-s2) var(--v2-s5);margin-bottom:var(--v2-s5);font-size:var(--v2-text-sm);}
+.judex-confirmation-body dt{color:var(--v2-muted);}.judex-confirmation-body dd{margin:0;overflow-wrap:anywhere;}
+.judex-confirmation-body .judex-v2-file-card{max-width:100%;}
+.judex-confirmation>footer{display:flex;align-items:center;flex-wrap:wrap;gap:var(--v2-s3);padding:var(--v2-s3) var(--v2-s5);border-top:var(--v2-stroke) solid var(--v2-line);}
+.judex-confirmation>footer>span{margin-left:auto;color:var(--v2-faint);font-size:var(--v2-text-2xs);}
+.judex-confirmation-split{display:flex;align-items:stretch;background:var(--v2-sand);border-radius:var(--v2-r-md);overflow:hidden;}
+.judex-confirmation-split>.judex-v2-button{border-radius:0;height:var(--v2-s10);color:var(--v2-ink);}
+.judex-confirmation-split>.judex-v2-button:first-child{padding-inline:var(--v2-s4);}.judex-confirmation-split>.judex-v2-button:last-child{border-left:var(--v2-stroke) solid var(--v2-strong-line);}
+.judex-confirmation-feedback,.judex-confirmation-responses{padding:var(--v2-s4) var(--v2-s5);border-top:var(--v2-stroke) solid var(--v2-line);}
+.judex-confirmation-feedback .judex-v2-check{margin-top:var(--v2-s3);}
+.judex-confirmation-responses details+details{margin-top:var(--v2-s3);}.judex-confirmation-responses summary{display:flex;flex-wrap:wrap;gap:var(--v2-s2);align-items:center;cursor:pointer;font-size:var(--v2-text-xs);}
+.judex-confirmation-responses summary>svg{width:var(--v2-icon-sm);height:var(--v2-icon-sm);color:var(--v2-accent);}.judex-confirmation-responses time{color:var(--v2-muted);margin-left:auto;}.judex-confirmation-responses p{white-space:pre-wrap;margin-top:var(--v2-s3);font-size:var(--v2-text-sm);}
+.judex-confirmation-draft{padding:var(--v2-s3);border-bottom:var(--v2-stroke) solid var(--v2-line);display:flex;align-items:center;gap:var(--v2-s2);}
+.judex-confirmation-draft .input{flex:1;min-width:0;font-size:var(--v2-text-sm);}.judex-confirmation-draft>svg{color:var(--v2-accent);width:var(--v2-icon);}

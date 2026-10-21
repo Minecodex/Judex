@@ -1,0 +1,41 @@
+// Shared by CI Playwright and CUA. Uses only visible product controls.
+export async function runSettingsFlow(page,{rootURL,peerName='Browser peer'}){
+ const checks=[],visible=l=>l.waitFor({state:'visible',timeoutMs:30000}),button=(name,scope=page)=>scope.getByRole('button',{name,exact:true});
+ const dialog=()=>page.getByRole('dialog',{name:'项目设置 · Browser workspace',exact:true});
+ await page.goto(rootURL);await visible(button('项目设置'));await button('项目设置').click();let settings=dialog();
+ const bounds=await settings.evaluate(e=>({width:e.getBoundingClientRect().width,scroll:e.scrollWidth,client:e.clientWidth}));
+ if(bounds.width<980||bounds.scroll>bounds.client+1)throw Error('Settings desktop layout overflow or narrow form');
+ await visible(settings.getByText('项目信息',{exact:true}));await visible(settings.getByText('AI 与讨论',{exact:true}));checks.push('wide-sectioned-project-settings');
+ await button('成员',settings).click();const search=settings.getByRole('textbox',{name:'搜索姓名或邮箱',exact:true});
+ await search.fill('absent member');await visible(settings.getByText('没有找到匹配的成员',{exact:true}));await search.fill(peerName);
+ const row=settings.locator('.judex-settings-member-row').filter({hasText:peerName});await visible(row);if(await settings.locator('.judex-settings-member-row').count()!==1)throw Error('Member search did not filter');
+ await button('成员操作 · '+peerName,row).click();await page.getByRole('menuitem',{name:'移出项目',exact:true}).click();await visible(settings.getByText('移出后将撤销此人在本项目全部群聊中的访问和岗位运行，历史消息仍保留。',{exact:true}));
+ await button('取消',settings.locator('.judex-settings-confirm')).click();await visible(row);checks.push('member-search-actions-removal-cancel');
+ await button('职位',settings).click();await button('内置职位库',settings).click();await visible(settings.getByText('118 职位',{exact:true}));
+ await settings.getByRole('button',{name:/适用场景/}).click();await page.getByRole('option',{name:'软件开发',exact:true}).click();await visible(settings.getByText('8 职位',{exact:true}));checks.push('builtin-library-scenario-filter');
+ await button('预览 · 项目经理',settings).click();await visible(settings.locator('.judex-settings-prompt-read').filter({hasText:'你承担“项目经理”职位'}));
+ await button('选择此模板',settings).click();await settings.getByRole('checkbox',{name:'产品经理',exact:true}).press('Space');await visible(settings.getByText('已选 2 项',{exact:true}));await button('添加到项目',settings).click();
+ await visible(button('编辑 · 项目经理',settings));await visible(button('编辑 · 产品经理',settings));checks.push('role-preview-multiselect-import');
+ await button('编辑 · 项目经理',settings).click();await settings.getByRole('textbox',{name:'名称',exact:true}).fill('我的项目经理');
+ await settings.getByRole('textbox',{name:'职位提示词',exact:true}).fill('保留自定义职责。请依据群内资料协作。');await button('保存修改',settings).click();await visible(page.getByText('已保存',{exact:true}));
+ await button('版本历史',settings).click();await visible(settings.locator('summary').filter({hasText:'版本 2'}));await visible(settings.locator('summary').filter({hasText:'版本 1'}));checks.push('role-editor-version-history');
+ await button('返回列表',settings).click();await button('内置职位库',settings).click();const imported=settings.locator('.judex-settings-catalog-card').filter({has:page.getByRole('heading',{name:'项目经理',exact:true})});await visible(imported.getByText('项目已添加',{exact:true}));
+ if(await imported.getByRole('checkbox').count())throw Error('Renamed preset can be imported again');checks.push('renamed-preset-source-recognition');
+ await button('参考工作流',settings).click();await button('内置工作流库',settings).click();await visible(settings.getByText('51 参考工作流',{exact:true}));
+ await button('预览 · 跨团队研发与安全交付',settings).click();await visible(settings.getByText('建议协作关系',{exact:true}));await visible(settings.getByText('建议协作职位',{exact:true}));if(await settings.locator('.judex-settings-flow-steps article').count()!==23)throw Error('Workflow steps missing');
+ await button('选择此模板',settings).click();await button('添加到项目',settings).click();await visible(button('编辑 · 跨团队研发与安全交付',settings));
+ await button('编辑 · 跨团队研发与安全交付',settings).click();await button('预览',settings).click();await visible(settings.locator('.judex-settings-document').filter({hasText:'工作流仅为参考'}));checks.push('workflow-steps-relationships-import-preview');
+ await button('我的个人提示词',settings).click();await visible(settings.getByText('仅自己可见',{exact:true}));const personal=settings.getByRole('textbox').first();await personal.fill('请先说明依据，再提出协作建议。');await button('保存修改',settings).click();await visible(page.getByText('已保存',{exact:true}));await visible(settings.getByText('提示词如何组合',{exact:true}));await button('关闭',settings).click();checks.push('private-prompt-editor-and-composition');
+ await page.locator('.judex-v2-chat-title').click();const group=page.getByRole('dialog',{name:'群聊设置',exact:true});await group.getByRole('button',{name:/成员与任职/}).click();
+ const person=group.locator('.judex-settings-group-person').filter({hasText:'Browser owner'}),ownRole=person.getByRole('checkbox',{name:'我的项目经理 AI',exact:true});
+ if(await ownRole.evaluate(e=>e.checked))throw Error('Import automatically assigned a role');await ownRole.press('Space');await person.getByRole('checkbox',{name:'产品经理 AI',exact:true}).press('Space');
+ await button('参考工作流',group).click();await group.getByRole('checkbox',{name:'跨团队研发与安全交付',exact:true}).press('Space');await button('保存修改',group).click();await group.waitFor({state:'hidden'});await page.locator('.judex-v2-chat-title').click();await group.getByRole('button',{name:/成员与任职/}).click();
+ if(!await person.getByRole('checkbox',{name:'我的项目经理 AI',exact:true}).evaluate(e=>e.checked)||!await person.getByRole('checkbox',{name:'产品经理 AI',exact:true}).evaluate(e=>e.checked))throw Error('Multiple role assignments were not persisted');
+ await group.getByRole('button',{name:/参考工作流/}).click();if(!await group.getByRole('checkbox',{name:'跨团队研发与安全交付',exact:true}).evaluate(e=>e.checked))throw Error('Workflow selection not persisted');await button('关闭',group).click();checks.push('group-independent-multi-role-and-workflow-selection');
+ await button('使用文档').click();const local=page.getByRole('dialog',{name:'使用文档',exact:true});await visible(local.getByText(/judex auth login/));await button('下载',local).click();await visible(local.getByRole('link',{name:/macOS/}));if(await local.getByRole('link').count()!==3)throw Error('Packaged client downloads missing');await button('推送成果与文件版本',local).click();await visible(local.getByText(/judex push --record-only/));await button('关闭',local).click();checks.push('client-download-cards-and-contextual-commands');
+ const preference=async(account,item)=>{await button(account).click();await page.getByRole('menuitem',{name:item,exact:true}).click();};
+ await preference('账号与偏好','切换深浅配色');await preference('账号与偏好','切换语言');await button('Project settings').click();settings=page.getByRole('dialog',{name:'Project settings · Browser workspace',exact:true});await button('Roles',settings).click();await button('Built-in roles',settings).click();
+ await visible(settings.getByRole('heading',{name:'Project manager',exact:true}));await visible(settings.locator('.judex-settings-catalog-card').filter({has:page.getByRole('heading',{name:'Project manager',exact:true})}).getByText('Already in project',{exact:true}));
+ if(await page.locator('html').getAttribute('data-theme')!=='dark')throw Error('Dark settings theme missing');await button('Close',settings).click();await preference('Account & preferences','Switch language');await preference('账号与偏好','切换深浅配色');checks.push('settings-bilingual-dark-theme-preset-identity');
+ return {status:'passed',checks};
+}

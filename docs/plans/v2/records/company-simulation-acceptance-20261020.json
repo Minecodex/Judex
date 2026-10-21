@@ -1,0 +1,315 @@
+{
+  "status": "passed-with-recovered-pauses",
+  "version": "0.2.0-local.20261020.v2.17",
+  "startedAt": "2026-10-20T13:09:16.949Z",
+  "completedAt": "2026-10-20T13:41:40.359Z",
+  "scope": "user-requested-real-local-Codex-company-simulation",
+  "environment": "Normal local Judex service with three explicitly named synthetic projects; no real pre-existing project modified",
+  "provider": "APIMart",
+  "model": "glm-5.3-flash",
+  "codexSessions": [
+    {
+      "key": "software",
+      "threadId": "01a1596f-bfb9-7030-9b8c-b4f1b0b841f3",
+      "hostId": "local"
+    },
+    {
+      "key": "design",
+      "threadId": "01a1596f-c60b-78e2-8cd2-b59ca0c7d49d",
+      "hostId": "local"
+    },
+    {
+      "key": "operations",
+      "threadId": "01a1596f-cc6b-7b51-930e-034b73e30d00",
+      "hostId": "local"
+    }
+  ],
+  "syntheticUsers": 6,
+  "companies": [
+    {
+      "key": "software",
+      "name": "模拟 · 星舟软件研发",
+      "projectId": "28f89d0a-932c-4c0e-b914-1eaa6ed5ba55",
+      "groupId": "c55a2fed-70db-45c5-a97e-061034782045",
+      "url": "http://127.0.0.1:18097/?project=28f89d0a-932c-4c0e-b914-1eaa6ed5ba55&group=c55a2fed-70db-45c5-a97e-061034782045",
+      "discussionId": "a8657d0e-b8bd-4352-870f-77bcda64ea7c",
+      "state": "settled",
+      "roleIdentities": 3,
+      "roleRuns": 5,
+      "AIMessageCount": 13,
+      "libraryFiles": 5,
+      "modelCalls": 38,
+      "tokens": {
+        "input": 790068,
+        "output": 9937
+      },
+      "technicalContinuationCount": 0,
+      "continuedByCurrentUser": true,
+      "historicalRunErrors": [],
+      "localEvidence": ".cache/company-simulation-20261020/software/evidence.json"
+    },
+    {
+      "key": "design",
+      "name": "模拟 · 晴川品牌设计",
+      "projectId": "b4655e90-4496-449f-8f7d-febe05ae506f",
+      "groupId": "aed91d56-83de-4816-9726-99545728f47c",
+      "url": "http://127.0.0.1:18097/?project=b4655e90-4496-449f-8f7d-febe05ae506f&group=aed91d56-83de-4816-9726-99545728f47c",
+      "discussionId": "f750c798-876b-41fa-8779-63c8e40f1785",
+      "state": "settled",
+      "roleIdentities": 3,
+      "roleRuns": 5,
+      "AIMessageCount": 13,
+      "libraryFiles": 11,
+      "modelCalls": 39,
+      "tokens": {
+        "input": 991229,
+        "output": 17424
+      },
+      "technicalContinuationCount": 1,
+      "continuedByCurrentUser": true,
+      "historicalRunErrors": [
+        {
+          "runId": "2fc72c00-1b54-41a3-b7e9-2253855fdb82",
+          "code": "model_failed",
+          "finalState": "completed"
+        },
+        {
+          "runId": "9eb4d979-7cb4-4815-8b9b-b8af8a4a8470",
+          "code": "technical_budget",
+          "finalState": "completed"
+        }
+      ],
+      "localEvidence": ".cache/company-simulation-20261020/design/evidence.json"
+    },
+    {
+      "key": "operations",
+      "name": "模拟 · 汇木公司运营",
+      "projectId": "b9def222-49df-4205-b1c6-1cd36fcb3a04",
+      "groupId": "ce8a7898-9ca0-43d4-840a-20e546511175",
+      "url": "http://127.0.0.1:18097/?project=b9def222-49df-4205-b1c6-1cd36fcb3a04&group=ce8a7898-9ca0-43d4-840a-20e546511175",
+      "discussionId": "f0dfb1a1-21fd-4204-9f36-c49007214a5c",
+      "state": "settled",
+      "roleIdentities": 3,
+      "roleRuns": 3,
+      "AIMessageCount": 8,
+      "libraryFiles": 7,
+      "modelCalls": 18,
+      "tokens": {
+        "input": 631135,
+        "output": 4755
+      },
+      "technicalContinuationCount": 1,
+      "continuedByCurrentUser": true,
+      "historicalRunErrors": [
+        {
+          "runId": "a2198c3d-f667-469d-a89f-9303f52d8df6",
+          "code": "technical_budget",
+          "finalState": "completed"
+        }
+      ],
+      "localEvidence": ".cache/company-simulation-20261020/operations/evidence.json"
+    }
+  ],
+  "independentChecks": {
+    "count": 40,
+    "checks": [
+      "software-independent-third-level-membership",
+      "software-cross-company-denied",
+      "design-independent-third-level-membership",
+      "design-cross-company-denied",
+      "operations-independent-third-level-membership",
+      "operations-cross-company-denied",
+      "platform-DM-cross-company-human-only",
+      "third-company-DM-denied",
+      "software-same-file-immutable-revision",
+      "software-old-new-download-sha-different",
+      "software-original-message-stays-v1",
+      "software-share-fixed-v1-no-AI",
+      "design-same-file-immutable-revision",
+      "design-old-new-download-sha-different",
+      "design-original-message-stays-v1",
+      "design-share-fixed-v1-no-AI",
+      "operations-same-file-immutable-revision",
+      "operations-old-new-download-sha-different",
+      "operations-original-message-stays-v1",
+      "operations-share-fixed-v1-no-AI",
+      "real-one-loop-pause",
+      "paused-new-trigger-no-new-discussion",
+      "idempotent-paused-trigger",
+      "Web-feedback-continue-one-frozen-allowance",
+      "real-second-loop-pause",
+      "Web-human-terminate",
+      "no-active-runs-after-termination",
+      "no-late-publication-after-observation-window",
+      "software-three-real-role-identities",
+      "software-structured-peer-handoff-and-published-file",
+      "software-human-explicit-reply-natural-settlement",
+      "software-all-runs-complete",
+      "design-three-real-role-identities",
+      "design-structured-peer-handoff-and-published-file",
+      "design-human-explicit-reply-natural-settlement",
+      "design-all-runs-complete",
+      "operations-three-real-role-identities",
+      "operations-structured-peer-handoff-and-published-file",
+      "operations-human-explicit-reply-natural-settlement",
+      "operations-all-runs-complete"
+    ]
+  },
+  "businessArtifacts": {
+    "software": {
+      "independentTests": 18,
+      "originalTests": 10,
+      "requirements": [
+        "valid-reservation",
+        "invalid-interval",
+        "overlap-rejection",
+        "room-isolation",
+        "cancellation-and-rebooking"
+      ],
+      "evidence": ".cache/company-simulation-20261020/software/independent-v2.log"
+    },
+    "design": {
+      "staticChecks": 14,
+      "textContrastPairs": 24,
+      "minimumContrast": 5.339,
+      "features": [
+        "self-contained-HTML",
+        "original-SVG",
+        "dark-theme",
+        "keyboard-focus"
+      ],
+      "evidence": ".cache/company-simulation-20261020/design/independent-validation-v2.json"
+    },
+    "operations": {
+      "headcount": 25,
+      "plannedCNY": "4800.00",
+      "syntheticClaimCNY": "4180.00",
+      "balanceCNY": "820.00",
+      "rejectedInvalidInputs": 8,
+      "realPaidCNY": "0.00",
+      "evidence": ".cache/company-simulation-20261020/operations/independent-validation-v2.json"
+    }
+  },
+  "loopControl": {
+    "checks": [
+      "real-one-loop-pause",
+      "paused-new-trigger-no-new-discussion",
+      "idempotent-paused-trigger",
+      "Web-feedback-continue-one-frozen-allowance",
+      "real-second-loop-pause",
+      "Web-human-terminate",
+      "no-active-runs-after-termination",
+      "no-late-publication-after-observation-window"
+    ],
+    "state": "terminated",
+    "loops": 2,
+    "allowance": 2,
+    "terminationStableSince": "2026-10-20T13:33:45.427Z"
+  },
+  "actualModelUsage": {
+    "attemptedCalls": 101,
+    "completedCalls": 100,
+    "unknownOutcomeCalls": 1,
+    "knownInputTokens": 2432654,
+    "knownOutputTokens": 33162,
+    "unknownUsageNotCountedAsZero": true,
+    "pricingNotEstimated": true
+  },
+  "runtimeTools": [
+    "send_message",
+    "bash",
+    "publish_file",
+    "read_context",
+    "write",
+    "read"
+  ],
+  "findings": [
+    {
+      "kind": "recovered-technical-budget",
+      "detail": "Design and operations each paused on technical Token budget with loopCount=0. Current user continued each once in the Web UI; same runs resumed and completed. Cumulative loops and technical budgets remain distinct."
+    },
+    {
+      "kind": "recovered-model-failure",
+      "detail": "One design run recorded model_failed before the human continuation. It later completed. Provider-level cause was not independently established. One historical model request retains a started/unknown outcome ledger record, with reserved cost preserved; its usage is excluded from known Token totals. This is retained as a real interruption rather than a clean run."
+    },
+    {
+      "kind": "AI-review-error-corrected",
+      "detail": "Software QA initially attributed its supplemental SQLite connection/thread error to the delivered test. The local employee supplied independent evidence; QA publicly withdrew the incorrect attribution, and the product role requested human confirmation."
+    },
+    {
+      "kind": "CLI-existing-version-attachment-opportunity",
+      "detail": "The CLI supports explicit file update and automatically publishes the updated file message; message send does not expose a file-version argument for reusing an arbitrary already-uploaded version. Software/design used the declared push fallback for review text/package, producing independent files as expected."
+    },
+    {
+      "kind": "unsupported-test-command",
+      "detail": "Some employee sessions attempted auth status, which is unsupported. Current skill documents judex status; this attempt is not treated as a product/documentation defect."
+    }
+  ],
+  "browserEvidence": {
+    "method": "CUA using existing Chrome session",
+    "checks": [
+      "three-project-cards-visible",
+      "real-loop-pause-continue-terminate",
+      "technical-budget-human-resume",
+      "design-HTML-v2-side-and-expanded-reader"
+    ],
+    "screenshots": [
+      ".cache/company-simulation-20261020/projects.png",
+      ".cache/company-simulation-20261020/loop-second-pause.png",
+      ".cache/company-simulation-20261020/operations-budget-pause.png",
+      ".cache/company-simulation-20261020/design-preview-expanded.png"
+    ],
+    "nonCUABrowserClaimsFromWorkerNotCounted": true
+  },
+  "health": {
+    "status": "passed",
+    "workloads": [
+      {
+        "name": "judex",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-judex-opensandbox-server",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-material-converter",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-postgresql",
+        "desired": 1,
+        "ready": 1
+      },
+      {
+        "name": "judex-seaweedfs",
+        "desired": 1,
+        "ready": 1
+      }
+    ],
+    "ready": {
+      "scope": "http+db",
+      "status": "ready"
+    },
+    "modelAndInfrastructureSecretsUnchanged": true,
+    "namespace": "judex",
+    "testProjectsRetained": true,
+    "at": "2026-10-20T13:40:13.197Z"
+  },
+  "limitations": {
+    "notAFullPerformanceLoadTest": true,
+    "liveProviderStabilityNotProven": true,
+    "noRemoteCITriggered": true,
+    "noNewServerOrWebReleaseNeeded": true,
+    "previousFullRegressionNotRelabeled": true
+  },
+  "retention": {
+    "projectsAndSyntheticArtifacts": "retained for user inspection",
+    "CLIGrants": "separate per synthetic employee and restricted to one project; kept for the created Codex sessions",
+    "secrets": "unchanged and not copied into prompts/reports",
+    "noPendingDiscussionWork": true
+  }
+}
